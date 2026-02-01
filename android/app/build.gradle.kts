@@ -63,5 +63,7 @@ android {
 }
 
 dependencies {
+    implementation(platform("com.google.firebase:firebase-bom:34.8.0"))
+    implementation("com.google.firebase:firebase-analytics")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.7.0")
 }
