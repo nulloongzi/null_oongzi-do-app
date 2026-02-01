@@ -37,33 +37,38 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   late final WebViewController _controller;
+  int _loadingProgress = 0; // 로딩 상태 확인용 변수 추가
 
   @override
   void initState() {
     super.initState();
-    
-    // [1] 앱 시작 시 위치 권한 요청
     _requestPermission();
 
-    // [2] 웹뷰 컨트롤러 설정
     final WebViewController controller = WebViewController();
-    
+
     controller
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(const Color(0xFFFFFFFF))
       ..setNavigationDelegate(
         NavigationDelegate(
+          onProgress: (progress) {
+            setState(() {
+              _loadingProgress = progress; // 로딩 진행률 업데이트
+            });
+          },
           onNavigationRequest: (NavigationRequest request) async {
-            // 외부 링크(카카오맵, 인스타 등) 처리
-            if (request.url.contains('map.kakao.com') || 
-                request.url.contains('instagram.com') || 
+            // 기존 외부 링크 처리 로직 유지
+            if (request.url.contains('map.kakao.com') ||
+                request.url.contains('instagram.com') ||
                 request.url.startsWith('kakaomap:') ||
                 request.url.startsWith('intent:') ||
                 request.url.startsWith('tel:') ||
                 request.url.startsWith('mailto:')) {
-              
               if (await canLaunchUrl(Uri.parse(request.url))) {
-                await launchUrl(Uri.parse(request.url), mode: LaunchMode.externalApplication);
+                await launchUrl(
+                  Uri.parse(request.url),
+                  mode: LaunchMode.externalApplication,
+                );
               }
               return NavigationDecision.prevent;
             }
@@ -73,19 +78,18 @@ class _MapScreenState extends State<MapScreen> {
       )
       ..loadRequest(Uri.parse('https://nulloongzi.github.io/null_oongzi-do/'));
 
-    // [3] 안드로이드 WebView 위치 권한 허용
+    // 안드로이드 특정 설정 유지
     if (controller.platform is AndroidWebViewController) {
       AndroidWebViewController.enableDebugging(true);
       (controller.platform as AndroidWebViewController)
           .setGeolocationPermissionsPromptCallbacks(
-        // [수정 포인트] 타입을 생략하여(origin) 호환성 문제 해결
-        onShowPrompt: (origin) async {
-          return const GeolocationPermissionsResponse(
-            allow: true,
-            retain: false,
+            onShowPrompt: (origin) async {
+              return const GeolocationPermissionsResponse(
+                allow: true,
+                retain: false,
+              );
+            },
           );
-        },
-      );
     }
 
     _controller = controller;
@@ -100,7 +104,6 @@ class _MapScreenState extends State<MapScreen> {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      // 뒤로가기 제스처 처리
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         if (await _controller.canGoBack()) {
@@ -111,7 +114,20 @@ class _MapScreenState extends State<MapScreen> {
       },
       child: Scaffold(
         body: SafeArea(
-          child: WebViewWidget(controller: _controller),
+          child: Stack(
+            // Stack을 사용하여 로딩바를 웹뷰 위에 배치
+            children: [
+              WebViewWidget(controller: _controller),
+              // 로딩이 진행 중일 때만 상단에 바 표시
+              if (_loadingProgress < 100)
+                LinearProgressIndicator(
+                  value: _loadingProgress / 100.0,
+                  backgroundColor: Colors.white,
+                  color: const Color(0xFFFAC710), // 앱 메인 컬러
+                  minHeight: 3,
+                ),
+            ],
+          ),
         ),
       ),
     );

@@ -1,3 +1,11 @@
+// 1. 파일 최상단에 이 블록을 추가하세요
+plugins {
+    id("com.android.application") version "8.11.1" apply false
+    id("org.jetbrains.kotlin.android") version "2.2.20" apply false    
+    // [추가] 구글 로그인 서비스 플러그인
+    id("com.google.gms.google-services") version "4.4.0" apply false
+}
+
 allprojects {
     repositories {
         google()
