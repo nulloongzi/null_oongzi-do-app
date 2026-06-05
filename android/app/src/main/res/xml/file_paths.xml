@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- appinio_social_share FileProvider 경로.
+     getTemporaryDirectory()(앱 캐시)에 쓴 스토리 PNG를 인스타에 공유하기 위함. -->
+<paths>
+    <cache-path name="cache" path="." />
+    <files-path name="files" path="." />
+    <external-cache-path name="external_cache" path="." />
+    <external-files-path name="external_files" path="." />
+</paths>

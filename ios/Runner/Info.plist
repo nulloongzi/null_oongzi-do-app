@@ -45,5 +45,33 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+
+	<!-- ── 인스타 스토리 공유 (appinio_social_share) ── -->
+	<!-- ⚠️ FacebookAppID / CFBundleURLSchemes(fb…) 의 0…0 자리를 발급받은 Facebook App ID로 교체.
+	     lib/main.dart 의 kFacebookAppId, android strings.xml 의 facebook_app_id 와 동일하게 맞출 것.
+	     placeholder 상태면 앱은 동작하되 스토리 스티커 '탭 → 딥링크'만 비활성. -->
+	<key>FacebookAppID</key>
+	<string>000000000000000</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fb000000000000000</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>instagram</string>
+		<string>instagram-stories</string>
+		<string>facebook-stories</string>
+		<string>fb</string>
+		<string>fbapi</string>
+		<string>fbauth2</string>
+		<string>fbshareextension</string>
+	</array>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>스토리 카드를 인스타그램에 공유할 때 사용합니다.</string>
 </dict>
 </plist>

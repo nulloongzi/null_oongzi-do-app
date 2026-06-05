@@ -41,6 +41,8 @@ dependencies:
   permission_handler: ^12.0.1
   webview_flutter_android: ^4.10.11
   flutter_launcher_icons: ^0.14.4
+  appinio_social_share: ^0.3.2  # 인스타 스토리 네이티브 공유 (sticker + attributionURL + appId)
+  path_provider: ^2.1.4         # 스토리 카드 임시 PNG 저장
 
 dev_dependencies:
   flutter_test:

@@ -7,7 +7,10 @@
         <package android:name="net.daum.android.map" />
     
         <package android:name="com.instagram.android" />
-    
+
+        <!-- appinio_social_share: 페이스북/인스타 설치 감지·콘텐츠 전달용 -->
+        <provider android:authorities="com.facebook.katana.provider.PlatformProvider" />
+
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <category android:name="android.intent.category.BROWSABLE" />
@@ -28,6 +31,34 @@
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon"
         android:usesCleartextTraffic="true">
+
+        <!-- appinio_social_share: 스토리 카드 임시 PNG를 인스타에 넘기는 FileProvider -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <!-- 인스타 스토리 'source_application'(=Facebook App ID). 발급 후 strings.xml 교체. -->
+        <meta-data
+            android:name="com.facebook.sdk.ApplicationId"
+            android:value="@string/facebook_app_id" />
+        <!-- 번들된 Facebook SDK 17이 시작 시 클라이언트 토큰을 요구한다. -->
+        <meta-data
+            android:name="com.facebook.sdk.ClientToken"
+            android:value="@string/facebook_client_token" />
+        <!-- placeholder 앱 ID로 FB에 이벤트/광고ID 전송 방지(공유 동작엔 불필요·프라이버시). -->
+        <meta-data
+            android:name="com.facebook.sdk.AutoLogAppEventsEnabled"
+            android:value="false" />
+        <meta-data
+            android:name="com.facebook.sdk.AdvertiserIDCollectionEnabled"
+            android:value="false" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ⚠️ Facebook(Meta) App ID — developers.facebook.com 에서 발급해 교체하세요.
+         인스타 스토리 '스티커 탭 → 딥링크'(attributionURL)가 동작하려면 필수입니다.
+         placeholder('000000000000000') 상태면 앱은 빌드/동작하지만 탭 링크만 비활성입니다.
+         lib/main.dart 의 kFacebookAppId 와 ios/Runner/Info.plist 의 FacebookAppID 도 동일하게 교체. -->
+    <string name="facebook_app_id">000000000000000</string>
+    <!-- Facebook 앱 설정 > 고급 > 클라이언트 토큰 값으로 교체.
+         번들된 Facebook SDK 17이 시작 시 요구하므로 비어 있으면 안 된다(placeholder 유지). -->
+    <string name="facebook_client_token">0000000000000000000000000000000</string>
+</resources>
