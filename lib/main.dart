@@ -71,6 +71,13 @@ class _MapScreenState extends State<MapScreen> {
             });
           },
           onNavigationRequest: (NavigationRequest request) async {
+            // 하위 프레임(iframe) 로드는 가로채지 않는다 — 인스타 릴스/게시물 임베드가
+            // 셸 안에서 정상 렌더되도록. (임베드 iframe의 src가 instagram.com이라,
+            // 메인프레임처럼 외부 앱으로 튕기면 임베드가 안 뜸.) 외부 앱 연결은
+            // 사용자가 직접 링크를 탭한 '메인 프레임' 이동에만 적용한다.
+            if (!request.isMainFrame) {
+              return NavigationDecision.navigate;
+            }
             // 기존 외부 링크 처리 로직 유지
             if (request.url.contains('map.kakao.com') ||
                 request.url.contains('instagram.com') ||
