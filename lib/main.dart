@@ -18,7 +18,7 @@ import 'package:appinio_social_share/appinio_social_share.dart';
 // 를 같은 값으로 교체해야 한다.
 // placeholder('000000000000000') 상태면 앱은 정상 동작하되, 스토리 스티커
 // '탭 → 딥링크'(attributionURL)만 비활성이다. (handoff §1.2)
-const String kFacebookAppId = '000000000000000';
+const String kFacebookAppId = '129937258232161';
 
 void main() {
   runApp(const MyApp());

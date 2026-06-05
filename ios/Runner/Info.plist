@@ -51,13 +51,13 @@
 	     lib/main.dart 의 kFacebookAppId, android strings.xml 의 facebook_app_id 와 동일하게 맞출 것.
 	     placeholder 상태면 앱은 동작하되 스토리 스티커 '탭 → 딥링크'만 비활성. -->
 	<key>FacebookAppID</key>
-	<string>000000000000000</string>
+	<string>129937258232161</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>fb000000000000000</string>
+				<string>fb129937258232161</string>
 			</array>
 		</dict>
 	</array>
