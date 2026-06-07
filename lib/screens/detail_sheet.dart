@@ -10,9 +10,11 @@ import '../services/i18n.dart';
 import '../services/lunchbox_service.dart';
 import '../services/share_service.dart';
 import '../services/story_share.dart';
+import '../services/schedule_parse.dart';
 import '../services/verification_service.dart';
 import '../theme.dart';
 import '../widgets/insta_embed.dart';
+import '../widgets/schedule_timetable.dart';
 import '../widgets/share_menu.dart';
 import '../widgets/story_card.dart';
 import 'club_form_screen.dart';
@@ -291,6 +293,12 @@ void showSpotDetail(
         if ((s.schedule ?? s.scheduleText) != null &&
             (s.schedule ?? s.scheduleText)!.isNotEmpty)
           _infoRow('🗓', (s.schedule ?? s.scheduleText)!),
+        ScheduleTimetable(
+          events: (s.scheduleRaw != null && s.scheduleRaw!.isNotEmpty)
+              ? eventsFromRaw(s.scheduleRaw)
+              : eventsFromText(s.schedule ?? s.scheduleText),
+          accent: NurungjiColors.teal,
+        ),
         if (where.isNotEmpty) _infoRow('📍', where),
         if (s.feeInfo != null && s.feeInfo!.isNotEmpty) _infoRow('💰', s.feeInfo!),
         if (s.instaReel != null && s.instaReel!.isNotEmpty)
@@ -366,6 +374,12 @@ void showClubDetail(
         if (c.isUrgent && c.urgentMsg != null && c.urgentMsg!.isNotEmpty)
           _banner(t('urgent'), c.urgentMsg!),
         if (c.schedule != null && c.schedule!.isNotEmpty) _infoRow('🗓', c.schedule!),
+        ScheduleTimetable(
+          events: (c.scheduleRaw != null && c.scheduleRaw!.isNotEmpty)
+              ? eventsFromRaw(c.scheduleRaw)
+              : eventsFromText(c.schedule),
+          accent: NurungjiColors.yellow,
+        ),
         if (c.address != null && c.address!.isNotEmpty) _infoRow('📍', c.address!),
         if (c.price != null && c.price!.isNotEmpty) _infoRow('💰', c.price!),
         if (c.instaReel != null && c.instaReel!.isNotEmpty)
