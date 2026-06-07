@@ -13,6 +13,7 @@ import '../services/story_share.dart';
 import '../services/schedule_parse.dart';
 import '../services/verification_service.dart';
 import '../theme.dart';
+import '../services/analytics.dart';
 import '../widgets/bounce_tap.dart';
 import '../widgets/insta_embed.dart';
 import '../widgets/schedule_timetable.dart';
@@ -275,6 +276,7 @@ void showSpotDetail(
   String? currentUid,
   Future<void> Function()? onChanged,
 }) {
+  Track.event('view_pickup', {'id': s.id});
   final where = [s.venueName, s.address].where((e) => e != null && e.isNotEmpty).join(' · ');
   final canModify =
       currentUid != null && s.ownerUid != null && s.ownerUid == currentUid;
@@ -309,7 +311,10 @@ void showSpotDetail(
         if (s.instaReel != null && s.instaReel!.isNotEmpty)
           InstaEmbed(url: s.instaReel!),
         if (s.contactLink != null && s.contactLink!.isNotEmpty)
-          _primaryBtn(t('chat_join'), () => _open(s.contactLink)),
+          _primaryBtn(t('chat_join'), () {
+            Track.event('pickup_contact', {'id': s.id, 'sport': s.sport});
+            _open(s.contactLink);
+          }),
         _primaryBtn(
           t('share_btn'),
           () => showShareMenu(
@@ -348,6 +353,7 @@ void showClubDetail(
   String? currentUid,
   Future<void> Function()? onChanged,
 }) {
+  Track.event('view_club', {'club_id': c.id, 'club_name': c.name});
   final tags = (c.target ?? '')
       .split(RegExp(r'[,\s]+'))
       .where((e) => e.isNotEmpty)

@@ -5,6 +5,7 @@ import 'package:flutter_naver_map/flutter_naver_map.dart';
 import '../models/pickup_spot.dart';
 import '../models/schedule_block.dart';
 import '../services/data_repository.dart';
+import '../services/analytics.dart';
 import '../services/geocoding_service.dart';
 import '../services/i18n.dart';
 import '../services/sanitize.dart';
@@ -216,6 +217,7 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
         await _repo.createPickup(fields);
       }
       if (!mounted) return;
+      Track.event('pickup_create', {'mode': _isEdit ? 'edit' : 'create'});
       _snack(_isEdit ? t('f_updated') : t('pf_created'));
       Navigator.pop(context, true);
     } catch (e) {

@@ -5,6 +5,7 @@ import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../models/club.dart';
 import '../models/pickup_spot.dart';
+import '../services/analytics.dart';
 import '../services/data_repository.dart';
 import '../services/club_filter.dart';
 import '../services/deep_link_service.dart';
@@ -62,6 +63,7 @@ class _MapScreenState extends State<MapScreen> {
   // 딥링크(?club=/?spot=) → 탭 전환 + 상세 오픈. 메모리에 없으면 단건 조회.
   Future<void> _handleDeepLink(DeepLink d) async {
     if (!mounted) return;
+    Track.event('deep_link_open', d.kind == 'club' ? {'club_id': d.id} : {'spot_id': d.id});
     if (d.kind == 'club') {
       Club? c;
       for (final x in _clubs) {
@@ -216,7 +218,9 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _onTab(String t) {
+    if (_tab == t) return;
     setState(() => _tab = t);
+    Track.event('switch_tab', {'tab': t});
     _refreshMarkers();
   }
 

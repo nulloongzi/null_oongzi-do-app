@@ -1,6 +1,7 @@
 // lunchbox_service.dart — 도시락(찜한 팀 5칸 + 커스텀 팀). 웹 lunchbox.js 포팅.
 // 네이티브는 로그인 필수(AuthGate) → Firestore 비공개 서브컬렉션 users/{uid}/private/profile 사용.
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'analytics.dart';
 
 class LunchboxData {
   final List<String?> bookmarks; // 길이 5
@@ -47,6 +48,7 @@ class LunchboxService {
     if (idx == -1) return '도시락이 가득 찼어요 (5칸)';
     data.bookmarks[idx] = teamId;
     await save(uid, data);
+    Track.event('add_bookmark');
     return null;
   }
 

@@ -1,6 +1,7 @@
 // share_menu.dart — 통합 공유 바텀시트. 웹 openShareMenu 포팅.
 // 헤드라인=인스타 스토리, 그 외 링크복사 / 다른앱(OS 공유시트). 카톡 리치카드는 후속.
 import 'package:flutter/material.dart';
+import '../services/analytics.dart';
 import '../services/i18n.dart';
 import '../services/share_service.dart';
 import '../theme.dart';
@@ -11,6 +12,11 @@ void showShareMenu(
   required String shareTitle,
   VoidCallback? onStory, // 인스타 스토리 (스토리 카드 렌더 → IG)
 }) {
+  final u = Uri.tryParse(url);
+  final idP = <String, Object?>{
+    if (u?.queryParameters['club'] != null) 'club_id': u!.queryParameters['club'],
+    if (u?.queryParameters['spot'] != null) 'spot_id': u!.queryParameters['spot'],
+  };
   showModalBottomSheet(
     context: context,
     showDragHandle: true,
@@ -36,6 +42,7 @@ void showShareMenu(
                 primary: true,
                 onTap: () {
                   Navigator.pop(ctx);
+                  Track.event('share', {'method': 'ig_story', ...idP});
                   onStory();
                 },
               ),
@@ -43,6 +50,7 @@ void showShareMenu(
               label: t('share_copy'),
               onTap: () async {
                 Navigator.pop(ctx);
+                Track.event('share', {'method': 'copy', ...idP});
                 await ShareService.copy(url);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -55,6 +63,7 @@ void showShareMenu(
               label: t('share_more'),
               onTap: () async {
                 Navigator.pop(ctx);
+                Track.event('share', {'method': 'web', ...idP});
                 await ShareService.osShare('$shareTitle\n$url');
               },
             ),

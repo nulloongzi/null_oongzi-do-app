@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../services/analytics.dart';
 import '../services/i18n.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -40,6 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
         accessToken: auth.accessToken,
       );
       await FirebaseAuth.instance.signInWithCredential(credential);
+      Track.event('login', {'method': 'google'});
       // 성공 시 AuthGate가 자동으로 홈으로 전환
     } catch (e) {
       setState(() => _error = '구글 로그인 실패: $e');
@@ -59,9 +61,11 @@ class _LoginScreenState extends State<LoginScreen> {
       if (signUp) {
         await FirebaseAuth.instance
             .createUserWithEmailAndPassword(email: email, password: pw);
+        Track.event('sign_up', {'method': 'email'});
       } else {
         await FirebaseAuth.instance
             .signInWithEmailAndPassword(email: email, password: pw);
+        Track.event('login', {'method': 'email'});
       }
     } on FirebaseAuthException catch (e) {
       setState(() => _error = '오류: ${e.message ?? e.code}');

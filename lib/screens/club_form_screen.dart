@@ -5,6 +5,7 @@ import 'package:flutter_naver_map/flutter_naver_map.dart';
 import '../models/club.dart';
 import '../models/schedule_block.dart';
 import '../services/data_repository.dart';
+import '../services/analytics.dart';
 import '../services/geocoding_service.dart';
 import '../services/i18n.dart';
 import '../services/sanitize.dart';
@@ -208,6 +209,7 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
         await _repo.createClub(fields);
       }
       if (!mounted) return;
+      Track.event('club_register', {'mode': _isEdit ? 'edit' : 'create'});
       _snack(_isEdit ? t('f_updated') : t('cf_created'));
       Navigator.pop(context, true);
     } catch (e) {
