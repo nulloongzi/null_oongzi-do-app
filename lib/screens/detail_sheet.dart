@@ -9,6 +9,7 @@ import '../services/data_repository.dart';
 import '../services/share_service.dart';
 import '../services/story_share.dart';
 import '../theme.dart';
+import '../widgets/insta_embed.dart';
 import '../widgets/share_menu.dart';
 import '../widgets/story_card.dart';
 import 'club_form_screen.dart';
@@ -262,6 +263,8 @@ void showSpotDetail(
           _infoRow('🗓', (s.schedule ?? s.scheduleText)!),
         if (where.isNotEmpty) _infoRow('📍', where),
         if (s.feeInfo != null && s.feeInfo!.isNotEmpty) _infoRow('💰', s.feeInfo!),
+        if (s.instaReel != null && s.instaReel!.isNotEmpty)
+          InstaEmbed(url: s.instaReel!),
         if (s.contactLink != null && s.contactLink!.isNotEmpty)
           _primaryBtn('💬 단톡 들어가기', () => _open(s.contactLink)),
         _primaryBtn(
@@ -335,6 +338,8 @@ void showClubDetail(
         if (c.schedule != null && c.schedule!.isNotEmpty) _infoRow('🗓', c.schedule!),
         if (c.address != null && c.address!.isNotEmpty) _infoRow('📍', c.address!),
         if (c.price != null && c.price!.isNotEmpty) _infoRow('💰', c.price!),
+        if (c.instaReel != null && c.instaReel!.isNotEmpty)
+          InstaEmbed(url: c.instaReel!),
         const SizedBox(height: 16),
         Wrap(spacing: 8, runSpacing: 8, children: [
           if (c.insta != null && c.insta!.isNotEmpty)
