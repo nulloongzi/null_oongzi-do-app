@@ -30,8 +30,19 @@ class _FilterSheetState extends State<_FilterSheet> {
   late final TextEditingController _kw =
       TextEditingController(text: widget.initial.keyword);
 
-  static List<ChipOption> _opts(List<String> v) =>
-      v.map((e) => (label: e, value: e)).toList();
+  // 값(KO)은 필터 매칭용으로 유지, 라벨만 표시 언어로 변환.
+  static List<ChipOption> _opts(List<String> v, String Function(String) labelOf) =>
+      v.map((e) => (label: labelOf(e), value: e)).toList();
+
+  // 대상: 영어모드면 6인제를 맨 앞 + '🏐 6s' 강조(외국인 축), 나머지는 i18nTarget.
+  List<ChipOption> _targetOpts() {
+    const base = ClubFilter.targetOptions;
+    if (isKo) return base.map((e) => (label: e, value: e)).toList();
+    final ordered = ['6인제', ...base.where((e) => e != '6인제')];
+    return ordered
+        .map((e) => (label: e == '6인제' ? '🏐 6s' : i18nTarget(e), value: e))
+        .toList();
+  }
 
   @override
   void dispose() {
@@ -83,9 +94,11 @@ class _FilterSheetState extends State<_FilterSheet> {
                 prefixIcon: const Icon(Icons.search),
               ),
             ),
-            _section(t('filter_region'), ClubFilter.regionOptions, _regions),
-            _section(t('filter_day'), ClubFilter.dayOptions, _days),
-            _section(t('filter_target'), ClubFilter.targetOptions, _targets),
+            _section(t('filter_region'),
+                _opts(ClubFilter.regionOptions, i18nRegion), _regions),
+            _section(t('filter_day'), _opts(ClubFilter.dayOptions, i18nDay), _days),
+            _section(t('filter_target'), _targetOpts(), _targets),
+            if (!isKo) _enHint(),
             const SizedBox(height: 18),
             Row(children: [
               OutlinedButton(onPressed: _reset, child: Text(t('filter_reset'))),
@@ -101,7 +114,21 @@ class _FilterSheetState extends State<_FilterSheet> {
     );
   }
 
-  Widget _section(String label, List<String> options, Set<String> selected) {
+  Widget _enHint() => Container(
+        margin: const EdgeInsets.only(top: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: const BoxDecoration(
+          color: Color(0x1AFAC710),
+          border:
+              Border(left: BorderSide(color: NurungjiColors.yellow, width: 4)),
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+        ),
+        child: Text(t('fs_en_hint'),
+            style: const TextStyle(
+                fontSize: 13, height: 1.35, color: NurungjiColors.dark)),
+      );
+
+  Widget _section(String label, List<ChipOption> options, Set<String> selected) {
     return Padding(
       padding: const EdgeInsets.only(top: 18),
       child: Column(
@@ -112,7 +139,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                   fontWeight: FontWeight.w700, color: NurungjiColors.dark)),
           const SizedBox(height: 8),
           MultiChoiceChips(
-            options: _opts(options),
+            options: options,
             selected: selected,
             onChanged: (s) => setState(() {
               selected

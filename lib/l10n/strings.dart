@@ -178,6 +178,11 @@ const Map<String, Map<String, String>> kStrings = {
   'cf_target_max': {'ko': '대상은 80자 이하로', 'en': 'Target must be ≤ 80 chars'},
   'cf_addr_max': {'ko': '주소는 200자 이하로', 'en': 'Address must be ≤ 200 chars'},
   'cf_price_max': {'ko': '회비는 100자 이하로', 'en': 'Dues must be ≤ 100 chars'},
+  // 영어모드 필터 힌트 (외국인 6s 안내, KO는 미표시)
+  'fs_en_hint': {
+    'ko': 'New to Korea? Most international players look for 6s — tap it above.',
+    'en': 'New to Korea? Most international players look for 6s — tap it above.'
+  },
   // 요일 (표시 변환 i18nDay)
   'd_mon': {'ko': '월', 'en': 'Mon'},
   'd_tue': {'ko': '화', 'en': 'Tue'},

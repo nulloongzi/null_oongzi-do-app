@@ -89,6 +89,14 @@ String i18nDay(String kchar) {
   return k != null ? t(k) : kchar;
 }
 
+const Map<String, String> _regionEn = {
+  '서울': 'Seoul', '경기': 'Gyeonggi', '인천': 'Incheon', '강원': 'Gangwon',
+  '충청': 'Chungcheong', '전라': 'Jeolla', '경상': 'Gyeongsang', '제주': 'Jeju',
+};
+
+/// 지역명 표시 변환(서울→Seoul). 값은 KO 유지, 표시만.
+String i18nRegion(String ko) => isKo ? ko : (_regionEn[ko] ?? ko);
+
 /// 스케줄 문자열의 요일만 표시 변환("토 19:00"→"Sat 19:00"). KO면 원문.
 String i18nSchedule(String? s) {
   if (s == null || s.isEmpty || isKo) return s ?? '';
