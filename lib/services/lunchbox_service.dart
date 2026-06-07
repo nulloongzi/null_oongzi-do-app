@@ -2,6 +2,7 @@
 // 네이티브는 로그인 필수(AuthGate) → Firestore 비공개 서브컬렉션 users/{uid}/private/profile 사용.
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'analytics.dart';
+import 'i18n.dart';
 
 class LunchboxData {
   final List<String?> bookmarks; // 길이 5
@@ -43,9 +44,9 @@ class LunchboxService {
   /// 찜하기. null=성공, 그 외=사용자 메시지.
   Future<String?> addBookmark(String uid, String teamId) async {
     final data = await load(uid);
-    if (data.bookmarks.contains(teamId)) return '이미 도시락에 담겨 있어요';
+    if (data.bookmarks.contains(teamId)) return t('lb_already');
     final idx = data.bookmarks.indexWhere((e) => e == null);
-    if (idx == -1) return '도시락이 가득 찼어요 (5칸)';
+    if (idx == -1) return t('lb_full');
     data.bookmarks[idx] = teamId;
     await save(uid, data);
     Track.event('add_bookmark');
@@ -57,7 +58,7 @@ class LunchboxService {
       String uid, String name, String schedule) async {
     final data = await load(uid);
     final idx = data.bookmarks.indexWhere((e) => e == null);
-    if (idx == -1) return '도시락이 가득 찼어요 (5칸)';
+    if (idx == -1) return t('lb_full');
     final id = 'custom_${DateTime.now().millisecondsSinceEpoch}';
     data.customTeams[id] = {'id': id, 'name': name, 'schedule': schedule};
     data.bookmarks[idx] = id;

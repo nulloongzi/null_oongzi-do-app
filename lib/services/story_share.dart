@@ -61,7 +61,7 @@ Future<void> shareStoryCard(BuildContext context, StoryCardData data) async {
     png = await renderStoryCardPng(card);
   } catch (_) {}
   if (png == null) {
-    messenger.showSnackBar(const SnackBar(content: Text('카드 생성에 실패했어요')));
+    messenger.showSnackBar(SnackBar(content: Text(t('err_card'))));
     return;
   }
 
@@ -89,7 +89,7 @@ Future<void> shareStoryCard(BuildContext context, StoryCardData data) async {
     try {
       await Share.shareXFiles([XFile(file.path)], text: data.url);
     } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text('공유 실패: $e')));
+      messenger.showSnackBar(SnackBar(content: Text('${t('err_share')}: $e')));
     }
   }
 }

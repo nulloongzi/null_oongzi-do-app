@@ -171,7 +171,7 @@ Future<void> _confirmDelete(
   } catch (e) {
     if (outerCtx.mounted) {
       ScaffoldMessenger.of(outerCtx)
-          .showSnackBar(SnackBar(content: Text('삭제 실패: $e')));
+          .showSnackBar(SnackBar(content: Text('${t('err_delete')}: $e')));
     }
     return;
   }
@@ -193,7 +193,7 @@ Widget _urgentToggle(
     } catch (e) {
       if (outerCtx.mounted) {
         ScaffoldMessenger.of(outerCtx)
-            .showSnackBar(SnackBar(content: Text('실패: $e')));
+            .showSnackBar(SnackBar(content: Text('${t('err_generic')}: $e')));
       }
       return;
     }

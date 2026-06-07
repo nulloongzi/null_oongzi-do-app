@@ -24,7 +24,13 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
   bool _showDiet = false;
   int? _selectedSlot; // 순서 바꾸기: 선택된 칸
 
-  static const _placeholders = ['밥', '국', '반찬 1', '반찬 2', '반찬 3'];
+  List<String> get _placeholders => [
+        t('lb_slot_rice'),
+        t('lb_slot_soup'),
+        t('lb_slot_side1'),
+        t('lb_slot_side2'),
+        t('lb_slot_side3'),
+      ];
   static const _slotBg = [
     Color(0xFFFFFDE7), Color(0xFFFFF3E0), Color(0xFFF1F8E9),
     Color(0xFFFBE9E7), Color(0xFFF3E5F5),
@@ -70,7 +76,7 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
     try {
       await _svc.save(uid, d);
     } catch (e) {
-      _snack('저장 실패: $e');
+      _snack('${t('lb_save_fail')}: $e');
     }
   }
 
@@ -108,9 +114,9 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
   Future<void> _addCustom() async {
     final uid = _repo.currentUid;
     if (uid == null) return;
-    final name = await _prompt(t('lb_team_name'), '예: 우리 동호회');
+    final name = await _prompt(t('lb_team_name'), t('lb_add_name_hint'));
     if (name == null || name.trim().isEmpty) return;
-    final sched = await _prompt(t('lb_sched_hint'), '토 14:00~17:00');
+    final sched = await _prompt(t('lb_sched_hint'), t('lb_add_sched_hint'));
     if (sched == null || sched.trim().isEmpty) return;
     final err = await _svc.addCustomTeam(uid, name.trim(), sched.trim());
     if (err != null) {
@@ -147,7 +153,7 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
     if (d == null) return null;
     if (d.customTeams.containsKey(id)) {
       final m = d.customTeams[id];
-      final name = (m is Map ? m['name'] : null) as String? ?? '커스텀 팀';
+      final name = (m is Map ? m['name'] : null) as String? ?? t('lb_custom_team');
       final sched = (m is Map ? m['schedule'] : null) as String?;
       return (name: name, isCustom: true, events: eventsFromText(sched));
     }
@@ -263,7 +269,7 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
             IconButton(
               onPressed: () => _removeSlot(i),
               icon: const Icon(Icons.close, size: 18, color: NurungjiColors.brown),
-              tooltip: '빼기',
+              tooltip: t('lb_remove'),
             ),
         ],
       ),

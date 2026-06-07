@@ -2,6 +2,7 @@
 // 반환: (lat, lng) record 또는 null(취소). registration.js startMapPicker 대체.
 import 'package:flutter/material.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
+import '../services/i18n.dart';
 import '../theme.dart';
 
 class MapPickerScreen extends StatefulWidget {
@@ -18,7 +19,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('위치 선택')),
+      appBar: AppBar(title: Text(t('map_pick_title'))),
       body: Stack(
         alignment: Alignment.center,
         children: [
@@ -49,7 +50,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                       context, (pos.target.latitude, pos.target.longitude));
                 }
               },
-              child: const Text('이 위치로 설정'),
+              child: Text(t('map_pick_set')),
             ),
           ),
         ],

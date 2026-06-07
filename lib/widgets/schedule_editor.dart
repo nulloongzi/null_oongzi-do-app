@@ -2,6 +2,7 @@
 // blocks를 직접 변형 후 onChanged()로 부모 setState 트리거.
 import 'package:flutter/material.dart';
 import '../models/schedule_block.dart';
+import '../services/i18n.dart';
 import '../theme.dart';
 import 'chip_select.dart';
 
@@ -28,7 +29,7 @@ class ScheduleEditor extends StatelessWidget {
             onChanged();
           },
           icon: const Icon(Icons.add),
-          label: const Text('시간대 추가'),
+          label: Text(t('sched_add')),
         ),
       ],
     );
@@ -77,7 +78,7 @@ class ScheduleEditor extends StatelessWidget {
                 },
                 icon: const Icon(Icons.delete_outline,
                     color: NurungjiColors.brown),
-                tooltip: '삭제',
+                tooltip: t('delete'),
               ),
             ],
           ),

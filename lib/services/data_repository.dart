@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/club.dart';
 import '../models/pickup_spot.dart';
+import 'i18n.dart';
 
 class DataRepository {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -77,7 +78,7 @@ class DataRepository {
   /// data엔 name/target/address/coordinates/schedule/schedule_raw/price/contact/insta_reel.
   Future<String> createClub(Map<String, dynamic> data) async {
     final uid = currentUid;
-    if (uid == null) throw Exception('로그인이 필요해요');
+    if (uid == null) throw Exception(t('login_required'));
     final id = _generateId();
     final now = FieldValue.serverTimestamp();
     final payload = <String, dynamic>{

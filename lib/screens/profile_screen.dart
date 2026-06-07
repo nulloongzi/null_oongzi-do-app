@@ -93,7 +93,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
       _snack(t('nickname_done'));
     } catch (e) {
-      _snack('오류: $e');
+      _snack('${t('err_generic')}: $e');
     }
   }
 
