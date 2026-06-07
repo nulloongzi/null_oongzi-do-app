@@ -15,6 +15,7 @@ import 'detail_sheet.dart';
 import 'pickup_form_screen.dart';
 import 'club_form_screen.dart';
 import 'profile_screen.dart';
+import '../widgets/bounce_tap.dart';
 import '../widgets/filter_sheet.dart';
 import '../widgets/pickup_list_panel.dart';
 
@@ -397,7 +398,7 @@ class _MapScreenState extends State<MapScreen> {
 
   Widget _tabBtn(String label, String key) {
     final on = _tab == key;
-    return GestureDetector(
+    return BounceTap(
       onTap: () => _onTab(key),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -468,7 +469,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Widget _seg(String label, bool on, VoidCallback onTap) {
-    return GestureDetector(
+    return BounceTap(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),

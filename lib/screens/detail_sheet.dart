@@ -13,6 +13,7 @@ import '../services/story_share.dart';
 import '../services/schedule_parse.dart';
 import '../services/verification_service.dart';
 import '../theme.dart';
+import '../widgets/bounce_tap.dart';
 import '../widgets/insta_embed.dart';
 import '../widgets/schedule_timetable.dart';
 import '../widgets/share_menu.dart';
@@ -92,13 +93,17 @@ Widget _primaryBtn(String label, VoidCallback onTap) => Padding(
       padding: const EdgeInsets.only(top: 16),
       child: SizedBox(
         width: double.infinity,
-        child: ElevatedButton(onPressed: onTap, child: Text(label)),
+        child: BounceTap(
+          child: ElevatedButton(onPressed: onTap, child: Text(label)),
+        ),
       ),
     );
 
-Widget _outlineBtn(String label, VoidCallback onTap) => OutlinedButton(
-      onPressed: onTap,
-      child: Text(label),
+Widget _outlineBtn(String label, VoidCallback onTap) => BounceTap(
+      child: OutlinedButton(
+        onPressed: onTap,
+        child: Text(label),
+      ),
     );
 
 Widget _sheet(List<Widget> children) => Padding(
