@@ -15,6 +15,7 @@ import '../theme.dart';
 import 'detail_sheet.dart';
 import 'pickup_form_screen.dart';
 import 'club_form_screen.dart';
+import 'lunchbox_screen.dart';
 import 'profile_screen.dart';
 import '../widgets/bounce_tap.dart';
 import '../widgets/filter_sheet.dart';
@@ -39,6 +40,7 @@ class _MapScreenState extends State<MapScreen> {
   ClubFilter _filter = const ClubFilter(); // 동호회 필터/검색
   bool _pkEnglishOnly = false; // 픽업: English OK만
   bool _pickupListView = false; // 픽업: 지도/목록 토글
+  final _search = TextEditingController(); // 상단 검색바 (동호회=필터키워드 / 픽업=목록검색)
   final _deepLinks = DeepLinkService();
   NOverlayImage? _clusterIcon; // 클러스터 노란 원 (런타임 생성)
 
@@ -56,9 +58,50 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   void dispose() {
+    _search.dispose();
     _deepLinks.dispose();
     super.dispose();
   }
+
+  // 상단 검색: 동호회=필터 키워드 + 결과맞춤 / 픽업=목록·마커 재필터.
+  void _onSearch(String v) {
+    if (_tab == 'clubs') {
+      setState(() => _filter = _filter.copyWith(keyword: v));
+      _refreshMarkers();
+      _fitToFilter();
+    } else {
+      setState(() {});
+      _refreshMarkers();
+    }
+  }
+
+  // 픽업: English-OK + 검색어(제목/장소/주소) 필터.
+  List<PickupSpot> _visibleSpots() {
+    final kw = _search.text.trim().toLowerCase();
+    return _spots.where((s) {
+      if (_pkEnglishOnly && !s.englishOk) return false;
+      if (kw.isEmpty) return true;
+      final hay =
+          '${s.title} ${s.venueName ?? ''} ${s.address ?? ''}'.toLowerCase();
+      return hay.contains(kw);
+    }).toList();
+  }
+
+  // 📍 내 위치로 이동(추적 follow). 권한 거부 시 무시.
+  Future<void> _moveToMe() async {
+    try {
+      final st = await Permission.location.request();
+      if (st.isGranted) {
+        _controller?.setLocationTrackingMode(NLocationTrackingMode.follow);
+      }
+    } catch (_) {}
+  }
+
+  void _openLunchbox() => Navigator.push(
+      context, MaterialPageRoute(builder: (_) => const LunchboxScreen()));
+
+  void _openProfile() => Navigator.push(
+      context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
 
   // 딥링크(?club=/?spot=) → 탭 전환 + 상세 오픈. 메모리에 없으면 단건 조회.
   Future<void> _handleDeepLink(DeepLink d) async {
@@ -198,7 +241,7 @@ class _MapScreenState extends State<MapScreen> {
         }
       }
     } else {
-      final spots = _pkEnglishOnly ? _spots.where((s) => s.englishOk) : _spots;
+      final spots = _visibleSpots();
       for (final spot in spots) {
         if (spot.lat == null || spot.lng == null) continue;
         final m = NClusterableMarker(
@@ -245,7 +288,10 @@ class _MapScreenState extends State<MapScreen> {
   Future<void> _openFilter() async {
     final result = await showFilterSheet(context, _filter);
     if (result != null) {
-      setState(() => _filter = result);
+      setState(() {
+        _filter = result;
+        _search.text = result.keyword; // 시트의 키워드 ↔ 상단 검색바 동기화
+      });
       await _refreshMarkers();
       _fitToFilter();
     }
@@ -271,13 +317,6 @@ class _MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openRegister,
-        backgroundColor: NurungjiColors.yellow,
-        foregroundColor: NurungjiColors.dark,
-        icon: const Icon(Icons.add),
-        label: Text(t('add'), style: const TextStyle(fontWeight: FontWeight.w800)),
-      ),
       body: SafeArea(
         child: Stack(
           children: [
@@ -287,7 +326,7 @@ class _MapScreenState extends State<MapScreen> {
                   target: NLatLng(37.5559, 127.0838),
                   zoom: 10.5,
                 ),
-                locationButtonEnable: true,
+                locationButtonEnable: false, // 커스텀 📍 FAB 사용
               ),
               clusterOptions: NaverMapClusteringOptions(
                 clusterMarkerBuilder: (info, clusterMarker) {
@@ -308,15 +347,20 @@ class _MapScreenState extends State<MapScreen> {
                 _refreshMarkers();
               },
             ),
-            Positioned(top: 10, left: 10, right: 10, child: _topBar()),
+            // 검색바 (design §2.1)
+            Positioned(top: 12, left: 15, right: 15, child: _searchBar()),
+            // 탭 pill (design §2.2) — 검색바 아래 가운데
+            Positioned(
+                top: 70, left: 0, right: 0, child: Center(child: _tabPill())),
+            // 급구 티커(동호회) / 지도·목록 토글(픽업) — design §2.3
             if (_tab == 'clubs')
-              Positioned(top: 66, left: 10, right: 10, child: _urgentTicker()),
+              Positioned(top: 122, left: 15, right: 15, child: _urgentTicker()),
             if (_tab == 'pickup')
               Positioned(
-                  top: 66, left: 0, right: 0, child: Center(child: _pickupToggle())),
+                  top: 122, left: 0, right: 0, child: Center(child: _pickupToggle())),
             if (_tab == 'pickup' && _pickupListView)
               Positioned(
-                top: 110,
+                top: 166,
                 left: 8,
                 right: 8,
                 bottom: 8,
@@ -324,74 +368,134 @@ class _MapScreenState extends State<MapScreen> {
                   color: const Color(0xF5FFFFFF), // 흰 0.96
                   blur: 10,
                   child: PickupListPanel(
-                    spots: _pkEnglishOnly
-                        ? _spots.where((s) => s.englishOk).toList()
-                        : _spots,
+                    spots: _visibleSpots(),
                     onTap: (s) => showSpotDetail(context, s,
                         currentUid: _repo.currentUid, onChanged: _load),
                   ),
                 ),
               ),
+            // 플로팅 FAB (design §2.4): 좌(도시락/프로필) · 우(등록/내위치)
+            // 픽업 목록뷰에선 패널과 겹치므로 숨김.
+            if (!(_tab == 'pickup' && _pickupListView)) ...[
+              Positioned(
+                  left: 15, bottom: 95, child: _fab('🍱', _openLunchbox)),
+              Positioned(left: 15, bottom: 30, child: _fab('🍚', _openProfile)),
+              Positioned(
+                  right: 15,
+                  bottom: 95,
+                  child: _fab('📝', _openRegister,
+                      bg: const Color(0xF2FAC710))), // 등록 = 브랜드 옐로
+              Positioned(right: 15, bottom: 30, child: _fab('📍', _moveToMe)),
+            ],
             if (_error != null)
-              Positioned(bottom: 20, left: 20, right: 20, child: _errorBox()),
+              Positioned(bottom: 20, left: 90, right: 90, child: _errorBox()),
           ],
         ),
       ),
     );
   }
 
-  Widget _topBar() {
-    return GlassSurface(
-      padding: const EdgeInsets.all(8),
-      child: Row(
-          children: [
-            _tabBtn('🏐 ${t('clubs')} ${_clubs.length}', 'clubs'),
-            const SizedBox(width: 6),
-            _tabBtn('📍 ${t('pickup')} ${_spots.length}', 'pickup'),
-            const Spacer(),
-            TextButton(
-              onPressed: toggleLang,
-              style: TextButton.styleFrom(
-                  minimumSize: const Size(36, 36),
-                  padding: const EdgeInsets.symmetric(horizontal: 6)),
-              child: Text(isKo ? 'EN' : '한',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      color: NurungjiColors.dark)),
-            ),
-            if (_loading)
-              const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2)),
-            if (_tab == 'clubs')
-              IconButton(
-                onPressed: _openFilter,
-                icon: Icon(Icons.tune,
-                    color: _filter.isEmpty ? null : NurungjiColors.teal),
-                tooltip: t('search_filter'),
-              )
-            else
-              IconButton(
-                onPressed: () {
-                  setState(() => _pkEnglishOnly = !_pkEnglishOnly);
-                  _refreshMarkers();
-                },
-                icon: Icon(Icons.language,
-                    color: _pkEnglishOnly ? NurungjiColors.teal : null),
-                tooltip: t('english_only'),
-              ),
-            IconButton(
-                onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const ProfileScreen())),
-                icon: const Icon(Icons.account_circle),
-                tooltip: t('my_profile')),
-          ],
+  // 플로팅 글래스 FAB (이모지) — 누르면 spring 축소.
+  Widget _fab(String emoji, VoidCallback onTap, {Color? bg, double size = 52}) {
+    return BounceTap(
+      onTap: onTap,
+      child: GlassSurface(
+        radius: BorderRadius.circular(size / 2),
+        color: bg ?? const Color(0xD9FFFFFF),
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: Center(
+              child: Text(emoji, style: TextStyle(fontSize: size * 0.46))),
         ),
+      ),
     );
   }
+
+  // 상단 검색바: 🔎 + 입력 + EN토글 + (동호회)필터 / (픽업)English-OK.
+  Widget _searchBar() {
+    final isClubs = _tab == 'clubs';
+    return GlassSurface(
+      radius: BorderRadius.circular(20),
+      padding: const EdgeInsets.only(left: 12, right: 4),
+      child: Row(children: [
+        const Icon(Icons.search, size: 20, color: NurungjiColors.brown),
+        const SizedBox(width: 6),
+        Expanded(
+          child: TextField(
+            controller: _search,
+            onChanged: _onSearch,
+            textInputAction: TextInputAction.search,
+            decoration: InputDecoration(
+              isDense: true,
+              border: InputBorder.none,
+              hintText: t('search_ph'),
+            ),
+            style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: NurungjiColors.dark),
+          ),
+        ),
+        TextButton(
+          onPressed: toggleLang,
+          style: TextButton.styleFrom(
+              minimumSize: const Size(34, 40),
+              padding: const EdgeInsets.symmetric(horizontal: 4)),
+          child: Text(isKo ? 'EN' : '한',
+              style: const TextStyle(
+                  fontWeight: FontWeight.w800, color: NurungjiColors.brown)),
+        ),
+        if (_loading)
+          const Padding(
+            padding: EdgeInsets.only(right: 6),
+            child: SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2)),
+          )
+        else if (isClubs)
+          Stack(alignment: Alignment.center, children: [
+            IconButton(
+              onPressed: _openFilter,
+              icon: Icon(Icons.tune,
+                  color: _filter.isEmpty ? NurungjiColors.brown : NurungjiColors.urgent),
+              tooltip: t('search_filter'),
+            ),
+            if (!_filter.isEmpty)
+              const Positioned(
+                top: 8,
+                right: 8,
+                child: CircleAvatar(radius: 4, backgroundColor: NurungjiColors.urgent),
+              ),
+          ])
+        else
+          IconButton(
+            onPressed: () {
+              setState(() => _pkEnglishOnly = !_pkEnglishOnly);
+              _refreshMarkers();
+            },
+            icon: Icon(Icons.language,
+                color: _pkEnglishOnly ? NurungjiColors.teal : NurungjiColors.brown),
+            tooltip: t('english_only'),
+          ),
+      ]),
+    );
+  }
+
+  // 탭 pill (동호회 | 픽업) — 글래스.
+  Widget _tabPill() {
+    return GlassSurface(
+      radius: BorderRadius.circular(16),
+      padding: const EdgeInsets.all(4),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        _tabBtn('🏐 ${t('clubs')} ${_clubs.length}', 'clubs'),
+        const SizedBox(width: 4),
+        _tabBtn('📍 ${t('pickup')} ${_spots.length}', 'pickup'),
+      ]),
+    );
+  }
+
 
   Widget _tabBtn(String label, String key) {
     final on = _tab == key;

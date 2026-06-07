@@ -12,6 +12,7 @@ class NurungjiColors {
   static const chipBg = Color(0xFFF0ECE2);
   static const chipFg = Color(0xFF6D6258);
   static const teal = Color(0xFF13A89E); // 픽업 핀 색
+  static const urgent = Color(0xFFFF7043); // --urgent-color (급구/주의)
 }
 
 class AppTheme {

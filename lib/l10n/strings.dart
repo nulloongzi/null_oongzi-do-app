@@ -22,6 +22,7 @@ const Map<String, Map<String, String>> kStrings = {
   'pickup': {'ko': '픽업', 'en': 'Pickup'},
   'add': {'ko': '등록', 'en': 'Add'},
   'my_profile': {'ko': '내 프로필', 'en': 'My profile'},
+  'search_ph': {'ko': '팀명, 지역으로 검색...', 'en': 'Search by team or area...'},
   'search_filter': {'ko': '검색·필터', 'en': 'Search & filter'},
   'english_only': {'ko': 'English OK만', 'en': 'English OK only'},
   'data_load_err': {'ko': '데이터 로드 오류', 'en': 'Data load error'},
