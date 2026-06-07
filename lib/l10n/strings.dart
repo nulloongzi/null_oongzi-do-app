@@ -1,0 +1,102 @@
+// strings.dart — 한/영 문자열 사전. 웹 i18n.js 딕셔너리 포팅(주요 화면).
+// 등록 폼은 한국어 유지(개설자 대상). 소비 동선(둘러보기·상세·공유·프로필·도시락)은 한/영.
+const Map<String, Map<String, String>> kStrings = {
+  // 공통
+  'brand': {'ko': '누룽지도', 'en': 'Nurungjido'},
+  'cancel': {'ko': '취소', 'en': 'Cancel'},
+  'confirm': {'ko': '확인', 'en': 'OK'},
+  'delete': {'ko': '삭제', 'en': 'Delete'},
+  'edit': {'ko': '수정', 'en': 'Edit'},
+  'save': {'ko': '저장', 'en': 'Save'},
+
+  // 로그인
+  'login_subtitle': {'ko': '우리 동네 배구, 여기서', 'en': 'Your neighborhood volleyball'},
+  'login_google': {'ko': '구글로 로그인', 'en': 'Sign in with Google'},
+  'email': {'ko': '이메일', 'en': 'Email'},
+  'password': {'ko': '비밀번호 (6자 이상)', 'en': 'Password (6+ chars)'},
+  'sign_in': {'ko': '로그인', 'en': 'Sign in'},
+  'sign_up': {'ko': '회원가입', 'en': 'Sign up'},
+
+  // 지도 / 상단바
+  'clubs': {'ko': '동호회', 'en': 'Clubs'},
+  'pickup': {'ko': '픽업', 'en': 'Pickup'},
+  'add': {'ko': '등록', 'en': 'Add'},
+  'my_profile': {'ko': '내 프로필', 'en': 'My profile'},
+  'search_filter': {'ko': '검색·필터', 'en': 'Search & filter'},
+  'english_only': {'ko': 'English OK만', 'en': 'English OK only'},
+  'data_load_err': {'ko': '데이터 로드 오류', 'en': 'Data load error'},
+
+  // 칩 라벨
+  'sport_6s': {'ko': '6인제', 'en': '6s'},
+  'sport_9s': {'ko': '9인제', 'en': '9s'},
+  'sport_mixed': {'ko': '혼성·자유', 'en': 'Mixed'},
+  'lv_beginner': {'ko': '입문', 'en': 'Beginner'},
+  'lv_intermediate': {'ko': '중급', 'en': 'Intermediate'},
+  'lv_advanced': {'ko': '고급', 'en': 'Advanced'},
+  'lv_any': {'ko': '레벨무관', 'en': 'Any level'},
+  'beginner_ok': {'ko': '🌱 초보환영', 'en': '🌱 Beginners'},
+  'english_ok': {'ko': '🌐 English OK', 'en': '🌐 English OK'},
+
+  // 상세
+  'this_week': {'ko': '이번주', 'en': 'This week'},
+  'urgent': {'ko': '🔥 급구', 'en': '🔥 Urgent'},
+  'chat_join': {'ko': '💬 단톡 들어가기', 'en': '💬 Join chat'},
+  'share_btn': {'ko': '📤 공유하기', 'en': '📤 Share'},
+  'bookmark_btn': {'ko': '🍱 도시락에 담기', 'en': '🍱 Add to lunchbox'},
+  'insta_btn': {'ko': '📷 인스타', 'en': '📷 Instagram'},
+  'home_btn': {'ko': '🔗 홈페이지', 'en': '🔗 Website'},
+  'directions_btn': {'ko': '🚀 길찾기', 'en': '🚀 Directions'},
+  'verify_btn': {'ko': '인증 신청 (사진 제출)', 'en': 'Apply for verification'},
+  'verify_done': {'ko': '인증 신청 완료! 검토 후 반영돼요', 'en': 'Verification requested! Pending review'},
+  'urgent_on': {'ko': '🔥 급구 올리기', 'en': '🔥 Post urgent'},
+  'urgent_off': {'ko': '급구 내리기', 'en': 'Remove urgent'},
+  'urgent_msg_hint': {'ko': '예: 이번주 토 세터 1명 급구!', 'en': 'e.g. Need 1 setter this Sat!'},
+  'modify_delete_title': {'ko': '삭제할까요?', 'en': 'Delete?'},
+  'modify_delete_body': {'ko': '이 작업은 되돌릴 수 없어요.', 'en': "This can't be undone."},
+
+  // 공유 메뉴
+  'share_title': {'ko': '공유하기', 'en': 'Share'},
+  'share_story': {'ko': '📸 인스타 스토리', 'en': '📸 Instagram Story'},
+  'share_story_hint': {'ko': '링크 자동 복사 — 보는 사람은 탭 1번에 입장', 'en': 'Link auto-copied — 1 tap to open'},
+  'share_copy': {'ko': '🔗 링크 복사', 'en': '🔗 Copy link'},
+  'share_more': {'ko': '📤 다른 앱으로 공유', 'en': '📤 Share to other apps'},
+  'link_copied': {'ko': '링크가 복사됐어요', 'en': 'Link copied'},
+  'story_link_hint': {
+    'ko': '링크 복사됨 — 스토리에 "링크 스티커"로 붙여넣으면 탭 1번에 입장돼요',
+    'en': 'Link copied — paste as a "link sticker" in your Story'
+  },
+
+  // 프로필
+  'profile_title': {'ko': '내 프로필', 'en': 'My profile'},
+  'my_lunchbox': {'ko': '내 도시락 (찜한 팀·식단표)', 'en': 'My lunchbox (saved teams & schedule)'},
+  'change_nickname': {'ko': '닉네임 변경', 'en': 'Change nickname'},
+  'logout': {'ko': '로그아웃', 'en': 'Log out'},
+  'joined': {'ko': '가입', 'en': 'Joined'},
+  'nickname_hint': {'ko': '새 닉네임 (하이픈 - 금지)', 'en': 'New nickname (no hyphen)'},
+  'nickname_hyphen': {'ko': '하이픈(-)은 밥아저씨가 지어준 이름에만 쓸 수 있어요', 'en': 'Hyphens are only for auto-generated names'},
+  'nickname_dup': {'ko': '이미 누군가 쓰고 있는 이름이에요', 'en': 'That name is already taken'},
+  'nickname_done': {'ko': '닉네임 변경 완료!', 'en': 'Nickname updated!'},
+
+  // 도시락
+  'lunchbox_title': {'ko': '내 도시락', 'en': 'My lunchbox'},
+  'lb_diet': {'ko': '🍱 식단표', 'en': '🍱 Schedule'},
+  'expand': {'ko': '펼치기', 'en': 'Expand'},
+  'collapse': {'ko': '접기', 'en': 'Collapse'},
+  'add_custom': {'ko': '커스텀 팀 추가', 'en': 'Add custom team'},
+  'deleted_team': {'ko': '삭제된 팀', 'en': 'Deleted team'},
+  'lb_full': {'ko': '도시락이 가득 찼어요 (5칸)', 'en': 'Lunchbox is full (5)'},
+  'lb_already': {'ko': '이미 도시락에 담겨 있어요', 'en': 'Already in your lunchbox'},
+  'lb_added': {'ko': '도시락에 담았어요!', 'en': 'Added to lunchbox!'},
+  'lb_no_sched': {'ko': '찜한 팀의 일정이 없어요', 'en': 'No schedule for saved teams'},
+  'lb_team_name': {'ko': '팀 이름', 'en': 'Team name'},
+  'lb_sched_hint': {'ko': '일정 (예: 토 14:00~17:00)', 'en': 'Schedule (e.g. Sat 14:00~17:00)'},
+
+  // 필터
+  'filter_title': {'ko': '검색 · 필터', 'en': 'Search & filter'},
+  'filter_search_hint': {'ko': '팀 이름·지역 검색', 'en': 'Search team or area'},
+  'filter_region': {'ko': '지역', 'en': 'Region'},
+  'filter_day': {'ko': '요일', 'en': 'Day'},
+  'filter_target': {'ko': '대상', 'en': 'For'},
+  'filter_reset': {'ko': '초기화', 'en': 'Reset'},
+  'filter_apply': {'ko': '적용하기', 'en': 'Apply'},
+};

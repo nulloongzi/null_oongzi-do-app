@@ -57,6 +57,7 @@ dependencies:
   app_links: ^6.3.0             # 딥링크 (?club=/?spot=)
   firebase_storage: ^12.3.0     # 인증 사진 업로드
   image_picker: ^1.1.2          # 인증 사진 선택
+  shared_preferences: ^2.3.2    # 언어 설정 저장
 
 dev_dependencies:
   flutter_test:

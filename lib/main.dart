@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'firebase_options.dart';
 import 'theme.dart';
+import 'services/i18n.dart';
 import 'screens/login_screen.dart';
 import 'screens/map_screen.dart';
 
@@ -15,6 +16,7 @@ const String kNaverMapClientId = 't4mzao93mh';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initLang();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await FlutterNaverMap().init(
     clientId: kNaverMapClientId,
@@ -28,11 +30,15 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: '누룽지도',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      home: const AuthGate(),
+    // appLang 변경 시 앱 전체 리빌드 → t()가 새 언어로 재평가됨.
+    return ValueListenableBuilder<String>(
+      valueListenable: appLang,
+      builder: (_, __, ___) => MaterialApp(
+        title: '누룽지도',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light,
+        home: const AuthGate(),
+      ),
     );
   }
 }

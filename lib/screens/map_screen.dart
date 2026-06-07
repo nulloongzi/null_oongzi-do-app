@@ -8,6 +8,7 @@ import '../services/data_repository.dart';
 import '../services/club_filter.dart';
 import '../services/deep_link_service.dart';
 import '../services/profile_service.dart';
+import '../services/i18n.dart';
 import '../theme.dart';
 import 'detail_sheet.dart';
 import 'pickup_form_screen.dart';
@@ -197,7 +198,7 @@ class _MapScreenState extends State<MapScreen> {
         backgroundColor: NurungjiColors.yellow,
         foregroundColor: NurungjiColors.dark,
         icon: const Icon(Icons.add),
-        label: const Text('등록', style: TextStyle(fontWeight: FontWeight.w800)),
+        label: Text(t('add'), style: const TextStyle(fontWeight: FontWeight.w800)),
       ),
       body: SafeArea(
         child: Stack(
@@ -234,10 +235,20 @@ class _MapScreenState extends State<MapScreen> {
         padding: const EdgeInsets.all(8),
         child: Row(
           children: [
-            _tabBtn('🏐 동호회 ${_clubs.length}', 'clubs'),
+            _tabBtn('🏐 ${t('clubs')} ${_clubs.length}', 'clubs'),
             const SizedBox(width: 6),
-            _tabBtn('📍 픽업 ${_spots.length}', 'pickup'),
+            _tabBtn('📍 ${t('pickup')} ${_spots.length}', 'pickup'),
             const Spacer(),
+            TextButton(
+              onPressed: toggleLang,
+              style: TextButton.styleFrom(
+                  minimumSize: const Size(36, 36),
+                  padding: const EdgeInsets.symmetric(horizontal: 6)),
+              child: Text(isKo ? 'EN' : '한',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: NurungjiColors.dark)),
+            ),
             if (_loading)
               const SizedBox(
                   width: 18,
@@ -248,7 +259,7 @@ class _MapScreenState extends State<MapScreen> {
                 onPressed: _openFilter,
                 icon: Icon(Icons.tune,
                     color: _filter.isEmpty ? null : NurungjiColors.teal),
-                tooltip: '검색·필터',
+                tooltip: t('search_filter'),
               )
             else
               IconButton(
@@ -258,7 +269,7 @@ class _MapScreenState extends State<MapScreen> {
                 },
                 icon: Icon(Icons.language,
                     color: _pkEnglishOnly ? NurungjiColors.teal : null),
-                tooltip: 'English OK만',
+                tooltip: t('english_only'),
               ),
             IconButton(
                 onPressed: () => Navigator.push(
@@ -266,7 +277,7 @@ class _MapScreenState extends State<MapScreen> {
                     MaterialPageRoute(
                         builder: (_) => const ProfileScreen())),
                 icon: const Icon(Icons.account_circle),
-                tooltip: '내 프로필'),
+                tooltip: t('my_profile')),
           ],
         ),
       ),
@@ -331,7 +342,7 @@ class _MapScreenState extends State<MapScreen> {
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(12),
-          child: Text('데이터 로드 오류: $_error',
+          child: Text('${t('data_load_err')}: $_error',
               style: TextStyle(color: Colors.red.shade900, fontSize: 12)),
         ),
       );

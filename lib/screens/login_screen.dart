@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../services/i18n.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -91,14 +92,14 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 const Text('🍚', style: TextStyle(fontSize: 64)),
                 const SizedBox(height: 8),
-                const Text('누룽지도',
-                    style: TextStyle(
+                Text(t('brand'),
+                    style: const TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.w900,
                         color: Color(0xFF4E342E))),
                 const SizedBox(height: 6),
-                const Text('우리 동네 배구, 여기서',
-                    style: TextStyle(color: Color(0xFF8D6E63))),
+                Text(t('login_subtitle'),
+                    style: const TextStyle(color: Color(0xFF8D6E63))),
                 const SizedBox(height: 28),
                 if (_error != null)
                   Padding(
@@ -112,7 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: ElevatedButton.icon(
                     onPressed: _busy ? null : _googleSignIn,
                     icon: const Icon(Icons.account_circle),
-                    label: const Text('구글로 로그인'),
+                    label: Text(t('login_google')),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: const Color(0xFF4E342E),
@@ -124,21 +125,21 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextField(
                   controller: _email,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                      labelText: '이메일',
+                  decoration: InputDecoration(
+                      labelText: t('email'),
                       filled: true,
                       fillColor: Colors.white,
-                      border: OutlineInputBorder()),
+                      border: const OutlineInputBorder()),
                 ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: _pw,
                   obscureText: true,
-                  decoration: const InputDecoration(
-                      labelText: '비밀번호 (6자 이상)',
+                  decoration: InputDecoration(
+                      labelText: t('password'),
                       filled: true,
                       fillColor: Colors.white,
-                      border: OutlineInputBorder()),
+                      border: const OutlineInputBorder()),
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -149,14 +150,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFFAC710),
                             foregroundColor: const Color(0xFF4E342E)),
-                        child: const Text('로그인'),
+                        child: Text(t('sign_in')),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: OutlinedButton(
                         onPressed: _busy ? null : () => _emailAuth(signUp: true),
-                        child: const Text('회원가입'),
+                        child: Text(t('sign_up')),
                       ),
                     ),
                   ],
