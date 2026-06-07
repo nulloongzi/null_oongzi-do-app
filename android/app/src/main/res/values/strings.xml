@@ -7,5 +7,5 @@
     <string name="facebook_app_id">129937258232161</string>
     <!-- Facebook 앱 설정 > 고급 > 클라이언트 토큰 값으로 교체.
          번들된 Facebook SDK 17이 시작 시 요구하므로 비어 있으면 안 된다(placeholder 유지). -->
-    <string name="facebook_client_token">0000000000000000000000000000000</string>
+    <string name="facebook_client_token">4c273c5306f9e84dde2c03ea2f747a83</string>
 </resources>
