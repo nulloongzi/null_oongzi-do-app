@@ -10,6 +10,7 @@ import '../services/data_repository.dart';
 import '../theme.dart';
 import 'detail_sheet.dart';
 import 'pickup_form_screen.dart';
+import 'club_form_screen.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -73,7 +74,12 @@ class _MapScreenState extends State<MapScreen> {
           icon: _clubIcon,
           size: _markerSize,
         );
-        m.setOnTapListener((NMarker overlay) => showClubDetail(context, club));
+        m.setOnTapListener((NMarker overlay) => showClubDetail(
+              context,
+              club,
+              currentUid: _repo.currentUid,
+              onChanged: _load,
+            ));
         overlays.add(m);
       }
     } else {
@@ -85,7 +91,12 @@ class _MapScreenState extends State<MapScreen> {
           icon: _pickupIcon,
           size: _markerSize,
         );
-        m.setOnTapListener((NMarker overlay) => showSpotDetail(context, spot));
+        m.setOnTapListener((NMarker overlay) => showSpotDetail(
+              context,
+              spot,
+              currentUid: _repo.currentUid,
+              onChanged: _load,
+            ));
         overlays.add(m);
       }
     }
@@ -99,22 +110,16 @@ class _MapScreenState extends State<MapScreen> {
 
   // ＋등록: 활성 탭에 따라 픽업/동호회 폼. 등록 성공 시 데이터 재로딩→마커 갱신.
   Future<void> _openRegister() async {
-    if (_tab != 'pickup') {
-      // 동호회 등록 폼은 다음 단계(Phase 1b)에서 추가
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('동호회 등록은 곧 지원돼요. (픽업 탭에서 픽업 등록 가능)')),
-      );
-      return;
-    }
     // 현재 지도 중심을 피커 초기 위치로 (없으면 폼 기본값 사용)
     final cam = await _controller?.getCameraPosition();
     if (!mounted) return;
+    final center = cam?.target ?? const NLatLng(37.5559, 127.0838);
     final created = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => PickupFormScreen(
-          initialCenter: cam?.target ?? const NLatLng(37.5559, 127.0838),
-        ),
+        builder: (_) => _tab == 'pickup'
+            ? PickupFormScreen(initialCenter: center)
+            : ClubFormScreen(initialCenter: center),
       ),
     );
     if (created == true) await _load();

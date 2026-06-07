@@ -5,6 +5,7 @@ double? _toD(dynamic v) => v == null ? null : (v as num).toDouble();
 
 class PickupSpot {
   final String id;
+  final String? ownerUid; // 소유자(수정/삭제 권한)
   final String title;
   final String? sport;
   final String? level;
@@ -15,6 +16,7 @@ class PickupSpot {
   final double? lat;
   final double? lng;
   final String? schedule;
+  final List? scheduleRaw; // [{day,start,end}] 편집 prefill용
   final String? scheduleText;
   final String? feeInfo;
   final String? contactLink;
@@ -24,6 +26,7 @@ class PickupSpot {
 
   PickupSpot({
     required this.id,
+    this.ownerUid,
     required this.title,
     this.sport,
     this.level,
@@ -34,6 +37,7 @@ class PickupSpot {
     this.lat,
     this.lng,
     this.schedule,
+    this.scheduleRaw,
     this.scheduleText,
     this.feeInfo,
     this.contactLink,
@@ -47,6 +51,7 @@ class PickupSpot {
     final coord = d['coordinates'] as Map<String, dynamic>?;
     return PickupSpot(
       id: doc.id,
+      ownerUid: d['owner_uid'] as String?,
       title: (d['title'] ?? '') as String,
       sport: d['sport'] as String?,
       level: d['level'] as String?,
@@ -57,6 +62,7 @@ class PickupSpot {
       lat: _toD(coord?['lat']),
       lng: _toD(coord?['lng']),
       schedule: d['schedule'] as String?,
+      scheduleRaw: d['schedule_raw'] as List?,
       scheduleText: d['schedule_text'] as String?,
       feeInfo: d['fee_info'] as String?,
       contactLink: d['contact_link'] as String?,

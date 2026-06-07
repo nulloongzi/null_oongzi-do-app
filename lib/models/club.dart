@@ -6,10 +6,12 @@ double? _toD(dynamic v) => v == null ? null : (v as num).toDouble();
 class Club {
   final String id;
   final String name;
+  final String? registeredBy; // 소유자(수정/삭제 권한)
   final String? target;
   final String? address;
   final String? price;
   final String? schedule;
+  final List? scheduleRaw; // [{day,start,end}] 편집 prefill용
   final double? lat;
   final double? lng;
   final String? insta;
@@ -22,10 +24,12 @@ class Club {
   Club({
     required this.id,
     required this.name,
+    this.registeredBy,
     this.target,
     this.address,
     this.price,
     this.schedule,
+    this.scheduleRaw,
     this.lat,
     this.lng,
     this.insta,
@@ -43,10 +47,12 @@ class Club {
     return Club(
       id: doc.id,
       name: (d['name'] ?? '') as String,
+      registeredBy: d['registered_by'] as String?,
       target: d['target'] as String?,
       address: d['address'] as String?,
       price: d['price'] as String?,
       schedule: d['schedule'] as String?,
+      scheduleRaw: d['schedule_raw'] as List?,
       lat: _toD(coord?['lat']),
       lng: _toD(coord?['lng']),
       insta: (d['insta'] ?? contact?['insta']) as String?,

@@ -1,10 +1,14 @@
 // detail_sheet.dart — P4 상세 바텀시트 (웹 club-detail / pickup-detail 과 동일한 톤/구성)
 // 칩·이번주 배너·정보행·링크버튼. 공유/릴스 임베드는 P4ب에서.
 import 'package:flutter/material.dart';
+import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/club.dart';
 import '../models/pickup_spot.dart';
+import '../services/data_repository.dart';
 import '../theme.dart';
+import 'club_form_screen.dart';
+import 'pickup_form_screen.dart';
 
 const _titleStyle = TextStyle(
     fontSize: 23, fontWeight: FontWeight.w800, color: NurungjiColors.dark);
@@ -92,13 +96,83 @@ Widget _sheet(List<Widget> children) => Padding(
       ),
     );
 
-void showSpotDetail(BuildContext context, PickupSpot s) {
+// 소유자 전용: 수정/삭제 버튼 행
+Widget _modifyRow({required VoidCallback onEdit, required VoidCallback onDelete}) =>
+    Padding(
+      padding: const EdgeInsets.only(top: 18),
+      child: Row(children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: onEdit,
+            icon: const Icon(Icons.edit, size: 18),
+            label: const Text('수정'),
+          ),
+        ),
+        const SizedBox(width: 10),
+        OutlinedButton.icon(
+          onPressed: onDelete,
+          icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+          label: const Text('삭제', style: TextStyle(color: Colors.red)),
+          style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.red)),
+        ),
+      ]),
+    );
+
+// coords가 있으면 그 위치, 없으면 서울 — 폼 지도피커 초기 중심.
+NLatLng _centerOf(double? lat, double? lng) => (lat != null && lng != null)
+    ? NLatLng(lat, lng)
+    : const NLatLng(37.5559, 127.0838);
+
+// 삭제 확인 → 삭제 → 시트 닫기 → onChanged. sheetCtx=시트 내부, outerCtx=호출측(스낵바용).
+Future<void> _confirmDelete(
+  BuildContext sheetCtx,
+  BuildContext outerCtx,
+  Future<void> Function()? onChanged,
+  Future<void> Function() doDelete,
+) async {
+  final ok = await showDialog<bool>(
+    context: sheetCtx,
+    builder: (dctx) => AlertDialog(
+      title: const Text('삭제할까요?'),
+      content: const Text('이 작업은 되돌릴 수 없어요.'),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(dctx, false),
+            child: const Text('취소')),
+        TextButton(
+            onPressed: () => Navigator.pop(dctx, true),
+            child: const Text('삭제', style: TextStyle(color: Colors.red))),
+      ],
+    ),
+  );
+  if (ok != true) return;
+  try {
+    await doDelete();
+  } catch (e) {
+    if (outerCtx.mounted) {
+      ScaffoldMessenger.of(outerCtx)
+          .showSnackBar(SnackBar(content: Text('삭제 실패: $e')));
+    }
+    return;
+  }
+  if (sheetCtx.mounted) Navigator.pop(sheetCtx);
+  await onChanged?.call();
+}
+
+void showSpotDetail(
+  BuildContext context,
+  PickupSpot s, {
+  String? currentUid,
+  Future<void> Function()? onChanged,
+}) {
   final where = [s.venueName, s.address].where((e) => e != null && e.isNotEmpty).join(' · ');
+  final canModify =
+      currentUid != null && s.ownerUid != null && s.ownerUid == currentUid;
   showModalBottomSheet(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
-    builder: (_) => SingleChildScrollView(
+    builder: (sheetCtx) => SingleChildScrollView(
       child: _sheet([
         Text(s.title, style: _titleStyle),
         const SizedBox(height: 12),
@@ -118,21 +192,47 @@ void showSpotDetail(BuildContext context, PickupSpot s) {
         if (s.feeInfo != null && s.feeInfo!.isNotEmpty) _infoRow('💰', s.feeInfo!),
         if (s.contactLink != null && s.contactLink!.isNotEmpty)
           _primaryBtn('💬 단톡 들어가기', () => _open(s.contactLink)),
+        if (canModify)
+          _modifyRow(
+            onEdit: () async {
+              Navigator.pop(sheetCtx);
+              final ok = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => PickupFormScreen(
+                    editing: s,
+                    initialCenter: _centerOf(s.lat, s.lng),
+                  ),
+                ),
+              );
+              if (ok == true) await onChanged?.call();
+            },
+            onDelete: () => _confirmDelete(sheetCtx, context, onChanged,
+                () => DataRepository().deletePickup(s.id)),
+          ),
       ]),
     ),
   );
 }
 
-void showClubDetail(BuildContext context, Club c) {
+void showClubDetail(
+  BuildContext context,
+  Club c, {
+  String? currentUid,
+  Future<void> Function()? onChanged,
+}) {
   final tags = (c.target ?? '')
       .split(RegExp(r'[,\s]+'))
       .where((e) => e.isNotEmpty)
       .toList();
+  final canModify = currentUid != null &&
+      c.registeredBy != null &&
+      c.registeredBy == currentUid;
   showModalBottomSheet(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
-    builder: (_) => SingleChildScrollView(
+    builder: (sheetCtx) => SingleChildScrollView(
       child: _sheet([
         Row(children: [
           if (c.isVerified)
@@ -162,6 +262,24 @@ void showClubDetail(BuildContext context, Club c) {
             _outlineBtn('🚀 길찾기',
                 () => _open('https://map.kakao.com/link/to/${c.name},${c.lat},${c.lng}')),
         ]),
+        if (canModify)
+          _modifyRow(
+            onEdit: () async {
+              Navigator.pop(sheetCtx);
+              final ok = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ClubFormScreen(
+                    editing: c,
+                    initialCenter: _centerOf(c.lat, c.lng),
+                  ),
+                ),
+              );
+              if (ok == true) await onChanged?.call();
+            },
+            onDelete: () => _confirmDelete(sheetCtx, context, onChanged,
+                () => DataRepository().deleteClub(c.id)),
+          ),
       ]),
     ),
   );

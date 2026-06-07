@@ -1,7 +1,8 @@
-// pickup_form_screen.dart — 픽업 스팟 등록 폼. 웹 pickup-host.js openPickupCreateModal 대체.
+// pickup_form_screen.dart — 픽업 스팟 등록/수정 폼. 웹 pickup-host.js 포팅.
 // 누구나 등록(무로그인=익명 인증). 좌표는 지도 피커로 직접 선택(지오코딩 불필요).
 import 'package:flutter/material.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
+import '../models/pickup_spot.dart';
 import '../models/schedule_block.dart';
 import '../services/data_repository.dart';
 import '../services/sanitize.dart';
@@ -13,9 +14,14 @@ import '../widgets/schedule_editor.dart';
 class PickupFormScreen extends StatefulWidget {
   /// 폼 진입 시 지도 중심 (피커 초기 위치). 기본 서울.
   final NLatLng initialCenter;
+
+  /// 수정 모드면 기존 스팟. null이면 신규 등록.
+  final PickupSpot? editing;
+
   const PickupFormScreen({
     super.key,
     this.initialCenter = const NLatLng(37.5559, 127.0838),
+    this.editing,
   });
 
   @override
@@ -43,13 +49,15 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
   bool _englishOk = false;
 
   // 구조화 일정 블록
-  final List<ScheduleBlock> _blocks = [ScheduleBlock()];
+  final List<ScheduleBlock> _blocks = [];
 
   // 지도 피커로 선택한 좌표
   double? _lat;
   double? _lng;
 
   bool _saving = false;
+
+  bool get _isEdit => widget.editing != null;
 
   static const _sportOptions = <ChipOption>[
     (label: '6인제', value: '6s'),
@@ -62,6 +70,31 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
     (label: '고급', value: 'advanced'),
     (label: '레벨무관', value: 'any'),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    final e = widget.editing;
+    if (e != null) {
+      _title.text = e.title;
+      _venue.text = e.venueName ?? '';
+      _address.text = e.address ?? '';
+      _scheduleMemo.text = e.scheduleText ?? '';
+      _thisWeek.text = e.thisWeek ?? '';
+      _fee.text = e.feeInfo ?? '';
+      _contact.text = e.contactLink ?? '';
+      _reel.text = e.instaReel ?? '';
+      _notes.text = e.notes ?? '';
+      _sport = e.sport ?? '6s';
+      _level = e.level ?? 'any';
+      _beginnerFriendly = e.beginnerFriendly;
+      _englishOk = e.englishOk;
+      _lat = e.lat;
+      _lng = e.lng;
+      _blocks.addAll(ScheduleBlock.groupFromRaw(e.scheduleRaw));
+    }
+    if (_blocks.isEmpty) _blocks.add(ScheduleBlock());
+  }
 
   @override
   void dispose() {
@@ -130,7 +163,7 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
       reel = s;
     }
 
-    final payload = <String, dynamic>{
+    final fields = <String, dynamic>{
       'title': title,
       'sport': _sport,
       'level': _level,
@@ -151,20 +184,24 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
 
     setState(() => _saving = true);
     try {
-      await _repo.createPickup(payload);
+      if (_isEdit) {
+        await _repo.updatePickup(widget.editing!.id, fields);
+      } else {
+        await _repo.createPickup(fields);
+      }
       if (!mounted) return;
-      _snack('픽업이 등록됐어요!');
+      _snack(_isEdit ? '수정됐어요!' : '픽업이 등록됐어요!');
       Navigator.pop(context, true);
     } catch (e) {
       setState(() => _saving = false);
-      _snack('등록 실패: $e');
+      _snack('${_isEdit ? '수정' : '등록'} 실패: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('픽업 게임 열기')),
+      appBar: AppBar(title: Text(_isEdit ? '픽업 수정' : '픽업 게임 열기')),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
@@ -222,7 +259,7 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
                       width: 20,
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: NurungjiColors.dark))
-                  : const Text('픽업 등록'),
+                  : Text(_isEdit ? '저장' : '픽업 등록'),
             ),
           ],
         ),
