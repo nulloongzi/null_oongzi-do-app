@@ -233,13 +233,31 @@ class _MapScreenState extends State<MapScreen> {
     if (created == true) await _load();
   }
 
-  // 동호회 필터 시트 열기 → 적용 시 마커 갱신
+  // 동호회 필터 시트 열기 → 적용 시 마커 갱신 + 화면 맞춤
   Future<void> _openFilter() async {
     final result = await showFilterSheet(context, _filter);
     if (result != null) {
       setState(() => _filter = result);
-      _refreshMarkers();
+      await _refreshMarkers();
+      _fitToFilter();
     }
+  }
+
+  // 필터/검색 활성 시 결과가 다 보이게 카메라 맞춤 (웹 map.setBounds 대응)
+  void _fitToFilter() {
+    if (_tab != 'clubs' || _filter.isEmpty) return;
+    final pts = <NLatLng>[];
+    for (final club in _clubs.where(_filter.matches)) {
+      if (club.lat != null && club.lng != null) {
+        pts.add(NLatLng(club.lat!, club.lng!));
+      }
+    }
+    if (pts.isEmpty) return;
+    try {
+      final bounds = NLatLngBounds.from(pts);
+      _controller?.updateCamera(
+          NCameraUpdate.fitBounds(bounds, padding: const EdgeInsets.all(64)));
+    } catch (_) {}
   }
 
   @override
