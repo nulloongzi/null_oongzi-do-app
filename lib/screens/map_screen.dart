@@ -51,6 +51,13 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  // 웹과 동일한 마커 이미지(assets/markers). 원본 224x294 → 32x42로 표시.
+  static final _clubIcon =
+      NOverlayImage.fromAssetImage('assets/markers/marker_yellow.png');
+  static final _pickupIcon =
+      NOverlayImage.fromAssetImage('assets/markers/marker_red.png');
+  static const _markerSize = Size(32, 42);
+
   Future<void> _refreshMarkers() async {
     final c = _controller;
     if (c == null) return;
@@ -62,7 +69,8 @@ class _MapScreenState extends State<MapScreen> {
         final m = NMarker(
           id: 'c_${club.id}',
           position: NLatLng(club.lat!, club.lng!),
-          iconTintColor: NurungjiColors.yellow,
+          icon: _clubIcon,
+          size: _markerSize,
         );
         m.setOnTapListener((NMarker overlay) => showClubDetail(context, club));
         overlays.add(m);
@@ -73,7 +81,8 @@ class _MapScreenState extends State<MapScreen> {
         final m = NMarker(
           id: 's_${spot.id}',
           position: NLatLng(spot.lat!, spot.lng!),
-          iconTintColor: NurungjiColors.teal,
+          icon: _pickupIcon,
+          size: _markerSize,
         );
         m.setOnTapListener((NMarker overlay) => showSpotDetail(context, spot));
         overlays.add(m);
