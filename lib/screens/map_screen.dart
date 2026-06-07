@@ -150,7 +150,7 @@ class _MapScreenState extends State<MapScreen> {
     try {
       final status = await Permission.location.request();
       if (status.isGranted) {
-        await _controller?.setLocationTrackingMode(NLocationTrackingMode.noFollow);
+        _controller?.setLocationTrackingMode(NLocationTrackingMode.noFollow);
       }
     } catch (_) {}
   }
