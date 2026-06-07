@@ -1,18 +1,18 @@
 // map_screen.dart — 네이티브 네이버지도(flutter_naver_map) + Firestore 마커
 // kakao_map_plugin(웹뷰) → flutter_naver_map(네이티브)로 전환: 패닝 부드러움 + 한국 데이터.
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import '../models/club.dart';
 import '../models/pickup_spot.dart';
 import '../services/data_repository.dart';
 import '../services/club_filter.dart';
 import '../services/deep_link_service.dart';
+import '../services/profile_service.dart';
 import '../theme.dart';
 import 'detail_sheet.dart';
 import 'pickup_form_screen.dart';
 import 'club_form_screen.dart';
+import 'profile_screen.dart';
 import '../widgets/filter_sheet.dart';
 
 class MapScreen extends StatefulWidget {
@@ -39,6 +39,11 @@ class _MapScreenState extends State<MapScreen> {
     super.initState();
     _load();
     _deepLinks.start(_handleDeepLink);
+    // 첫 로그인 시 밥이름 프로필 생성 (조용히, 실패 무시)
+    final uid = _repo.currentUid;
+    if (uid != null) {
+      ProfileService().ensureProfile(uid).then((_) {}, onError: (_) {});
+    }
   }
 
   @override
@@ -184,13 +189,6 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  Future<void> _signOut() async {
-    try {
-      await GoogleSignIn().signOut();
-    } catch (_) {}
-    await FirebaseAuth.instance.signOut();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -263,9 +261,12 @@ class _MapScreenState extends State<MapScreen> {
                 tooltip: 'English OK만',
               ),
             IconButton(
-                onPressed: _signOut,
-                icon: const Icon(Icons.logout),
-                tooltip: '로그아웃'),
+                onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const ProfileScreen())),
+                icon: const Icon(Icons.account_circle),
+                tooltip: '내 프로필'),
           ],
         ),
       ),
