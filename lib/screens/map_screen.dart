@@ -1,12 +1,13 @@
-// map_screen.dart — P3 카카오 지도 + P2 Firestore 마커 (동호회/픽업)
-// 지도가 안 떠도(카카오 도메인 등록 이슈 등) 상단 카운트로 Firestore 로드는 확인 가능.
+// map_screen.dart — 네이티브 네이버지도(flutter_naver_map) + Firestore 마커
+// kakao_map_plugin(웹뷰) → flutter_naver_map(네이티브)로 전환: 패닝 부드러움 + 한국 데이터.
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:kakao_map_plugin/kakao_map_plugin.dart';
+import 'package:flutter_naver_map/flutter_naver_map.dart';
 import '../models/club.dart';
 import '../models/pickup_spot.dart';
 import '../services/data_repository.dart';
+import '../theme.dart';
 import 'detail_sheet.dart';
 
 class MapScreen extends StatefulWidget {
@@ -17,7 +18,7 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
-  KakaoMapController? _controller;
+  NaverMapController? _controller;
   final _repo = DataRepository();
   List<Club> _clubs = [];
   List<PickupSpot> _spots = [];
@@ -33,13 +34,15 @@ class _MapScreenState extends State<MapScreen> {
 
   Future<void> _load() async {
     try {
-      final results = await Future.wait([_repo.loadClubs(), _repo.loadPickups()]);
+      final results =
+          await Future.wait([_repo.loadClubs(), _repo.loadPickups()]);
       if (!mounted) return;
       setState(() {
         _clubs = results[0] as List<Club>;
         _spots = results[1] as List<PickupSpot>;
         _loading = false;
       });
+      _refreshMarkers();
     } catch (e) {
       if (mounted) setState(() {
         _error = '$e';
@@ -48,60 +51,40 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  // 웹앱과 동일한 마커 이미지(GitHub Pages 호스팅) — 동호회=노랑, 픽업=빨강
-  static const _clubPin =
-      'https://nulloongzi.github.io/null_oongzi-do/marker_yellow.png';
-  static const _pickupPin =
-      'https://nulloongzi.github.io/null_oongzi-do/marker_red.png';
-
-  List<Marker> _buildMarkers() {
-    final list = <Marker>[];
+  Future<void> _refreshMarkers() async {
+    final c = _controller;
+    if (c == null) return;
+    await c.clearOverlays();
+    final overlays = <NAddableOverlay>{};
     if (_tab == 'clubs') {
-      for (final c in _clubs) {
-        if (c.lat == null || c.lng == null) continue;
-        list.add(Marker(
-            markerId: 'c_${c.id}',
-            latLng: LatLng(c.lat!, c.lng!),
-            markerImageSrc: _clubPin,
-            width: 33,
-            height: 43));
+      for (final club in _clubs) {
+        if (club.lat == null || club.lng == null) continue;
+        final m = NMarker(
+          id: 'c_${club.id}',
+          position: NLatLng(club.lat!, club.lng!),
+          iconTintColor: NurungjiColors.yellow,
+        );
+        m.setOnTapListener((NMarker overlay) => showClubDetail(context, club));
+        overlays.add(m);
       }
     } else {
-      for (final s in _spots) {
-        if (s.lat == null || s.lng == null) continue;
-        list.add(Marker(
-            markerId: 's_${s.id}',
-            latLng: LatLng(s.lat!, s.lng!),
-            markerImageSrc: _pickupPin,
-            width: 33,
-            height: 43));
+      for (final spot in _spots) {
+        if (spot.lat == null || spot.lng == null) continue;
+        final m = NMarker(
+          id: 's_${spot.id}',
+          position: NLatLng(spot.lat!, spot.lng!),
+          iconTintColor: NurungjiColors.teal,
+        );
+        m.setOnTapListener((NMarker overlay) => showSpotDetail(context, spot));
+        overlays.add(m);
       }
     }
-    return list;
+    if (overlays.isNotEmpty) await c.addOverlayAll(overlays);
   }
 
-  void _onMarkerTap(String markerId) {
-    if (markerId.startsWith('c_')) {
-      final id = markerId.substring(2);
-      Club? c;
-      for (final e in _clubs) {
-        if (e.id == id) {
-          c = e;
-          break;
-        }
-      }
-      if (c != null) showClubDetail(context, c);
-    } else if (markerId.startsWith('s_')) {
-      final id = markerId.substring(2);
-      PickupSpot? s;
-      for (final e in _spots) {
-        if (e.id == id) {
-          s = e;
-          break;
-        }
-      }
-      if (s != null) showSpotDetail(context, s);
-    }
+  void _onTab(String t) {
+    setState(() => _tab = t);
+    _refreshMarkers();
   }
 
   Future<void> _signOut() async {
@@ -117,11 +100,18 @@ class _MapScreenState extends State<MapScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            KakaoMap(
-              onMapCreated: (controller) => _controller = controller,
-              onMarkerTap: (markerId, latLng, zoomLevel) => _onMarkerTap(markerId),
-              markers: _buildMarkers(),
-              center: LatLng(37.5559, 127.0838),
+            NaverMap(
+              options: const NaverMapViewOptions(
+                initialCameraPosition: NCameraPosition(
+                  target: NLatLng(37.5559, 127.0838),
+                  zoom: 10.5,
+                ),
+                locationButtonEnable: true,
+              ),
+              onMapReady: (controller) {
+                _controller = controller;
+                _refreshMarkers();
+              },
             ),
             Positioned(top: 10, left: 10, right: 10, child: _topBar()),
             if (_error != null)
@@ -162,17 +152,17 @@ class _MapScreenState extends State<MapScreen> {
   Widget _tabBtn(String label, String key) {
     final on = _tab == key;
     return GestureDetector(
-      onTap: () => setState(() => _tab = key),
+      onTap: () => _onTab(key),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: on ? const Color(0xFFFAC710) : const Color(0xFFF0ECE2),
+          color: on ? NurungjiColors.yellow : NurungjiColors.chipBg,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(label,
             style: TextStyle(
                 fontWeight: on ? FontWeight.w800 : FontWeight.w600,
-                color: const Color(0xFF4E342E))),
+                color: NurungjiColors.dark)),
       ),
     );
   }

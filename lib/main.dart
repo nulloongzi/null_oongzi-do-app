@@ -3,17 +3,23 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:kakao_map_plugin/kakao_map_plugin.dart';
+import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'firebase_options.dart';
 import 'theme.dart';
 import 'screens/login_screen.dart';
 import 'screens/map_screen.dart';
 
+// ⚠️ 네이버 클라우드 '지도(Mobile Dynamic Map)' Client ID — console.ncloud.com 발급 후 교체.
+// placeholder면 지도가 인증 실패로 안 뜸(카운트·상세 등 나머지는 정상 동작).
+const String kNaverMapClientId = 'YOUR_NAVER_MAP_CLIENT_ID';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  // 카카오 지도 JS 키 (웹앱과 동일)
-  AuthRepository.initialize(appKey: '69f821ba943db5e3532ac90ea5ca1080');
+  await FlutterNaverMap().init(
+    clientId: kNaverMapClientId,
+    onAuthFailed: (ex) => debugPrint('네이버지도 인증 실패: $ex'),
+  );
   runApp(const MyApp());
 }
 
