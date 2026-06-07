@@ -292,7 +292,7 @@ void showSpotDetail(
         if (s.thisWeek != null && s.thisWeek!.isNotEmpty) _banner(t('this_week'), s.thisWeek!),
         if ((s.schedule ?? s.scheduleText) != null &&
             (s.schedule ?? s.scheduleText)!.isNotEmpty)
-          _infoRow('🗓', (s.schedule ?? s.scheduleText)!),
+          _infoRow('🗓', i18nSchedule(s.schedule ?? s.scheduleText)),
         ScheduleTimetable(
           events: (s.scheduleRaw != null && s.scheduleRaw!.isNotEmpty)
               ? eventsFromRaw(s.scheduleRaw)
@@ -300,7 +300,7 @@ void showSpotDetail(
           accent: NurungjiColors.teal,
         ),
         if (where.isNotEmpty) _infoRow('📍', where),
-        if (s.feeInfo != null && s.feeInfo!.isNotEmpty) _infoRow('💰', s.feeInfo!),
+        if (s.feeInfo != null && s.feeInfo!.isNotEmpty) _infoRow('💰', i18nPrice(s.feeInfo)),
         if (s.instaReel != null && s.instaReel!.isNotEmpty)
           InstaEmbed(url: s.instaReel!),
         if (s.contactLink != null && s.contactLink!.isNotEmpty)
@@ -369,11 +369,12 @@ void showClubDetail(
               spacing: 6,
               runSpacing: 6,
               children: tags
-                  .map((t) => _chip(t, NurungjiColors.chipBg, NurungjiColors.chipFg))
+                  .map((tag) => _chip(
+                      i18nTarget(tag), NurungjiColors.chipBg, NurungjiColors.chipFg))
                   .toList()),
         if (c.isUrgent && c.urgentMsg != null && c.urgentMsg!.isNotEmpty)
           _banner(t('urgent'), c.urgentMsg!),
-        if (c.schedule != null && c.schedule!.isNotEmpty) _infoRow('🗓', c.schedule!),
+        if (c.schedule != null && c.schedule!.isNotEmpty) _infoRow('🗓', i18nSchedule(c.schedule)),
         ScheduleTimetable(
           events: (c.scheduleRaw != null && c.scheduleRaw!.isNotEmpty)
               ? eventsFromRaw(c.scheduleRaw)
@@ -381,7 +382,7 @@ void showClubDetail(
           accent: NurungjiColors.yellow,
         ),
         if (c.address != null && c.address!.isNotEmpty) _infoRow('📍', c.address!),
-        if (c.price != null && c.price!.isNotEmpty) _infoRow('💰', c.price!),
+        if (c.price != null && c.price!.isNotEmpty) _infoRow('💰', i18nPrice(c.price)),
         if (c.instaReel != null && c.instaReel!.isNotEmpty)
           InstaEmbed(url: c.instaReel!),
         const SizedBox(height: 16),

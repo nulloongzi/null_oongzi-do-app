@@ -78,7 +78,7 @@ class PickupListPanel extends StatelessWidget {
               if (sched != null && sched.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4),
-                  child: Text('🗓 $sched',
+                  child: Text('🗓 ${i18nSchedule(sched)}',
                       style: const TextStyle(
                           fontSize: 13, color: NurungjiColors.chipFg)),
                 ),
@@ -106,7 +106,7 @@ class PickupListPanel extends StatelessWidget {
               if (s.feeInfo != null && s.feeInfo!.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
-                  child: Text('💰 ${s.feeInfo}',
+                  child: Text('💰 ${i18nPrice(s.feeInfo)}',
                       style: const TextStyle(
                           fontSize: 13, color: NurungjiColors.brown)),
                 ),

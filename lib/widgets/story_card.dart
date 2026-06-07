@@ -9,6 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../models/club.dart';
 import '../models/pickup_spot.dart';
+import '../services/i18n.dart';
 import '../services/share_service.dart';
 
 class StoryTag {
@@ -72,20 +73,24 @@ class StoryCardData {
       );
 
   factory StoryCardData.fromSpot(PickupSpot s) {
-    final sportL =
-        s.sport == '6s' ? '6인제' : (s.sport == '9s' ? '9인제' : '혼성·자유');
-    final levelL =
-        const {'beginner': '입문', 'intermediate': '중급', 'advanced': '고급'}[s.level] ??
-            '레벨무관';
+    final sportL = t(s.sport == '6s'
+        ? 'sport_6s'
+        : (s.sport == '9s' ? 'sport_9s' : 'sport_mixed'));
+    final levelL = t(const {
+          'beginner': 'lv_beginner',
+          'intermediate': 'lv_intermediate',
+          'advanced': 'lv_advanced',
+        }[s.level] ??
+        'lv_any');
     final tags = <StoryTag>[
       StoryTag(sportL, const Color(0xFFFAC710), const Color(0xFF4E342E)),
       StoryTag(levelL, const Color(0xFFF0ECE2), const Color(0xFF6D6258)),
     ];
     if (s.beginnerFriendly) {
-      tags.add(const StoryTag('🌱 초보환영', Color(0xFFE7F6E7), Color(0xFF2E7D32)));
+      tags.add(StoryTag(t('beginner_ok'), const Color(0xFFE7F6E7), const Color(0xFF2E7D32)));
     }
     if (s.englishOk) {
-      tags.add(const StoryTag('🌐 English OK', Color(0xFFE6F0FB), Color(0xFF1565C0)));
+      tags.add(StoryTag(t('english_ok'), const Color(0xFFE6F0FB), const Color(0xFF1565C0)));
     }
     return StoryCardData(
       title: s.title,
@@ -93,10 +98,10 @@ class StoryCardData {
       accent: const Color(0xFF13A89E),
       tags: tags,
       thisWeek: s.thisWeek,
-      schedule: (s.schedule != null && s.schedule!.isNotEmpty)
+      schedule: i18nSchedule((s.schedule != null && s.schedule!.isNotEmpty)
           ? s.schedule
-          : s.scheduleText,
-      fee: s.feeInfo,
+          : s.scheduleText),
+      fee: i18nPrice(s.feeInfo),
       venue: s.venueName,
       address: s.address,
       lat: s.lat,
@@ -111,7 +116,8 @@ class StoryCardData {
         .toList();
     final tags = <StoryTag>[];
     for (var i = 0; i < tgt.length && i < 4; i++) {
-      tags.add(StoryTag(tgt[i], const Color(0xFFF0ECE2), const Color(0xFF6D6258)));
+      tags.add(StoryTag(
+          i18nTarget(tgt[i]), const Color(0xFFF0ECE2), const Color(0xFF6D6258)));
     }
     return StoryCardData(
       title: c.name,
@@ -119,8 +125,8 @@ class StoryCardData {
       verified: c.isVerified,
       accent: const Color(0xFFFAC710),
       tags: tags,
-      schedule: c.schedule,
-      fee: c.price,
+      schedule: i18nSchedule(c.schedule),
+      fee: i18nPrice(c.price),
       venue: '',
       address: c.address,
       lat: c.lat,

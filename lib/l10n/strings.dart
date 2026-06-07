@@ -178,6 +178,14 @@ const Map<String, Map<String, String>> kStrings = {
   'cf_target_max': {'ko': '대상은 80자 이하로', 'en': 'Target must be ≤ 80 chars'},
   'cf_addr_max': {'ko': '주소는 200자 이하로', 'en': 'Address must be ≤ 200 chars'},
   'cf_price_max': {'ko': '회비는 100자 이하로', 'en': 'Dues must be ≤ 100 chars'},
+  // 요일 (표시 변환 i18nDay)
+  'd_mon': {'ko': '월', 'en': 'Mon'},
+  'd_tue': {'ko': '화', 'en': 'Tue'},
+  'd_wed': {'ko': '수', 'en': 'Wed'},
+  'd_thu': {'ko': '목', 'en': 'Thu'},
+  'd_fri': {'ko': '금', 'en': 'Fri'},
+  'd_sat': {'ko': '토', 'en': 'Sat'},
+  'd_sun': {'ko': '일', 'en': 'Sun'},
   // 대상 칩
   't_adult': {'ko': '성인', 'en': 'Adult'},
   't_college': {'ko': '대학생', 'en': 'College'},

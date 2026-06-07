@@ -1,6 +1,7 @@
 // schedule_timetable.dart — 상세시트용 단일 팀 주간 시간표. 웹 club-detail renderTimetables 대응.
 // 요일×시간 그리드에 운동 시간 블록 + 오늘 요일 강조. schedule_parse 재사용.
 import 'package:flutter/material.dart';
+import '../services/i18n.dart';
 import '../services/schedule_parse.dart';
 import '../theme.dart';
 
@@ -72,7 +73,7 @@ class ScheduleTimetable extends StatelessWidget {
         Expanded(
           child: Center(
             child: Text(
-              scheduleDays[i],
+              i18nDay(scheduleDays[i]),
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: i == todayIdx ? FontWeight.w900 : FontWeight.w600,

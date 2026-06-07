@@ -86,7 +86,7 @@ class DietGrid extends StatelessWidget {
       for (final d in scheduleDays)
         Expanded(
           child: Center(
-            child: Text(d,
+            child: Text(i18nDay(d),
                 style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 12,
