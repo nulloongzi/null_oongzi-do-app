@@ -22,6 +22,7 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
   final Map<String, Club> _clubs = {};
   bool _loading = true;
   bool _showDiet = false;
+  int? _selectedSlot; // 순서 바꾸기: 선택된 칸
 
   static const _placeholders = ['밥', '국', '반찬 1', '반찬 2', '반찬 3'];
   static const _slotBg = [
@@ -76,7 +77,31 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
   Future<void> _removeSlot(int i) async {
     final d = _data;
     if (d == null) return;
-    setState(() => d.bookmarks[i] = null);
+    setState(() {
+      d.bookmarks[i] = null;
+      _selectedSlot = null;
+    });
+    await _save();
+  }
+
+  // 탭 1: 칸 선택, 탭 2: 두 칸 스왑(순서 변경) → 저장.
+  Future<void> _onSlotTap(int i) async {
+    final d = _data;
+    if (d == null) return;
+    if (_selectedSlot == null) {
+      if (d.bookmarks[i] == null) return; // 빈 칸은 선택 시작 불가
+      setState(() => _selectedSlot = i);
+      return;
+    }
+    if (_selectedSlot == i) {
+      setState(() => _selectedSlot = null); // 같은 칸 다시 → 해제
+      return;
+    }
+    final from = _selectedSlot!;
+    final tmp = d.bookmarks[from];
+    d.bookmarks[from] = d.bookmarks[i];
+    d.bookmarks[i] = tmp;
+    setState(() => _selectedSlot = null);
     await _save();
   }
 
@@ -147,6 +172,16 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      _selectedSlot == null
+                          ? t('lb_reorder_hint')
+                          : t('lb_reorder_pick'),
+                      style: const TextStyle(
+                          fontSize: 12, color: NurungjiColors.brown),
+                    ),
+                  ),
                   for (var i = 0; i < 5; i++) _slotTile(i),
                   const SizedBox(height: 8),
                   OutlinedButton.icon(
@@ -198,14 +233,20 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
     final label = !filled
         ? _placeholders[i]
         : (r == null ? t('deleted_team') : (r.isCustom ? '🍙 ${r.name}' : r.name));
+    final selected = _selectedSlot == i;
 
-    return Container(
+    return GestureDetector(
+      onTap: () => _onSlotTap(i),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
         color: filled ? _slotBg[i] : NurungjiColors.chipBg,
         borderRadius: BorderRadius.circular(12),
         border: Border(left: BorderSide(color: _slotBorder[i], width: 5)),
+        boxShadow: selected
+            ? const [BoxShadow(color: NurungjiColors.teal, spreadRadius: 2)]
+            : null,
       ),
       child: Row(
         children: [
@@ -225,6 +266,7 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
               tooltip: '빼기',
             ),
         ],
+      ),
       ),
     );
   }
