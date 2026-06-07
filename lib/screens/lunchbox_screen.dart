@@ -1,0 +1,230 @@
+// lunchbox_screen.dart — 내 도시락(찜한 팀 5칸 + 커스텀 + 식단표). 웹 lunchbox.js 포팅.
+import 'package:flutter/material.dart';
+import '../models/club.dart';
+import '../services/data_repository.dart';
+import '../services/lunchbox_service.dart';
+import '../services/schedule_parse.dart';
+import '../theme.dart';
+import '../widgets/diet_grid.dart';
+
+class LunchboxScreen extends StatefulWidget {
+  const LunchboxScreen({super.key});
+
+  @override
+  State<LunchboxScreen> createState() => _LunchboxScreenState();
+}
+
+class _LunchboxScreenState extends State<LunchboxScreen> {
+  final _svc = LunchboxService();
+  final _repo = DataRepository();
+  LunchboxData? _data;
+  final Map<String, Club> _clubs = {};
+  bool _loading = true;
+  bool _showDiet = false;
+
+  static const _placeholders = ['밥', '국', '반찬 1', '반찬 2', '반찬 3'];
+  static const _slotBg = [
+    Color(0xFFFFFDE7), Color(0xFFFFF3E0), Color(0xFFF1F8E9),
+    Color(0xFFFBE9E7), Color(0xFFF3E5F5),
+  ];
+  static const _slotBorder = [
+    Color(0xFFFBC02D), Color(0xFFF57C00), Color(0xFF689F38),
+    Color(0xFFD84315), Color(0xFF8E24AA),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final uid = _repo.currentUid;
+    if (uid == null) {
+      setState(() => _loading = false);
+      return;
+    }
+    try {
+      final results = await Future.wait([_repo.loadClubs(), _svc.load(uid)]);
+      final clubs = results[0] as List<Club>;
+      _clubs
+        ..clear()
+        ..addEntries(clubs.map((c) => MapEntry(c.id, c)));
+      _data = results[1] as LunchboxData;
+    } catch (_) {}
+    if (mounted) setState(() => _loading = false);
+  }
+
+  void _snack(String m) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+    }
+  }
+
+  Future<void> _save() async {
+    final uid = _repo.currentUid;
+    final d = _data;
+    if (uid == null || d == null) return;
+    try {
+      await _svc.save(uid, d);
+    } catch (e) {
+      _snack('저장 실패: $e');
+    }
+  }
+
+  Future<void> _removeSlot(int i) async {
+    final d = _data;
+    if (d == null) return;
+    setState(() => d.bookmarks[i] = null);
+    await _save();
+  }
+
+  Future<void> _addCustom() async {
+    final uid = _repo.currentUid;
+    if (uid == null) return;
+    final name = await _prompt('팀 이름', '예: 우리 동호회');
+    if (name == null || name.trim().isEmpty) return;
+    final sched = await _prompt('일정 (예: 토 14:00~17:00)', '토 14:00~17:00');
+    if (sched == null || sched.trim().isEmpty) return;
+    final err = await _svc.addCustomTeam(uid, name.trim(), sched.trim());
+    if (err != null) {
+      _snack(err);
+      return;
+    }
+    await _load();
+    _snack('도시락에 담았어요!');
+  }
+
+  Future<String?> _prompt(String title, String hint) {
+    final c = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (dctx) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+            controller: c,
+            autofocus: true,
+            decoration: InputDecoration(hintText: hint)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dctx), child: const Text('취소')),
+          TextButton(
+              onPressed: () => Navigator.pop(dctx, c.text),
+              child: const Text('확인')),
+        ],
+      ),
+    );
+  }
+
+  ({String name, bool isCustom, List<SchedEvent> events})? _resolve(String id) {
+    final d = _data;
+    if (d == null) return null;
+    if (d.customTeams.containsKey(id)) {
+      final m = d.customTeams[id];
+      final name = (m is Map ? m['name'] : null) as String? ?? '커스텀 팀';
+      final sched = (m is Map ? m['schedule'] : null) as String?;
+      return (name: name, isCustom: true, events: eventsFromText(sched));
+    }
+    final c = _clubs[id];
+    if (c != null) {
+      final ev = (c.scheduleRaw != null && c.scheduleRaw!.isNotEmpty)
+          ? eventsFromRaw(c.scheduleRaw)
+          : eventsFromText(c.schedule);
+      return (name: c.name, isCustom: false, events: ev);
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('내 도시락')),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var i = 0; i < 5; i++) _slotTile(i),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: _addCustom,
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('커스텀 팀 추가'),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      const Text('🍱 식단표',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                              color: NurungjiColors.dark)),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () => setState(() => _showDiet = !_showDiet),
+                        child: Text(_showDiet ? '접기' : '펼치기'),
+                      ),
+                    ],
+                  ),
+                  if (_showDiet) DietGrid(teams: _dietTeams()),
+                ],
+              ),
+            ),
+    );
+  }
+
+  List<DietTeam> _dietTeams() {
+    final out = <DietTeam>[];
+    final d = _data;
+    if (d == null) return out;
+    for (var i = 0; i < 5; i++) {
+      final id = d.bookmarks[i];
+      if (id == null) continue;
+      final r = _resolve(id);
+      if (r == null) continue;
+      out.add(DietTeam(
+          name: r.name, isCustom: r.isCustom, slotIdx: i, events: r.events));
+    }
+    return out;
+  }
+
+  Widget _slotTile(int i) {
+    final id = _data?.bookmarks[i];
+    final r = id == null ? null : _resolve(id);
+    final filled = id != null;
+    final label = !filled
+        ? _placeholders[i]
+        : (r == null ? '삭제된 팀' : (r.isCustom ? '🍙 ${r.name}' : r.name));
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      decoration: BoxDecoration(
+        color: filled ? _slotBg[i] : NurungjiColors.chipBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border(left: BorderSide(color: _slotBorder[i], width: 5)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontWeight: filled ? FontWeight.w700 : FontWeight.w500,
+                color: filled ? NurungjiColors.dark : NurungjiColors.brown,
+              ),
+            ),
+          ),
+          if (filled)
+            IconButton(
+              onPressed: () => _removeSlot(i),
+              icon: const Icon(Icons.close, size: 18, color: NurungjiColors.brown),
+              tooltip: '빼기',
+            ),
+        ],
+      ),
+    );
+  }
+}

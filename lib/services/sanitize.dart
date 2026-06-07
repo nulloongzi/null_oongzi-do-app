@@ -19,6 +19,14 @@ class Sanitize {
     return '';
   }
 
+  /// 업로드 파일명 정규화: 영숫자/._- 만 유지, 나머지 _ 치환, 최대 50자(확장자 보존 위해 끝 50자).
+  static String filename(String? v) {
+    final s = (v ?? 'photo').trim();
+    final cleaned = s.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+    final out = cleaned.isEmpty ? 'photo' : cleaned;
+    return out.length > 50 ? out.substring(out.length - 50) : out;
+  }
+
   /// 공개 인스타 게시물/릴스 permalink만 → 정규 permalink 반환, 무효면 ''.
   static String instaPostUrl(String? v) {
     if (v == null) return '';

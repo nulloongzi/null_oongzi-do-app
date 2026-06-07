@@ -6,8 +6,10 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/club.dart';
 import '../models/pickup_spot.dart';
 import '../services/data_repository.dart';
+import '../services/lunchbox_service.dart';
 import '../services/share_service.dart';
 import '../services/story_share.dart';
+import '../services/verification_service.dart';
 import '../theme.dart';
 import '../widgets/insta_embed.dart';
 import '../widgets/share_menu.dart';
@@ -208,6 +210,29 @@ Widget _urgentToggle(
   );
 }
 
+// 인증 신청(사진 제출) — 소유자 & 미인증일 때만.
+Widget _verifyBtn(Club c, BuildContext outerCtx) {
+  return Padding(
+    padding: const EdgeInsets.only(top: 12),
+    child: SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () async {
+          final err = await VerificationService()
+              .submit(clubId: c.id, clubName: c.name);
+          if (err == 'cancelled') return;
+          if (outerCtx.mounted) {
+            ScaffoldMessenger.of(outerCtx).showSnackBar(SnackBar(
+                content: Text(err ?? '인증 신청 완료! 검토 후 반영돼요')));
+          }
+        },
+        icon: const Icon(Icons.verified_outlined, size: 18),
+        label: const Text('인증 신청 (사진 제출)'),
+      ),
+    ),
+  );
+}
+
 Future<String?> _promptText(BuildContext ctx,
     {required String title, required String hint}) {
   final ctrl = TextEditingController();
@@ -349,6 +374,14 @@ void showClubDetail(
           if (c.lat != null && c.lng != null)
             _outlineBtn('🚀 길찾기',
                 () => _open('https://map.kakao.com/link/to/${c.name},${c.lat},${c.lng}')),
+          if (currentUid != null)
+            _outlineBtn('🍱 도시락에 담기', () async {
+              final err = await LunchboxService().addBookmark(currentUid, c.id);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(err ?? '도시락에 담았어요!')));
+              }
+            }),
         ]),
         _primaryBtn(
           '📤 공유하기',
@@ -359,6 +392,7 @@ void showClubDetail(
             onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
           ),
         ),
+        if (canModify && !c.isVerified) _verifyBtn(c, context),
         if (canModify) _urgentToggle(c, sheetCtx, context, onChanged),
         if (canModify)
           _modifyRow(

@@ -5,6 +5,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../models/profile.dart';
 import '../services/profile_service.dart';
 import '../theme.dart';
+import 'lunchbox_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -115,6 +116,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   if (_profile != null) _card(_profile!),
                   const SizedBox(height: 20),
+                  ElevatedButton.icon(
+                    onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const LunchboxScreen())),
+                    icon: const Icon(Icons.lunch_dining, size: 18),
+                    label: const Text('내 도시락 (찜한 팀·식단표)'),
+                  ),
+                  const SizedBox(height: 10),
                   if (_profile != null)
                     OutlinedButton.icon(
                       onPressed: _rename,
