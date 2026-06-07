@@ -25,6 +25,9 @@ const Map<String, Map<String, String>> kStrings = {
   'search_filter': {'ko': '검색·필터', 'en': 'Search & filter'},
   'english_only': {'ko': 'English OK만', 'en': 'English OK only'},
   'data_load_err': {'ko': '데이터 로드 오류', 'en': 'Data load error'},
+  'map_view': {'ko': '지도', 'en': 'Map'},
+  'list_view': {'ko': '목록', 'en': 'List'},
+  'pk_empty': {'ko': '주변에 등록된 픽업이 없어요', 'en': 'No pickups registered yet'},
 
   // 칩 라벨
   'sport_6s': {'ko': '6인제', 'en': '6s'},

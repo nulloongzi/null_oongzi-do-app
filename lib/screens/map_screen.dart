@@ -16,6 +16,7 @@ import 'pickup_form_screen.dart';
 import 'club_form_screen.dart';
 import 'profile_screen.dart';
 import '../widgets/filter_sheet.dart';
+import '../widgets/pickup_list_panel.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -34,6 +35,7 @@ class _MapScreenState extends State<MapScreen> {
   String? _error;
   ClubFilter _filter = const ClubFilter(); // 동호회 필터/검색
   bool _pkEnglishOnly = false; // 픽업: English OK만
+  bool _pickupListView = false; // 픽업: 지도/목록 토글
   final _deepLinks = DeepLinkService();
   NOverlayImage? _clusterIcon; // 클러스터 노란 원 (런타임 생성)
 
@@ -303,6 +305,31 @@ class _MapScreenState extends State<MapScreen> {
             Positioned(top: 10, left: 10, right: 10, child: _topBar()),
             if (_tab == 'clubs')
               Positioned(top: 66, left: 10, right: 10, child: _urgentTicker()),
+            if (_tab == 'pickup')
+              Positioned(
+                  top: 66, left: 0, right: 0, child: Center(child: _pickupToggle())),
+            if (_tab == 'pickup' && _pickupListView)
+              Positioned(
+                top: 110,
+                left: 8,
+                right: 8,
+                bottom: 8,
+                child: Material(
+                  elevation: 3,
+                  borderRadius: BorderRadius.circular(16),
+                  color: NurungjiColors.bg,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: PickupListPanel(
+                      spots: _pkEnglishOnly
+                          ? _spots.where((s) => s.englishOk).toList()
+                          : _spots,
+                      onTap: (s) => showSpotDetail(context, s,
+                          currentUid: _repo.currentUid, onChanged: _load),
+                    ),
+                  ),
+                ),
+              ),
             if (_error != null)
               Positioned(bottom: 20, left: 20, right: 20, child: _errorBox()),
           ],
@@ -417,6 +444,42 @@ class _MapScreenState extends State<MapScreen> {
             );
           },
         ),
+      ),
+    );
+  }
+
+  // 픽업 탭: 지도/목록 토글 알약
+  Widget _pickupToggle() {
+    return Material(
+      elevation: 3,
+      borderRadius: BorderRadius.circular(22),
+      child: Container(
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+            color: Colors.white, borderRadius: BorderRadius.circular(22)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          _seg('🗺 ${t('map_view')}', !_pickupListView,
+              () => setState(() => _pickupListView = false)),
+          _seg('☰ ${t('list_view')}', _pickupListView,
+              () => setState(() => _pickupListView = true)),
+        ]),
+      ),
+    );
+  }
+
+  Widget _seg(String label, bool on, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+        decoration: BoxDecoration(
+            color: on ? NurungjiColors.yellow : Colors.transparent,
+            borderRadius: BorderRadius.circular(20)),
+        child: Text(label,
+            style: TextStyle(
+                fontWeight: on ? FontWeight.w800 : FontWeight.w600,
+                color: NurungjiColors.dark,
+                fontSize: 13)),
       ),
     );
   }
