@@ -6,7 +6,11 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/club.dart';
 import '../models/pickup_spot.dart';
 import '../services/data_repository.dart';
+import '../services/share_service.dart';
+import '../services/story_share.dart';
 import '../theme.dart';
+import '../widgets/share_menu.dart';
+import '../widgets/story_card.dart';
 import 'club_form_screen.dart';
 import 'pickup_form_screen.dart';
 
@@ -192,6 +196,15 @@ void showSpotDetail(
         if (s.feeInfo != null && s.feeInfo!.isNotEmpty) _infoRow('💰', s.feeInfo!),
         if (s.contactLink != null && s.contactLink!.isNotEmpty)
           _primaryBtn('💬 단톡 들어가기', () => _open(s.contactLink)),
+        _primaryBtn(
+          '📤 공유하기',
+          () => showShareMenu(
+            context,
+            url: ShareService.spotUrl(s.id),
+            shareTitle: s.title,
+            onStory: () => shareStoryCard(context, StoryCardData.fromSpot(s)),
+          ),
+        ),
         if (canModify)
           _modifyRow(
             onEdit: () async {
@@ -262,6 +275,15 @@ void showClubDetail(
             _outlineBtn('🚀 길찾기',
                 () => _open('https://map.kakao.com/link/to/${c.name},${c.lat},${c.lng}')),
         ]),
+        _primaryBtn(
+          '📤 공유하기',
+          () => showShareMenu(
+            context,
+            url: ShareService.clubUrl(c.id),
+            shareTitle: c.name,
+            onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
+          ),
+        ),
         if (canModify)
           _modifyRow(
             onEdit: () async {
