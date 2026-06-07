@@ -3,13 +3,16 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:kakao_map_plugin/kakao_map_plugin.dart';
 import 'firebase_options.dart';
 import 'screens/login_screen.dart';
-import 'screens/home_screen.dart';
+import 'screens/map_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // 카카오 지도 JS 키 (웹앱과 동일)
+  AuthRepository.initialize(appKey: '69f821ba943db5e3532ac90ea5ca1080');
   runApp(const MyApp());
 }
 
@@ -44,7 +47,7 @@ class AuthGate extends StatelessWidget {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        if (snapshot.hasData) return const HomeScreen();
+        if (snapshot.hasData) return const MapScreen();
         return const LoginScreen();
       },
     );

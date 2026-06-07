@@ -38,6 +38,9 @@ dependencies:
   firebase_auth: ^5.3.3
   cloud_firestore: ^5.5.0
 
+  # 카카오 지도 (WebView 기반 플러그인)
+  kakao_map_plugin: ^0.4.0
+
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.2
