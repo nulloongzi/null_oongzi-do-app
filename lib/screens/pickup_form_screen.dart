@@ -5,6 +5,7 @@ import 'package:flutter_naver_map/flutter_naver_map.dart';
 import '../models/pickup_spot.dart';
 import '../models/schedule_block.dart';
 import '../services/data_repository.dart';
+import '../services/geocoding_service.dart';
 import '../services/sanitize.dart';
 import '../theme.dart';
 import '../widgets/chip_select.dart';
@@ -56,8 +57,32 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
   double? _lng;
 
   bool _saving = false;
+  bool _geocoding = false;
 
   bool get _isEdit => widget.editing != null;
+
+  // 주소 → 좌표 (Cloud Function). 실패 시 지도 피커로 폴백 안내.
+  Future<void> _geocode() async {
+    final addr = _address.text.trim();
+    if (addr.isEmpty) {
+      _snack('주소를 입력해주세요');
+      return;
+    }
+    setState(() => _geocoding = true);
+    final r = await GeocodingService.geocode(addr);
+    if (!mounted) return;
+    setState(() {
+      _geocoding = false;
+      if (r != null) {
+        _lat = r.lat;
+        _lng = r.lng;
+        if (r.roadAddress != null && r.roadAddress!.isNotEmpty) {
+          _address.text = r.roadAddress!;
+        }
+      }
+    });
+    _snack(r != null ? '주소를 찾았어요!' : '주소를 못 찾았어요 — 지도에서 선택해주세요');
+  }
 
   static const _sportOptions = <ChipOption>[
     (label: '6인제', value: '6s'),
@@ -295,17 +320,30 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(child: _input(_address, '예: 서울 송파구 올림픽로 25')),
-            const SizedBox(width: 10),
-            OutlinedButton(
-              onPressed: _pickLocation,
-              child: const Text('지도에서 찾기'),
+        _input(_address, '예: 서울 송파구 올림픽로 25'),
+        const SizedBox(height: 8),
+        Row(children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: _geocoding ? null : _geocode,
+              icon: _geocoding
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.search, size: 18),
+              label: const Text('주소로 검색'),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: _pickLocation,
+              icon: const Icon(Icons.map_outlined, size: 18),
+              label: const Text('지도에서'),
+            ),
+          ),
+        ]),
         if (picked)
           Padding(
             padding: const EdgeInsets.only(top: 6),
