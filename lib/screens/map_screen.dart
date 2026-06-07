@@ -2,6 +2,7 @@
 // kakao_map_plugin(웹뷰) → flutter_naver_map(네이티브)로 전환: 패닝 부드러움 + 한국 데이터.
 import 'package:flutter/material.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../models/club.dart';
 import '../models/pickup_spot.dart';
 import '../services/data_repository.dart';
@@ -34,6 +35,7 @@ class _MapScreenState extends State<MapScreen> {
   ClubFilter _filter = const ClubFilter(); // 동호회 필터/검색
   bool _pkEnglishOnly = false; // 픽업: English OK만
   final _deepLinks = DeepLinkService();
+  NOverlayImage? _clusterIcon; // 클러스터 노란 원 (런타임 생성)
 
   @override
   void initState() {
@@ -115,6 +117,44 @@ class _MapScreenState extends State<MapScreen> {
       NOverlayImage.fromAssetImage('assets/markers/marker_red.png');
   static const _markerSize = Size(32, 42);
 
+  NOverlayCaption _caption(String text, {bool urgent = false}) => NOverlayCaption(
+        text: urgent ? '🔥 $text' : text,
+        textSize: 13,
+        color: urgent ? const Color(0xFFD32F2F) : NurungjiColors.dark,
+        haloColor: Colors.white,
+      );
+
+  // 클러스터용 노란 원 아이콘 1회 생성
+  Future<void> _ensureClusterIcon() async {
+    if (_clusterIcon != null || !mounted) return;
+    try {
+      _clusterIcon = await NOverlayImage.fromWidget(
+        widget: Container(
+          width: 46,
+          height: 46,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(
+            color: NurungjiColors.yellow,
+            shape: BoxShape.circle,
+            boxShadow: [BoxShadow(color: Color(0x55000000), blurRadius: 4, offset: Offset(0, 2))],
+          ),
+        ),
+        size: const Size(46, 46),
+        context: context,
+      );
+    } catch (_) {}
+  }
+
+  // 위치 권한 + 내 위치 오버레이 (locationButtonEnable 버튼이 동작하도록)
+  Future<void> _enableMyLocation() async {
+    try {
+      final status = await Permission.location.request();
+      if (status.isGranted) {
+        await _controller?.setLocationTrackingMode(NLocationTrackingMode.noFollow);
+      }
+    } catch (_) {}
+  }
+
   Future<void> _refreshMarkers() async {
     final c = _controller;
     if (c == null) return;
@@ -123,36 +163,48 @@ class _MapScreenState extends State<MapScreen> {
     if (_tab == 'clubs') {
       for (final club in _clubs.where(_filter.matches)) {
         if (club.lat == null || club.lng == null) continue;
-        final m = NMarker(
-          id: 'c_${club.id}',
-          position: NLatLng(club.lat!, club.lng!),
-          icon: _clubIcon,
-          size: _markerSize,
-        );
-        m.setOnTapListener((NMarker overlay) => showClubDetail(
-              context,
-              club,
-              currentUid: _repo.currentUid,
-              onChanged: _load,
-            ));
-        overlays.add(m);
+        final pos = NLatLng(club.lat!, club.lng!);
+        final urgent = club.isUrgent && (club.urgentMsg?.isNotEmpty ?? false);
+        if (urgent) {
+          // 급구: 클러스터 제외(항상 표시) + 빨강 + 항상 캡션
+          final m = NMarker(
+            id: 'c_${club.id}',
+            position: pos,
+            icon: _pickupIcon,
+            size: _markerSize,
+            caption: _caption(club.name, urgent: true),
+          );
+          m.setOnTapListener((NMarker o) => showClubDetail(context, club,
+              currentUid: _repo.currentUid, onChanged: _load));
+          overlays.add(m);
+        } else {
+          final m = NClusterableMarker(
+            id: 'c_${club.id}',
+            position: pos,
+            icon: _clubIcon,
+            size: _markerSize,
+            caption: _caption(club.name),
+            isHideCollidedCaptions: true,
+          );
+          m.setOnTapListener((NClusterableMarker o) => showClubDetail(context, club,
+              currentUid: _repo.currentUid, onChanged: _load));
+          overlays.add(m);
+        }
       }
     } else {
       final spots = _pkEnglishOnly ? _spots.where((s) => s.englishOk) : _spots;
       for (final spot in spots) {
         if (spot.lat == null || spot.lng == null) continue;
-        final m = NMarker(
+        final m = NClusterableMarker(
           id: 's_${spot.id}',
           position: NLatLng(spot.lat!, spot.lng!),
           icon: _pickupIcon,
           size: _markerSize,
+          caption: _caption(spot.title),
+          isHideCollidedCaptions: true,
         );
-        m.setOnTapListener((NMarker overlay) => showSpotDetail(
-              context,
-              spot,
-              currentUid: _repo.currentUid,
-              onChanged: _load,
-            ));
+        m.setOnTapListener((NClusterableMarker o) => showSpotDetail(context, spot,
+            currentUid: _repo.currentUid, onChanged: _load));
         overlays.add(m);
       }
     }
@@ -211,8 +263,22 @@ class _MapScreenState extends State<MapScreen> {
                 ),
                 locationButtonEnable: true,
               ),
-              onMapReady: (controller) {
+              clusterOptions: NaverMapClusteringOptions(
+                clusterMarkerBuilder: (info, clusterMarker) {
+                  if (_clusterIcon != null) clusterMarker.setIcon(_clusterIcon!);
+                  clusterMarker.setIsFlat(true);
+                  clusterMarker.setCaption(NOverlayCaption(
+                    text: info.size.toString(),
+                    textSize: 15,
+                    color: NurungjiColors.dark,
+                    haloColor: NurungjiColors.yellow,
+                  ));
+                },
+              ),
+              onMapReady: (controller) async {
                 _controller = controller;
+                await _ensureClusterIcon();
+                await _enableMyLocation();
                 _refreshMarkers();
               },
             ),
