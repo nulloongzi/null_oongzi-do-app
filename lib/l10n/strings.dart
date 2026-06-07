@@ -79,6 +79,9 @@ const Map<String, Map<String, String>> kStrings = {
   // 프로필
   'profile_title': {'ko': '내 프로필', 'en': 'My profile'},
   'my_lunchbox': {'ko': '내 도시락 (찜한 팀·식단표)', 'en': 'My lunchbox (saved teams & schedule)'},
+  'share_image_title': {'ko': '이미지로 공유', 'en': 'Share as image'},
+  'share_image_btn': {'ko': '이미지로 공유 / 저장', 'en': 'Share / save image'},
+  'share_image_btn_profile': {'ko': '📤 내 카드 이미지 공유', 'en': '📤 Share my card image'},
   'change_nickname': {'ko': '닉네임 변경', 'en': 'Change nickname'},
   'logout': {'ko': '로그아웃', 'en': 'Log out'},
   'joined': {'ko': '가입', 'en': 'Joined'},

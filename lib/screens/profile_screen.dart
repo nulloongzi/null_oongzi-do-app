@@ -7,6 +7,7 @@ import '../services/i18n.dart';
 import '../services/profile_service.dart';
 import '../theme.dart';
 import 'lunchbox_screen.dart';
+import 'share_image_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -128,6 +129,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             builder: (_) => const LunchboxScreen())),
                     icon: const Icon(Icons.lunch_dining, size: 18),
                     label: Text(t('my_lunchbox')),
+                  ),
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const ShareImageScreen())),
+                    icon: const Icon(Icons.ios_share, size: 18),
+                    label: Text(t('share_image_btn_profile')),
                   ),
                   const SizedBox(height: 10),
                   if (_profile != null)
