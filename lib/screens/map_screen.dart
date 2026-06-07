@@ -17,6 +17,7 @@ import 'club_form_screen.dart';
 import 'profile_screen.dart';
 import '../widgets/bounce_tap.dart';
 import '../widgets/filter_sheet.dart';
+import '../widgets/glass_surface.dart';
 import '../widgets/pickup_list_panel.dart';
 
 class MapScreen extends StatefulWidget {
@@ -315,19 +316,15 @@ class _MapScreenState extends State<MapScreen> {
                 left: 8,
                 right: 8,
                 bottom: 8,
-                child: Material(
-                  elevation: 3,
-                  borderRadius: BorderRadius.circular(16),
-                  color: NurungjiColors.bg,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: PickupListPanel(
-                      spots: _pkEnglishOnly
-                          ? _spots.where((s) => s.englishOk).toList()
-                          : _spots,
-                      onTap: (s) => showSpotDetail(context, s,
-                          currentUid: _repo.currentUid, onChanged: _load),
-                    ),
+                child: GlassSurface(
+                  color: const Color(0xF5FFFFFF), // 흰 0.96
+                  blur: 10,
+                  child: PickupListPanel(
+                    spots: _pkEnglishOnly
+                        ? _spots.where((s) => s.englishOk).toList()
+                        : _spots,
+                    onTap: (s) => showSpotDetail(context, s,
+                        currentUid: _repo.currentUid, onChanged: _load),
                   ),
                 ),
               ),
@@ -340,12 +337,9 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Widget _topBar() {
-    return Material(
-      elevation: 3,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Row(
+    return GlassSurface(
+      padding: const EdgeInsets.all(8),
+      child: Row(
           children: [
             _tabBtn('🏐 ${t('clubs')} ${_clubs.length}', 'clubs'),
             const SizedBox(width: 6),
@@ -392,7 +386,6 @@ class _MapScreenState extends State<MapScreen> {
                 tooltip: t('my_profile')),
           ],
         ),
-      ),
     );
   }
 
@@ -420,10 +413,10 @@ class _MapScreenState extends State<MapScreen> {
         .where((c) => c.isUrgent && (c.urgentMsg?.isNotEmpty ?? false))
         .toList();
     if (urgent.isEmpty) return const SizedBox.shrink();
-    return Material(
-      elevation: 2,
-      borderRadius: BorderRadius.circular(12),
-      color: const Color(0xFFFFF3E0),
+    return GlassSurface(
+      color: const Color(0xD9FFFBF0), // 크림-오렌지 0.85
+      blur: 10,
+      radius: BorderRadius.circular(12),
       child: SizedBox(
         height: 40,
         child: ListView.separated(
@@ -451,20 +444,15 @@ class _MapScreenState extends State<MapScreen> {
 
   // 픽업 탭: 지도/목록 토글 알약
   Widget _pickupToggle() {
-    return Material(
-      elevation: 3,
-      borderRadius: BorderRadius.circular(22),
-      child: Container(
-        padding: const EdgeInsets.all(3),
-        decoration: BoxDecoration(
-            color: Colors.white, borderRadius: BorderRadius.circular(22)),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          _seg('🗺 ${t('map_view')}', !_pickupListView,
-              () => setState(() => _pickupListView = false)),
-          _seg('☰ ${t('list_view')}', _pickupListView,
-              () => setState(() => _pickupListView = true)),
-        ]),
-      ),
+    return GlassSurface(
+      radius: BorderRadius.circular(22),
+      padding: const EdgeInsets.all(3),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        _seg('🗺 ${t('map_view')}', !_pickupListView,
+            () => setState(() => _pickupListView = false)),
+        _seg('☰ ${t('list_view')}', _pickupListView,
+            () => setState(() => _pickupListView = true)),
+      ]),
     );
   }
 
