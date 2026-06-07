@@ -34,7 +34,7 @@ android {
 
     defaultConfig {
         applicationId = "com.nulloongzi.nulloongzido"
-        minSdk = flutter.minSdkVersion
+        minSdk = maxOf(flutter.minSdkVersion, 23)  // Firebase Android SDK 최소 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
