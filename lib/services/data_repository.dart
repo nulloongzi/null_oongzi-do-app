@@ -20,6 +20,17 @@ class DataRepository {
     return snap.docs.map((d) => PickupSpot.fromDoc(d)).toList();
   }
 
+  /// 딥링크 단건 조회 (메모리에 없을 때 폴백).
+  Future<Club?> getClub(String id) async {
+    final doc = await _db.collection('clubs').doc(id).get();
+    return doc.exists ? Club.fromDoc(doc) : null;
+  }
+
+  Future<PickupSpot?> getSpot(String id) async {
+    final doc = await _db.collection('pickup_games').doc(id).get();
+    return doc.exists ? PickupSpot.fromDoc(doc) : null;
+  }
+
   /// 현재 로그인 uid (없으면 null). 클럽 등록/권한 판정용.
   String? get currentUid => FirebaseAuth.instance.currentUser?.uid;
 

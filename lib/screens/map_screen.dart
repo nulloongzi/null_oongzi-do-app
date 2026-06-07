@@ -8,6 +8,7 @@ import '../models/club.dart';
 import '../models/pickup_spot.dart';
 import '../services/data_repository.dart';
 import '../services/club_filter.dart';
+import '../services/deep_link_service.dart';
 import '../theme.dart';
 import 'detail_sheet.dart';
 import 'pickup_form_screen.dart';
@@ -31,11 +32,55 @@ class _MapScreenState extends State<MapScreen> {
   String? _error;
   ClubFilter _filter = const ClubFilter(); // 동호회 필터/검색
   bool _pkEnglishOnly = false; // 픽업: English OK만
+  final _deepLinks = DeepLinkService();
 
   @override
   void initState() {
     super.initState();
     _load();
+    _deepLinks.start(_handleDeepLink);
+  }
+
+  @override
+  void dispose() {
+    _deepLinks.dispose();
+    super.dispose();
+  }
+
+  // 딥링크(?club=/?spot=) → 탭 전환 + 상세 오픈. 메모리에 없으면 단건 조회.
+  Future<void> _handleDeepLink(DeepLink d) async {
+    if (!mounted) return;
+    if (d.kind == 'club') {
+      Club? c;
+      for (final x in _clubs) {
+        if (x.id == d.id) {
+          c = x;
+          break;
+        }
+      }
+      c ??= await _repo.getClub(d.id);
+      if (c != null && mounted) {
+        setState(() => _tab = 'clubs');
+        _refreshMarkers();
+        showClubDetail(context, c,
+            currentUid: _repo.currentUid, onChanged: _load);
+      }
+    } else {
+      PickupSpot? s;
+      for (final x in _spots) {
+        if (x.id == d.id) {
+          s = x;
+          break;
+        }
+      }
+      s ??= await _repo.getSpot(d.id);
+      if (s != null && mounted) {
+        setState(() => _tab = 'pickup');
+        _refreshMarkers();
+        showSpotDetail(context, s,
+            currentUid: _repo.currentUid, onChanged: _load);
+      }
+    }
   }
 
   Future<void> _load() async {

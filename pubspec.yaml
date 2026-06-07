@@ -54,6 +54,7 @@ dependencies:
   google_fonts: ^6.2.1          # Noto Sans KR (누룽지 따뜻한 톤, 스토리카드 한글 렌더)
   share_plus: ^10.1.1           # OS 공유시트 (다른 앱/DM)
   qr_flutter: ^4.1.0            # 스토리 카드 QR
+  app_links: ^6.3.0             # 딥링크 (?club=/?spot=)
 
 dev_dependencies:
   flutter_test:
