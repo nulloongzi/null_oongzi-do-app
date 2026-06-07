@@ -173,6 +173,8 @@ class _MapScreenState extends State<MapScreen> {
               },
             ),
             Positioned(top: 10, left: 10, right: 10, child: _topBar()),
+            if (_tab == 'clubs')
+              Positioned(top: 66, left: 10, right: 10, child: _urgentTicker()),
             if (_error != null)
               Positioned(bottom: 20, left: 20, right: 20, child: _errorBox()),
           ],
@@ -239,6 +241,41 @@ class _MapScreenState extends State<MapScreen> {
             style: TextStyle(
                 fontWeight: on ? FontWeight.w800 : FontWeight.w600,
                 color: NurungjiColors.dark)),
+      ),
+    );
+  }
+
+  // 급구 티커 (verified 무관, is_urgent+메시지 있는 클럽). 탭 → 상세.
+  Widget _urgentTicker() {
+    final urgent = _clubs
+        .where((c) => c.isUrgent && (c.urgentMsg?.isNotEmpty ?? false))
+        .toList();
+    if (urgent.isEmpty) return const SizedBox.shrink();
+    return Material(
+      elevation: 2,
+      borderRadius: BorderRadius.circular(12),
+      color: const Color(0xFFFFF3E0),
+      child: SizedBox(
+        height: 40,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          itemCount: urgent.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 16),
+          itemBuilder: (_, i) {
+            final c = urgent[i];
+            return Center(
+              child: GestureDetector(
+                onTap: () => showClubDetail(context, c,
+                    currentUid: _repo.currentUid, onChanged: _load),
+                child: Text('🔥 ${c.name} · ${c.urgentMsg}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: NurungjiColors.dark)),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

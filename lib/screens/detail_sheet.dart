@@ -163,6 +163,74 @@ Future<void> _confirmDelete(
   await onChanged?.call();
 }
 
+// 동호회 급구(is_urgent) 올리기/내리기 — 소유자 전용. update merge로 나머지 보존.
+Widget _urgentToggle(
+  Club c,
+  BuildContext sheetCtx,
+  BuildContext outerCtx,
+  Future<void> Function()? onChanged,
+) {
+  Future<void> apply(bool urgent, String msg) async {
+    try {
+      await DataRepository().updateClub(
+          c.id, {'is_urgent': urgent, 'urgent_msg': urgent ? msg : ''});
+    } catch (e) {
+      if (outerCtx.mounted) {
+        ScaffoldMessenger.of(outerCtx)
+            .showSnackBar(SnackBar(content: Text('실패: $e')));
+      }
+      return;
+    }
+    if (sheetCtx.mounted) Navigator.pop(sheetCtx);
+    await onChanged?.call();
+  }
+
+  return Padding(
+    padding: const EdgeInsets.only(top: 12),
+    child: SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () async {
+          if (c.isUrgent) {
+            await apply(false, '');
+          } else {
+            final msg = await _promptText(sheetCtx,
+                title: '🔥 급구 올리기', hint: '예: 이번주 토 세터 1명 급구!');
+            if (msg != null && msg.trim().isNotEmpty) await apply(true, msg.trim());
+          }
+        },
+        icon: Icon(c.isUrgent ? Icons.notifications_off : Icons.campaign,
+            size: 18),
+        label: Text(c.isUrgent ? '급구 내리기' : '🔥 급구 올리기'),
+      ),
+    ),
+  );
+}
+
+Future<String?> _promptText(BuildContext ctx,
+    {required String title, required String hint}) {
+  final ctrl = TextEditingController();
+  return showDialog<String>(
+    context: ctx,
+    builder: (dctx) => AlertDialog(
+      title: Text(title),
+      content: TextField(
+        controller: ctrl,
+        autofocus: true,
+        maxLength: 200,
+        decoration: InputDecoration(hintText: hint),
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(dctx), child: const Text('취소')),
+        TextButton(
+            onPressed: () => Navigator.pop(dctx, ctrl.text),
+            child: const Text('확인')),
+      ],
+    ),
+  );
+}
+
 void showSpotDetail(
   BuildContext context,
   PickupSpot s, {
@@ -262,6 +330,8 @@ void showClubDetail(
               children: tags
                   .map((t) => _chip(t, NurungjiColors.chipBg, NurungjiColors.chipFg))
                   .toList()),
+        if (c.isUrgent && c.urgentMsg != null && c.urgentMsg!.isNotEmpty)
+          _banner('🔥 급구', c.urgentMsg!),
         if (c.schedule != null && c.schedule!.isNotEmpty) _infoRow('🗓', c.schedule!),
         if (c.address != null && c.address!.isNotEmpty) _infoRow('📍', c.address!),
         if (c.price != null && c.price!.isNotEmpty) _infoRow('💰', c.price!),
@@ -284,6 +354,7 @@ void showClubDetail(
             onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
           ),
         ),
+        if (canModify) _urgentToggle(c, sheetCtx, context, onChanged),
         if (canModify)
           _modifyRow(
             onEdit: () async {
