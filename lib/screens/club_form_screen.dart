@@ -6,6 +6,7 @@ import '../models/club.dart';
 import '../models/schedule_block.dart';
 import '../services/data_repository.dart';
 import '../services/geocoding_service.dart';
+import '../services/i18n.dart';
 import '../services/sanitize.dart';
 import '../theme.dart';
 import '../widgets/chip_select.dart';
@@ -50,7 +51,7 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
   Future<void> _geocode() async {
     final addr = _address.text.trim();
     if (addr.isEmpty) {
-      _snack('주소를 입력해주세요');
+      _snack(t('f_addr_empty'));
       return;
     }
     setState(() => _geocoding = true);
@@ -66,20 +67,20 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
         }
       }
     });
-    _snack(r != null ? '주소를 찾았어요!' : '주소를 못 찾았어요 — 지도에서 선택해주세요');
+    _snack(r != null ? t('f_addr_found') : t('f_addr_notfound'));
   }
 
-  // 웹 reg-target-chip data-val (한글 값 그대로 저장 → 필터·기존데이터 호환)
-  static const _targetOptions = <ChipOption>[
-    (label: '성인', value: '성인'),
-    (label: '대학생', value: '대학생'),
-    (label: '청소년', value: '청소년'),
-    (label: '무관', value: '무관'),
-    (label: '여성전용', value: '여성전용'),
-    (label: '남성전용', value: '남성전용'),
-    (label: '선출가능', value: '선출가능'),
-    (label: '6인제', value: '6인제'),
-  ];
+  // 웹 reg-target-chip data-val: 값은 한글 고정(필터·기존데이터 호환), 라벨만 한/영.
+  List<ChipOption> get _targetOptions => [
+        (label: t('t_adult'), value: '성인'),
+        (label: t('t_college'), value: '대학생'),
+        (label: t('t_youth'), value: '청소년'),
+        (label: t('t_any'), value: '무관'),
+        (label: t('t_women'), value: '여성전용'),
+        (label: t('t_men'), value: '남성전용'),
+        (label: t('t_expro'), value: '선출가능'),
+        (label: t('t_6s'), value: '6인제'),
+      ];
 
   @override
   void initState() {
@@ -95,9 +96,9 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
       _lat = e.lat;
       _lng = e.lng;
       // target 문자열 → 칩 부분일치 프리셀렉트 (잔여 표현은 메모 복원 불가 → 비움)
-      final t = e.target ?? '';
+      final tgt = e.target ?? '';
       for (final o in _targetOptions) {
-        if (t.contains(o.value)) _targets.add(o.value);
+        if (tgt.contains(o.value)) _targets.add(o.value);
       }
       _blocks.addAll(ScheduleBlock.groupFromRaw(e.scheduleRaw));
     }
@@ -150,40 +151,40 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
     final target = _targetValue();
     final address = _address.text.trim();
     if (name.isEmpty || target.isEmpty || address.isEmpty) {
-      _snack('이름·대상·주소는 필수예요');
+      _snack(t('cf_req'));
       return;
     }
     if (_lat == null || _lng == null) {
-      _snack('지도에서 위치를 선택해주세요');
+      _snack(t('f_pick_loc'));
       return;
     }
     // 길이 가드(웹과 동일 · permission-denied 예방)
-    if (name.length > 60) return _snack('팀 이름은 60자 이하로');
-    if (target.length > 80) return _snack('대상은 80자 이하로');
-    if (address.length > 200) return _snack('주소는 200자 이하로');
+    if (name.length > 60) return _snack(t('cf_name_max'));
+    if (target.length > 80) return _snack(t('cf_target_max'));
+    if (address.length > 200) return _snack(t('cf_addr_max'));
 
     final price = _price.text.trim();
-    if (price.length > 100) return _snack('회비는 100자 이하로');
+    if (price.length > 100) return _snack(t('cf_price_max'));
 
     // insta 핸들(선택)
     var insta = _insta.text.trim();
     if (insta.isNotEmpty) {
       final s = Sanitize.instaHandle(insta);
-      if (s.isEmpty) return _snack('인스타 핸들 형식이 올바르지 않아요');
+      if (s.isEmpty) return _snack(t('cf_insta_invalid'));
       insta = s;
     }
     // 가입/문의 링크(선택)
     var link = _link.text.trim();
     if (link.isNotEmpty) {
       final s = Sanitize.url(link);
-      if (s.isEmpty) return _snack('링크 형식이 올바르지 않아요 (http/https)');
+      if (s.isEmpty) return _snack(t('f_link_invalid'));
       link = s;
     }
     // 릴스/게시물(선택)
     var reel = _reel.text.trim();
     if (reel.isNotEmpty) {
       final s = Sanitize.instaPostUrl(reel);
-      if (s.isEmpty) return _snack('인스타 게시물/릴스 링크 형식이 올바르지 않아요');
+      if (s.isEmpty) return _snack(t('f_reel_invalid'));
       reel = s;
     }
 
@@ -207,25 +208,25 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
         await _repo.createClub(fields);
       }
       if (!mounted) return;
-      _snack(_isEdit ? '수정됐어요!' : '동호회가 등록됐어요!');
+      _snack(_isEdit ? t('f_updated') : t('cf_created'));
       Navigator.pop(context, true);
     } catch (e) {
       setState(() => _saving = false);
-      _snack('${_isEdit ? '수정' : '등록'} 실패: $e');
+      _snack('$e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_isEdit ? '동호회 수정' : '동호회 등록')),
+      appBar: AppBar(title: Text(_isEdit ? t('cf_edit_title') : t('cf_title'))),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           children: [
-            _group('팀 이름 (필수)', _input(_name, '예: GVT 배구클럽')),
+            _group(t('cf_name'), _input(_name, t('cf_name_hint'))),
             _group(
-              '대상 (필수)',
+              t('cf_target'),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -239,21 +240,19 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
                     }),
                   ),
                   const SizedBox(height: 8),
-                  _input(_targetNote, '기타 조건 (예: 구력 1년 이상) — 선택'),
+                  _input(_targetNote, t('cf_target_note')),
                 ],
               ),
             ),
-            _group('주소 (필수) — 실제 체육관', _addressRow()),
+            _group(t('cf_addr'), _addressRow()),
             _group(
-              '운동 시간 (스케줄)',
+              t('cf_sched'),
               ScheduleEditor(blocks: _blocks, onChanged: () => setState(() {})),
             ),
-            _group('회비 및 게스트비', _input(_price, '예: 월 3만원 / 게스트 1만원')),
-            _group('인스타그램 핸들 (선택)', _input(_insta, '예: gvt__official')),
-            _group('인스타 릴스/게시물 링크 (선택)',
-                _input(_reel, '예: https://www.instagram.com/reel/...')),
-            _group('가입/문의 링크 (선택)',
-                _input(_link, '예: https://open.kakao.com/o/...')),
+            _group(t('cf_price'), _input(_price, t('cf_price_hint'))),
+            _group(t('cf_insta'), _input(_insta, t('cf_insta_hint'))),
+            _group(t('f_reel_label'), _input(_reel, t('f_reel_hint'))),
+            _group(t('cf_link'), _input(_link, t('f_contact_hint'))),
             const SizedBox(height: 8),
             ElevatedButton(
               onPressed: _saving ? null : _submit,
@@ -263,7 +262,7 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
                       width: 20,
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: NurungjiColors.dark))
-                  : Text(_isEdit ? '저장' : '등록하기'),
+                  : Text(_isEdit ? t('save') : t('cf_submit')),
             ),
           ],
         ),
@@ -299,7 +298,7 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _input(_address, '예: 서울 송파구 올림픽로 424'),
+        _input(_address, t('cf_addr_hint')),
         const SizedBox(height: 8),
         Row(children: [
           Expanded(
@@ -311,7 +310,7 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Icons.search, size: 18),
-              label: const Text('주소로 검색'),
+              label: Text(t('f_addr_search')),
             ),
           ),
           const SizedBox(width: 8),
@@ -319,7 +318,7 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
             child: OutlinedButton.icon(
               onPressed: _pickLocation,
               icon: const Icon(Icons.map_outlined, size: 18),
-              label: const Text('지도에서'),
+              label: Text(t('f_addr_map')),
             ),
           ),
         ]),
@@ -331,7 +330,7 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
                   size: 16, color: NurungjiColors.teal),
               const SizedBox(width: 4),
               Text(
-                '위치 선택됨 (${_lat!.toStringAsFixed(5)}, ${_lng!.toStringAsFixed(5)})',
+                '${t('f_loc_set')} (${_lat!.toStringAsFixed(5)}, ${_lng!.toStringAsFixed(5)})',
                 style: const TextStyle(
                     fontSize: 12, color: NurungjiColors.brown),
               ),

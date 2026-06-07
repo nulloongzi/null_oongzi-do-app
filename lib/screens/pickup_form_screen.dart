@@ -6,6 +6,7 @@ import '../models/pickup_spot.dart';
 import '../models/schedule_block.dart';
 import '../services/data_repository.dart';
 import '../services/geocoding_service.dart';
+import '../services/i18n.dart';
 import '../services/sanitize.dart';
 import '../theme.dart';
 import '../widgets/chip_select.dart';
@@ -65,7 +66,7 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
   Future<void> _geocode() async {
     final addr = _address.text.trim();
     if (addr.isEmpty) {
-      _snack('주소를 입력해주세요');
+      _snack(t('f_addr_empty'));
       return;
     }
     setState(() => _geocoding = true);
@@ -81,20 +82,20 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
         }
       }
     });
-    _snack(r != null ? '주소를 찾았어요!' : '주소를 못 찾았어요 — 지도에서 선택해주세요');
+    _snack(r != null ? t('f_addr_found') : t('f_addr_notfound'));
   }
 
-  static const _sportOptions = <ChipOption>[
-    (label: '6인제', value: '6s'),
-    (label: '9인제', value: '9s'),
-    (label: '혼성·자유', value: 'mixed'),
-  ];
-  static const _levelOptions = <ChipOption>[
-    (label: '입문', value: 'beginner'),
-    (label: '중급', value: 'intermediate'),
-    (label: '고급', value: 'advanced'),
-    (label: '레벨무관', value: 'any'),
-  ];
+  List<ChipOption> get _sportOptions => [
+        (label: t('sport_6s'), value: '6s'),
+        (label: t('sport_9s'), value: '9s'),
+        (label: t('sport_mixed'), value: 'mixed'),
+      ];
+  List<ChipOption> get _levelOptions => [
+        (label: t('lv_beginner'), value: 'beginner'),
+        (label: t('lv_intermediate'), value: 'intermediate'),
+        (label: t('lv_advanced'), value: 'advanced'),
+        (label: t('lv_any'), value: 'any'),
+      ];
 
   @override
   void initState() {
@@ -158,11 +159,11 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
     final title = _title.text.trim();
     final address = _address.text.trim();
     if (title.isEmpty || address.isEmpty) {
-      _snack('게임 이름과 주소는 필수예요');
+      _snack(t('pf_req'));
       return;
     }
     if (_lat == null || _lng == null) {
-      _snack('지도에서 위치를 선택해주세요');
+      _snack(t('f_pick_loc'));
       return;
     }
 
@@ -171,7 +172,7 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
     if (contact.isNotEmpty) {
       final s = Sanitize.url(contact);
       if (s.isEmpty) {
-        _snack('링크 형식이 올바르지 않아요 (http/https)');
+        _snack(t('f_link_invalid'));
         return;
       }
       contact = s;
@@ -182,7 +183,7 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
     if (reel.isNotEmpty) {
       final s = Sanitize.instaPostUrl(reel);
       if (s.isEmpty) {
-        _snack('인스타 게시물/릴스 링크 형식이 올바르지 않아요');
+        _snack(t('f_reel_invalid'));
         return;
       }
       reel = s;
@@ -215,25 +216,25 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
         await _repo.createPickup(fields);
       }
       if (!mounted) return;
-      _snack(_isEdit ? '수정됐어요!' : '픽업이 등록됐어요!');
+      _snack(_isEdit ? t('f_updated') : t('pf_created'));
       Navigator.pop(context, true);
     } catch (e) {
       setState(() => _saving = false);
-      _snack('${_isEdit ? '수정' : '등록'} 실패: $e');
+      _snack('$e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_isEdit ? '픽업 수정' : '픽업 게임 열기')),
+      appBar: AppBar(title: Text(_isEdit ? t('pf_edit_title') : t('pf_title'))),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           children: [
-            _group('게임 이름 (필수)', _input(_title, '예: 토요일 저녁 6인제 픽업')),
+            _group(t('pf_name'), _input(_title, t('pf_name_hint'))),
             _group(
-              '종목',
+              t('pf_sport'),
               SingleChoiceChips(
                 options: _sportOptions,
                 selected: _sport,
@@ -241,7 +242,7 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
               ),
             ),
             _group(
-              '레벨',
+              t('pf_level'),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -252,29 +253,26 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
                   ),
                   const SizedBox(height: 8),
                   Wrap(spacing: 8, children: [
-                    _toggle('초보 환영', _beginnerFriendly,
+                    _toggle(t('pf_beginner'), _beginnerFriendly,
                         (v) => setState(() => _beginnerFriendly = v)),
-                    _toggle('🌐 외국인 환영 (English OK)', _englishOk,
+                    _toggle(t('pf_english'), _englishOk,
                         (v) => setState(() => _englishOk = v)),
                   ]),
                 ],
               ),
             ),
-            _group('체육관/장소 이름', _input(_venue, '예: 잠실학생체육관')),
-            _group('주소 (필수)', _addressRow()),
+            _group(t('pf_venue'), _input(_venue, t('pf_venue_hint'))),
+            _group(t('pf_addr'), _addressRow()),
             _group(
-              '보통 일정 (요일·시간)',
+              t('pf_sched'),
               ScheduleEditor(blocks: _blocks, onChanged: () => setState(() {})),
             ),
-            _group('일정 메모 (비정기·기타, 선택)',
-                _input(_scheduleMemo, '예: 셋째주 휴무 · 우천시 취소')),
-            _group('이번주 공지 (선택)', _input(_thisWeek, '예: 이번주 토 7시 잠실')),
-            _group('게임비 정보 (선택)', _input(_fee, '예: 보통 1만원 · 현장')),
-            _group('단톡/Meetup 링크 (들어가는 문)',
-                _input(_contact, '예: https://open.kakao.com/o/...')),
-            _group('릴스/게시물 링크 (선택)',
-                _input(_reel, '예: https://www.instagram.com/reel/...')),
-            _group('추가 안내 (선택)', _input(_notes, '예: 실내화 필수 · 네트 6인제 높이')),
+            _group(t('pf_sched_memo'), _input(_scheduleMemo, t('pf_sched_memo_hint'))),
+            _group(t('pf_thisweek'), _input(_thisWeek, t('pf_thisweek_hint'))),
+            _group(t('pf_fee'), _input(_fee, t('pf_fee_hint'))),
+            _group(t('pf_contact'), _input(_contact, t('f_contact_hint'))),
+            _group(t('f_reel_label'), _input(_reel, t('f_reel_hint'))),
+            _group(t('pf_notes'), _input(_notes, t('pf_notes_hint'))),
             const SizedBox(height: 8),
             ElevatedButton(
               onPressed: _saving ? null : _submit,
@@ -284,7 +282,7 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
                       width: 20,
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: NurungjiColors.dark))
-                  : Text(_isEdit ? '저장' : '픽업 등록'),
+                  : Text(_isEdit ? t('save') : t('pf_submit')),
             ),
           ],
         ),
@@ -320,7 +318,7 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _input(_address, '예: 서울 송파구 올림픽로 25'),
+        _input(_address, t('pf_addr_hint')),
         const SizedBox(height: 8),
         Row(children: [
           Expanded(
@@ -332,7 +330,7 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Icons.search, size: 18),
-              label: const Text('주소로 검색'),
+              label: Text(t('f_addr_search')),
             ),
           ),
           const SizedBox(width: 8),
@@ -340,7 +338,7 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
             child: OutlinedButton.icon(
               onPressed: _pickLocation,
               icon: const Icon(Icons.map_outlined, size: 18),
-              label: const Text('지도에서'),
+              label: Text(t('f_addr_map')),
             ),
           ),
         ]),
@@ -352,7 +350,7 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
                   size: 16, color: NurungjiColors.teal),
               const SizedBox(width: 4),
               Text(
-                '위치 선택됨 (${_lat!.toStringAsFixed(5)}, ${_lng!.toStringAsFixed(5)})',
+                '${t('f_loc_set')} (${_lat!.toStringAsFixed(5)}, ${_lng!.toStringAsFixed(5)})',
                 style: const TextStyle(
                     fontSize: 12, color: NurungjiColors.brown),
               ),
