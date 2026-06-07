@@ -2,6 +2,7 @@
 // 적용 시 ClubFilter 반환(null=취소). 검색어도 함께 담아 반환.
 import 'package:flutter/material.dart';
 import '../services/club_filter.dart';
+import '../services/i18n.dart';
 import '../theme.dart';
 import 'chip_select.dart';
 
@@ -69,29 +70,29 @@ class _FilterSheetState extends State<_FilterSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('검색 · 필터',
-                style: TextStyle(
+            Text(t('filter_title'),
+                style: const TextStyle(
                     fontSize: 19,
                     fontWeight: FontWeight.w800,
                     color: NurungjiColors.dark)),
             const SizedBox(height: 14),
             TextField(
               controller: _kw,
-              decoration: const InputDecoration(
-                hintText: '팀 이름·지역 검색',
-                prefixIcon: Icon(Icons.search),
+              decoration: InputDecoration(
+                hintText: t('filter_search_hint'),
+                prefixIcon: const Icon(Icons.search),
               ),
             ),
-            _section('지역', ClubFilter.regionOptions, _regions),
-            _section('요일', ClubFilter.dayOptions, _days),
-            _section('대상', ClubFilter.targetOptions, _targets),
+            _section(t('filter_region'), ClubFilter.regionOptions, _regions),
+            _section(t('filter_day'), ClubFilter.dayOptions, _days),
+            _section(t('filter_target'), ClubFilter.targetOptions, _targets),
             const SizedBox(height: 18),
             Row(children: [
-              OutlinedButton(onPressed: _reset, child: const Text('초기화')),
+              OutlinedButton(onPressed: _reset, child: Text(t('filter_reset'))),
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(
-                    onPressed: _apply, child: const Text('적용하기')),
+                    onPressed: _apply, child: Text(t('filter_apply'))),
               ),
             ]),
           ],

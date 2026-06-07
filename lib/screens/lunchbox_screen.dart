@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../models/club.dart';
 import '../services/data_repository.dart';
+import '../services/i18n.dart';
 import '../services/lunchbox_service.dart';
 import '../services/schedule_parse.dart';
 import '../theme.dart';
@@ -82,9 +83,9 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
   Future<void> _addCustom() async {
     final uid = _repo.currentUid;
     if (uid == null) return;
-    final name = await _prompt('팀 이름', '예: 우리 동호회');
+    final name = await _prompt(t('lb_team_name'), '예: 우리 동호회');
     if (name == null || name.trim().isEmpty) return;
-    final sched = await _prompt('일정 (예: 토 14:00~17:00)', '토 14:00~17:00');
+    final sched = await _prompt(t('lb_sched_hint'), '토 14:00~17:00');
     if (sched == null || sched.trim().isEmpty) return;
     final err = await _svc.addCustomTeam(uid, name.trim(), sched.trim());
     if (err != null) {
@@ -92,7 +93,7 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
       return;
     }
     await _load();
-    _snack('도시락에 담았어요!');
+    _snack(t('lb_added'));
   }
 
   Future<String?> _prompt(String title, String hint) {
@@ -107,10 +108,10 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
             decoration: InputDecoration(hintText: hint)),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(dctx), child: const Text('취소')),
+              onPressed: () => Navigator.pop(dctx), child: Text(t('cancel'))),
           TextButton(
               onPressed: () => Navigator.pop(dctx, c.text),
-              child: const Text('확인')),
+              child: Text(t('confirm'))),
         ],
       ),
     );
@@ -138,7 +139,7 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('내 도시락')),
+      appBar: AppBar(title: Text(t('lunchbox_title'))),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -151,20 +152,20 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
                   OutlinedButton.icon(
                     onPressed: _addCustom,
                     icon: const Icon(Icons.add, size: 18),
-                    label: const Text('커스텀 팀 추가'),
+                    label: Text(t('add_custom')),
                   ),
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      const Text('🍱 식단표',
-                          style: TextStyle(
+                      Text(t('lb_diet'),
+                          style: const TextStyle(
                               fontWeight: FontWeight.w800,
                               fontSize: 16,
                               color: NurungjiColors.dark)),
                       const Spacer(),
                       TextButton(
                         onPressed: () => setState(() => _showDiet = !_showDiet),
-                        child: Text(_showDiet ? '접기' : '펼치기'),
+                        child: Text(_showDiet ? t('collapse') : t('expand')),
                       ),
                     ],
                   ),
@@ -196,7 +197,7 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
     final filled = id != null;
     final label = !filled
         ? _placeholders[i]
-        : (r == null ? '삭제된 팀' : (r.isCustom ? '🍙 ${r.name}' : r.name));
+        : (r == null ? t('deleted_team') : (r.isCustom ? '🍙 ${r.name}' : r.name));
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),

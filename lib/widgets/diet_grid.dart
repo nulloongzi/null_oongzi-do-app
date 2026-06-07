@@ -1,6 +1,7 @@
 // diet_grid.dart — 식단표(찜한 팀 주간 시간표). 웹 renderCombinedSchedule 포팅.
 // 요일×시간 그리드에 팀별 일정 블록을 슬롯 색으로 표시.
 import 'package:flutter/material.dart';
+import '../services/i18n.dart';
 import '../services/schedule_parse.dart';
 import '../theme.dart';
 
@@ -39,11 +40,11 @@ class DietGrid extends StatelessWidget {
       }
     }
     if (all.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 24),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
         child: Center(
-          child: Text('찜한 팀의 일정이 없어요',
-              style: TextStyle(color: NurungjiColors.brown)),
+          child: Text(t('lb_no_sched'),
+              style: const TextStyle(color: NurungjiColors.brown)),
         ),
       );
     }

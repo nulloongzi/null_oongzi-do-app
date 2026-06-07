@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../models/profile.dart';
+import '../services/i18n.dart';
 import '../services/profile_service.dart';
 import '../theme.dart';
 import 'lunchbox_screen.dart';
@@ -53,19 +54,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final newName = await showDialog<String>(
       context: context,
       builder: (dctx) => AlertDialog(
-        title: const Text('닉네임 변경'),
+        title: Text(t('change_nickname')),
         content: TextField(
           controller: ctrl,
           autofocus: true,
           maxLength: 30,
-          decoration: const InputDecoration(hintText: '새 닉네임 (하이픈 - 금지)'),
+          decoration: InputDecoration(hintText: t('nickname_hint')),
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(dctx), child: const Text('취소')),
+              onPressed: () => Navigator.pop(dctx), child: Text(t('cancel'))),
           TextButton(
               onPressed: () => Navigator.pop(dctx, ctrl.text),
-              child: const Text('확인')),
+              child: Text(t('confirm'))),
         ],
       ),
     );
@@ -73,12 +74,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final n = newName.trim();
     if (n.isEmpty || n == p.fullNickname) return;
     if (n.contains('-')) {
-      _snack('하이픈(-)은 밥아저씨가 지어준 이름에만 쓸 수 있어요');
+      _snack(t('nickname_hyphen'));
       return;
     }
     try {
       if (await _svc.isDuplicate(n)) {
-        _snack('이미 누군가 쓰고 있는 이름이에요');
+        _snack(t('nickname_dup'));
         return;
       }
       await _svc.rename(uid, n);
@@ -89,7 +90,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             color: p.color,
             createdAt: p.createdAt));
       }
-      _snack('닉네임 변경 완료!');
+      _snack(t('nickname_done'));
     } catch (e) {
       _snack('오류: $e');
     }
@@ -103,10 +104,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (mounted) Navigator.pop(context); // AuthGate가 로그인 화면으로 전환
   }
 
+  String _joinedLabel(Profile p) => p.createdAt == null
+      ? ''
+      : '${t('joined')} ${p.createdAt!.year}.${p.createdAt!.month}.${p.createdAt!.day}';
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('내 프로필')),
+      appBar: AppBar(title: Text(t('profile_title'))),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -122,21 +127,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         MaterialPageRoute(
                             builder: (_) => const LunchboxScreen())),
                     icon: const Icon(Icons.lunch_dining, size: 18),
-                    label: const Text('내 도시락 (찜한 팀·식단표)'),
+                    label: Text(t('my_lunchbox')),
                   ),
                   const SizedBox(height: 10),
                   if (_profile != null)
                     OutlinedButton.icon(
                       onPressed: _rename,
                       icon: const Icon(Icons.edit, size: 18),
-                      label: const Text('닉네임 변경'),
+                      label: Text(t('change_nickname')),
                     ),
                   const SizedBox(height: 10),
                   OutlinedButton.icon(
                     onPressed: _signOut,
                     icon: const Icon(Icons.logout, size: 18, color: Colors.red),
-                    label: const Text('로그아웃',
-                        style: TextStyle(color: Colors.red)),
+                    label: Text(t('logout'),
+                        style: const TextStyle(color: Colors.red)),
                     style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: Colors.red)),
                   ),
@@ -147,9 +152,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _card(Profile p) {
-    final joined = p.createdAt == null
-        ? ''
-        : '가입 ${p.createdAt!.year}.${p.createdAt!.month}.${p.createdAt!.day}';
+    final joined = _joinedLabel(p);
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(

@@ -1,6 +1,7 @@
 // share_menu.dart — 통합 공유 바텀시트. 웹 openShareMenu 포팅.
 // 헤드라인=인스타 스토리, 그 외 링크복사 / 다른앱(OS 공유시트). 카톡 리치카드는 후속.
 import 'package:flutter/material.dart';
+import '../services/i18n.dart';
 import '../services/share_service.dart';
 import '../theme.dart';
 
@@ -20,18 +21,18 @@ void showShareMenu(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Padding(
-              padding: EdgeInsets.only(bottom: 6, top: 2),
-              child: Text('공유하기',
-                  style: TextStyle(
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6, top: 2),
+              child: Text(t('share_title'),
+                  style: const TextStyle(
                       fontWeight: FontWeight.w800,
                       fontSize: 17,
                       color: NurungjiColors.dark)),
             ),
             if (onStory != null)
               _menuButton(
-                label: '📸 인스타 스토리',
-                hint: '링크 자동 복사 — 보는 사람은 탭 1번에 입장',
+                label: t('share_story'),
+                hint: t('share_story_hint'),
                 primary: true,
                 onTap: () {
                   Navigator.pop(ctx);
@@ -39,19 +40,19 @@ void showShareMenu(
                 },
               ),
             _menuButton(
-              label: '🔗 링크 복사',
+              label: t('share_copy'),
               onTap: () async {
                 Navigator.pop(ctx);
                 await ShareService.copy(url);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('링크가 복사됐어요')),
+                    SnackBar(content: Text(t('link_copied'))),
                   );
                 }
               },
             ),
             _menuButton(
-              label: '📤 다른 앱으로 공유',
+              label: t('share_more'),
               onTap: () async {
                 Navigator.pop(ctx);
                 await ShareService.osShare('$shareTitle\n$url');
@@ -59,7 +60,7 @@ void showShareMenu(
             ),
             const SizedBox(height: 2),
             TextButton(
-                onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
+                onPressed: () => Navigator.pop(ctx), child: Text(t('cancel'))),
           ],
         ),
       ),

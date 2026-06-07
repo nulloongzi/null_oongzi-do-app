@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/club.dart';
 import '../models/pickup_spot.dart';
 import '../services/data_repository.dart';
+import '../services/i18n.dart';
 import '../services/lunchbox_service.dart';
 import '../services/share_service.dart';
 import '../services/story_share.dart';
@@ -21,10 +22,14 @@ const _titleStyle = TextStyle(
     fontSize: 23, fontWeight: FontWeight.w800, color: NurungjiColors.dark);
 
 String _sportLabel(String? s) =>
-    s == '6s' ? '6인제' : (s == '9s' ? '9인제' : '혼성·자유');
-String _levelLabel(String? l) =>
-    const {'beginner': '입문', 'intermediate': '중급', 'advanced': '고급'}[l] ??
-    '레벨무관';
+    s == '6s' ? t('sport_6s') : (s == '9s' ? t('sport_9s') : t('sport_mixed'));
+String _levelLabel(String? l) => l == 'beginner'
+    ? t('lv_beginner')
+    : l == 'intermediate'
+        ? t('lv_intermediate')
+        : l == 'advanced'
+            ? t('lv_advanced')
+            : t('lv_any');
 
 Future<void> _open(String? url) async {
   if (url == null || url.trim().isEmpty) return;
@@ -112,14 +117,14 @@ Widget _modifyRow({required VoidCallback onEdit, required VoidCallback onDelete}
           child: OutlinedButton.icon(
             onPressed: onEdit,
             icon: const Icon(Icons.edit, size: 18),
-            label: const Text('수정'),
+            label: Text(t('edit')),
           ),
         ),
         const SizedBox(width: 10),
         OutlinedButton.icon(
           onPressed: onDelete,
           icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
-          label: const Text('삭제', style: TextStyle(color: Colors.red)),
+          label: Text(t('delete'), style: const TextStyle(color: Colors.red)),
           style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.red)),
         ),
       ]),
@@ -140,15 +145,15 @@ Future<void> _confirmDelete(
   final ok = await showDialog<bool>(
     context: sheetCtx,
     builder: (dctx) => AlertDialog(
-      title: const Text('삭제할까요?'),
-      content: const Text('이 작업은 되돌릴 수 없어요.'),
+      title: Text(t('modify_delete_title')),
+      content: Text(t('modify_delete_body')),
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(dctx, false),
-            child: const Text('취소')),
+            child: Text(t('cancel'))),
         TextButton(
             onPressed: () => Navigator.pop(dctx, true),
-            child: const Text('삭제', style: TextStyle(color: Colors.red))),
+            child: Text(t('delete'), style: const TextStyle(color: Colors.red))),
       ],
     ),
   );
@@ -198,13 +203,13 @@ Widget _urgentToggle(
             await apply(false, '');
           } else {
             final msg = await _promptText(sheetCtx,
-                title: '🔥 급구 올리기', hint: '예: 이번주 토 세터 1명 급구!');
+                title: t('urgent_on'), hint: t('urgent_msg_hint'));
             if (msg != null && msg.trim().isNotEmpty) await apply(true, msg.trim());
           }
         },
         icon: Icon(c.isUrgent ? Icons.notifications_off : Icons.campaign,
             size: 18),
-        label: Text(c.isUrgent ? '급구 내리기' : '🔥 급구 올리기'),
+        label: Text(c.isUrgent ? t('urgent_off') : t('urgent_on')),
       ),
     ),
   );
@@ -223,11 +228,11 @@ Widget _verifyBtn(Club c, BuildContext outerCtx) {
           if (err == 'cancelled') return;
           if (outerCtx.mounted) {
             ScaffoldMessenger.of(outerCtx).showSnackBar(SnackBar(
-                content: Text(err ?? '인증 신청 완료! 검토 후 반영돼요')));
+                content: Text(err ?? t('verify_done'))));
           }
         },
         icon: const Icon(Icons.verified_outlined, size: 18),
-        label: const Text('인증 신청 (사진 제출)'),
+        label: Text(t('verify_btn')),
       ),
     ),
   );
@@ -248,10 +253,10 @@ Future<String?> _promptText(BuildContext ctx,
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.pop(dctx), child: const Text('취소')),
+            onPressed: () => Navigator.pop(dctx), child: Text(t('cancel'))),
         TextButton(
             onPressed: () => Navigator.pop(dctx, ctrl.text),
-            child: const Text('확인')),
+            child: Text(t('confirm'))),
       ],
     ),
   );
@@ -278,11 +283,11 @@ void showSpotDetail(
           _chip(_sportLabel(s.sport), NurungjiColors.yellow, NurungjiColors.dark),
           _chip(_levelLabel(s.level), NurungjiColors.chipBg, NurungjiColors.chipFg),
           if (s.beginnerFriendly)
-            _chip('🌱 초보환영', const Color(0xFFE7F6E7), const Color(0xFF2E7D32)),
+            _chip(t('beginner_ok'), const Color(0xFFE7F6E7), const Color(0xFF2E7D32)),
           if (s.englishOk)
-            _chip('🌐 English OK', const Color(0xFFE6F0FB), const Color(0xFF1565C0)),
+            _chip(t('english_ok'), const Color(0xFFE6F0FB), const Color(0xFF1565C0)),
         ]),
-        if (s.thisWeek != null && s.thisWeek!.isNotEmpty) _banner('이번주', s.thisWeek!),
+        if (s.thisWeek != null && s.thisWeek!.isNotEmpty) _banner(t('this_week'), s.thisWeek!),
         if ((s.schedule ?? s.scheduleText) != null &&
             (s.schedule ?? s.scheduleText)!.isNotEmpty)
           _infoRow('🗓', (s.schedule ?? s.scheduleText)!),
@@ -291,9 +296,9 @@ void showSpotDetail(
         if (s.instaReel != null && s.instaReel!.isNotEmpty)
           InstaEmbed(url: s.instaReel!),
         if (s.contactLink != null && s.contactLink!.isNotEmpty)
-          _primaryBtn('💬 단톡 들어가기', () => _open(s.contactLink)),
+          _primaryBtn(t('chat_join'), () => _open(s.contactLink)),
         _primaryBtn(
-          '📤 공유하기',
+          t('share_btn'),
           () => showShareMenu(
             context,
             url: ShareService.spotUrl(s.id),
@@ -359,7 +364,7 @@ void showClubDetail(
                   .map((t) => _chip(t, NurungjiColors.chipBg, NurungjiColors.chipFg))
                   .toList()),
         if (c.isUrgent && c.urgentMsg != null && c.urgentMsg!.isNotEmpty)
-          _banner('🔥 급구', c.urgentMsg!),
+          _banner(t('urgent'), c.urgentMsg!),
         if (c.schedule != null && c.schedule!.isNotEmpty) _infoRow('🗓', c.schedule!),
         if (c.address != null && c.address!.isNotEmpty) _infoRow('📍', c.address!),
         if (c.price != null && c.price!.isNotEmpty) _infoRow('💰', c.price!),
@@ -368,23 +373,23 @@ void showClubDetail(
         const SizedBox(height: 16),
         Wrap(spacing: 8, runSpacing: 8, children: [
           if (c.insta != null && c.insta!.isNotEmpty)
-            _outlineBtn('📷 인스타', () => _open('https://instagram.com/${c.insta}')),
+            _outlineBtn(t('insta_btn'), () => _open('https://instagram.com/${c.insta}')),
           if (c.link != null && c.link!.isNotEmpty)
-            _outlineBtn('🔗 홈페이지', () => _open(c.link)),
+            _outlineBtn(t('home_btn'), () => _open(c.link)),
           if (c.lat != null && c.lng != null)
-            _outlineBtn('🚀 길찾기',
+            _outlineBtn(t('directions_btn'),
                 () => _open('https://map.kakao.com/link/to/${c.name},${c.lat},${c.lng}')),
           if (currentUid != null)
-            _outlineBtn('🍱 도시락에 담기', () async {
+            _outlineBtn(t('bookmark_btn'), () async {
               final err = await LunchboxService().addBookmark(currentUid, c.id);
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(err ?? '도시락에 담았어요!')));
+                    SnackBar(content: Text(err ?? t('lb_added'))));
               }
             }),
         ]),
         _primaryBtn(
-          '📤 공유하기',
+          t('share_btn'),
           () => showShareMenu(
             context,
             url: ShareService.clubUrl(c.id),
