@@ -10,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 import '../widgets/story_card.dart';
 import 'i18n.dart';
 import 'share_service.dart';
+import 'station_service.dart';
 
 // strings.xml / Info.plist 의 FacebookAppID 와 동일해야 스티커 탭→딥링크가 동작.
 const String kFacebookAppId = '129937258232161';
@@ -48,9 +49,16 @@ Future<void> shareStoryCard(BuildContext context, StoryCardData data) async {
     duration: const Duration(seconds: 4),
   ));
 
+  // 가까운 지하철역 enrich (실패해도 무시 → 지역 라벨 폴백)
+  var card = data;
+  if (data.lat != null && data.lng != null) {
+    final st = await StationService.nearest(data.lat!, data.lng!);
+    if (st != null) card = data.copyWith(station: st.label);
+  }
+
   Uint8List? png;
   try {
-    png = await renderStoryCardPng(data);
+    png = await renderStoryCardPng(card);
   } catch (_) {}
   if (png == null) {
     messenger.showSnackBar(const SnackBar(content: Text('카드 생성에 실패했어요')));

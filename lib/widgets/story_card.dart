@@ -31,6 +31,9 @@ class StoryCardData {
   final String? fee;
   final String? venue;
   final String? address;
+  final double? lat;
+  final double? lng;
+  final String? station; // 가까운 지하철역 라벨 (enrich)
 
   const StoryCardData({
     required this.title,
@@ -45,7 +48,28 @@ class StoryCardData {
     this.fee,
     this.venue,
     this.address,
+    this.lat,
+    this.lng,
+    this.station,
   });
+
+  StoryCardData copyWith({String? station}) => StoryCardData(
+        title: title,
+        url: url,
+        verified: verified,
+        accent: accent,
+        icon: icon,
+        tags: tags,
+        thisWeek: thisWeek,
+        thisWeekBadge: thisWeekBadge,
+        schedule: schedule,
+        fee: fee,
+        venue: venue,
+        address: address,
+        lat: lat,
+        lng: lng,
+        station: station ?? this.station,
+      );
 
   factory StoryCardData.fromSpot(PickupSpot s) {
     final sportL =
@@ -75,6 +99,8 @@ class StoryCardData {
       fee: s.feeInfo,
       venue: s.venueName,
       address: s.address,
+      lat: s.lat,
+      lng: s.lng,
     );
   }
 
@@ -97,6 +123,8 @@ class StoryCardData {
       fee: c.price,
       venue: '',
       address: c.address,
+      lat: c.lat,
+      lng: c.lng,
     );
   }
 }
@@ -274,8 +302,11 @@ class StoryCardPainter extends CustomPainter {
       final rt = _tp('📍 $region', _st(26, FontWeight.w700, _brown));
       rt.paint(canvas, Offset(pinX - rt.width / 2, mpY + 34));
     }
-    final chipText =
-        (data.venue != null && data.venue!.isNotEmpty) ? data.venue! : region;
+    final chipText = (data.station != null && data.station!.isNotEmpty)
+        ? data.station!
+        : (data.venue != null && data.venue!.isNotEmpty)
+            ? data.venue!
+            : region;
     if (chipText.isNotEmpty) {
       final ct = _tp(chipText, _st(34, FontWeight.w800, _dark));
       final chW = (ct.width + 56).clamp(0.0, mpW - 60);
