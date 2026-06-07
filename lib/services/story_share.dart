@@ -5,20 +5,47 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:appinio_social_share/appinio_social_share.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
 import '../widgets/story_card.dart';
+import 'i18n.dart';
 import 'share_service.dart';
 
 // strings.xml / Info.plist 의 FacebookAppID 와 동일해야 스티커 탭→딥링크가 동작.
 const String kFacebookAppId = '129937258232161';
 
+/// 첫 공유 시 1회: '링크 스티커' 붙이는 법 안내(인스타는 외부앱 자동 링크를 막음).
+Future<void> _maybeShowCoach(BuildContext context) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('story_coach_seen') ?? false) return;
+    if (!context.mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (dctx) => AlertDialog(
+        title: Text(t('coach_title')),
+        content: Text(t('coach_steps'), style: const TextStyle(height: 1.5)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dctx),
+            child: Text(t('coach_go')),
+          ),
+        ],
+      ),
+    );
+    await prefs.setBool('story_coach_seen', true);
+  } catch (_) {}
+}
+
 Future<void> shareStoryCard(BuildContext context, StoryCardData data) async {
   final messenger = ScaffoldMessenger.of(context);
-  // IG '링크 스티커' 붙여넣기 쉽게 링크 자동 복사 + 1회 안내
+  // 1회 코치: 링크 스티커 붙이는 법 안내
+  await _maybeShowCoach(context);
+  // IG '링크 스티커' 붙여넣기 쉽게 링크 자동 복사 + 매번 안내 스낵바
   await ShareService.copy(data.url);
-  messenger.showSnackBar(const SnackBar(
-    content: Text('링크 복사됨 — 스토리에 "링크 스티커"로 붙여넣으면 탭 1번에 입장돼요'),
-    duration: Duration(seconds: 4),
+  messenger.showSnackBar(SnackBar(
+    content: Text(t('story_link_hint')),
+    duration: const Duration(seconds: 4),
   ));
 
   Uint8List? png;

@@ -65,6 +65,13 @@ const Map<String, Map<String, String>> kStrings = {
     'ko': '링크 복사됨 — 스토리에 "링크 스티커"로 붙여넣으면 탭 1번에 입장돼요',
     'en': 'Link copied — paste as a "link sticker" in your Story'
   },
+  'coach_title': {'ko': "스토리에 '링크 스티커' 붙이기", 'en': 'Add a "link sticker"'},
+  'coach_steps': {
+    'ko': '링크는 이미 복사됐어요! 인스타 편집 화면에서:\n\n①  상단 스티커 아이콘 탭\n②  "링크" 선택\n③  붙여넣기 → 완료\n\n그러면 보는 사람이 탭 1번에 들어와요.\n(안 붙여도 카드의 QR·주소로 입장 가능)',
+    'en': 'Link already copied! In the Instagram editor:\n\n1.  Tap the sticker icon (top)\n2.  Choose "Link"\n3.  Paste → done\n\nThen viewers open it in 1 tap.\n(Or they can use the QR/URL on the card.)'
+  },
+  'coach_go': {'ko': '인스타로 이동', 'en': 'Open Instagram'},
+  'coach_dont_show': {'ko': '다시 보지 않기', 'en': "Don't show again"},
 
   // 프로필
   'profile_title': {'ko': '내 프로필', 'en': 'My profile'},
