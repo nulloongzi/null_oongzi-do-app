@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kakao_map_plugin/kakao_map_plugin.dart';
 import 'firebase_options.dart';
+import 'theme.dart';
 import 'screens/login_screen.dart';
 import 'screens/map_screen.dart';
 
@@ -24,10 +25,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: '누룽지도',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFFAC710)),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.light,
       home: const AuthGate(),
     );
   }

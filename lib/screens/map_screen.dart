@@ -47,17 +47,33 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  // 웹앱과 동일한 마커 이미지(GitHub Pages 호스팅) — 동호회=노랑, 픽업=빨강
+  static const _clubPin =
+      'https://nulloongzi.github.io/null_oongzi-do/marker_yellow.png';
+  static const _pickupPin =
+      'https://nulloongzi.github.io/null_oongzi-do/marker_red.png';
+
   List<Marker> _buildMarkers() {
     final list = <Marker>[];
     if (_tab == 'clubs') {
       for (final c in _clubs) {
         if (c.lat == null || c.lng == null) continue;
-        list.add(Marker(markerId: 'c_${c.id}', latLng: LatLng(c.lat!, c.lng!)));
+        list.add(Marker(
+            markerId: 'c_${c.id}',
+            latLng: LatLng(c.lat!, c.lng!),
+            markerImageSrc: _clubPin,
+            width: 33,
+            height: 43));
       }
     } else {
       for (final s in _spots) {
         if (s.lat == null || s.lng == null) continue;
-        list.add(Marker(markerId: 's_${s.id}', latLng: LatLng(s.lat!, s.lng!)));
+        list.add(Marker(
+            markerId: 's_${s.id}',
+            latLng: LatLng(s.lat!, s.lng!),
+            markerImageSrc: _pickupPin,
+            width: 33,
+            height: 43));
       }
     }
     return list;
