@@ -7,10 +7,12 @@ import 'package:flutter_naver_map/flutter_naver_map.dart';
 import '../models/club.dart';
 import '../models/pickup_spot.dart';
 import '../services/data_repository.dart';
+import '../services/club_filter.dart';
 import '../theme.dart';
 import 'detail_sheet.dart';
 import 'pickup_form_screen.dart';
 import 'club_form_screen.dart';
+import '../widgets/filter_sheet.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -27,6 +29,8 @@ class _MapScreenState extends State<MapScreen> {
   String _tab = 'clubs'; // 'clubs' | 'pickup'
   bool _loading = true;
   String? _error;
+  ClubFilter _filter = const ClubFilter(); // 동호회 필터/검색
+  bool _pkEnglishOnly = false; // 픽업: English OK만
 
   @override
   void initState() {
@@ -66,7 +70,7 @@ class _MapScreenState extends State<MapScreen> {
     await c.clearOverlays();
     final overlays = <NAddableOverlay>{};
     if (_tab == 'clubs') {
-      for (final club in _clubs) {
+      for (final club in _clubs.where(_filter.matches)) {
         if (club.lat == null || club.lng == null) continue;
         final m = NMarker(
           id: 'c_${club.id}',
@@ -83,7 +87,8 @@ class _MapScreenState extends State<MapScreen> {
         overlays.add(m);
       }
     } else {
-      for (final spot in _spots) {
+      final spots = _pkEnglishOnly ? _spots.where((s) => s.englishOk) : _spots;
+      for (final spot in spots) {
         if (spot.lat == null || spot.lng == null) continue;
         final m = NMarker(
           id: 's_${spot.id}',
@@ -123,6 +128,15 @@ class _MapScreenState extends State<MapScreen> {
       ),
     );
     if (created == true) await _load();
+  }
+
+  // 동호회 필터 시트 열기 → 적용 시 마커 갱신
+  Future<void> _openFilter() async {
+    final result = await showFilterSheet(context, _filter);
+    if (result != null) {
+      setState(() => _filter = result);
+      _refreshMarkers();
+    }
   }
 
   Future<void> _signOut() async {
@@ -184,6 +198,23 @@ class _MapScreenState extends State<MapScreen> {
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2)),
+            if (_tab == 'clubs')
+              IconButton(
+                onPressed: _openFilter,
+                icon: Icon(Icons.tune,
+                    color: _filter.isEmpty ? null : NurungjiColors.teal),
+                tooltip: '검색·필터',
+              )
+            else
+              IconButton(
+                onPressed: () {
+                  setState(() => _pkEnglishOnly = !_pkEnglishOnly);
+                  _refreshMarkers();
+                },
+                icon: Icon(Icons.language,
+                    color: _pkEnglishOnly ? NurungjiColors.teal : null),
+                tooltip: 'English OK만',
+              ),
             IconButton(
                 onPressed: _signOut,
                 icon: const Icon(Icons.logout),
