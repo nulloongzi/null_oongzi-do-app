@@ -1,0 +1,305 @@
+// pickup_form_screen.dart — 픽업 스팟 등록 폼. 웹 pickup-host.js openPickupCreateModal 대체.
+// 누구나 등록(무로그인=익명 인증). 좌표는 지도 피커로 직접 선택(지오코딩 불필요).
+import 'package:flutter/material.dart';
+import 'package:flutter_naver_map/flutter_naver_map.dart';
+import '../models/schedule_block.dart';
+import '../services/data_repository.dart';
+import '../services/sanitize.dart';
+import '../theme.dart';
+import '../widgets/chip_select.dart';
+import '../widgets/map_picker.dart';
+import '../widgets/schedule_editor.dart';
+
+class PickupFormScreen extends StatefulWidget {
+  /// 폼 진입 시 지도 중심 (피커 초기 위치). 기본 서울.
+  final NLatLng initialCenter;
+  const PickupFormScreen({
+    super.key,
+    this.initialCenter = const NLatLng(37.5559, 127.0838),
+  });
+
+  @override
+  State<PickupFormScreen> createState() => _PickupFormScreenState();
+}
+
+class _PickupFormScreenState extends State<PickupFormScreen> {
+  final _repo = DataRepository();
+
+  // 텍스트 입력 (웹 TEXT_FIELDS 대응)
+  final _title = TextEditingController();
+  final _venue = TextEditingController();
+  final _address = TextEditingController();
+  final _scheduleMemo = TextEditingController(); // 일정 메모(비정기)
+  final _thisWeek = TextEditingController();
+  final _fee = TextEditingController();
+  final _contact = TextEditingController();
+  final _reel = TextEditingController();
+  final _notes = TextEditingController();
+
+  // 칩 선택
+  String _sport = '6s';
+  String _level = 'any';
+  bool _beginnerFriendly = false;
+  bool _englishOk = false;
+
+  // 구조화 일정 블록
+  final List<ScheduleBlock> _blocks = [ScheduleBlock()];
+
+  // 지도 피커로 선택한 좌표
+  double? _lat;
+  double? _lng;
+
+  bool _saving = false;
+
+  static const _sportOptions = <ChipOption>[
+    (label: '6인제', value: '6s'),
+    (label: '9인제', value: '9s'),
+    (label: '혼성·자유', value: 'mixed'),
+  ];
+  static const _levelOptions = <ChipOption>[
+    (label: '입문', value: 'beginner'),
+    (label: '중급', value: 'intermediate'),
+    (label: '고급', value: 'advanced'),
+    (label: '레벨무관', value: 'any'),
+  ];
+
+  @override
+  void dispose() {
+    for (final c in [
+      _title, _venue, _address, _scheduleMemo,
+      _thisWeek, _fee, _contact, _reel, _notes,
+    ]) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  void _snack(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  Future<void> _pickLocation() async {
+    final start = (_lat != null && _lng != null)
+        ? NLatLng(_lat!, _lng!)
+        : widget.initialCenter;
+    final result = await Navigator.push<(double, double)>(
+      context,
+      MaterialPageRoute(builder: (_) => MapPickerScreen(initial: start)),
+    );
+    if (result != null) {
+      setState(() {
+        _lat = result.$1;
+        _lng = result.$2;
+      });
+    }
+  }
+
+  Future<void> _submit() async {
+    final title = _title.text.trim();
+    final address = _address.text.trim();
+    if (title.isEmpty || address.isEmpty) {
+      _snack('게임 이름과 주소는 필수예요');
+      return;
+    }
+    if (_lat == null || _lng == null) {
+      _snack('지도에서 위치를 선택해주세요');
+      return;
+    }
+
+    // 링크(선택): http(s)만
+    var contact = _contact.text.trim();
+    if (contact.isNotEmpty) {
+      final s = Sanitize.url(contact);
+      if (s.isEmpty) {
+        _snack('링크 형식이 올바르지 않아요 (http/https)');
+        return;
+      }
+      contact = s;
+    }
+
+    // 릴스/게시물(선택): 공개 인스타 permalink만
+    var reel = _reel.text.trim();
+    if (reel.isNotEmpty) {
+      final s = Sanitize.instaPostUrl(reel);
+      if (s.isEmpty) {
+        _snack('인스타 게시물/릴스 링크 형식이 올바르지 않아요');
+        return;
+      }
+      reel = s;
+    }
+
+    final payload = <String, dynamic>{
+      'title': title,
+      'sport': _sport,
+      'level': _level,
+      'beginner_friendly': _beginnerFriendly,
+      'english_ok': _englishOk,
+      'venue_name': _venue.text.trim(),
+      'address': address,
+      'coordinates': {'lat': _lat, 'lng': _lng},
+      'schedule': ScheduleBlock.toText(_blocks),
+      'schedule_raw': ScheduleBlock.toRaw(_blocks),
+      'schedule_text': _scheduleMemo.text.trim(),
+      'fee_info': _fee.text.trim(),
+      'contact_link': contact,
+      'this_week': _thisWeek.text.trim(),
+      'insta_reel': reel,
+      'notes': _notes.text.trim(),
+    };
+
+    setState(() => _saving = true);
+    try {
+      await _repo.createPickup(payload);
+      if (!mounted) return;
+      _snack('픽업이 등록됐어요!');
+      Navigator.pop(context, true);
+    } catch (e) {
+      setState(() => _saving = false);
+      _snack('등록 실패: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('픽업 게임 열기')),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          children: [
+            _group('게임 이름 (필수)', _input(_title, '예: 토요일 저녁 6인제 픽업')),
+            _group(
+              '종목',
+              SingleChoiceChips(
+                options: _sportOptions,
+                selected: _sport,
+                onChanged: (v) => setState(() => _sport = v),
+              ),
+            ),
+            _group(
+              '레벨',
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SingleChoiceChips(
+                    options: _levelOptions,
+                    selected: _level,
+                    onChanged: (v) => setState(() => _level = v),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(spacing: 8, children: [
+                    _toggle('초보 환영', _beginnerFriendly,
+                        (v) => setState(() => _beginnerFriendly = v)),
+                    _toggle('🌐 외국인 환영 (English OK)', _englishOk,
+                        (v) => setState(() => _englishOk = v)),
+                  ]),
+                ],
+              ),
+            ),
+            _group('체육관/장소 이름', _input(_venue, '예: 잠실학생체육관')),
+            _group('주소 (필수)', _addressRow()),
+            _group(
+              '보통 일정 (요일·시간)',
+              ScheduleEditor(blocks: _blocks, onChanged: () => setState(() {})),
+            ),
+            _group('일정 메모 (비정기·기타, 선택)',
+                _input(_scheduleMemo, '예: 셋째주 휴무 · 우천시 취소')),
+            _group('이번주 공지 (선택)', _input(_thisWeek, '예: 이번주 토 7시 잠실')),
+            _group('게임비 정보 (선택)', _input(_fee, '예: 보통 1만원 · 현장')),
+            _group('단톡/Meetup 링크 (들어가는 문)',
+                _input(_contact, '예: https://open.kakao.com/o/...')),
+            _group('릴스/게시물 링크 (선택)',
+                _input(_reel, '예: https://www.instagram.com/reel/...')),
+            _group('추가 안내 (선택)', _input(_notes, '예: 실내화 필수 · 네트 6인제 높이')),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: _saving ? null : _submit,
+              child: _saving
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: NurungjiColors.dark))
+                  : const Text('픽업 등록'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _group(String label, Widget child) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: const TextStyle(
+                  fontWeight: FontWeight.w700, color: NurungjiColors.dark)),
+          const SizedBox(height: 8),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _input(TextEditingController c, String hint) {
+    return TextField(
+      controller: c,
+      decoration: InputDecoration(hintText: hint),
+    );
+  }
+
+  Widget _addressRow() {
+    final picked = _lat != null && _lng != null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: _input(_address, '예: 서울 송파구 올림픽로 25')),
+            const SizedBox(width: 10),
+            OutlinedButton(
+              onPressed: _pickLocation,
+              child: const Text('지도에서 찾기'),
+            ),
+          ],
+        ),
+        if (picked)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Row(children: [
+              const Icon(Icons.check_circle,
+                  size: 16, color: NurungjiColors.teal),
+              const SizedBox(width: 4),
+              Text(
+                '위치 선택됨 (${_lat!.toStringAsFixed(5)}, ${_lng!.toStringAsFixed(5)})',
+                style: const TextStyle(
+                    fontSize: 12, color: NurungjiColors.brown),
+              ),
+            ]),
+          ),
+      ],
+    );
+  }
+
+  Widget _toggle(String label, bool on, ValueChanged<bool> onCh) {
+    return FilterChip(
+      label: Text(label),
+      selected: on,
+      onSelected: onCh,
+      selectedColor: NurungjiColors.yellow,
+      backgroundColor: NurungjiColors.chipBg,
+      labelStyle: TextStyle(
+        color: NurungjiColors.dark,
+        fontWeight: on ? FontWeight.w800 : FontWeight.w600,
+      ),
+      shape: const StadiumBorder(),
+      showCheckmark: false,
+    );
+  }
+}
