@@ -7,6 +7,7 @@ import 'package:kakao_map_plugin/kakao_map_plugin.dart';
 import '../models/club.dart';
 import '../models/pickup_spot.dart';
 import '../services/data_repository.dart';
+import 'detail_sheet.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -89,13 +90,7 @@ class _MapScreenState extends State<MapScreen> {
           break;
         }
       }
-      if (c == null) return;
-      _showSheet(c.name, [
-        if (c.target != null) '🏷 ${c.target}',
-        if (c.schedule != null) '🗓 ${c.schedule}',
-        if (c.price != null) '💰 ${c.price}',
-        if (c.address != null) '📍 ${c.address}',
-      ]);
+      if (c != null) showClubDetail(context, c);
     } else if (markerId.startsWith('s_')) {
       final id = markerId.substring(2);
       PickupSpot? s;
@@ -105,42 +100,8 @@ class _MapScreenState extends State<MapScreen> {
           break;
         }
       }
-      if (s == null) return;
-      _showSheet(s.title, [
-        if (s.thisWeek != null) '🔥 ${s.thisWeek}',
-        if (s.schedule != null) '🗓 ${s.schedule}',
-        if (s.feeInfo != null) '💰 ${s.feeInfo}',
-        if ((s.venueName ?? s.address) != null) '📍 ${s.venueName ?? s.address}',
-      ]);
+      if (s != null) showSpotDetail(context, s);
     }
-  }
-
-  void _showSheet(String title, List<String> lines) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title,
-                style:
-                    const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 12),
-            ...lines.map((l) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(l, style: const TextStyle(fontSize: 15.5)),
-                )),
-            const SizedBox(height: 6),
-            const Text('상세·공유·등록은 다음 단계(P4~)에서 이식 예정',
-                style: TextStyle(color: Colors.grey, fontSize: 12)),
-          ],
-        ),
-      ),
-    );
   }
 
   Future<void> _signOut() async {
