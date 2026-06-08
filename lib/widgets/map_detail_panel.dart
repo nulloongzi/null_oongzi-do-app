@@ -147,11 +147,16 @@ class _MapDetailPanelState extends State<MapDetailPanel> {
               ),
             ),
             Expanded(
-              child: SingleChildScrollView(
-                child: DetailPanelScope(
-                  expand: _expand,
-                  toggle: _toggle,
-                  child: widget.child,
+              // Material로 감싸 본문 텍스트 기준(theme bodyMedium)·잉크 보장
+              // (오버레이라 Material 조상이 없으면 텍스트가 과대 기본값으로 렌더됨).
+              child: Material(
+                type: MaterialType.transparency,
+                child: SingleChildScrollView(
+                  child: DetailPanelScope(
+                    expand: _expand,
+                    toggle: _toggle,
+                    child: widget.child,
+                  ),
                 ),
               ),
             ),

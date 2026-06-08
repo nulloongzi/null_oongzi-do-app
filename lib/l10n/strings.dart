@@ -105,6 +105,7 @@ const Map<String, Map<String, String>> kStrings = {
   // 상세 시트(보완): 주소 복사 · 시간표 morph 펼침 힌트
   'copy_address': {'ko': '📍 주소 복사', 'en': '📍 Copy'},
   'address_copied': {'ko': '주소를 복사했어요', 'en': 'Address copied'},
+  'share_link': {'ko': '🔗 공유', 'en': '🔗 Share'}, // 컴팩트 액션 줄용
   'detail_pull_hint': {'ko': '▴ 위로 올려 시간표 보기', 'en': '▴ Pull up for schedule'},
   'detail_collapse_hint': {'ko': '▾ 접기', 'en': '▾ Collapse'},
   'lb_slot_rice': {'ko': '밥', 'en': 'Rice'},

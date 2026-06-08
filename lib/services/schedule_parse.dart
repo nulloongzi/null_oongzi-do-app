@@ -1,4 +1,6 @@
 // schedule_parse.dart — 일정(raw/텍스트) → 요일별 시간 이벤트. 웹 parseScheduleText 포팅.
+import 'i18n.dart';
+
 class SchedEvent {
   final String day; // 월~일
   final double start; // 시(소수) 예: 19.5
@@ -55,4 +57,43 @@ String getHourLabel(int h) {
   var h12 = h % 12;
   if (h12 == 0) h12 = 12;
   return '$p $h12';
+}
+
+// ── 요약 표기 (웹 club-detail 요약: "토요일 PM 1:00 ~ PM 5:00") ──
+const _fullDay = {
+  '월': {'ko': '월요일', 'en': 'Monday'},
+  '화': {'ko': '화요일', 'en': 'Tuesday'},
+  '수': {'ko': '수요일', 'en': 'Wednesday'},
+  '목': {'ko': '목요일', 'en': 'Thursday'},
+  '금': {'ko': '금요일', 'en': 'Friday'},
+  '토': {'ko': '토요일', 'en': 'Saturday'},
+  '일': {'ko': '일요일', 'en': 'Sunday'},
+};
+
+/// 요일 풀네임 (토 → 토요일 / Saturday).
+String fullDayName(String day) => _fullDay[day]?[isKo ? 'ko' : 'en'] ?? day;
+
+/// 시(소수) → 12시간제 "PM 1:00" (19.5 → "PM 7:30").
+String time12(double h) {
+  final hh = h.floor();
+  final mm = ((h - hh) * 60).round();
+  final p = hh >= 12 ? 'PM' : 'AM';
+  var h12 = hh % 12;
+  if (h12 == 0) h12 = 12;
+  return '$p $h12:${mm.toString().padLeft(2, '0')}';
+}
+
+/// 길이 라벨 (4.0 → "4h", 3.5 → "3.5h").
+String durLabel(double hours) {
+  final whole = hours == hours.roundToDouble();
+  final s = whole ? hours.toInt().toString() : hours.toString();
+  return '${s}h';
+}
+
+/// 이벤트 → 요약 문자열 "토요일 PM 1:00 ~ PM 5:00 · 월요일 PM 7:00 ~ PM 10:00".
+String scheduleSummary(List<SchedEvent> events) {
+  if (events.isEmpty) return '';
+  return events
+      .map((e) => '${fullDayName(e.day)} ${time12(e.start)} ~ ${time12(e.end)}')
+      .join(' · ');
 }

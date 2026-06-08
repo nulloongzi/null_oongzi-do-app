@@ -54,30 +54,34 @@ Widget _chip(String text, Color bg, Color fg) => Container(
           style: TextStyle(color: fg, fontWeight: FontWeight.w600, fontSize: 11.5)),
     );
 
+// 급구/이번주 배너 — 웹처럼 컴팩트(작은 크림-오렌지). 텍스트 크기 명시.
 Widget _banner(String badge, String text) => Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(top: 14),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
-          color: const Color(0x38FAC710),
-          borderRadius: BorderRadius.circular(14)),
+          color: const Color(0xFFFFF3E0),
+          borderRadius: BorderRadius.circular(12)),
       child: Row(children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
-              color: NurungjiColors.yellow,
+              color: NurungjiColors.urgent,
               borderRadius: BorderRadius.circular(20)),
           child: Text(badge,
               style: const TextStyle(
                   fontWeight: FontWeight.w800,
-                  fontSize: 12,
-                  color: NurungjiColors.dark)),
+                  fontSize: 11,
+                  color: Colors.white)),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 8),
         Expanded(
             child: Text(text,
                 style: const TextStyle(
-                    fontWeight: FontWeight.w700, color: NurungjiColors.dark))),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13.5,
+                    height: 1.3,
+                    color: NurungjiColors.dark))),
       ]),
     );
 
@@ -258,6 +262,57 @@ Widget _outlineBtn(String label, VoidCallback onTap) => BounceTap(
       ),
     );
 
+// 인스타 아이콘 (웹 .instagram 그라데이션) — 타이틀 옆. 탭하면 인스타 열기.
+Widget _instaIcon(VoidCallback onTap) => BounceTap(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(left: 6),
+        width: 24,
+        height: 24,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(7),
+          gradient: const LinearGradient(
+            begin: Alignment.bottomLeft,
+            end: Alignment.topRight,
+            colors: [
+              Color(0xFFFEDA75),
+              Color(0xFFFA7E1E),
+              Color(0xFFD62976),
+              Color(0xFF962FBF),
+              Color(0xFF4F5BD5),
+            ],
+          ),
+        ),
+        child: const Icon(Icons.camera_alt_outlined, size: 14, color: Colors.white),
+      ),
+    );
+
+// 컴팩트 액션 알약 (웹 .action-buttons .btn): flex로 한 줄에 여러 개.
+Widget _actionPill(String label, VoidCallback onTap,
+    {required Color bg, required Color fg}) {
+  return Expanded(
+    child: BounceTap(
+      child: Material(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 11),
+            alignment: Alignment.center,
+            child: Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    color: fg, fontWeight: FontWeight.w700, fontSize: 13)),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 Widget _sheet(List<Widget> children) => Padding(
       padding: const EdgeInsets.fromLTRB(22, 4, 22, 30),
       child: Column(
@@ -267,34 +322,34 @@ Widget _sheet(List<Widget> children) => Padding(
       ),
     );
 
-// 소유자 전용: 수정/삭제 버튼 행
-// 소유자 수정/삭제: 작은 알약 한 쌍.
-Widget _modifyRow({required VoidCallback onEdit, required VoidCallback onDelete}) {
-  Widget pill(String label, VoidCallback onTap, Color bg, Color fg) => BounceTap(
-        child: Material(
-          color: bg,
-          borderRadius: BorderRadius.circular(12),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-              child: Text(label,
-                  style: TextStyle(
-                      color: fg, fontWeight: FontWeight.w700, fontSize: 13.5)),
+// 소유자 수정/삭제 — 웹처럼 풀폭 스택(수정=노랑, 삭제=흰 아웃라인).
+Widget _modifyRow({required VoidCallback onEdit, required VoidCallback onDelete}) =>
+    Column(children: [
+      Padding(
+        padding: const EdgeInsets.only(top: 10),
+        child: SizedBox(
+          width: double.infinity,
+          child: BounceTap(
+            child: ElevatedButton.icon(
+              onPressed: onEdit,
+              icon: const Icon(Icons.edit, size: 18),
+              label: Text(t('edit')),
             ),
           ),
         ),
-      );
-  return Padding(
-    padding: const EdgeInsets.only(top: 16),
-    child: Row(children: [
-      pill(t('edit'), onEdit, const Color(0xFFF0ECE2), const Color(0xFF6D6258)),
-      const SizedBox(width: 8),
-      pill(t('delete'), onDelete, const Color(0xFFFDECEA), const Color(0xFFD32F2F)),
-    ]),
-  );
-}
+      ),
+      Padding(
+        padding: const EdgeInsets.only(top: 10),
+        child: SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: onDelete,
+            icon: const Icon(Icons.delete_outline, size: 18),
+            label: Text(t('delete')),
+          ),
+        ),
+      ),
+    ]);
 
 // coords가 있으면 그 위치, 없으면 서울 — 폼 지도피커 초기 중심.
 NLatLng _centerOf(double? lat, double? lng) => (lat != null && lng != null)
@@ -363,7 +418,10 @@ Widget _urgentToggle(
     padding: const EdgeInsets.only(top: 12),
     child: SizedBox(
       width: double.infinity,
-      child: OutlinedButton.icon(
+      child: ElevatedButton.icon(
+        style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFE53935),
+            foregroundColor: Colors.white),
         onPressed: () async {
           if (c.isUrgent) {
             await apply(false, '');
@@ -467,6 +525,9 @@ void showSpotDetail(
   final canModify =
       (currentUid != null && s.ownerUid != null && s.ownerUid == currentUid) ||
           isAdmin;
+  final spotEvents = (s.scheduleRaw != null && s.scheduleRaw!.isNotEmpty)
+      ? eventsFromRaw(s.scheduleRaw)
+      : eventsFromText(s.schedule ?? s.scheduleText);
   _showDetailSheet(context, (close) => [
         Text(s.title, style: _titleStyle),
         const SizedBox(height: 12),
@@ -480,16 +541,13 @@ void showSpotDetail(
         ]),
         if (s.thisWeek != null && s.thisWeek!.isNotEmpty) _banner(t('this_week'), s.thisWeek!),
         _ScheduleMorph(
-          summaryText: ((s.schedule ?? s.scheduleText) != null &&
-                  (s.schedule ?? s.scheduleText)!.isNotEmpty)
-              ? i18nSchedule(s.schedule ?? s.scheduleText)
-              : null,
-          full: ScheduleTimetable(
-            events: (s.scheduleRaw != null && s.scheduleRaw!.isNotEmpty)
-                ? eventsFromRaw(s.scheduleRaw)
-                : eventsFromText(s.schedule ?? s.scheduleText),
-            accent: NurungjiColors.teal,
-          ),
+          summaryText: spotEvents.isNotEmpty
+              ? scheduleSummary(spotEvents)
+              : (((s.schedule ?? s.scheduleText) != null &&
+                      (s.schedule ?? s.scheduleText)!.isNotEmpty)
+                  ? i18nSchedule(s.schedule ?? s.scheduleText)
+                  : null),
+          full: ScheduleTimetable(events: spotEvents, accent: NurungjiColors.teal),
         ),
         if (where.isNotEmpty) _addressRow(context, where, s.address ?? where),
         if (s.feeInfo != null && s.feeInfo!.isNotEmpty) _infoRow('💰', i18nPrice(s.feeInfo)),
@@ -543,63 +601,102 @@ void showClubDetail(
           c.registeredBy != null &&
           c.registeredBy == currentUid) ||
       isAdmin;
+  // 일정 이벤트(요약·그리드 공용으로 1회 파싱)
+  final clubEvents = (c.scheduleRaw != null && c.scheduleRaw!.isNotEmpty)
+      ? eventsFromRaw(c.scheduleRaw)
+      : eventsFromText(c.schedule);
+  void shareClub() => showShareMenu(
+        context,
+        url: ShareService.clubUrl(c.id),
+        shareTitle: c.name,
+        onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
+      );
+  Future<void> copyAddr() async {
+    await Clipboard.setData(ClipboardData(text: c.address ?? ''));
+    if (context.mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(t('address_copied'))));
+    }
+  }
+
+  // 웹 클럽 상세 순서: 급구→타이틀→일정→태그→가격→주소→액션줄→임베드→소유자
   _showDetailSheet(context, (close) => [
+        // 1. 급구 배너 (맨 위, 컴팩트)
+        if (c.isUrgent && c.urgentMsg != null && c.urgentMsg!.isNotEmpty)
+          _banner(t('urgent'), c.urgentMsg!),
+        // 2. 타이틀: ✓ + 이름 + 인스타 아이콘 + 🍱 북마크
         Row(children: [
           if (c.isVerified)
             const Padding(
                 padding: EdgeInsets.only(right: 6),
                 child: Icon(Icons.verified, color: Color(0xFF1DA1F2), size: 22)),
           Expanded(child: Text(c.name, style: _titleStyle)),
-          // 🍱 북마크 토글(웹 #btnBookmark) — 타이틀 우측. 로그인 필수 앱이라 항상 노출.
+          if (c.insta != null && c.insta!.isNotEmpty)
+            _instaIcon(() => _open('https://instagram.com/${c.insta}')),
           if (currentUid != null)
             _BookmarkButton(uid: currentUid, teamId: c.id),
         ]),
-        const SizedBox(height: 12),
-        if (tags.isNotEmpty)
-          Wrap(
+        const SizedBox(height: 10),
+        // 3. 일정 morph (타이틀 바로 아래)
+        _ScheduleMorph(
+          summaryText: clubEvents.isNotEmpty
+              ? scheduleSummary(clubEvents)
+              : ((c.schedule != null && c.schedule!.isNotEmpty)
+                  ? i18nSchedule(c.schedule)
+                  : null),
+          full: ScheduleTimetable(
+              events: clubEvents, accent: NurungjiColors.yellow),
+        ),
+        // 4. 태그 + 🏠 홈페이지(인라인)
+        if (tags.isNotEmpty || (c.link != null && c.link!.isNotEmpty))
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Wrap(
               spacing: 6,
               runSpacing: 6,
-              children: tags
-                  .map((tag) => _chip(
-                      i18nTarget(tag), NurungjiColors.chipBg, NurungjiColors.chipFg))
-                  .toList()),
-        if (c.isUrgent && c.urgentMsg != null && c.urgentMsg!.isNotEmpty)
-          _banner(t('urgent'), c.urgentMsg!),
-        _ScheduleMorph(
-          summaryText: (c.schedule != null && c.schedule!.isNotEmpty)
-              ? i18nSchedule(c.schedule)
-              : null,
-          full: ScheduleTimetable(
-            events: (c.scheduleRaw != null && c.scheduleRaw!.isNotEmpty)
-                ? eventsFromRaw(c.scheduleRaw)
-                : eventsFromText(c.schedule),
-            accent: NurungjiColors.yellow,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                ...tags.map((tag) => _chip(i18nTarget(tag),
+                    NurungjiColors.chipBg, NurungjiColors.chipFg)),
+                if (c.link != null && c.link!.isNotEmpty)
+                  _outlineBtn(t('home_btn'), () => _open(c.link)),
+              ],
+            ),
           ),
-        ),
+        // 5. 가격
+        if (c.price != null && c.price!.isNotEmpty)
+          _infoRow('💰', i18nPrice(c.price)),
+        // 6. 주소 텍스트(유지)
         if (c.address != null && c.address!.isNotEmpty)
-          _addressRow(context, c.address!, c.address!),
-        if (c.price != null && c.price!.isNotEmpty) _infoRow('💰', i18nPrice(c.price)),
-        if (c.instaReel != null && c.instaReel!.isNotEmpty)
-          InstaEmbed(url: c.instaReel!),
-        const SizedBox(height: 16),
-        Wrap(spacing: 8, runSpacing: 8, children: [
-          if (c.insta != null && c.insta!.isNotEmpty)
-            _outlineBtn(t('insta_btn'), () => _open('https://instagram.com/${c.insta}')),
-          if (c.link != null && c.link!.isNotEmpty)
-            _outlineBtn(t('home_btn'), () => _open(c.link)),
-          if (c.lat != null && c.lng != null)
-            _outlineBtn(t('directions_btn'),
-                () => _open('https://map.kakao.com/link/to/${c.name},${c.lat},${c.lng}')),
-        ]),
-        _primaryBtn(
-          t('share_btn'),
-          () => showShareMenu(
-            context,
-            url: ShareService.clubUrl(c.id),
-            shareTitle: c.name,
-            onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
-          ),
+          _infoRow('📍', c.address!),
+        // 7. 액션 줄: 주소복사 / 길찾기 / 공유 (컴팩트 3)
+        Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: Row(children: [
+            if (c.address != null && c.address!.isNotEmpty) ...[
+              _actionPill(t('copy_address'), copyAddr,
+                  bg: const Color(0xFFECEFF1), fg: const Color(0xFF455A64)),
+              const SizedBox(width: 8),
+            ],
+            if (c.lat != null && c.lng != null) ...[
+              _actionPill(
+                  t('directions_btn'),
+                  () => _open(
+                      'https://map.kakao.com/link/to/${c.name},${c.lat},${c.lng}'),
+                  bg: NurungjiColors.yellow,
+                  fg: NurungjiColors.dark),
+              const SizedBox(width: 8),
+            ],
+            _actionPill(t('share_link'), shareClub,
+                bg: const Color(0xFFECEFF1), fg: const Color(0xFF455A64)),
+          ]),
         ),
+        // 8. 인스타 임베드
+        if (c.instaReel != null && c.instaReel!.isNotEmpty)
+          Padding(
+              padding: const EdgeInsets.only(top: 14),
+              child: InstaEmbed(url: c.instaReel!)),
+        // 9. 소유자: 인증 / 급구(빨강) / 수정·삭제(풀폭)
         if (canModify && !c.isVerified) _verifyBtn(c, context),
         if (canModify) _urgentToggle(c, context, onChanged, close),
         if (canModify)

@@ -14,12 +14,6 @@ class ScheduleTimetable extends StatelessWidget {
     this.accent = NurungjiColors.yellow,
   });
 
-  static String _fmt(double h) {
-    final hh = h.floor();
-    final mm = ((h - hh) * 60).round();
-    return '${hh.toString().padLeft(2, '0')}:${mm.toString().padLeft(2, '0')}';
-  }
-
   @override
   Widget build(BuildContext context) {
     if (events.isEmpty) return const SizedBox.shrink();
@@ -130,21 +124,42 @@ class ScheduleTimetable extends StatelessWidget {
               right: 1,
               height: ((e.end - e.start) * rowH - 2).clamp(16.0, 9999.0).toDouble(),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+                padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
                 decoration: BoxDecoration(
                   color: accent.withValues(alpha: 0.85),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: Text(
-                  _fmt(e.start),
-                  style: const TextStyle(
-                      fontSize: 8,
-                      height: 1.1,
-                      fontWeight: FontWeight.w700,
-                      color: NurungjiColors.dark),
-                  maxLines: 1,
-                  overflow: TextOverflow.clip,
-                ),
+                // 웹 #fullContent 블록: 시작·종료·길이 (12시간제)
+                child: Builder(builder: (_) {
+                  // 짧은 블록(<1h)은 시작만 — 오버플로 방지.
+                  final showEnd = (e.end - e.start) >= 1.0;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: showEnd
+                        ? MainAxisAlignment.spaceBetween
+                        : MainAxisAlignment.start,
+                    children: [
+                      Text(time12(e.start),
+                          style: const TextStyle(
+                              fontSize: 8,
+                              height: 1.1,
+                              fontWeight: FontWeight.w800,
+                              color: NurungjiColors.dark),
+                          maxLines: 1,
+                          overflow: TextOverflow.clip),
+                      if (showEnd)
+                        Text('${time12(e.end)}\n(${durLabel(e.end - e.start)})',
+                            style: TextStyle(
+                                fontSize: 7,
+                                height: 1.15,
+                                fontWeight: FontWeight.w600,
+                                color:
+                                    NurungjiColors.dark.withValues(alpha: 0.7)),
+                            maxLines: 2,
+                            overflow: TextOverflow.clip),
+                    ],
+                  );
+                }),
               ),
             ),
         ],
