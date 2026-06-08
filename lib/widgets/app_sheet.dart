@@ -11,11 +11,13 @@ import 'package:flutter/material.dart';
 Future<T?> showAppSheet<T>(
   BuildContext context, {
   required Widget child,
+  Color? background, // null이면 테마(크림). 등록폼 등 흰 배경엔 Colors.white 전달.
 }) {
   return showModalBottomSheet<T>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
+    backgroundColor: background,
     constraints: BoxConstraints(
       maxHeight: MediaQuery.of(context).size.height * 0.94,
     ),

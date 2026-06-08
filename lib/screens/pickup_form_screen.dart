@@ -23,6 +23,7 @@ Future<bool?> showPickupFormSheet(
   PickupSpot? editing,
 }) =>
     showAppSheet<bool>(context,
+        background: Colors.white, // 웹 등록 모달: 흰 배경
         child: PickupFormScreen(initialCenter: initialCenter, editing: editing));
 
 class PickupFormScreen extends StatefulWidget {

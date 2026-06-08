@@ -24,7 +24,7 @@ import 'club_form_screen.dart';
 import 'pickup_form_screen.dart';
 
 const _titleStyle = TextStyle(
-    fontSize: 23, fontWeight: FontWeight.w800, color: NurungjiColors.dark);
+    fontSize: 20.5, fontWeight: FontWeight.w800, color: NurungjiColors.dark);
 
 String _sportLabel(String? s) =>
     s == '6s' ? t('sport_6s') : (s == '9s' ? t('sport_9s') : t('sport_mixed'));
@@ -45,11 +45,12 @@ Future<void> _open(String? url) async {
   } catch (_) {}
 }
 
+// 웹 .tag/.ps-tags 톤: 작고 아담한 칩.
 Widget _chip(String text, Color bg, Color fg) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(9)),
       child: Text(text,
-          style: TextStyle(color: fg, fontWeight: FontWeight.w700, fontSize: 13)),
+          style: TextStyle(color: fg, fontWeight: FontWeight.w600, fontSize: 11.5)),
     );
 
 Widget _banner(String badge, String text) => Container(
@@ -91,20 +92,39 @@ Widget _infoRow(String icon, String text) => Padding(
       ]),
     );
 
+// 주 CTA(단톡·공유): 옐로 풀폭, 웹 .btn-way/.ps-join-btn 톤(약간 컴팩트).
 Widget _primaryBtn(String label, VoidCallback onTap) => Padding(
-      padding: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.only(top: 14),
       child: SizedBox(
         width: double.infinity,
         child: BounceTap(
-          child: ElevatedButton(onPressed: onTap, child: Text(label)),
+          child: ElevatedButton(
+            onPressed: onTap,
+            style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12)),
+            child: Text(label, style: const TextStyle(fontSize: 14.5)),
+          ),
         ),
       ),
     );
 
+// 보조 액션: 웹 .btn-copy 톤의 작은 연회색 알약(아기자기).
 Widget _outlineBtn(String label, VoidCallback onTap) => BounceTap(
-      child: OutlinedButton(
-        onPressed: onTap,
-        child: Text(label),
+      child: Material(
+        color: const Color(0xFFF0ECE2),
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            child: Text(label,
+                style: const TextStyle(
+                    color: NurungjiColors.chipFg,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13.5)),
+          ),
+        ),
       ),
     );
 
@@ -118,26 +138,33 @@ Widget _sheet(List<Widget> children) => Padding(
     );
 
 // 소유자 전용: 수정/삭제 버튼 행
-Widget _modifyRow({required VoidCallback onEdit, required VoidCallback onDelete}) =>
-    Padding(
-      padding: const EdgeInsets.only(top: 18),
-      child: Row(children: [
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: onEdit,
-            icon: const Icon(Icons.edit, size: 18),
-            label: Text(t('edit')),
+// 소유자 수정/삭제: 작은 알약 한 쌍.
+Widget _modifyRow({required VoidCallback onEdit, required VoidCallback onDelete}) {
+  Widget pill(String label, VoidCallback onTap, Color bg, Color fg) => BounceTap(
+        child: Material(
+          color: bg,
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+              child: Text(label,
+                  style: TextStyle(
+                      color: fg, fontWeight: FontWeight.w700, fontSize: 13.5)),
+            ),
           ),
         ),
-        const SizedBox(width: 10),
-        OutlinedButton.icon(
-          onPressed: onDelete,
-          icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
-          label: Text(t('delete'), style: const TextStyle(color: Colors.red)),
-          style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.red)),
-        ),
-      ]),
-    );
+      );
+  return Padding(
+    padding: const EdgeInsets.only(top: 16),
+    child: Row(children: [
+      pill(t('edit'), onEdit, const Color(0xFFF0ECE2), const Color(0xFF6D6258)),
+      const SizedBox(width: 8),
+      pill(t('delete'), onDelete, const Color(0xFFFDECEA), const Color(0xFFD32F2F)),
+    ]),
+  );
+}
 
 // coords가 있으면 그 위치, 없으면 서울 — 폼 지도피커 초기 중심.
 NLatLng _centerOf(double? lat, double? lng) => (lat != null && lng != null)

@@ -23,6 +23,7 @@ Future<bool?> showClubFormSheet(
   Club? editing,
 }) =>
     showAppSheet<bool>(context,
+        background: Colors.white, // 웹 등록 모달: 흰 배경
         child: ClubFormScreen(initialCenter: initialCenter, editing: editing));
 
 class ClubFormScreen extends StatefulWidget {
