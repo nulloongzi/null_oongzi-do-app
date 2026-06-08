@@ -1,6 +1,7 @@
 // detail_sheet.dart — P4 상세 바텀시트 (웹 club-detail / pickup-detail 과 동일한 톤/구성)
 // 칩·이번주 배너·정보행·링크버튼. 공유/릴스 임베드는 P4ب에서.
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/club.dart';
@@ -91,6 +92,135 @@ Widget _infoRow(String icon, String text) => Padding(
                     fontSize: 15.5, color: NurungjiColors.dark, height: 1.4))),
       ]),
     );
+
+// 📍 주소 행 + 복사 알약 (웹 #sheetAddressVal + #btnCopy). display=표시값, copyText=복사값.
+Widget _addressRow(BuildContext context, String display, String copyText) =>
+    Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('📍', style: TextStyle(fontSize: 17)),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(display,
+              style: const TextStyle(
+                  fontSize: 15.5, color: NurungjiColors.dark, height: 1.4)),
+        ),
+        const SizedBox(width: 8),
+        _outlineBtn(t('copy_address'), () async {
+          await Clipboard.setData(ClipboardData(text: copyText));
+          if (context.mounted) {
+            ScaffoldMessenger.of(context)
+                .showSnackBar(SnackBar(content: Text(t('address_copied'))));
+          }
+        }),
+      ]),
+    );
+
+// 시간표 morph (웹 #timeMorphContainer/interpolateMorph): peek=요약 텍스트, expand=주간 그리드.
+// 패널 펼침비율(DetailPanelScope.expand)에 연동해 crossfade, 탭하면 peek↔expand 토글.
+class _ScheduleMorph extends StatelessWidget {
+  final String? summaryText; // 🗓 요약 (없으면 미표시)
+  final Widget full; // 전체 시간표 그리드
+  const _ScheduleMorph({required this.summaryText, required this.full});
+
+  @override
+  Widget build(BuildContext context) {
+    final summary = (summaryText != null && summaryText!.isNotEmpty)
+        ? _infoRow('🗓', summaryText!)
+        : const SizedBox(width: double.infinity);
+    final scope = DetailPanelScope.of(context);
+    // 패널 밖(스코프 없음)이면 요약+전체 둘 다 표시(폴백).
+    if (scope == null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [summary, full],
+      );
+    }
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: scope.toggle,
+      child: ValueListenableBuilder<double>(
+        valueListenable: scope.expand,
+        builder: (_, r, __) => AnimatedCrossFade(
+          duration: const Duration(milliseconds: 220),
+          sizeCurve: Curves.easeOut,
+          crossFadeState:
+              r >= 0.5 ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          firstChild: summary,
+          secondChild: full,
+        ),
+      ),
+    );
+  }
+}
+
+// 🍱 북마크 토글 (웹 #btnBookmark): 타이틀 우측. 담김=진하게/안 담김=흐리게, 탭=추가/해제.
+class _BookmarkButton extends StatefulWidget {
+  final String uid;
+  final String teamId;
+  const _BookmarkButton({required this.uid, required this.teamId});
+
+  @override
+  State<_BookmarkButton> createState() => _BookmarkButtonState();
+}
+
+class _BookmarkButtonState extends State<_BookmarkButton> {
+  final _svc = LunchboxService();
+  bool? _on; // null=로딩
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final data = await _svc.load(widget.uid);
+      if (mounted) setState(() => _on = data.bookmarks.contains(widget.teamId));
+    } catch (_) {
+      if (mounted) setState(() => _on = false);
+    }
+  }
+
+  Future<void> _toggle() async {
+    if (_on == null) return;
+    final cur = _on!;
+    setState(() => _on = !cur); // 낙관적 업데이트
+    final err = cur
+        ? await _svc.removeBookmark(widget.uid, widget.teamId)
+        : await _svc.addBookmark(widget.uid, widget.teamId);
+    if (!mounted) return;
+    if (err != null) {
+      setState(() => _on = cur); // 실패 시 롤백
+      _snack(err);
+    } else {
+      _snack(cur ? t('lb_removed') : t('lb_added'));
+    }
+  }
+
+  void _snack(String m) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final on = _on ?? false;
+    return BounceTap(
+      onTap: _toggle,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 6),
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 150),
+          opacity: on ? 1.0 : 0.32, // 담김=진하게 / 안 담김=흐리게
+          child: const Text('🍱', style: TextStyle(fontSize: 24)),
+        ),
+      ),
+    );
+  }
+}
 
 // 주 CTA(단톡·공유): 옐로 풀폭, 웹 .btn-way/.ps-join-btn 톤(약간 컴팩트).
 Widget _primaryBtn(String label, VoidCallback onTap) => Padding(
@@ -349,16 +479,19 @@ void showSpotDetail(
             _chip(t('english_ok'), const Color(0xFFE6F0FB), const Color(0xFF1565C0)),
         ]),
         if (s.thisWeek != null && s.thisWeek!.isNotEmpty) _banner(t('this_week'), s.thisWeek!),
-        if ((s.schedule ?? s.scheduleText) != null &&
-            (s.schedule ?? s.scheduleText)!.isNotEmpty)
-          _infoRow('🗓', i18nSchedule(s.schedule ?? s.scheduleText)),
-        ScheduleTimetable(
-          events: (s.scheduleRaw != null && s.scheduleRaw!.isNotEmpty)
-              ? eventsFromRaw(s.scheduleRaw)
-              : eventsFromText(s.schedule ?? s.scheduleText),
-          accent: NurungjiColors.teal,
+        _ScheduleMorph(
+          summaryText: ((s.schedule ?? s.scheduleText) != null &&
+                  (s.schedule ?? s.scheduleText)!.isNotEmpty)
+              ? i18nSchedule(s.schedule ?? s.scheduleText)
+              : null,
+          full: ScheduleTimetable(
+            events: (s.scheduleRaw != null && s.scheduleRaw!.isNotEmpty)
+                ? eventsFromRaw(s.scheduleRaw)
+                : eventsFromText(s.schedule ?? s.scheduleText),
+            accent: NurungjiColors.teal,
+          ),
         ),
-        if (where.isNotEmpty) _infoRow('📍', where),
+        if (where.isNotEmpty) _addressRow(context, where, s.address ?? where),
         if (s.feeInfo != null && s.feeInfo!.isNotEmpty) _infoRow('💰', i18nPrice(s.feeInfo)),
         if (s.instaReel != null && s.instaReel!.isNotEmpty)
           InstaEmbed(url: s.instaReel!),
@@ -417,6 +550,9 @@ void showClubDetail(
                 padding: EdgeInsets.only(right: 6),
                 child: Icon(Icons.verified, color: Color(0xFF1DA1F2), size: 22)),
           Expanded(child: Text(c.name, style: _titleStyle)),
+          // 🍱 북마크 토글(웹 #btnBookmark) — 타이틀 우측. 로그인 필수 앱이라 항상 노출.
+          if (currentUid != null)
+            _BookmarkButton(uid: currentUid, teamId: c.id),
         ]),
         const SizedBox(height: 12),
         if (tags.isNotEmpty)
@@ -429,14 +565,19 @@ void showClubDetail(
                   .toList()),
         if (c.isUrgent && c.urgentMsg != null && c.urgentMsg!.isNotEmpty)
           _banner(t('urgent'), c.urgentMsg!),
-        if (c.schedule != null && c.schedule!.isNotEmpty) _infoRow('🗓', i18nSchedule(c.schedule)),
-        ScheduleTimetable(
-          events: (c.scheduleRaw != null && c.scheduleRaw!.isNotEmpty)
-              ? eventsFromRaw(c.scheduleRaw)
-              : eventsFromText(c.schedule),
-          accent: NurungjiColors.yellow,
+        _ScheduleMorph(
+          summaryText: (c.schedule != null && c.schedule!.isNotEmpty)
+              ? i18nSchedule(c.schedule)
+              : null,
+          full: ScheduleTimetable(
+            events: (c.scheduleRaw != null && c.scheduleRaw!.isNotEmpty)
+                ? eventsFromRaw(c.scheduleRaw)
+                : eventsFromText(c.schedule),
+            accent: NurungjiColors.yellow,
+          ),
         ),
-        if (c.address != null && c.address!.isNotEmpty) _infoRow('📍', c.address!),
+        if (c.address != null && c.address!.isNotEmpty)
+          _addressRow(context, c.address!, c.address!),
         if (c.price != null && c.price!.isNotEmpty) _infoRow('💰', i18nPrice(c.price)),
         if (c.instaReel != null && c.instaReel!.isNotEmpty)
           InstaEmbed(url: c.instaReel!),
@@ -449,14 +590,6 @@ void showClubDetail(
           if (c.lat != null && c.lng != null)
             _outlineBtn(t('directions_btn'),
                 () => _open('https://map.kakao.com/link/to/${c.name},${c.lat},${c.lng}')),
-          if (currentUid != null)
-            _outlineBtn(t('bookmark_btn'), () async {
-              final err = await LunchboxService().addBookmark(currentUid, c.id);
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(err ?? t('lb_added'))));
-              }
-            }),
         ]),
         _primaryBtn(
           t('share_btn'),

@@ -53,6 +53,17 @@ class LunchboxService {
     return null;
   }
 
+  /// 찜 해제(도시락에서 빼기). null=성공.
+  Future<String?> removeBookmark(String uid, String teamId) async {
+    final data = await load(uid);
+    final idx = data.bookmarks.indexWhere((e) => e == teamId);
+    if (idx == -1) return null; // 이미 없음
+    data.bookmarks[idx] = null;
+    await save(uid, data);
+    Track.event('remove_bookmark');
+    return null;
+  }
+
   /// 커스텀 팀 추가 + 찜. null=성공, 그 외=메시지.
   Future<String?> addCustomTeam(
       String uid, String name, String schedule) async {

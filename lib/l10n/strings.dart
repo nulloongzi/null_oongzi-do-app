@@ -101,6 +101,12 @@ const Map<String, Map<String, String>> kStrings = {
   'lb_full': {'ko': '도시락이 가득 찼어요 (5칸)', 'en': 'Lunchbox is full (5)'},
   'lb_already': {'ko': '이미 도시락에 담겨 있어요', 'en': 'Already in your lunchbox'},
   'lb_added': {'ko': '도시락에 담았어요!', 'en': 'Added to lunchbox!'},
+  'lb_removed': {'ko': '도시락에서 뺐어요', 'en': 'Removed from lunchbox'},
+  // 상세 시트(보완): 주소 복사 · 시간표 morph 펼침 힌트
+  'copy_address': {'ko': '📍 주소 복사', 'en': '📍 Copy'},
+  'address_copied': {'ko': '주소를 복사했어요', 'en': 'Address copied'},
+  'detail_pull_hint': {'ko': '▴ 위로 올려 시간표 보기', 'en': '▴ Pull up for schedule'},
+  'detail_collapse_hint': {'ko': '▾ 접기', 'en': '▾ Collapse'},
   'lb_slot_rice': {'ko': '밥', 'en': 'Rice'},
   'lb_slot_soup': {'ko': '국', 'en': 'Soup'},
   'lb_slot_side1': {'ko': '반찬 1', 'en': 'Side 1'},
