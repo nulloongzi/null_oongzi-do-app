@@ -6,8 +6,13 @@ import '../models/profile.dart';
 import '../services/i18n.dart';
 import '../services/profile_service.dart';
 import '../theme.dart';
+import '../widgets/app_sheet.dart';
 import 'lunchbox_screen.dart';
 import 'share_image_screen.dart';
+
+/// 내 정보 팝업: 풀스크린 라우트 대신 지도 위로 뜨는 모달 바텀시트(웹 프로필 오버레이 대응).
+Future<void> showProfileSheet(BuildContext context) =>
+    showAppSheet<void>(context, child: const ProfileScreen());
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -111,53 +116,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(t('profile_title'))),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (_profile != null) _card(_profile!),
-                  const SizedBox(height: 20),
-                  ElevatedButton.icon(
-                    onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const LunchboxScreen())),
-                    icon: const Icon(Icons.lunch_dining, size: 18),
-                    label: Text(t('my_lunchbox')),
-                  ),
-                  const SizedBox(height: 10),
-                  OutlinedButton.icon(
-                    onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const ShareImageScreen())),
-                    icon: const Icon(Icons.ios_share, size: 18),
-                    label: Text(t('share_image_btn_profile')),
-                  ),
-                  const SizedBox(height: 10),
-                  if (_profile != null)
-                    OutlinedButton.icon(
-                      onPressed: _rename,
-                      icon: const Icon(Icons.edit, size: 18),
-                      label: Text(t('change_nickname')),
-                    ),
-                  const SizedBox(height: 10),
-                  OutlinedButton.icon(
-                    onPressed: _signOut,
-                    icon: const Icon(Icons.logout, size: 18, color: Colors.red),
-                    label: Text(t('logout'),
-                        style: const TextStyle(color: Colors.red)),
-                    style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.red)),
-                  ),
-                ],
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SheetTitle(t('profile_title')),
+            if (_loading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 48),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else ...[
+              if (_profile != null) _card(_profile!),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                // 도시락도 시트로 (이 시트 위에 스택). 풀스크린 전환 제거.
+                onPressed: () => showLunchboxSheet(context),
+                icon: const Icon(Icons.lunch_dining, size: 18),
+                label: Text(t('my_lunchbox')),
               ),
-            ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const ShareImageScreen())),
+                icon: const Icon(Icons.ios_share, size: 18),
+                label: Text(t('share_image_btn_profile')),
+              ),
+              const SizedBox(height: 10),
+              if (_profile != null)
+                OutlinedButton.icon(
+                  onPressed: _rename,
+                  icon: const Icon(Icons.edit, size: 18),
+                  label: Text(t('change_nickname')),
+                ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: _signOut,
+                icon: const Icon(Icons.logout, size: 18, color: Colors.red),
+                label: Text(t('logout'),
+                    style: const TextStyle(color: Colors.red)),
+                style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.red)),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 

@@ -6,7 +6,12 @@ import '../services/i18n.dart';
 import '../services/lunchbox_service.dart';
 import '../services/schedule_parse.dart';
 import '../theme.dart';
+import '../widgets/app_sheet.dart';
 import '../widgets/diet_grid.dart';
+
+/// 도시락 팝업: 풀스크린 라우트 대신 지도 위로 뜨는 모달 바텀시트(웹 도시락 오버레이 대응).
+Future<void> showLunchboxSheet(BuildContext context) =>
+    showAppSheet<void>(context, child: const LunchboxScreen());
 
 class LunchboxScreen extends StatefulWidget {
   const LunchboxScreen({super.key});
@@ -169,51 +174,58 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(t('lunchbox_title'))),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SheetTitle(t('lunchbox_title')),
+            if (_loading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 48),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else ...[
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  _selectedSlot == null
+                      ? t('lb_reorder_hint')
+                      : t('lb_reorder_pick'),
+                  style: const TextStyle(
+                      fontSize: 12, color: NurungjiColors.brown),
+                ),
+              ),
+              for (var i = 0; i < 5; i++) _slotTile(i),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _addCustom,
+                icon: const Icon(Icons.add, size: 18),
+                label: Text(t('add_custom')),
+              ),
+              const SizedBox(height: 16),
+              Row(
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      _selectedSlot == null
-                          ? t('lb_reorder_hint')
-                          : t('lb_reorder_pick'),
+                  Text(t('lb_diet'),
                       style: const TextStyle(
-                          fontSize: 12, color: NurungjiColors.brown),
-                    ),
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                          color: NurungjiColors.dark)),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () => setState(() => _showDiet = !_showDiet),
+                    child: Text(_showDiet ? t('collapse') : t('expand')),
                   ),
-                  for (var i = 0; i < 5; i++) _slotTile(i),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed: _addCustom,
-                    icon: const Icon(Icons.add, size: 18),
-                    label: Text(t('add_custom')),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Text(t('lb_diet'),
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 16,
-                              color: NurungjiColors.dark)),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: () => setState(() => _showDiet = !_showDiet),
-                        child: Text(_showDiet ? t('collapse') : t('expand')),
-                      ),
-                    ],
-                  ),
-                  if (_showDiet) DietGrid(teams: _dietTeams()),
                 ],
               ),
-            ),
+              if (_showDiet) DietGrid(teams: _dietTeams()),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
