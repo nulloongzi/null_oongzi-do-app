@@ -36,8 +36,15 @@ class AppTheme {
       ),
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: NurungjiColors.light,
+        modalBackgroundColor: NurungjiColors.light,
+        // 웹 오버레이(rgba(93,64,55,.35))처럼 검정이 아닌 따뜻한 갈색 딤.
+        modalBarrierColor: Color(0x4D5D4037),
+        // 드래그 핸들: 웹 .sheet-handle(#d8cfc6, 44x5)과 동일 톤.
+        showDragHandle: true,
+        dragHandleColor: Color(0xFFD8CFC6),
+        dragHandleSize: Size(44, 5),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
