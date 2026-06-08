@@ -1,5 +1,7 @@
 // map_screen.dart — 네이티브 네이버지도(flutter_naver_map) + Firestore 마커
 // kakao_map_plugin(웹뷰) → flutter_naver_map(네이티브)로 전환: 패닝 부드러움 + 한국 데이터.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -170,7 +172,7 @@ class _MapScreenState extends State<MapScreen> {
       NOverlayImage.fromAssetImage('assets/markers/marker_red.png');
   static const _markerSize = Size(38, 48); // 기본 핀(라벨 없음) — 약간 키움
   static const _labelSize = Size(170, 76); // 이름 알약 포함 마커
-  static const _labelZoomThreshold = 13.5; // 이 줌 이상에서만 이름 알약 노출
+  static const _labelZoomThreshold = 12.0; // 이 줌 이상에서만 이름 알약 노출
   bool _showLabels = false; // 현재 줌이 임계 이상? (스테이지3=알약 표시)
 
   // 마커 라벨 아이콘 캐시(이름·상태별 1회 렌더) + 핀 에셋 프리캐시(미로드 시 핀이 빈칸으로 캡처되는 것 방지)
@@ -316,6 +318,39 @@ class _MapScreenState extends State<MapScreen> {
     } catch (_) {}
   }
 
+  // 핀을 '시트 위 보이는 영역'의 중앙(화면 상단 ~30%)에 오도록 카메라 이동.
+  // pivot으로 타깃 latlng를 화면 비율 위치에 배치(시트 peek가 하단 ~42% 가림 보정).
+  Future<void> _centerOnPin(double? lat, double? lng) async {
+    final c = _controller;
+    if (c == null || lat == null || lng == null) return;
+    try {
+      final update = NCameraUpdate.scrollAndZoomTo(target: NLatLng(lat, lng))
+        ..setPivot(const NPoint(0.5, 0.30));
+      await c.updateCamera(update);
+    } catch (_) {
+      // 폴백: pivot 미지원 시 그냥 중앙으로
+      try {
+        await c.updateCamera(
+            NCameraUpdate.scrollAndZoomTo(target: NLatLng(lat, lng)));
+      } catch (_) {}
+    }
+  }
+
+  // 마커/티커 탭 → 핀을 보이는 영역 중앙으로 이동 + 상세 시트 오픈.
+  Future<void> _focusAndShowClub(Club club) async {
+    await _centerOnPin(club.lat, club.lng);
+    if (!mounted) return;
+    showClubDetail(context, club,
+        currentUid: _repo.currentUid, isAdmin: _isAdmin, onChanged: _load);
+  }
+
+  Future<void> _focusAndShowSpot(PickupSpot spot) async {
+    await _centerOnPin(spot.lat, spot.lng);
+    if (!mounted) return;
+    showSpotDetail(context, spot,
+        currentUid: _repo.currentUid, isAdmin: _isAdmin, onChanged: _load);
+  }
+
   // 줌 변경 후: 임계 넘나들면 이름 알약 표시여부 전환 + 마커 재렌더(아이콘 캐시로 빠름).
   void _onCameraIdle() async {
     final cam = await _controller?.getCameraPosition();
@@ -350,8 +385,7 @@ class _MapScreenState extends State<MapScreen> {
             icon: icon ?? _pickupIcon,
             size: icon != null ? _labelSize : _markerSize,
           );
-          m.setOnTapListener((NMarker o) => showClubDetail(context, club,
-              currentUid: _repo.currentUid, isAdmin: _isAdmin, onChanged: _load));
+          m.setOnTapListener((NMarker o) => _focusAndShowClub(club));
           overlays.add(m);
         } else {
           final m = NClusterableMarker(
@@ -360,8 +394,7 @@ class _MapScreenState extends State<MapScreen> {
             icon: icon ?? _clubIcon,
             size: icon != null ? _labelSize : _markerSize,
           );
-          m.setOnTapListener((NClusterableMarker o) => showClubDetail(context, club,
-              currentUid: _repo.currentUid, isAdmin: _isAdmin, onChanged: _load));
+          m.setOnTapListener((NClusterableMarker o) => _focusAndShowClub(club));
           overlays.add(m);
         }
       }
@@ -379,8 +412,7 @@ class _MapScreenState extends State<MapScreen> {
           icon: icon ?? _pickupIcon,
           size: icon != null ? _labelSize : _markerSize,
         );
-        m.setOnTapListener((NClusterableMarker o) => showSpotDetail(context, spot,
-            currentUid: _repo.currentUid, isAdmin: _isAdmin, onChanged: _load));
+        m.setOnTapListener((NClusterableMarker o) => _focusAndShowSpot(spot));
         overlays.add(m);
       }
     }
@@ -646,33 +678,8 @@ class _MapScreenState extends State<MapScreen> {
         .where((c) => c.isUrgent && (c.urgentMsg?.isNotEmpty ?? false))
         .toList();
     if (urgent.isEmpty) return const SizedBox.shrink();
-    return GlassSurface(
-      color: const Color(0xD9FFFBF0), // 크림-오렌지 0.85
-      blur: 10,
-      radius: BorderRadius.circular(12),
-      child: SizedBox(
-        height: 40,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          itemCount: urgent.length,
-          separatorBuilder: (_, __) => const SizedBox(width: 16),
-          itemBuilder: (_, i) {
-            final c = urgent[i];
-            return Center(
-              child: GestureDetector(
-                onTap: () => showClubDetail(context, c,
-                    currentUid: _repo.currentUid, isAdmin: _isAdmin, onChanged: _load),
-                child: Text('🔥 ${c.name} · ${c.urgentMsg}',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: NurungjiColors.dark)),
-              ),
-            );
-          },
-        ),
-      ),
-    );
+    // 롤링 티커: 여러 급구 팀을 일정 간격으로 위로 굴려 보여줌. 탭 → 핀 이동 + 상세.
+    return _UrgentTicker(clubs: urgent, onTap: _focusAndShowClub);
   }
 
   // 픽업 탭: 지도/목록 토글 알약
@@ -715,4 +722,94 @@ class _MapScreenState extends State<MapScreen> {
               style: TextStyle(color: Colors.red.shade900, fontSize: 12)),
         ),
       );
+}
+
+// 상단 급구 롤링 티커: 여러 급구 팀을 4초마다 위로 굴려 노출. 탭 → 핀 이동 + 상세.
+class _UrgentTicker extends StatefulWidget {
+  final List<Club> clubs;
+  final void Function(Club) onTap;
+  const _UrgentTicker({required this.clubs, required this.onTap});
+
+  @override
+  State<_UrgentTicker> createState() => _UrgentTickerState();
+}
+
+class _UrgentTickerState extends State<_UrgentTicker> {
+  int _i = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _start();
+  }
+
+  void _start() {
+    _timer?.cancel();
+    if (widget.clubs.length > 1) {
+      _timer = Timer.periodic(const Duration(seconds: 4), (_) {
+        if (!mounted) return;
+        setState(() => _i = (_i + 1) % widget.clubs.length);
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _UrgentTicker old) {
+    super.didUpdateWidget(old);
+    if (_i >= widget.clubs.length) _i = 0;
+    _start();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.clubs.isEmpty) return const SizedBox.shrink();
+    final c = widget.clubs[_i % widget.clubs.length];
+    return GlassSurface(
+      color: const Color(0xD9FFFBF0), // 크림-오렌지 0.85
+      blur: 10,
+      radius: BorderRadius.circular(12),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => widget.onTap(c),
+          child: SizedBox(
+            height: 40,
+            child: Row(children: [
+              const SizedBox(width: 12),
+              const Text('🔥', style: TextStyle(fontSize: 16)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 400),
+                  transitionBuilder: (child, anim) => SlideTransition(
+                    position: Tween<Offset>(
+                            begin: const Offset(0, 1), end: Offset.zero)
+                        .animate(anim),
+                    child: FadeTransition(opacity: anim, child: child),
+                  ),
+                  child: Text(
+                    '[${c.name}] ${c.urgentMsg}',
+                    key: ValueKey('${c.id}_$_i'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700, color: NurungjiColors.dark),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
 }

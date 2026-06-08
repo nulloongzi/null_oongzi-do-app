@@ -287,6 +287,22 @@ Widget _instaIcon(VoidCallback onTap) => BounceTap(
       ),
     );
 
+// 홈페이지 집 아이콘 — 타이틀 옆(인스타·북마크와 한 줄). 탭하면 홈/링크 열기.
+Widget _homeIcon(VoidCallback onTap) => BounceTap(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(left: 6),
+        width: 24,
+        height: 24,
+        decoration: BoxDecoration(
+          color: NurungjiColors.chipBg,
+          borderRadius: BorderRadius.circular(7),
+        ),
+        child: const Icon(Icons.home_rounded,
+            size: 15, color: NurungjiColors.brown),
+      ),
+    );
+
 // 컴팩트 액션 알약 (웹 .action-buttons .btn): flex로 한 줄에 여러 개.
 Widget _actionPill(String label, VoidCallback onTap,
     {required Color bg, required Color fg}) {
@@ -633,6 +649,8 @@ void showClubDetail(
           Expanded(child: Text(c.name, style: _titleStyle)),
           if (c.insta != null && c.insta!.isNotEmpty)
             _instaIcon(() => _open('https://instagram.com/${c.insta}')),
+          if (c.link != null && c.link!.isNotEmpty)
+            _homeIcon(() => _open(c.link)),
           if (currentUid != null)
             _BookmarkButton(uid: currentUid, teamId: c.id),
         ]),
@@ -647,20 +665,17 @@ void showClubDetail(
           full: ScheduleTimetable(
               events: clubEvents, accent: NurungjiColors.yellow),
         ),
-        // 4. 태그 + 🏠 홈페이지(인라인)
-        if (tags.isNotEmpty || (c.link != null && c.link!.isNotEmpty))
+        // 4. 모집 키워드 — 해시태그 느낌(#)
+        if (tags.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 12),
             child: Wrap(
               spacing: 6,
               runSpacing: 6,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                ...tags.map((tag) => _chip(i18nTarget(tag),
-                    NurungjiColors.chipBg, NurungjiColors.chipFg)),
-                if (c.link != null && c.link!.isNotEmpty)
-                  _outlineBtn(t('home_btn'), () => _open(c.link)),
-              ],
+              children: tags
+                  .map((tag) => _chip('#${i18nTarget(tag)}',
+                      NurungjiColors.chipBg, NurungjiColors.chipFg))
+                  .toList(),
             ),
           ),
         // 5. 가격
