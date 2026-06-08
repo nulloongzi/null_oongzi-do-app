@@ -168,8 +168,10 @@ class _MapScreenState extends State<MapScreen> {
       NOverlayImage.fromAssetImage('assets/markers/marker_yellow.png');
   static final _pickupIcon =
       NOverlayImage.fromAssetImage('assets/markers/marker_red.png');
-  static const _markerSize = Size(32, 42);
-  static const _labelSize = Size(150, 58); // 이름 라벨 포함 마커
+  static const _markerSize = Size(38, 48); // 기본 핀(라벨 없음) — 약간 키움
+  static const _labelSize = Size(170, 76); // 이름 알약 포함 마커
+  static const _labelZoomThreshold = 13.5; // 이 줌 이상에서만 이름 알약 노출
+  bool _showLabels = false; // 현재 줌이 임계 이상? (스테이지3=알약 표시)
 
   // 마커 라벨 아이콘 캐시(이름·상태별 1회 렌더) + 핀 에셋 프리캐시(미로드 시 핀이 빈칸으로 캡처되는 것 방지)
   final Map<String, NOverlayImage> _labelIconCache = {};
@@ -185,10 +187,11 @@ class _MapScreenState extends State<MapScreen> {
     }();
   }
 
-  // 핀 위에 이름(흰 배경 알약) — 웹 마커 라벨 스타일. fromWidget로 1회 렌더 후 캐시.
+  // 핀 위에 이름 알약(흰 배경 + 인증 배지) — 웹 마커 라벨. fromWidget 1회 렌더 후 캐시.
   Future<NOverlayImage?> _labeledIcon(String name,
-      {required bool red, required bool urgent}) async {
-    final key = '${red ? "r" : "y"}|${urgent ? "u" : "n"}|$name';
+      {required bool red, required bool urgent, required bool verified}) async {
+    final key =
+        '${red ? "r" : "y"}|${urgent ? "u" : "n"}|${verified ? "v" : ""}|$name';
     final hit = _labelIconCache[key];
     if (hit != null) return hit;
     await _ensurePrewarm();
@@ -207,41 +210,61 @@ class _MapScreenState extends State<MapScreen> {
               children: [
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                      const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(9),
                     border: Border.all(
                         color: urgent
-                            ? NurungjiColors.urgent
-                            : const Color(0x22000000)),
-                    boxShadow: const [
-                      BoxShadow(
+                            ? const Color(0xFFE53935)
+                            : const Color(0x22000000),
+                        width: urgent ? 1.5 : 1),
+                    boxShadow: [
+                      const BoxShadow(
                           color: Color(0x33000000),
                           blurRadius: 3,
                           offset: Offset(0, 1)),
+                      // 급구: 붉은 글로우로 시선 끌기
+                      if (urgent)
+                        BoxShadow(
+                            color: const Color(0xFFE53935).withValues(alpha: 0.55),
+                            blurRadius: 8,
+                            spreadRadius: 1),
                     ],
                   ),
-                  child: Text(
-                    urgent ? '🔥 $name' : name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: urgent
-                          ? const Color(0xFFD32F2F)
-                          : NurungjiColors.dark,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          urgent ? '🔥 $name' : name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: urgent
+                                ? const Color(0xFFD32F2F)
+                                : NurungjiColors.dark,
+                          ),
+                        ),
+                      ),
+                      if (verified)
+                        const Padding(
+                          padding: EdgeInsets.only(left: 3),
+                          child: Icon(Icons.verified,
+                              color: Color(0xFF1DA1F2), size: 14),
+                        ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 1),
+                const SizedBox(height: 2),
                 Image.asset(
                   red
                       ? 'assets/markers/marker_red.png'
                       : 'assets/markers/marker_yellow.png',
-                  width: 26,
-                  height: 34,
+                  width: 34,
+                  height: 44,
                 ),
               ],
             ),
@@ -293,6 +316,17 @@ class _MapScreenState extends State<MapScreen> {
     } catch (_) {}
   }
 
+  // 줌 변경 후: 임계 넘나들면 이름 알약 표시여부 전환 + 마커 재렌더(아이콘 캐시로 빠름).
+  void _onCameraIdle() async {
+    final cam = await _controller?.getCameraPosition();
+    if (cam == null || !mounted) return;
+    final show = cam.zoom >= _labelZoomThreshold;
+    if (show != _showLabels) {
+      _showLabels = show;
+      _refreshMarkers();
+    }
+  }
+
   Future<void> _refreshMarkers() async {
     final c = _controller;
     if (c == null) return;
@@ -303,8 +337,11 @@ class _MapScreenState extends State<MapScreen> {
         if (club.lat == null || club.lng == null) continue;
         final pos = NLatLng(club.lat!, club.lng!);
         final urgent = club.isUrgent && (club.urgentMsg?.isNotEmpty ?? false);
-        // 이름 라벨(핀 위 흰 알약)을 아이콘에 포함 — 웹 마커 라벨 스타일.
-        final icon = await _labeledIcon(club.name, red: urgent, urgent: urgent);
+        // 줌 임계 이상일 때만 이름 알약 노출(중간 줌=핀만). 인증팀은 배지 포함.
+        final icon = _showLabels
+            ? await _labeledIcon(club.name,
+                red: urgent, urgent: urgent, verified: club.isVerified)
+            : null;
         if (urgent) {
           // 급구: 클러스터 제외(항상 표시) + 빨강 라벨
           final m = NMarker(
@@ -332,7 +369,10 @@ class _MapScreenState extends State<MapScreen> {
       final spots = _visibleSpots();
       for (final spot in spots) {
         if (spot.lat == null || spot.lng == null) continue;
-        final icon = await _labeledIcon(spot.title, red: true, urgent: false);
+        final icon = _showLabels
+            ? await _labeledIcon(spot.title,
+                red: true, urgent: false, verified: false)
+            : null;
         final m = NClusterableMarker(
           id: 's_${spot.id}',
           position: NLatLng(spot.lat!, spot.lng!),
@@ -429,6 +469,8 @@ class _MapScreenState extends State<MapScreen> {
                 await _enableMyLocation();
                 _refreshMarkers();
               },
+              // 줌이 임계를 넘나들면 이름 알약 표시/숨김 전환(스테이지 2↔3)
+              onCameraIdle: _onCameraIdle,
             ),
             // 검색바 (design §2.1)
             Positioned(top: 12, left: 15, right: 15, child: _searchBar()),
