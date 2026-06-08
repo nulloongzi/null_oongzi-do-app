@@ -354,6 +354,7 @@ void showClubDetail(
   BuildContext context,
   Club c, {
   String? currentUid,
+  bool isAdmin = false,
   Future<void> Function()? onChanged,
 }) {
   Track.event('view_club', {'club_id': c.id, 'club_name': c.name});
@@ -361,9 +362,11 @@ void showClubDetail(
       .split(RegExp(r'[,\s]+'))
       .where((e) => e.isNotEmpty)
       .toList();
-  final canModify = currentUid != null &&
-      c.registeredBy != null &&
-      c.registeredBy == currentUid;
+  // 수정/삭제: 소유자 OR 관리자(문서 02 §7, 규칙도 동일).
+  final canModify = (currentUid != null &&
+          c.registeredBy != null &&
+          c.registeredBy == currentUid) ||
+      isAdmin;
   showModalBottomSheet(
     context: context,
     showDragHandle: true,

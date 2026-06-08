@@ -121,7 +121,7 @@ class _MapScreenState extends State<MapScreen> {
         setState(() => _tab = 'clubs');
         _refreshMarkers();
         showClubDetail(context, c,
-            currentUid: _repo.currentUid, onChanged: _load);
+            currentUid: _repo.currentUid, isAdmin: _isAdmin, onChanged: _load);
       }
     } else {
       PickupSpot? s;
@@ -229,7 +229,7 @@ class _MapScreenState extends State<MapScreen> {
             caption: _caption(club.name, urgent: true),
           );
           m.setOnTapListener((NMarker o) => showClubDetail(context, club,
-              currentUid: _repo.currentUid, onChanged: _load));
+              currentUid: _repo.currentUid, isAdmin: _isAdmin, onChanged: _load));
           overlays.add(m);
         } else {
           final m = NClusterableMarker(
@@ -241,7 +241,7 @@ class _MapScreenState extends State<MapScreen> {
             isHideCollidedCaptions: true,
           );
           m.setOnTapListener((NClusterableMarker o) => showClubDetail(context, club,
-              currentUid: _repo.currentUid, onChanged: _load));
+              currentUid: _repo.currentUid, isAdmin: _isAdmin, onChanged: _load));
           overlays.add(m);
         }
       }
@@ -542,7 +542,7 @@ class _MapScreenState extends State<MapScreen> {
             return Center(
               child: GestureDetector(
                 onTap: () => showClubDetail(context, c,
-                    currentUid: _repo.currentUid, onChanged: _load),
+                    currentUid: _repo.currentUid, isAdmin: _isAdmin, onChanged: _load),
                 child: Text('🔥 ${c.name} · ${c.urgentMsg}',
                     style: const TextStyle(
                         fontWeight: FontWeight.w700,
