@@ -5,6 +5,7 @@
 //
 // 펼침 비율(_expand: 0=peek..1=expand)을 DetailPanelScope로 본문에 노출 → 시간표 morph
 // (요약↔그리드)와 펼침 힌트가 이 비율에 연동된다(웹 interpolateMorph 대응).
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import '../services/i18n.dart';
 
