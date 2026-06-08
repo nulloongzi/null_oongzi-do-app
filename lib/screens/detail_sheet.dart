@@ -19,6 +19,7 @@ import '../widgets/insta_embed.dart';
 import '../widgets/schedule_timetable.dart';
 import '../widgets/share_menu.dart';
 import '../widgets/story_card.dart';
+import '../widgets/map_detail_panel.dart';
 import 'club_form_screen.dart';
 import 'pickup_form_screen.dart';
 
@@ -143,15 +144,15 @@ NLatLng _centerOf(double? lat, double? lng) => (lat != null && lng != null)
     ? NLatLng(lat, lng)
     : const NLatLng(37.5559, 127.0838);
 
-// 삭제 확인 → 삭제 → 시트 닫기 → onChanged. sheetCtx=시트 내부, outerCtx=호출측(스낵바용).
+// 삭제 확인 → 삭제 → 패널 닫기(close) → onChanged. context=호출측(다이얼로그·스낵바).
 Future<void> _confirmDelete(
-  BuildContext sheetCtx,
-  BuildContext outerCtx,
+  BuildContext context,
   Future<void> Function()? onChanged,
+  VoidCallback close,
   Future<void> Function() doDelete,
 ) async {
   final ok = await showDialog<bool>(
-    context: sheetCtx,
+    context: context,
     builder: (dctx) => AlertDialog(
       title: Text(t('modify_delete_title')),
       content: Text(t('modify_delete_body')),
@@ -169,35 +170,35 @@ Future<void> _confirmDelete(
   try {
     await doDelete();
   } catch (e) {
-    if (outerCtx.mounted) {
-      ScaffoldMessenger.of(outerCtx)
+    if (context.mounted) {
+      ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('${t('err_delete')}: $e')));
     }
     return;
   }
-  if (sheetCtx.mounted) Navigator.pop(sheetCtx);
+  close();
   await onChanged?.call();
 }
 
 // 동호회 급구(is_urgent) 올리기/내리기 — 소유자 전용. update merge로 나머지 보존.
 Widget _urgentToggle(
   Club c,
-  BuildContext sheetCtx,
-  BuildContext outerCtx,
+  BuildContext context,
   Future<void> Function()? onChanged,
+  VoidCallback close,
 ) {
   Future<void> apply(bool urgent, String msg) async {
     try {
       await DataRepository().updateClub(
           c.id, {'is_urgent': urgent, 'urgent_msg': urgent ? msg : ''});
     } catch (e) {
-      if (outerCtx.mounted) {
-        ScaffoldMessenger.of(outerCtx)
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('${t('err_generic')}: $e')));
       }
       return;
     }
-    if (sheetCtx.mounted) Navigator.pop(sheetCtx);
+    close();
     await onChanged?.call();
   }
 
@@ -210,7 +211,7 @@ Widget _urgentToggle(
           if (c.isUrgent) {
             await apply(false, '');
           } else {
-            final msg = await _promptText(sheetCtx,
+            final msg = await _promptText(context,
                 title: t('urgent_on'), hint: t('urgent_msg_hint'));
             if (msg != null && msg.trim().isNotEmpty) await apply(true, msg.trim());
           }
@@ -270,54 +271,30 @@ Future<String?> _promptText(BuildContext ctx,
   );
 }
 
-// 상세 시트: 웹 club-detail/pickup-detail처럼 작게 떴다가(peek) 끌어올리면 펼쳐지는
-// (expand) 드래그 가능한 바텀시트. content는 sheetCtx(시트 내부 컨텍스트)를 받아 빌드한다
-// — 수정/삭제/급구 토글이 Navigator.pop(sheetCtx)를 쓰기 때문.
+// 상세 시트: 웹 .bottom-sheet처럼 비(非)모달로 띄운다 — OverlayEntry로 화면 바닥에만 깔고
+// (딤·배리어 없음) 위쪽 지도는 그대로 조작 가능. content는 close 콜백을 받아 빌드한다
+// (수정/삭제/급구 토글이 패널을 닫을 때 사용). 한 번에 하나만 — 새로 열면 기존 패널 교체.
+OverlayEntry? _activeDetailEntry;
+
 void _showDetailSheet(
   BuildContext context,
-  List<Widget> Function(BuildContext sheetCtx) content,
+  List<Widget> Function(VoidCallback close) content,
 ) {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    showDragHandle: false, // 아래 커스텀 핸들 사용
-    backgroundColor: Colors.transparent, // 내부 컨테이너로 라운드/배경 처리
-    builder: (sheetCtx) => DraggableScrollableSheet(
-      initialChildSize: 0.6, // peek
-      minChildSize: 0.4,
-      maxChildSize: 0.92, // expand
-      expand: false,
-      snap: true,
-      snapSizes: const [0.6, 0.92],
-      builder: (ctx, scrollController) => Container(
-        decoration: const BoxDecoration(
-          color: NurungjiColors.light,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          children: [
-            // 드래그 핸들 (웹 .sheet-handle: #d8cfc6, 44x5)
-            Container(
-              width: 44,
-              height: 5,
-              margin: const EdgeInsets.only(top: 12, bottom: 2),
-              decoration: BoxDecoration(
-                color: const Color(0xFFD8CFC6),
-                borderRadius: BorderRadius.circular(3),
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                controller: scrollController, // 드래그-스크롤 연동(필수)
-                child: _sheet(content(sheetCtx)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
+  _activeDetailEntry?.remove();
+  _activeDetailEntry = null;
+  final overlay = Overlay.of(context);
+  late OverlayEntry entry;
+  void close() {
+    if (identical(_activeDetailEntry, entry)) _activeDetailEntry = null;
+    if (entry.mounted) entry.remove();
+  }
+
+  entry = OverlayEntry(
+    builder: (_) =>
+        MapDetailPanel(onClose: close, child: _sheet(content(close))),
   );
+  _activeDetailEntry = entry;
+  overlay.insert(entry);
 }
 
 void showSpotDetail(
@@ -333,7 +310,7 @@ void showSpotDetail(
   final canModify =
       (currentUid != null && s.ownerUid != null && s.ownerUid == currentUid) ||
           isAdmin;
-  _showDetailSheet(context, (sheetCtx) => [
+  _showDetailSheet(context, (close) => [
         Text(s.title, style: _titleStyle),
         const SizedBox(height: 12),
         Wrap(spacing: 6, runSpacing: 6, children: [
@@ -375,7 +352,7 @@ void showSpotDetail(
         if (canModify)
           _modifyRow(
             onEdit: () async {
-              Navigator.pop(sheetCtx);
+              close();
               final ok = await showPickupFormSheet(
                 context,
                 editing: s,
@@ -383,7 +360,7 @@ void showSpotDetail(
               );
               if (ok == true) await onChanged?.call();
             },
-            onDelete: () => _confirmDelete(sheetCtx, context, onChanged,
+            onDelete: () => _confirmDelete(context, onChanged, close,
                 () => DataRepository().deletePickup(s.id)),
           ),
       ]);
@@ -406,7 +383,7 @@ void showClubDetail(
           c.registeredBy != null &&
           c.registeredBy == currentUid) ||
       isAdmin;
-  _showDetailSheet(context, (sheetCtx) => [
+  _showDetailSheet(context, (close) => [
         Row(children: [
           if (c.isVerified)
             const Padding(
@@ -464,11 +441,11 @@ void showClubDetail(
           ),
         ),
         if (canModify && !c.isVerified) _verifyBtn(c, context),
-        if (canModify) _urgentToggle(c, sheetCtx, context, onChanged),
+        if (canModify) _urgentToggle(c, context, onChanged, close),
         if (canModify)
           _modifyRow(
             onEdit: () async {
-              Navigator.pop(sheetCtx);
+              close();
               final ok = await showClubFormSheet(
                 context,
                 editing: c,
@@ -476,7 +453,7 @@ void showClubDetail(
               );
               if (ok == true) await onChanged?.call();
             },
-            onDelete: () => _confirmDelete(sheetCtx, context, onChanged,
+            onDelete: () => _confirmDelete(context, onChanged, close,
                 () => DataRepository().deleteClub(c.id)),
           ),
       ]);
