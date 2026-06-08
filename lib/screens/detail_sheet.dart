@@ -270,6 +270,56 @@ Future<String?> _promptText(BuildContext ctx,
   );
 }
 
+// 상세 시트: 웹 club-detail/pickup-detail처럼 작게 떴다가(peek) 끌어올리면 펼쳐지는
+// (expand) 드래그 가능한 바텀시트. content는 sheetCtx(시트 내부 컨텍스트)를 받아 빌드한다
+// — 수정/삭제/급구 토글이 Navigator.pop(sheetCtx)를 쓰기 때문.
+void _showDetailSheet(
+  BuildContext context,
+  List<Widget> Function(BuildContext sheetCtx) content,
+) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: false, // 아래 커스텀 핸들 사용
+    backgroundColor: Colors.transparent, // 내부 컨테이너로 라운드/배경 처리
+    builder: (sheetCtx) => DraggableScrollableSheet(
+      initialChildSize: 0.6, // peek
+      minChildSize: 0.4,
+      maxChildSize: 0.92, // expand
+      expand: false,
+      snap: true,
+      snapSizes: const [0.6, 0.92],
+      builder: (ctx, scrollController) => Container(
+        decoration: const BoxDecoration(
+          color: NurungjiColors.light,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
+            // 드래그 핸들 (웹 .sheet-handle: #d8cfc6, 44x5)
+            Container(
+              width: 44,
+              height: 5,
+              margin: const EdgeInsets.only(top: 12, bottom: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xFFD8CFC6),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                controller: scrollController, // 드래그-스크롤 연동(필수)
+                child: _sheet(content(sheetCtx)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 void showSpotDetail(
   BuildContext context,
   PickupSpot s, {
@@ -283,12 +333,7 @@ void showSpotDetail(
   final canModify =
       (currentUid != null && s.ownerUid != null && s.ownerUid == currentUid) ||
           isAdmin;
-  showModalBottomSheet(
-    context: context,
-    showDragHandle: true,
-    isScrollControlled: true,
-    builder: (sheetCtx) => SingleChildScrollView(
-      child: _sheet([
+  _showDetailSheet(context, (sheetCtx) => [
         Text(s.title, style: _titleStyle),
         const SizedBox(height: 12),
         Wrap(spacing: 6, runSpacing: 6, children: [
@@ -341,9 +386,7 @@ void showSpotDetail(
             onDelete: () => _confirmDelete(sheetCtx, context, onChanged,
                 () => DataRepository().deletePickup(s.id)),
           ),
-      ]),
-    ),
-  );
+      ]);
 }
 
 void showClubDetail(
@@ -363,12 +406,7 @@ void showClubDetail(
           c.registeredBy != null &&
           c.registeredBy == currentUid) ||
       isAdmin;
-  showModalBottomSheet(
-    context: context,
-    showDragHandle: true,
-    isScrollControlled: true,
-    builder: (sheetCtx) => SingleChildScrollView(
-      child: _sheet([
+  _showDetailSheet(context, (sheetCtx) => [
         Row(children: [
           if (c.isVerified)
             const Padding(
@@ -441,7 +479,5 @@ void showClubDetail(
             onDelete: () => _confirmDelete(sheetCtx, context, onChanged,
                 () => DataRepository().deleteClub(c.id)),
           ),
-      ]),
-    ),
-  );
+      ]);
 }
