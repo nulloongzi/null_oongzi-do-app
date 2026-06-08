@@ -10,9 +10,20 @@ import '../services/geocoding_service.dart';
 import '../services/i18n.dart';
 import '../services/sanitize.dart';
 import '../theme.dart';
+import '../widgets/app_sheet.dart';
 import '../widgets/chip_select.dart';
 import '../widgets/map_picker.dart';
 import '../widgets/schedule_editor.dart';
+
+/// 픽업 등록/수정 폼: 풀스크린 라우트 대신 지도 위 모달 바텀시트(웹 등록 팝업 대응).
+/// 등록·수정 성공 시 true 반환.
+Future<bool?> showPickupFormSheet(
+  BuildContext context, {
+  required NLatLng initialCenter,
+  PickupSpot? editing,
+}) =>
+    showAppSheet<bool>(context,
+        child: PickupFormScreen(initialCenter: initialCenter, editing: editing));
 
 class PickupFormScreen extends StatefulWidget {
   /// 폼 진입 시 지도 중심 (피커 초기 위치). 기본 서울.
@@ -253,12 +264,15 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(_isEdit ? t('pf_edit_title') : t('pf_title'))),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            SheetTitle(_isEdit ? t('pf_edit_title') : t('pf_title')),
             _group(t('pf_name'), _input(_title, t('pf_name_hint'))),
             _group(
               t('pf_sport'),

@@ -331,14 +331,10 @@ void showSpotDetail(
           _modifyRow(
             onEdit: () async {
               Navigator.pop(sheetCtx);
-              final ok = await Navigator.push<bool>(
+              final ok = await showPickupFormSheet(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => PickupFormScreen(
-                    editing: s,
-                    initialCenter: _centerOf(s.lat, s.lng),
-                  ),
-                ),
+                editing: s,
+                initialCenter: _centerOf(s.lat, s.lng),
               );
               if (ok == true) await onChanged?.call();
             },
@@ -435,14 +431,10 @@ void showClubDetail(
           _modifyRow(
             onEdit: () async {
               Navigator.pop(sheetCtx);
-              final ok = await Navigator.push<bool>(
+              final ok = await showClubFormSheet(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => ClubFormScreen(
-                    editing: c,
-                    initialCenter: _centerOf(c.lat, c.lng),
-                  ),
-                ),
+                editing: c,
+                initialCenter: _centerOf(c.lat, c.lng),
               );
               if (ok == true) await onChanged?.call();
             },

@@ -277,14 +277,10 @@ class _MapScreenState extends State<MapScreen> {
     final cam = await _controller?.getCameraPosition();
     if (!mounted) return;
     final center = cam?.target ?? const NLatLng(37.5559, 127.0838);
-    final created = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => _tab == 'pickup'
-            ? PickupFormScreen(initialCenter: center)
-            : ClubFormScreen(initialCenter: center),
-      ),
-    );
+    // 풀스크린 라우트 대신 지도 위 모달 시트(웹 등록 팝업 동작 대응).
+    final created = await (_tab == 'pickup'
+        ? showPickupFormSheet(context, initialCenter: center)
+        : showClubFormSheet(context, initialCenter: center));
     if (created == true) await _load();
   }
 

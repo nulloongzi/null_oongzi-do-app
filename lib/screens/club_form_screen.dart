@@ -10,9 +10,20 @@ import '../services/geocoding_service.dart';
 import '../services/i18n.dart';
 import '../services/sanitize.dart';
 import '../theme.dart';
+import '../widgets/app_sheet.dart';
 import '../widgets/chip_select.dart';
 import '../widgets/map_picker.dart';
 import '../widgets/schedule_editor.dart';
+
+/// 동호회 등록/수정 폼: 풀스크린 라우트 대신 지도 위 모달 바텀시트(웹 등록 팝업 대응).
+/// 등록·수정 성공 시 true 반환.
+Future<bool?> showClubFormSheet(
+  BuildContext context, {
+  required NLatLng initialCenter,
+  Club? editing,
+}) =>
+    showAppSheet<bool>(context,
+        child: ClubFormScreen(initialCenter: initialCenter, editing: editing));
 
 class ClubFormScreen extends StatefulWidget {
   final NLatLng initialCenter;
@@ -220,12 +231,15 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(_isEdit ? t('cf_edit_title') : t('cf_title'))),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            SheetTitle(_isEdit ? t('cf_edit_title') : t('cf_title')),
             _group(t('cf_name'), _input(_name, t('cf_name_hint'))),
             _group(
               t('cf_target'),
