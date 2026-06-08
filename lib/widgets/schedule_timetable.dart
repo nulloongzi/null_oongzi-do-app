@@ -30,7 +30,7 @@ class ScheduleTimetable extends StatelessWidget {
     final todayIdx = DateTime.now().weekday - 1; // 월=0 .. 일=6
 
     return Container(
-      margin: const EdgeInsets.only(top: 12),
+      margin: const EdgeInsets.only(top: 4),
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
       decoration: BoxDecoration(
         color: Colors.white,

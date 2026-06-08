@@ -57,7 +57,7 @@ Widget _chip(String text, Color bg, Color fg) => Container(
 // 급구/이번주 배너 — 웹처럼 컴팩트(작은 크림-오렌지). 텍스트 크기 명시.
 Widget _banner(String badge, String text) => Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(top: 10),
+      margin: const EdgeInsets.only(top: 8, bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
           color: const Color(0xFFFFF3E0),
@@ -636,7 +636,7 @@ void showClubDetail(
           if (currentUid != null)
             _BookmarkButton(uid: currentUid, teamId: c.id),
         ]),
-        const SizedBox(height: 10),
+        const SizedBox(height: 4),
         // 3. 일정 morph (타이틀 바로 아래)
         _ScheduleMorph(
           summaryText: clubEvents.isNotEmpty

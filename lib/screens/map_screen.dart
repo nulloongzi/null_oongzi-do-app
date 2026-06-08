@@ -169,6 +169,91 @@ class _MapScreenState extends State<MapScreen> {
   static final _pickupIcon =
       NOverlayImage.fromAssetImage('assets/markers/marker_red.png');
   static const _markerSize = Size(32, 42);
+  static const _labelSize = Size(150, 58); // 이름 라벨 포함 마커
+
+  // 마커 라벨 아이콘 캐시(이름·상태별 1회 렌더) + 핀 에셋 프리캐시(미로드 시 핀이 빈칸으로 캡처되는 것 방지)
+  final Map<String, NOverlayImage> _labelIconCache = {};
+  Future<void>? _prewarm;
+  Future<void> _ensurePrewarm() {
+    return _prewarm ??= () async {
+      try {
+        await precacheImage(
+            const AssetImage('assets/markers/marker_yellow.png'), context);
+        await precacheImage(
+            const AssetImage('assets/markers/marker_red.png'), context);
+      } catch (_) {}
+    }();
+  }
+
+  // 핀 위에 이름(흰 배경 알약) — 웹 마커 라벨 스타일. fromWidget로 1회 렌더 후 캐시.
+  Future<NOverlayImage?> _labeledIcon(String name,
+      {required bool red, required bool urgent}) async {
+    final key = '${red ? "r" : "y"}|${urgent ? "u" : "n"}|$name';
+    final hit = _labelIconCache[key];
+    if (hit != null) return hit;
+    await _ensurePrewarm();
+    if (!mounted) return null;
+    try {
+      final img = await NOverlayImage.fromWidget(
+        size: _labelSize,
+        context: context,
+        widget: Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(
+            width: _labelSize.width,
+            height: _labelSize.height,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                        color: urgent
+                            ? NurungjiColors.urgent
+                            : const Color(0x22000000)),
+                    boxShadow: const [
+                      BoxShadow(
+                          color: Color(0x33000000),
+                          blurRadius: 3,
+                          offset: Offset(0, 1)),
+                    ],
+                  ),
+                  child: Text(
+                    urgent ? '🔥 $name' : name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: urgent
+                          ? const Color(0xFFD32F2F)
+                          : NurungjiColors.dark,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Image.asset(
+                  red
+                      ? 'assets/markers/marker_red.png'
+                      : 'assets/markers/marker_yellow.png',
+                  width: 26,
+                  height: 34,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      _labelIconCache[key] = img;
+      return img;
+    } catch (_) {
+      return null;
+    }
+  }
 
   NOverlayCaption _caption(String text, {bool urgent = false}) => NOverlayCaption(
         text: urgent ? '🔥 $text' : text,
@@ -218,14 +303,15 @@ class _MapScreenState extends State<MapScreen> {
         if (club.lat == null || club.lng == null) continue;
         final pos = NLatLng(club.lat!, club.lng!);
         final urgent = club.isUrgent && (club.urgentMsg?.isNotEmpty ?? false);
+        // 이름 라벨(핀 위 흰 알약)을 아이콘에 포함 — 웹 마커 라벨 스타일.
+        final icon = await _labeledIcon(club.name, red: urgent, urgent: urgent);
         if (urgent) {
-          // 급구: 클러스터 제외(항상 표시) + 빨강 + 항상 캡션
+          // 급구: 클러스터 제외(항상 표시) + 빨강 라벨
           final m = NMarker(
             id: 'c_${club.id}',
             position: pos,
-            icon: _pickupIcon,
-            size: _markerSize,
-            caption: _caption(club.name, urgent: true),
+            icon: icon ?? _pickupIcon,
+            size: icon != null ? _labelSize : _markerSize,
           );
           m.setOnTapListener((NMarker o) => showClubDetail(context, club,
               currentUid: _repo.currentUid, isAdmin: _isAdmin, onChanged: _load));
@@ -234,10 +320,8 @@ class _MapScreenState extends State<MapScreen> {
           final m = NClusterableMarker(
             id: 'c_${club.id}',
             position: pos,
-            icon: _clubIcon,
-            size: _markerSize,
-            caption: _caption(club.name),
-            isHideCollidedCaptions: true,
+            icon: icon ?? _clubIcon,
+            size: icon != null ? _labelSize : _markerSize,
           );
           m.setOnTapListener((NClusterableMarker o) => showClubDetail(context, club,
               currentUid: _repo.currentUid, isAdmin: _isAdmin, onChanged: _load));
@@ -248,13 +332,12 @@ class _MapScreenState extends State<MapScreen> {
       final spots = _visibleSpots();
       for (final spot in spots) {
         if (spot.lat == null || spot.lng == null) continue;
+        final icon = await _labeledIcon(spot.title, red: true, urgent: false);
         final m = NClusterableMarker(
           id: 's_${spot.id}',
           position: NLatLng(spot.lat!, spot.lng!),
-          icon: _pickupIcon,
-          size: _markerSize,
-          caption: _caption(spot.title),
-          isHideCollidedCaptions: true,
+          icon: icon ?? _pickupIcon,
+          size: icon != null ? _labelSize : _markerSize,
         );
         m.setOnTapListener((NClusterableMarker o) => showSpotDetail(context, spot,
             currentUid: _repo.currentUid, isAdmin: _isAdmin, onChanged: _load));
