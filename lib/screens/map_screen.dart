@@ -40,6 +40,7 @@ class _MapScreenState extends State<MapScreen> {
   ClubFilter _filter = const ClubFilter(); // 동호회 필터/검색
   bool _pkEnglishOnly = false; // 픽업: English OK만
   bool _pickupListView = false; // 픽업: 지도/목록 토글
+  bool _isAdmin = false; // 관리자(픽업 모더레이션 삭제)
   final _search = TextEditingController(); // 상단 검색바 (동호회=필터키워드 / 픽업=목록검색)
   final _deepLinks = DeepLinkService();
   NOverlayImage? _clusterIcon; // 클러스터 노란 원 (런타임 생성)
@@ -135,7 +136,7 @@ class _MapScreenState extends State<MapScreen> {
         setState(() => _tab = 'pickup');
         _refreshMarkers();
         showSpotDetail(context, s,
-            currentUid: _repo.currentUid, onChanged: _load);
+            currentUid: _repo.currentUid, isAdmin: _isAdmin, onChanged: _load);
       }
     }
   }
@@ -151,6 +152,10 @@ class _MapScreenState extends State<MapScreen> {
         _loading = false;
       });
       _refreshMarkers();
+      // 관리자 여부(픽업 모더레이션 삭제 권한) — 비동기, 실패 무시.
+      _repo.isAdmin().then((v) {
+        if (mounted && v != _isAdmin) setState(() => _isAdmin = v);
+      });
     } catch (e) {
       if (mounted) setState(() {
         _error = '$e';
@@ -253,7 +258,7 @@ class _MapScreenState extends State<MapScreen> {
           isHideCollidedCaptions: true,
         );
         m.setOnTapListener((NClusterableMarker o) => showSpotDetail(context, spot,
-            currentUid: _repo.currentUid, onChanged: _load));
+            currentUid: _repo.currentUid, isAdmin: _isAdmin, onChanged: _load));
         overlays.add(m);
       }
     }
@@ -370,7 +375,7 @@ class _MapScreenState extends State<MapScreen> {
                   child: PickupListPanel(
                     spots: _visibleSpots(),
                     onTap: (s) => showSpotDetail(context, s,
-                        currentUid: _repo.currentUid, onChanged: _load),
+                        currentUid: _repo.currentUid, isAdmin: _isAdmin, onChanged: _load),
                   ),
                 ),
               ),

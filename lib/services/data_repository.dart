@@ -18,7 +18,12 @@ class DataRepository {
 
   Future<List<PickupSpot>> loadPickups() async {
     final snap = await _db.collection('pickup_games').get();
-    return snap.docs.map((d) => PickupSpot.fromDoc(d)).toList();
+    final now = DateTime.now();
+    // 유효기간(B): 만료된 스팟은 숨김 (TTL 하드삭제 전이라도). null=상시.
+    return snap.docs
+        .map((d) => PickupSpot.fromDoc(d))
+        .where((s) => s.expireAt == null || s.expireAt!.isAfter(now))
+        .toList();
   }
 
   /// 딥링크 단건 조회 (메모리에 없을 때 폴백).
@@ -34,6 +39,22 @@ class DataRepository {
 
   /// 현재 로그인 uid (없으면 null). 클럽 등록/권한 판정용.
   String? get currentUid => FirebaseAuth.instance.currentUser?.uid;
+
+  static bool? _adminCache;
+
+  /// 관리자 여부(/admins/{uid} 존재). 1회 캐시. 모더레이션(픽업 삭제) 권한 판정용.
+  Future<bool> isAdmin() async {
+    if (_adminCache != null) return _adminCache!;
+    final uid = currentUid;
+    if (uid == null) return false; // 비로그인/익명은 캐시 안 함
+    try {
+      final doc = await _db.collection('admins').doc(uid).get();
+      _adminCache = doc.exists;
+      return _adminCache!;
+    } catch (_) {
+      return false;
+    }
+  }
 
   /// 로그인돼 있으면 그 uid, 아니면 익명 로그인. (픽업 무로그인 등록 허용)
   Future<String> ensureUid() async {

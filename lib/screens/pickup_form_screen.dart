@@ -48,6 +48,7 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
   // 칩 선택
   String _sport = '6s';
   String _level = 'any';
+  String _expire = '1m'; // 유효기간(B): weekend/1m/3m/always. 기본 1개월
   bool _beginnerFriendly = false;
   bool _englishOk = false;
 
@@ -97,6 +98,28 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
         (label: t('lv_advanced'), value: 'advanced'),
         (label: t('lv_any'), value: 'any'),
       ];
+  List<ChipOption> get _expireOptions => [
+        (label: t('pk_exp_weekend'), value: 'weekend'),
+        (label: t('pk_exp_1m'), value: '1m'),
+        (label: t('pk_exp_3m'), value: '3m'),
+        (label: t('pk_exp_always'), value: 'always'),
+      ];
+
+  // 유효기간 프리셋 → DateTime|null (웹 computeExpireAt 포팅). null=상시.
+  DateTime? _computeExpireAt(String preset) {
+    final now = DateTime.now();
+    if (preset == 'always') return null;
+    if (preset == 'weekend') {
+      final wd = now.weekday % 7; // 일=0..토=6 (웹 getDay와 동일)
+      var s = DateTime(now.year, now.month, now.day + (wd == 0 ? 0 : 7 - wd),
+          23, 59, 59);
+      if (s.isBefore(now)) s = s.add(const Duration(days: 7));
+      return s;
+    }
+    final months = preset == '3m' ? 3 : 1; // 기본 1개월
+    return DateTime(
+        now.year, now.month + months, now.day, now.hour, now.minute, now.second);
+  }
 
   @override
   void initState() {
@@ -114,6 +137,7 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
       _notes.text = e.notes ?? '';
       _sport = e.sport ?? '6s';
       _level = e.level ?? 'any';
+      _expire = e.expireAt != null ? '1m' : 'always'; // 웹과 동일(편집 시 1m/상시)
       _beginnerFriendly = e.beginnerFriendly;
       _englishOk = e.englishOk;
       _lat = e.lat;
@@ -207,6 +231,7 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
       'this_week': _thisWeek.text.trim(),
       'insta_reel': reel,
       'notes': _notes.text.trim(),
+      'expire_at': _computeExpireAt(_expire), // DateTime?→Firestore Timestamp/null
     };
 
     setState(() => _saving = true);
@@ -275,6 +300,14 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
             _group(t('pf_contact'), _input(_contact, t('f_contact_hint'))),
             _group(t('f_reel_label'), _input(_reel, t('f_reel_hint'))),
             _group(t('pf_notes'), _input(_notes, t('pf_notes_hint'))),
+            _group(
+              t('pk_f_expire'),
+              SingleChoiceChips(
+                options: _expireOptions,
+                selected: _expire,
+                onChanged: (v) => setState(() => _expire = v),
+              ),
+            ),
             const SizedBox(height: 8),
             ElevatedButton(
               onPressed: _saving ? null : _submit,

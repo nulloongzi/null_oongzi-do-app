@@ -172,6 +172,11 @@ const Map<String, Map<String, String>> kStrings = {
   'pf_contact': {'ko': '단톡/Meetup 링크 (들어가는 문)', 'en': 'Group chat / Meetup link'},
   'pf_notes': {'ko': '추가 안내 (선택)', 'en': 'Extra notes (optional)'},
   'pf_notes_hint': {'ko': '예: 실내화 필수 · 네트 6인제 높이', 'en': 'e.g. indoor shoes · 6s net height'},
+  'pk_f_expire': {'ko': '언제까지 보일까요? (지나면 자동 숨김)', 'en': 'Show until? (auto-hidden after)'},
+  'pk_exp_weekend': {'ko': '이번 주말', 'en': 'This weekend'},
+  'pk_exp_1m': {'ko': '1개월', 'en': '1 month'},
+  'pk_exp_3m': {'ko': '3개월', 'en': '3 months'},
+  'pk_exp_always': {'ko': '상시', 'en': 'Always'},
   'pf_req': {'ko': '게임 이름과 주소는 필수예요', 'en': 'Name and address are required'},
   'pf_created': {'ko': '픽업이 등록됐어요!', 'en': 'Pickup posted!'},
   // 동호회 폼

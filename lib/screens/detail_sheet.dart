@@ -274,12 +274,15 @@ void showSpotDetail(
   BuildContext context,
   PickupSpot s, {
   String? currentUid,
+  bool isAdmin = false,
   Future<void> Function()? onChanged,
 }) {
   Track.event('view_pickup', {'id': s.id});
   final where = [s.venueName, s.address].where((e) => e != null && e.isNotEmpty).join(' · ');
+  // 수정/삭제: 소유자 OR 관리자(모더레이션). Firestore 규칙도 동일 조건.
   final canModify =
-      currentUid != null && s.ownerUid != null && s.ownerUid == currentUid;
+      (currentUid != null && s.ownerUid != null && s.ownerUid == currentUid) ||
+          isAdmin;
   showModalBottomSheet(
     context: context,
     showDragHandle: true,

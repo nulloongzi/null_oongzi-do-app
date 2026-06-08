@@ -23,6 +23,7 @@ class PickupSpot {
   final String? thisWeek;
   final String? notes;
   final String? instaReel;
+  final DateTime? expireAt; // 유효기간(B): 지나면 자동 숨김 + Firestore TTL. null=상시
 
   PickupSpot({
     required this.id,
@@ -44,6 +45,7 @@ class PickupSpot {
     this.thisWeek,
     this.notes,
     this.instaReel,
+    this.expireAt,
   });
 
   factory PickupSpot.fromDoc(DocumentSnapshot doc) {
@@ -69,6 +71,7 @@ class PickupSpot {
       thisWeek: d['this_week'] as String?,
       notes: d['notes'] as String?,
       instaReel: d['insta_reel'] as String?,
+      expireAt: (d['expire_at'] as Timestamp?)?.toDate(),
     );
   }
 }
