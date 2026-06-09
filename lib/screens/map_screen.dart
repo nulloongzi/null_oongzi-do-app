@@ -173,6 +173,7 @@ class _MapScreenState extends State<MapScreen> {
   static const _markerSize = Size(38, 48); // 기본 핀(라벨 없음) — 약간 키움
   static const _labelSize = Size(170, 76); // 이름 알약 포함 마커
   static const _labelZoomThreshold = 12.0; // 이 줌 이상에서만 이름 알약 노출
+  static const _focusZoom = 15.0; // 마커 탭 시 확대 축척
   bool _showLabels = false; // 현재 줌이 임계 이상? (스테이지3=알약 표시)
 
   // 마커 라벨 아이콘 캐시(이름·상태별 1회 렌더) + 핀 에셋 프리캐시(미로드 시 핀이 빈칸으로 캡처되는 것 방지)
@@ -323,15 +324,30 @@ class _MapScreenState extends State<MapScreen> {
   Future<void> _centerOnPin(double? lat, double? lng) async {
     final c = _controller;
     if (c == null || lat == null || lng == null) return;
+    // 상단(검색·티커·탭)과 하단 시트가 가리는 부분을 빼고 '보이는 지도'의 중앙에 핀 배치.
+    final mq = MediaQuery.of(context);
+    final h = mq.size.height;
+    final mapTop = mq.padding.top;
+    final mapH = h - mapTop - mq.padding.bottom;
+    const topChrome = 172.0; // 검색바+티커+탭(대략, SafeArea 기준 px)
+    final sheetTopInMap = h * 0.58 - mapTop; // 시트 peek(42%) 윗변
+    final pivotY =
+        (((topChrome + sheetTopInMap) / 2) / mapH).clamp(0.18, 0.5).toDouble();
+    // 정해진 축척으로 확대(현재가 더 크면 유지 — 줌아웃 방지)
+    double z = _focusZoom;
     try {
-      final update = NCameraUpdate.scrollAndZoomTo(target: NLatLng(lat, lng))
-        ..setPivot(const NPoint(0.5, 0.30));
+      final cam = await c.getCameraPosition();
+      if (cam.zoom > z) z = cam.zoom;
+    } catch (_) {}
+    try {
+      final update =
+          NCameraUpdate.scrollAndZoomTo(target: NLatLng(lat, lng), zoom: z)
+            ..setPivot(NPoint(0.5, pivotY));
       await c.updateCamera(update);
     } catch (_) {
-      // 폴백: pivot 미지원 시 그냥 중앙으로
       try {
         await c.updateCamera(
-            NCameraUpdate.scrollAndZoomTo(target: NLatLng(lat, lng)));
+            NCameraUpdate.scrollAndZoomTo(target: NLatLng(lat, lng), zoom: z));
       } catch (_) {}
     }
   }
@@ -365,7 +381,6 @@ class _MapScreenState extends State<MapScreen> {
   Future<void> _refreshMarkers() async {
     final c = _controller;
     if (c == null) return;
-    await c.clearOverlays();
     final overlays = <NAddableOverlay>{};
     if (_tab == 'clubs') {
       for (final club in _clubs.where(_filter.matches)) {
@@ -416,6 +431,8 @@ class _MapScreenState extends State<MapScreen> {
         overlays.add(m);
       }
     }
+    // 아이콘(라벨) 빌드를 끝낸 뒤에 clear+add → 사라졌다 뜨는 끊김 최소화
+    await c.clearOverlays();
     if (overlays.isNotEmpty) await c.addOverlayAll(overlays);
   }
 
@@ -506,15 +523,20 @@ class _MapScreenState extends State<MapScreen> {
             ),
             // 검색바 (design §2.1)
             Positioned(top: 12, left: 15, right: 15, child: _searchBar()),
-            // 탭 pill (design §2.2) — 검색바 아래 가운데
-            Positioned(
-                top: 70, left: 0, right: 0, child: Center(child: _tabPill())),
-            // 급구 티커(동호회) / 지도·목록 토글(픽업) — design §2.3
-            if (_tab == 'clubs')
-              Positioned(top: 122, left: 15, right: 15, child: _urgentTicker()),
+            // 급구 티커(동호회) / 지도·목록 토글(픽업) — 검색바 바로 아래(우선 노출)
+            if (_tab == 'clubs' && _hasUrgent)
+              Positioned(top: 70, left: 15, right: 15, child: _urgentTicker()),
             if (_tab == 'pickup')
               Positioned(
-                  top: 122, left: 0, right: 0, child: Center(child: _pickupToggle())),
+                  top: 70, left: 0, right: 0, child: Center(child: _pickupToggle())),
+            // 동호회/픽업 탭 — 위 컨텍스트바가 있으면 122, 없으면 70.
+            Positioned(
+                top: (_tab == 'pickup' || (_tab == 'clubs' && _hasUrgent))
+                    ? 122
+                    : 70,
+                left: 0,
+                right: 0,
+                child: Center(child: _tabPill())),
             if (_tab == 'pickup' && _pickupListView)
               Positioned(
                 top: 166,
@@ -641,14 +663,19 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   // 탭 pill (동호회 | 픽업) — 글래스.
+  // 급구(메시지 있는) 동호회가 하나라도 있는지 — 상단 티커/탭 배치에 사용.
+  bool get _hasUrgent =>
+      _clubs.any((c) => c.isUrgent && (c.urgentMsg?.isNotEmpty ?? false));
+
+  // 동호회/픽업 — 큰 알약 안에 작은 알약 둘(숫자 없음).
   Widget _tabPill() {
     return GlassSurface(
-      radius: BorderRadius.circular(16),
+      radius: BorderRadius.circular(22),
       padding: const EdgeInsets.all(4),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        _tabBtn('🏐 ${t('clubs')} ${_clubs.length}', 'clubs'),
+        _tabBtn('🏐 ${t('clubs')}', 'clubs'),
         const SizedBox(width: 4),
-        _tabBtn('📍 ${t('pickup')} ${_spots.length}', 'pickup'),
+        _tabBtn('📍 ${t('pickup')}', 'pickup'),
       ]),
     );
   }
@@ -658,11 +685,12 @@ class _MapScreenState extends State<MapScreen> {
     final on = _tab == key;
     return BounceTap(
       onTap: () => _onTab(key),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: on ? NurungjiColors.yellow : NurungjiColors.chipBg,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(18), // 작은 알약
         ),
         child: Text(label,
             style: TextStyle(
