@@ -502,30 +502,21 @@ Future<String?> _promptText(BuildContext ctx,
   );
 }
 
-// 상세 시트: 웹 .bottom-sheet처럼 비(非)모달로 띄운다 — OverlayEntry로 화면 바닥에만 깔고
-// (딤·배리어 없음) 위쪽 지도는 그대로 조작 가능. content는 close 콜백을 받아 빌드한다
-// (수정/삭제/급구 토글이 패널을 닫을 때 사용). 한 번에 하나만 — 새로 열면 기존 패널 교체.
-OverlayEntry? _activeDetailEntry;
+// 상세 패널: OverlayEntry(모든 라우트 위) 대신 MapScreen Stack에서 렌더되도록 notifier로
+// 전달한다 → 상세에서 띄우는 공유/삭제확인/스토리카드 등 모달이 패널보다 위에 나타남.
+// 비모달(지도 조작 가능)은 MapDetailPanel(Align)이 그대로 유지. 한 번에 하나만.
+final ValueNotifier<Widget?> detailPanel = ValueNotifier<Widget?>(null);
 
 void _showDetailSheet(
   BuildContext context,
   List<Widget> Function(VoidCallback close) content,
 ) {
-  _activeDetailEntry?.remove();
-  _activeDetailEntry = null;
-  final overlay = Overlay.of(context);
-  late OverlayEntry entry;
-  void close() {
-    if (identical(_activeDetailEntry, entry)) _activeDetailEntry = null;
-    if (entry.mounted) entry.remove();
-  }
-
-  entry = OverlayEntry(
-    builder: (_) =>
-        MapDetailPanel(onClose: close, child: _sheet(content(close))),
+  void close() => detailPanel.value = null;
+  detailPanel.value = MapDetailPanel(
+    key: UniqueKey(), // 새로 열 때마다 드래그/높이 상태 초기화
+    onClose: close,
+    child: _sheet(content(close)),
   );
-  _activeDetailEntry = entry;
-  overlay.insert(entry);
 }
 
 void showSpotDetail(

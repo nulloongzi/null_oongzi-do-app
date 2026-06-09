@@ -61,6 +61,7 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   void dispose() {
+    detailPanel.value = null; // 화면 떠날 때 잔존 패널 정리
     _search.dispose();
     _deepLinks.dispose();
     super.dispose();
@@ -568,6 +569,11 @@ class _MapScreenState extends State<MapScreen> {
             ],
             if (_error != null)
               Positioned(bottom: 20, left: 90, right: 90, child: _errorBox()),
+            // 상세 패널(비모달) — Stack의 일부라 상세에서 띄우는 모달(공유 등)이 그 위에 뜸.
+            ValueListenableBuilder<Widget?>(
+              valueListenable: detailPanel,
+              builder: (_, panel, __) => panel ?? const SizedBox.shrink(),
+            ),
           ],
         ),
       ),
