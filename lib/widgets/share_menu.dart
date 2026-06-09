@@ -17,18 +17,21 @@ void showShareMenu(
     if (u?.queryParameters['club'] != null) 'club_id': u!.queryParameters['club'],
     if (u?.queryParameters['spot'] != null) 'spot_id': u!.queryParameters['spot'],
   };
-  showModalBottomSheet(
+  showDialog(
     context: context,
-    showDragHandle: true,
-    builder: (ctx) => SafeArea(
+    barrierColor: const Color(0x4D5D4037), // 따뜻한 갈색 딤
+    builder: (ctx) => Dialog(
+      backgroundColor: Colors.white,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 36, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.only(bottom: 6, top: 2),
+              padding: const EdgeInsets.only(bottom: 8),
               child: Text(t('share_title'),
                   style: const TextStyle(
                       fontWeight: FontWeight.w800,

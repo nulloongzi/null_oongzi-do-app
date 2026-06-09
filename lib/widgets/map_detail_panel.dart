@@ -152,6 +152,10 @@ class _MapDetailPanelState extends State<MapDetailPanel> {
               child: Material(
                 type: MaterialType.transparency,
                 child: SingleChildScrollView(
+                  // peek(ratio<0.5)에선 스크롤 잠금 — 펼쳐야 그 아래(릴스/소유자)까지 봄.
+                  physics: _ratio >= 0.5
+                      ? null
+                      : const NeverScrollableScrollPhysics(),
                   child: DetailPanelScope(
                     expand: _expand,
                     toggle: _toggle,

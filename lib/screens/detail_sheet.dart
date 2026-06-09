@@ -158,6 +158,30 @@ class _ScheduleMorph extends StatelessWidget {
   }
 }
 
+// 펼치기 전(peek)엔 숨기고, 위로 펼치면(ratio>=0.5) 펼쳐지듯 나타나는 영역.
+// 릴스 임베드·소유자 버튼(급구/수정/삭제)에 사용 — peek에선 주소복사/길찾기/공유까지만 보이게.
+class _ExpandReveal extends StatelessWidget {
+  final Widget child;
+  const _ExpandReveal({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final scope = DetailPanelScope.of(context);
+    if (scope == null) return child; // 패널 밖이면 그냥 표시
+    return ValueListenableBuilder<double>(
+      valueListenable: scope.expand,
+      builder: (_, r, __) => AnimatedSize(
+        duration: const Duration(milliseconds: 220),
+        alignment: Alignment.topCenter,
+        curve: Curves.easeOut,
+        child: r >= 0.5
+            ? child
+            : const SizedBox(width: double.infinity, height: 0),
+      ),
+    );
+  }
+}
+
 // 🍱 북마크 토글 (웹 #btnBookmark): 타이틀 우측. 담김=진하게/안 담김=흐리게, 탭=추가/해제.
 class _BookmarkButton extends StatefulWidget {
   final String uid;
@@ -558,8 +582,6 @@ void showSpotDetail(
         ),
         if (where.isNotEmpty) _addressRow(context, where, s.address ?? where),
         if (s.feeInfo != null && s.feeInfo!.isNotEmpty) _infoRow('💰', i18nPrice(s.feeInfo)),
-        if (s.instaReel != null && s.instaReel!.isNotEmpty)
-          InstaEmbed(url: s.instaReel!),
         if (s.contactLink != null && s.contactLink!.isNotEmpty)
           _primaryBtn(t('chat_join'), () {
             Track.event('pickup_contact', {'id': s.id, 'sport': s.sport});
@@ -574,20 +596,30 @@ void showSpotDetail(
             onStory: () => shareStoryCard(context, StoryCardData.fromSpot(s)),
           ),
         ),
-        if (canModify)
-          _modifyRow(
-            onEdit: () async {
-              close();
-              final ok = await showPickupFormSheet(
-                context,
-                editing: s,
-                initialCenter: _centerOf(s.lat, s.lng),
-              );
-              if (ok == true) await onChanged?.call();
-            },
-            onDelete: () => _confirmDelete(context, onChanged, close,
-                () => DataRepository().deletePickup(s.id)),
+        // 펼쳐야 보이는 영역: 릴스 + 소유자 수정/삭제
+        _ExpandReveal(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (s.instaReel != null && s.instaReel!.isNotEmpty)
+                InstaEmbed(url: s.instaReel!),
+              if (canModify)
+                _modifyRow(
+                  onEdit: () async {
+                    close();
+                    final ok = await showPickupFormSheet(
+                      context,
+                      editing: s,
+                      initialCenter: _centerOf(s.lat, s.lng),
+                    );
+                    if (ok == true) await onChanged?.call();
+                  },
+                  onDelete: () => _confirmDelete(context, onChanged, close,
+                      () => DataRepository().deletePickup(s.id)),
+                ),
+            ],
           ),
+        ),
       ]);
 }
 
@@ -697,27 +729,31 @@ void showClubDetail(
                 bg: const Color(0xFFECEFF1), fg: const Color(0xFF455A64)),
           ]),
         ),
-        // 8. 인스타 임베드
-        if (c.instaReel != null && c.instaReel!.isNotEmpty)
-          Padding(
-              padding: const EdgeInsets.only(top: 14),
-              child: InstaEmbed(url: c.instaReel!)),
-        // 9. 소유자: 인증 / 급구(빨강) / 수정·삭제(풀폭)
-        if (canModify && !c.isVerified) _verifyBtn(c, context),
-        if (canModify) _urgentToggle(c, context, onChanged, close),
-        if (canModify)
-          _modifyRow(
-            onEdit: () async {
-              close();
-              final ok = await showClubFormSheet(
-                context,
-                editing: c,
-                initialCenter: _centerOf(c.lat, c.lng),
-              );
-              if (ok == true) await onChanged?.call();
-            },
-            onDelete: () => _confirmDelete(context, onChanged, close,
-                () => DataRepository().deleteClub(c.id)),
+        // 8~9. 펼쳐야 보이는 영역: 릴스 임베드 + 소유자(인증/급구/수정·삭제)
+        _ExpandReveal(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (c.instaReel != null && c.instaReel!.isNotEmpty)
+                InstaEmbed(url: c.instaReel!),
+              if (canModify && !c.isVerified) _verifyBtn(c, context),
+              if (canModify) _urgentToggle(c, context, onChanged, close),
+              if (canModify)
+                _modifyRow(
+                  onEdit: () async {
+                    close();
+                    final ok = await showClubFormSheet(
+                      context,
+                      editing: c,
+                      initialCenter: _centerOf(c.lat, c.lng),
+                    );
+                    if (ok == true) await onChanged?.call();
+                  },
+                  onDelete: () => _confirmDelete(context, onChanged, close,
+                      () => DataRepository().deleteClub(c.id)),
+                ),
+            ],
           ),
+        ),
       ]);
 }

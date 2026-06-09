@@ -40,17 +40,20 @@ class DataRepository {
   /// 현재 로그인 uid (없으면 null). 클럽 등록/권한 판정용.
   String? get currentUid => FirebaseAuth.instance.currentUser?.uid;
 
-  static bool? _adminCache;
+  // 관리자 여부 캐시 — uid별로 보관(계정 전환 시 이전 값이 남는 버그 방지).
+  static String? _adminUid;
+  static bool _adminValue = false;
 
-  /// 관리자 여부(/admins/{uid} 존재). 1회 캐시. 모더레이션(픽업 삭제) 권한 판정용.
+  /// 관리자 여부(/admins/{uid} 존재). uid별 1회 캐시. 모더레이션 권한 판정용.
   Future<bool> isAdmin() async {
-    if (_adminCache != null) return _adminCache!;
     final uid = currentUid;
-    if (uid == null) return false; // 비로그인/익명은 캐시 안 함
+    if (uid == null) return false; // 비로그인/익명
+    if (_adminUid == uid) return _adminValue; // 같은 계정만 캐시 사용
     try {
       final doc = await _db.collection('admins').doc(uid).get();
-      _adminCache = doc.exists;
-      return _adminCache!;
+      _adminUid = uid;
+      _adminValue = doc.exists;
+      return _adminValue;
     } catch (_) {
       return false;
     }
