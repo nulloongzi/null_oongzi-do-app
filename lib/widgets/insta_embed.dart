@@ -1,9 +1,7 @@
 // insta_embed.dart — 공개 인스타 릴스/게시물을 상세 안에 '인라인 임베드'(플라이휠 차별점).
-// 방식: 인스타 공식 '/embed/' 페이지를 WebView로 직접 로드(인스타 origin이라 안정적 렌더).
-//   기존 loadHtmlString(blockquote+embed.js)은 about:blank origin이라 cross-origin 처리에서
-//   자주 실패/오류 → permalink + 'embed/' 직접 로드로 교체.
-// 실패(네트워크/차단) 시에만 '탭하면 인스타에서 보기' 카드로 폴백(깨진 오류화면 방지).
-// URL은 Sanitize.instaPostUrl로 화이트리스트 검증 후에만 사용(XSS/lookalike 차단).
+// 인스타 공식 '/embed/' 페이지를 WebView로 직접 로드(인스타 origin → 안정적, 탭하면 인라인 재생).
+// 높이는 페이지 scrollHeight를 JS 채널로 받아 자동 맞춤(빈 공간/잘림 없이 세로 릴스형).
+// 실패 시에만 '탭→인스타' 카드로 폴백. URL은 Sanitize.instaPostUrl로 검증.
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -24,23 +22,38 @@ class _InstaEmbedState extends State<InstaEmbed> {
   WebViewController? _ctrl;
   String _safe = '';
   bool _failed = false;
+  double _height = 640; // 측정 전 기본(세로 릴스 가정). JS가 실제 높이로 갱신.
 
   @override
   void initState() {
     super.initState();
-    _safe = Sanitize.instaPostUrl(widget.url); // .../reel/<code>/ (끝 슬래시)
+    _safe = Sanitize.instaPostUrl(widget.url); // .../reel/<code>/
     if (_safe.isEmpty) return;
     final embedUrl = '${_safe}embed/';
     _ctrl = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(const Color(0xFFFFFFFF))
+      // 임베드 페이지 높이를 받아 컨테이너에 맞춤(빈 공간/잘림 제거)
+      ..addJavaScriptChannel('NurungjiResize', onMessageReceived: (m) {
+        final h = double.tryParse(m.message);
+        if (h != null && h > 80 && mounted) {
+          setState(() => _height = h.clamp(220.0, 1000.0).toDouble());
+        }
+      })
       ..setNavigationDelegate(NavigationDelegate(
+        onPageFinished: (_) {
+          _ctrl?.runJavaScript(
+            "(function(){function p(){try{NurungjiResize.postMessage(String(document.body.scrollHeight));}catch(e){}}"
+            "p();setTimeout(p,500);setTimeout(p,1500);setTimeout(p,3000);"
+            "window.addEventListener('resize',p);})();",
+          );
+        },
         onWebResourceError: (e) {
           if (mounted && e.isForMainFrame == true) {
             setState(() => _failed = true);
           }
         },
-        // 임베드 안에서 게시물/프로필 탭 → 인스타 앱/브라우저로(WebView 내 이탈 방지)
+        // 임베드 안에서 게시물/프로필 등 '링크' 탭 → 인스타 앱/브라우저로(영상 재생은 인라인 유지).
         onNavigationRequest: (req) {
           if (req.isMainFrame && !req.url.contains('/embed')) {
             final u = Uri.tryParse(req.url);
@@ -64,7 +77,8 @@ class _InstaEmbedState extends State<InstaEmbed> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(14),
         child: Container(
-          height: 600, // 릴스(세로) 임베드 — 기기에서 보고 조정 가능
+          height: _height,
+          width: double.infinity,
           color: Colors.white,
           child: WebViewWidget(controller: _ctrl!),
         ),
