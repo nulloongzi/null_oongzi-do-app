@@ -202,7 +202,7 @@ class _ReelsSectionState extends State<_ReelsSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        InstaEmbed(url: reels.first), // 하나는 무조건
+        _LazyReel(url: reels.first), // 포스터 카드 → 탭하면 인라인 재생(스크롤 매끄럽게)
         if (more > 0)
           BounceTap(
             onTap: () => setState(() => _open = !_open),
@@ -228,8 +228,82 @@ class _ReelsSectionState extends State<_ReelsSection> {
             ),
           ),
         if (_open)
-          for (final u in reels.skip(1)) InstaEmbed(url: u),
+          for (final u in reels.skip(1)) _LazyReel(url: u),
       ],
+    );
+  }
+}
+
+// 릴스 지연 로딩: 기본은 가벼운 포스터 카드만 → 탭하면 그때 InstaEmbed(WebView) 인라인 생성.
+// 스크롤 경로에서 플랫폼뷰(WebView)를 걷어내 버벅임 제거(자동재생 대신 탭재생).
+class _LazyReel extends StatefulWidget {
+  final String url;
+  const _LazyReel({required this.url});
+
+  @override
+  State<_LazyReel> createState() => _LazyReelState();
+}
+
+class _LazyReelState extends State<_LazyReel> {
+  bool _play = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_play) return InstaEmbed(url: widget.url); // 탭 후에만 실제 임베드
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: BounceTap(
+        onTap: () => setState(() => _play = true),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0x1A000000)),
+          ),
+          child: Row(children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(13),
+                gradient: const LinearGradient(
+                  begin: Alignment.bottomLeft,
+                  end: Alignment.topRight,
+                  colors: [
+                    Color(0xFFFEDA75),
+                    Color(0xFFFA7E1E),
+                    Color(0xFFD62976),
+                    Color(0xFF962FBF),
+                    Color(0xFF4F5BD5),
+                  ],
+                ),
+              ),
+              child: const Icon(Icons.play_arrow_rounded,
+                  color: Colors.white, size: 32),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(t('insta_reel_title'),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14.5,
+                          color: NurungjiColors.dark)),
+                  const SizedBox(height: 2),
+                  Text(t('reel_tap_play'),
+                      style: const TextStyle(
+                          fontSize: 12, color: NurungjiColors.brown)),
+                ],
+              ),
+            ),
+            const Icon(Icons.play_circle_outline,
+                size: 20, color: NurungjiColors.brown),
+          ]),
+        ),
+      ),
     );
   }
 }
