@@ -160,6 +160,7 @@ const Map<String, Map<String, String>> kStrings = {
   'f_updated': {'ko': '수정됐어요!', 'en': 'Updated!'},
   'f_reel_label': {'ko': '릴스/게시물 링크 (선택)', 'en': 'Reel/post link (optional)'},
   'f_reel_hint': {'ko': '예: https://www.instagram.com/reel/...', 'en': 'e.g. https://www.instagram.com/reel/...'},
+  'reel_add': {'ko': '릴스 추가', 'en': 'Add reel'},
   'f_contact_hint': {'ko': '예: https://open.kakao.com/o/...', 'en': 'e.g. https://open.kakao.com/o/...'},
   // 픽업 폼
   'pf_title': {'ko': '픽업 게임 열기', 'en': 'Open a pickup game'},

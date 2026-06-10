@@ -13,6 +13,7 @@ import '../theme.dart';
 import '../widgets/app_sheet.dart';
 import '../widgets/chip_select.dart';
 import '../widgets/map_picker.dart';
+import '../widgets/reel_editor.dart';
 import '../widgets/schedule_editor.dart';
 
 /// 픽업 등록/수정 폼: 풀스크린 라우트 대신 지도 위 모달 바텀시트(웹 등록 팝업 대응).
@@ -54,8 +55,8 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
   final _thisWeek = TextEditingController();
   final _fee = TextEditingController();
   final _contact = TextEditingController();
-  final _reel = TextEditingController();
   final _notes = TextEditingController();
+  final List<TextEditingController> _reels = []; // 릴스 다중 입력(행마다 1개)
 
   // 칩 선택
   String _sport = '6s';
@@ -145,7 +146,9 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
       _thisWeek.text = e.thisWeek ?? '';
       _fee.text = e.feeInfo ?? '';
       _contact.text = e.contactLink ?? '';
-      _reel.text = e.instaReels.join('\n'); // 멀티 릴스: 한 줄에 하나
+      for (final r in e.instaReels) {
+        _reels.add(TextEditingController(text: r)); // 멀티 릴스: 행마다 하나
+      }
       _notes.text = e.notes ?? '';
       _sport = e.sport ?? '6s';
       _level = e.level ?? 'any';
@@ -157,14 +160,18 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
       _blocks.addAll(ScheduleBlock.groupFromRaw(e.scheduleRaw));
     }
     if (_blocks.isEmpty) _blocks.add(ScheduleBlock());
+    if (_reels.isEmpty) _reels.add(TextEditingController()); // 최소 1행 노출
   }
 
   @override
   void dispose() {
     for (final c in [
       _title, _venue, _address, _scheduleMemo,
-      _thisWeek, _fee, _contact, _reel, _notes,
+      _thisWeek, _fee, _contact, _notes,
     ]) {
+      c.dispose();
+    }
+    for (final c in _reels) {
       c.dispose();
     }
     super.dispose();
@@ -217,8 +224,8 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
 
     // 릴스/게시물(선택, 여러 개): 줄바꿈 구분, 각각 공개 permalink 검증
     final reels = <String>[];
-    for (final line in _reel.text.split('\n')) {
-      final ln = line.trim();
+    for (final c in _reels) {
+      final ln = c.text.trim();
       if (ln.isEmpty) continue;
       final s = Sanitize.instaPostUrl(ln);
       if (s.isEmpty) {
@@ -317,12 +324,9 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
             _group(t('pf_fee'), _input(_fee, t('pf_fee_hint'))),
             _group(t('pf_contact'), _input(_contact, t('f_contact_hint'))),
             _group(
-                t('f_reel_label'),
-                TextField(
-                  controller: _reel,
-                  maxLines: 3,
-                  decoration: InputDecoration(hintText: t('f_reel_hint')),
-                )),
+              t('f_reel_label'),
+              ReelEditor(controllers: _reels, onChanged: () => setState(() {})),
+            ),
             _group(t('pf_notes'), _input(_notes, t('pf_notes_hint'))),
             _group(
               t('pk_f_expire'),

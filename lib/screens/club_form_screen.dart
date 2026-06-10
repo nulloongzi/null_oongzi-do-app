@@ -13,6 +13,7 @@ import '../theme.dart';
 import '../widgets/app_sheet.dart';
 import '../widgets/chip_select.dart';
 import '../widgets/map_picker.dart';
+import '../widgets/reel_editor.dart';
 import '../widgets/schedule_editor.dart';
 
 /// 동호회 등록/수정 폼: 풀스크린 라우트 대신 지도 위 모달 바텀시트(웹 등록 팝업 대응).
@@ -47,8 +48,8 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
   final _address = TextEditingController();
   final _price = TextEditingController();
   final _insta = TextEditingController();
-  final _reel = TextEditingController();
   final _link = TextEditingController();
+  final List<TextEditingController> _reels = []; // 릴스 다중 입력(행마다 1개)
 
   final Set<String> _targets = {};
   final List<ScheduleBlock> _blocks = [];
@@ -104,7 +105,9 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
       _address.text = e.address ?? '';
       _price.text = e.price ?? '';
       _insta.text = e.insta ?? '';
-      _reel.text = e.instaReels.join('\n'); // 멀티 릴스: 한 줄에 하나
+      for (final r in e.instaReels) {
+        _reels.add(TextEditingController(text: r)); // 멀티 릴스: 행마다 하나
+      }
       _link.text = e.link ?? '';
       _lat = e.lat;
       _lng = e.lng;
@@ -116,11 +119,15 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
       _blocks.addAll(ScheduleBlock.groupFromRaw(e.scheduleRaw));
     }
     if (_blocks.isEmpty) _blocks.add(ScheduleBlock());
+    if (_reels.isEmpty) _reels.add(TextEditingController()); // 최소 1행 노출
   }
 
   @override
   void dispose() {
-    for (final c in [_name, _targetNote, _address, _price, _insta, _reel, _link]) {
+    for (final c in [_name, _targetNote, _address, _price, _insta, _link]) {
+      c.dispose();
+    }
+    for (final c in _reels) {
       c.dispose();
     }
     super.dispose();
@@ -196,8 +203,8 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
     // 릴스/게시물(선택)
     // 릴스(선택, 여러 개): 줄바꿈으로 구분, 각각 공개 permalink 검증
     final reels = <String>[];
-    for (final line in _reel.text.split('\n')) {
-      final ln = line.trim();
+    for (final c in _reels) {
+      final ln = c.text.trim();
       if (ln.isEmpty) continue;
       final s = Sanitize.instaPostUrl(ln);
       if (s.isEmpty) return _snack(t('f_reel_invalid'));
@@ -273,12 +280,9 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
             _group(t('cf_price'), _input(_price, t('cf_price_hint'))),
             _group(t('cf_insta'), _input(_insta, t('cf_insta_hint'))),
             _group(
-                t('f_reel_label'),
-                TextField(
-                  controller: _reel,
-                  maxLines: 3,
-                  decoration: InputDecoration(hintText: t('f_reel_hint')),
-                )),
+              t('f_reel_label'),
+              ReelEditor(controllers: _reels, onChanged: () => setState(() {})),
+            ),
             _group(t('cf_link'), _input(_link, t('f_contact_hint'))),
             const SizedBox(height: 8),
             ElevatedButton(
