@@ -1,6 +1,8 @@
 // map_screen.dart — 네이티브 네이버지도(flutter_naver_map) + Firestore 마커
 // kakao_map_plugin(웹뷰) → flutter_naver_map(네이티브)로 전환: 패닝 부드러움 + 한국 데이터.
 import 'dart:async';
+import 'dart:math' as math;
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
@@ -22,6 +24,7 @@ import 'profile_screen.dart';
 import '../widgets/bounce_tap.dart';
 import '../widgets/filter_sheet.dart';
 import '../widgets/glass_surface.dart';
+import '../widgets/insta_embed.dart';
 import '../widgets/pickup_list_panel.dart';
 
 class MapScreen extends StatefulWidget {
@@ -46,6 +49,7 @@ class _MapScreenState extends State<MapScreen> {
   final _search = TextEditingController(); // 상단 검색바 (동호회=필터키워드 / 픽업=목록검색)
   final _deepLinks = DeepLinkService();
   NOverlayImage? _clusterIcon; // 클러스터 노란 원 (런타임 생성)
+  _ReelPeek? _reelPeek; // 마커 롱프레스 → 블러+릴스 미리보기(인스타 피드 꾹 누르기 느낌)
 
   @override
   void initState() {
@@ -379,6 +383,75 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  // 두 좌표 간 근사 거리(m) — 작은 범위라 equirectangular 근사로 충분(haversine 불필요).
+  static double _approxMeters(NLatLng a, NLatLng b) {
+    const r = 6378137.0; // 지구 반경
+    final dLat = (b.latitude - a.latitude) * math.pi / 180;
+    final dLng = (b.longitude - a.longitude) * math.pi / 180;
+    final mLat = (a.latitude + b.latitude) / 2 * math.pi / 180;
+    final x = dLng * math.cos(mLat);
+    return math.sqrt(dLat * dLat + x * x) * r;
+  }
+
+  // 마커 롱프레스(인스타 피드 '꾹 누르기'): 누른 지점 근처 가장 가까운 마커를 찾아
+  // 릴스가 있으면 배경 블러 + 릴스 크게 미리보기. flutter_naver_map은 마커별 롱프레스
+  // 콜백이 없어 지도 onMapLongTapped + 최근접 마커로 우회(핀을 정확히 누를 필요 없음).
+  Future<void> _onMapLongTapped(NPoint point, NLatLng latLng) async {
+    final c = _controller;
+    if (c == null) return;
+    double zoom = 14;
+    try {
+      final cam = await c.getCameraPosition();
+      zoom = cam.zoom;
+    } catch (_) {}
+    if (!mounted) return;
+    // 화면상 ~52px 반경 안에서만 인식 → 줌 기준 m/px로 환산해 거리 임계로 사용(줌 무관).
+    final mpp = 156543.03392 *
+        math.cos(latLng.latitude * math.pi / 180) /
+        math.pow(2, zoom);
+    final thresholdM = 52 * mpp;
+
+    String? title;
+    String? reel;
+    bool urgent = false;
+    double best = double.infinity;
+    if (_tab == 'clubs') {
+      for (final club in _clubs.where(_filter.matches)) {
+        if (club.lat == null || club.lng == null) continue;
+        final d = _approxMeters(latLng, NLatLng(club.lat!, club.lng!));
+        if (d < best) {
+          best = d;
+          title = club.name;
+          reel = club.instaReels.isNotEmpty ? club.instaReels.first : null;
+          urgent = club.isUrgent && (club.urgentMsg?.isNotEmpty ?? false);
+        }
+      }
+    } else {
+      for (final spot in _visibleSpots()) {
+        if (spot.lat == null || spot.lng == null) continue;
+        final d = _approxMeters(latLng, NLatLng(spot.lat!, spot.lng!));
+        if (d < best) {
+          best = d;
+          title = spot.title;
+          reel = spot.instaReels.isNotEmpty ? spot.instaReels.first : null;
+          urgent = false;
+        }
+      }
+    }
+    if (title == null || best > thresholdM) return; // 근처에 마커 없음
+    if (reel == null) {
+      _snack(t('reel_peek_none'));
+      return;
+    }
+    Track.event('reel_peek', {'tab': _tab});
+    setState(() => _reelPeek = _ReelPeek(title: title!, reel: reel!, urgent: urgent));
+  }
+
+  void _snack(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
   Future<void> _refreshMarkers() async {
     final c = _controller;
     if (c == null) return;
@@ -521,6 +594,8 @@ class _MapScreenState extends State<MapScreen> {
               },
               // 줌이 임계를 넘나들면 이름 알약 표시/숨김 전환(스테이지 2↔3)
               onCameraIdle: _onCameraIdle,
+              // 마커 꾹 누르기 → 배경 블러 + 릴스 미리보기(인스타 피드 느낌)
+              onMapLongTapped: _onMapLongTapped,
             ),
             // 검색바 (design §2.1)
             Positioned(top: 12, left: 15, right: 15, child: _searchBar()),
@@ -574,6 +649,14 @@ class _MapScreenState extends State<MapScreen> {
               valueListenable: detailPanel,
               builder: (_, panel, __) => panel ?? const SizedBox.shrink(),
             ),
+            // 마커 롱프레스 릴스 미리보기(최상단) — 배경 블러 + 릴스 크게.
+            if (_reelPeek != null)
+              Positioned.fill(
+                child: _ReelPeekOverlay(
+                  data: _reelPeek!,
+                  onClose: () => setState(() => _reelPeek = null),
+                ),
+              ),
           ],
         ),
       ),
@@ -842,6 +925,139 @@ class _UrgentTickerState extends State<_UrgentTicker> {
               const SizedBox(width: 12),
             ]),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// 마커 롱프레스 릴스 미리보기 데이터(제목·릴스 URL·급구여부).
+class _ReelPeek {
+  final String title;
+  final String reel;
+  final bool urgent;
+  const _ReelPeek(
+      {required this.title, required this.reel, required this.urgent});
+}
+
+// 배경 블러 + 릴스 크게 — 인스타 피드 '꾹 누르면 릴스' 느낌. 바깥 탭/✕ → 닫힘.
+// 진입 시 스크림(블러+딤)만 애니메이션(웹뷰는 플랫폼뷰라 Transform/Opacity 미적용).
+class _ReelPeekOverlay extends StatefulWidget {
+  final _ReelPeek data;
+  final VoidCallback onClose;
+  const _ReelPeekOverlay({required this.data, required this.onClose});
+
+  @override
+  State<_ReelPeekOverlay> createState() => _ReelPeekOverlayState();
+}
+
+class _ReelPeekOverlayState extends State<_ReelPeekOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ac = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 240),
+  )..forward();
+
+  @override
+  void dispose() {
+    _ac.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ac,
+      // 카드는 1회만 빌드(웹뷰 재생성 방지) — 스크림만 프레임마다 갱신.
+      child: Center(child: _card(context, widget.data)),
+      builder: (_, child) {
+        final v = Curves.easeOut.transform(_ac.value);
+        return Stack(
+          children: [
+            // 블러 + 어둡게 스크림 — 탭하면 닫힘. (네이티브 맵은 플랫폼뷰라
+            // 일부 기기에서 blur 미반영 가능 → 딤으로 항상 초점 보장)
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: widget.onClose,
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 18 * v, sigmaY: 18 * v),
+                  child: Container(
+                      color: Colors.black.withValues(alpha: 0.42 * v)),
+                ),
+              ),
+            ),
+            child!,
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _card(BuildContext context, _ReelPeek d) {
+    final maxH = MediaQuery.of(context).size.height * 0.76;
+    return GestureDetector(
+      onTap: () {}, // 카드 내부 탭은 닫힘으로 전파하지 않음
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 22),
+        constraints: BoxConstraints(maxHeight: maxH, maxWidth: 460),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: const [
+            BoxShadow(
+                color: Color(0x55000000), blurRadius: 30, offset: Offset(0, 12)),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 헤더: 이름(+급구 불꽃) · 닫기
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 6, 2),
+              child: Row(children: [
+                if (d.urgent)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 6),
+                    child: Text('🔥', style: TextStyle(fontSize: 16)),
+                  ),
+                Expanded(
+                  child: Text(
+                    d.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                        color: NurungjiColors.dark),
+                  ),
+                ),
+                IconButton(
+                  onPressed: widget.onClose,
+                  icon: const Icon(Icons.close, size: 20),
+                  color: NurungjiColors.brown,
+                ),
+              ]),
+            ),
+            // 릴스 임베드(탭하면 인라인/인스타 재생)
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 2),
+                child: InstaEmbed(url: d.reel),
+              ),
+            ),
+            // 닫기/재생 힌트
+            Padding(
+              padding: const EdgeInsets.only(top: 2, bottom: 10),
+              child: Text(
+                t('reel_peek_hint'),
+                style: const TextStyle(
+                    fontSize: 12,
+                    color: NurungjiColors.brown,
+                    fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
         ),
       ),
     );

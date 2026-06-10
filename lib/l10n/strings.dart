@@ -110,6 +110,8 @@ const Map<String, Map<String, String>> kStrings = {
   'insta_reel_open': {'ko': '탭하면 인스타그램에서 봐요', 'en': 'Tap to view on Instagram'},
   'reels_more_label': {'ko': '릴스 더 보기', 'en': 'More reels'},
   'reels_hide': {'ko': '릴스 접기', 'en': 'Hide reels'},
+  'reel_peek_hint': {'ko': '탭하면 재생 · 바깥을 누르면 닫기', 'en': 'Tap to play · tap outside to close'},
+  'reel_peek_none': {'ko': '이 팀은 아직 릴스가 없어요', 'en': 'No reel for this team yet'},
   'detail_pull_hint': {'ko': '▴ 위로 올려 시간표 보기', 'en': '▴ Pull up for schedule'},
   'detail_collapse_hint': {'ko': '▾ 접기', 'en': '▾ Collapse'},
   'lb_slot_rice': {'ko': '밥', 'en': 'Rice'},
