@@ -36,9 +36,11 @@ class _InstaEmbedState extends State<InstaEmbed> {
       // 임베드 페이지 높이를 받아 컨테이너에 맞춤(빈 공간/잘림 제거)
       ..addJavaScriptChannel('NurungjiResize', onMessageReceived: (m) {
         final h = double.tryParse(m.message);
-        if (h != null && h > 80 && mounted) {
-          setState(() => _height = h.clamp(220.0, 1000.0).toDouble());
-        }
+        if (h == null || h <= 80 || !mounted) return;
+        final clamped = h.clamp(220.0, 1000.0).toDouble();
+        // 8px 미만 변화는 무시 → 임베드 로딩 중 반복 resize의 불필요한 relayout(점프) 방지.
+        if ((clamped - _height).abs() < 8) return;
+        setState(() => _height = clamped);
       })
       ..setNavigationDelegate(NavigationDelegate(
         onPageFinished: (_) {
@@ -74,13 +76,16 @@ class _InstaEmbedState extends State<InstaEmbed> {
     if (_failed || _ctrl == null) return _fallbackCard();
     return Padding(
       padding: const EdgeInsets.only(top: 14),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          height: _height,
-          width: double.infinity,
-          color: Colors.white,
-          child: WebViewWidget(controller: _ctrl!),
+      // RepaintBoundary: 웹뷰(플랫폼뷰) 리페인트를 형제(다른 릴스·시트 본문)와 격리.
+      child: RepaintBoundary(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            height: _height,
+            width: double.infinity,
+            color: Colors.white,
+            child: WebViewWidget(controller: _ctrl!),
+          ),
         ),
       ),
     );

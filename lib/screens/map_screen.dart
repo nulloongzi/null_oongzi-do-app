@@ -27,6 +27,28 @@ import '../widgets/glass_surface.dart';
 import '../widgets/insta_embed.dart';
 import '../widgets/pickup_list_panel.dart';
 
+// 마커 1건 스펙(클럽/스팟 공통) — 아이콘 병렬 빌드 후 마커를 한 번에 생성하기 위한 중간 표현.
+class _MarkerSpec {
+  final String id;
+  final NLatLng pos;
+  final String name;
+  final bool red; // 빨강 핀(급구/스팟)
+  final bool urgent;
+  final bool verified;
+  final bool clusterable; // 급구 클럽=false(항상 표시), 그 외=true
+  final VoidCallback onTap;
+  const _MarkerSpec({
+    required this.id,
+    required this.pos,
+    required this.name,
+    required this.red,
+    required this.urgent,
+    required this.verified,
+    required this.clusterable,
+    required this.onTap,
+  });
+}
+
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
 
@@ -379,7 +401,7 @@ class _MapScreenState extends State<MapScreen> {
     final show = cam.zoom >= _labelZoomThreshold;
     if (show != _showLabels) {
       _showLabels = show;
-      _refreshMarkers();
+      _refreshMarkers(fade: true); // 줌 임계 전환 → 이름 알약 페이드 인
     }
   }
 
@@ -452,62 +474,104 @@ class _MapScreenState extends State<MapScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-  Future<void> _refreshMarkers() async {
+  Future<void> _refreshMarkers({bool fade = false}) async {
     final c = _controller;
     if (c == null) return;
-    final overlays = <NAddableOverlay>{};
+    // 1) 표시할 항목 수집(클럽/스팟 공통 스펙)
+    final items = <_MarkerSpec>[];
     if (_tab == 'clubs') {
       for (final club in _clubs.where(_filter.matches)) {
         if (club.lat == null || club.lng == null) continue;
-        final pos = NLatLng(club.lat!, club.lng!);
         final urgent = club.isUrgent && (club.urgentMsg?.isNotEmpty ?? false);
-        // 줌 임계 이상일 때만 이름 알약 노출(중간 줌=핀만). 인증팀은 배지 포함.
-        final icon = _showLabels
-            ? await _labeledIcon(club.name,
-                red: urgent, urgent: urgent, verified: club.isVerified)
-            : null;
-        if (urgent) {
-          // 급구: 클러스터 제외(항상 표시) + 빨강 라벨
-          final m = NMarker(
-            id: 'c_${club.id}',
-            position: pos,
-            icon: icon ?? _pickupIcon,
-            size: icon != null ? _labelSize : _markerSize,
-          );
-          m.setOnTapListener((NMarker o) => _focusAndShowClub(club));
-          overlays.add(m);
-        } else {
-          final m = NClusterableMarker(
-            id: 'c_${club.id}',
-            position: pos,
-            icon: icon ?? _clubIcon,
-            size: icon != null ? _labelSize : _markerSize,
-          );
-          m.setOnTapListener((NClusterableMarker o) => _focusAndShowClub(club));
-          overlays.add(m);
-        }
+        items.add(_MarkerSpec(
+          id: 'c_${club.id}',
+          pos: NLatLng(club.lat!, club.lng!),
+          name: club.name,
+          red: urgent,
+          urgent: urgent,
+          verified: club.isVerified,
+          clusterable: !urgent, // 급구: 클러스터 제외(항상 표시)
+          onTap: () => _focusAndShowClub(club),
+        ));
       }
     } else {
-      final spots = _visibleSpots();
-      for (final spot in spots) {
+      for (final spot in _visibleSpots()) {
         if (spot.lat == null || spot.lng == null) continue;
-        final icon = _showLabels
-            ? await _labeledIcon(spot.title,
-                red: true, urgent: false, verified: false)
-            : null;
-        final m = NClusterableMarker(
+        items.add(_MarkerSpec(
           id: 's_${spot.id}',
-          position: NLatLng(spot.lat!, spot.lng!),
-          icon: icon ?? _pickupIcon,
-          size: icon != null ? _labelSize : _markerSize,
-        );
-        m.setOnTapListener((NClusterableMarker o) => _focusAndShowSpot(spot));
-        overlays.add(m);
+          pos: NLatLng(spot.lat!, spot.lng!),
+          name: spot.title,
+          red: true,
+          urgent: false,
+          verified: false,
+          clusterable: true,
+          onTap: () => _focusAndShowSpot(spot),
+        ));
       }
     }
-    // 아이콘(라벨) 빌드를 끝낸 뒤에 clear+add → 사라졌다 뜨는 끊김 최소화
+
+    // 2) 이름 알약 아이콘을 병렬로 빌드(순차 await 제거 → 줌 인 시 끊김 완화). 캐시 히트는 즉시.
+    final icons = _showLabels
+        ? await Future.wait(items.map((s) => _labeledIcon(s.name,
+            red: s.red, urgent: s.urgent, verified: s.verified)))
+        : const <NOverlayImage?>[];
+    if (!mounted || _controller == null) return;
+
+    // 3) 마커 생성(급구 클럽=비클러스터, 그 외=클러스터러블)
+    final markers = <NMarker>[];
+    final overlays = <NAddableOverlay>{};
+    for (var i = 0; i < items.length; i++) {
+      final s = items[i];
+      final icon = _showLabels ? icons[i] : null;
+      final size = icon != null ? _labelSize : _markerSize;
+      final fallback = s.red ? _pickupIcon : _clubIcon;
+      final NMarker m;
+      if (s.clusterable) {
+        final cm = NClusterableMarker(
+            id: s.id, position: s.pos, icon: icon ?? fallback, size: size);
+        cm.setOnTapListener((NClusterableMarker o) => s.onTap());
+        m = cm;
+      } else {
+        final nm = NMarker(
+            id: s.id, position: s.pos, icon: icon ?? fallback, size: size);
+        nm.setOnTapListener((NMarker o) => s.onTap());
+        m = nm;
+      }
+      markers.add(m);
+      overlays.add(m);
+    }
+
+    // 4) 아이콘 빌드를 끝낸 뒤에 clear+add → 사라졌다 뜨는 끊김 최소화
     await c.clearOverlays();
     if (overlays.isNotEmpty) await c.addOverlayAll(overlays);
+
+    // 5) 라벨 전환(줌) 시: 네이티브 마커 alpha 0→1 페이드 인(팝업 대신 부드러운 등장)
+    if (fade && markers.isNotEmpty) _fadeInMarkers(markers);
+  }
+
+  // 마커 등장 페이드: alpha 0→1 짧은 트윈. 채널콜 폭주 방지를 위해 스텝 제한 + 가드.
+  void _fadeInMarkers(List<NMarker> markers) {
+    for (final m in markers) {
+      try {
+        m.setAlpha(0.0);
+      } catch (_) {}
+    }
+    const steps = 6;
+    var i = 0;
+    Timer.periodic(const Duration(milliseconds: 36), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      i++;
+      final v = (i / steps).clamp(0.0, 1.0);
+      for (final m in markers) {
+        try {
+          m.setAlpha(v);
+        } catch (_) {}
+      }
+      if (i >= steps) timer.cancel();
+    });
   }
 
   void _onTab(String t) {
