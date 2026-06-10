@@ -182,6 +182,58 @@ class _ExpandReveal extends StatelessWidget {
   }
 }
 
+// 릴스 섹션: 첫 릴스는 항상 표시(피로감↓), 2개 이상이면 '더 보기' 드롭다운으로 나머지.
+class _ReelsSection extends StatefulWidget {
+  final List<String> reels;
+  const _ReelsSection({required this.reels});
+
+  @override
+  State<_ReelsSection> createState() => _ReelsSectionState();
+}
+
+class _ReelsSectionState extends State<_ReelsSection> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final reels = widget.reels;
+    if (reels.isEmpty) return const SizedBox.shrink();
+    final more = reels.length - 1;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        InstaEmbed(url: reels.first), // 하나는 무조건
+        if (more > 0)
+          BounceTap(
+            onTap: () => setState(() => _open = !_open),
+            child: Container(
+              margin: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.symmetric(vertical: 9),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: NurungjiColors.chipBg,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Text(
+                  _open ? t('reels_hide') : '${t('reels_more_label')} ($more)',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      color: NurungjiColors.chipFg),
+                ),
+                Icon(_open ? Icons.expand_less : Icons.expand_more,
+                    size: 18, color: NurungjiColors.chipFg),
+              ]),
+            ),
+          ),
+        if (_open)
+          for (final u in reels.skip(1)) InstaEmbed(url: u),
+      ],
+    );
+  }
+}
+
 // 🍱 북마크 토글 (웹 #btnBookmark): 타이틀 우측. 담김=진하게/안 담김=흐리게, 탭=추가/해제.
 class _BookmarkButton extends StatefulWidget {
   final String uid;
@@ -601,8 +653,7 @@ void showSpotDetail(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (s.instaReel != null && s.instaReel!.isNotEmpty)
-                InstaEmbed(url: s.instaReel!),
+              if (s.instaReels.isNotEmpty) _ReelsSection(reels: s.instaReels),
               if (canModify)
                 _modifyRow(
                   onEdit: () async {
@@ -734,8 +785,7 @@ void showClubDetail(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (c.instaReel != null && c.instaReel!.isNotEmpty)
-                InstaEmbed(url: c.instaReel!),
+              if (c.instaReels.isNotEmpty) _ReelsSection(reels: c.instaReels),
               if (canModify && !c.isVerified) _verifyBtn(c, context),
               if (canModify) _urgentToggle(c, context, onChanged, close),
               if (canModify)

@@ -145,7 +145,7 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
       _thisWeek.text = e.thisWeek ?? '';
       _fee.text = e.feeInfo ?? '';
       _contact.text = e.contactLink ?? '';
-      _reel.text = e.instaReel ?? '';
+      _reel.text = e.instaReels.join('\n'); // 멀티 릴스: 한 줄에 하나
       _notes.text = e.notes ?? '';
       _sport = e.sport ?? '6s';
       _level = e.level ?? 'any';
@@ -215,15 +215,17 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
       contact = s;
     }
 
-    // 릴스/게시물(선택): 공개 인스타 permalink만
-    var reel = _reel.text.trim();
-    if (reel.isNotEmpty) {
-      final s = Sanitize.instaPostUrl(reel);
+    // 릴스/게시물(선택, 여러 개): 줄바꿈 구분, 각각 공개 permalink 검증
+    final reels = <String>[];
+    for (final line in _reel.text.split('\n')) {
+      final ln = line.trim();
+      if (ln.isEmpty) continue;
+      final s = Sanitize.instaPostUrl(ln);
       if (s.isEmpty) {
         _snack(t('f_reel_invalid'));
         return;
       }
-      reel = s;
+      reels.add(s);
     }
 
     final fields = <String, dynamic>{
@@ -241,7 +243,8 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
       'fee_info': _fee.text.trim(),
       'contact_link': contact,
       'this_week': _thisWeek.text.trim(),
-      'insta_reel': reel,
+      'insta_reel': reels.isNotEmpty ? reels.first : '', // 웹 호환(단일)
+      'insta_reels': reels,
       'notes': _notes.text.trim(),
       'expire_at': _computeExpireAt(_expire), // DateTime?→Firestore Timestamp/null
     };
@@ -313,7 +316,13 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
             _group(t('pf_thisweek'), _input(_thisWeek, t('pf_thisweek_hint'))),
             _group(t('pf_fee'), _input(_fee, t('pf_fee_hint'))),
             _group(t('pf_contact'), _input(_contact, t('f_contact_hint'))),
-            _group(t('f_reel_label'), _input(_reel, t('f_reel_hint'))),
+            _group(
+                t('f_reel_label'),
+                TextField(
+                  controller: _reel,
+                  maxLines: 3,
+                  decoration: InputDecoration(hintText: t('f_reel_hint')),
+                )),
             _group(t('pf_notes'), _input(_notes, t('pf_notes_hint'))),
             _group(
               t('pk_f_expire'),

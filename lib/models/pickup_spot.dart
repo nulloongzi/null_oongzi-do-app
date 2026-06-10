@@ -3,6 +3,21 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 double? _toD(dynamic v) => v == null ? null : (v as num).toDouble();
 
+// insta_reels(배열) 우선, 없으면 insta_reel(단일) 폴백 → 항상 List로.
+List<String> _reels(Map d) {
+  final raw = d['insta_reels'];
+  if (raw is List) {
+    final out = raw
+        .whereType<String>()
+        .where((e) => e.trim().isNotEmpty)
+        .toList();
+    if (out.isNotEmpty) return out;
+  }
+  final single = d['insta_reel'] as String?;
+  if (single != null && single.trim().isNotEmpty) return [single];
+  return const [];
+}
+
 class PickupSpot {
   final String id;
   final String? ownerUid; // 소유자(수정/삭제 권한)
@@ -23,6 +38,7 @@ class PickupSpot {
   final String? thisWeek;
   final String? notes;
   final String? instaReel;
+  final List<String> instaReels; // 멀티 릴스(없으면 [instaReel])
   final DateTime? expireAt; // 유효기간(B): 지나면 자동 숨김 + Firestore TTL. null=상시
 
   PickupSpot({
@@ -45,6 +61,7 @@ class PickupSpot {
     this.thisWeek,
     this.notes,
     this.instaReel,
+    this.instaReels = const [],
     this.expireAt,
   });
 
@@ -71,6 +88,7 @@ class PickupSpot {
       thisWeek: d['this_week'] as String?,
       notes: d['notes'] as String?,
       instaReel: d['insta_reel'] as String?,
+      instaReels: _reels(d),
       expireAt: (d['expire_at'] as Timestamp?)?.toDate(),
     );
   }

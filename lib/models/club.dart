@@ -3,6 +3,21 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 double? _toD(dynamic v) => v == null ? null : (v as num).toDouble();
 
+// insta_reels(배열) 우선, 없으면 insta_reel(단일) 폴백 → 항상 List로.
+List<String> _reels(Map d) {
+  final raw = d['insta_reels'];
+  if (raw is List) {
+    final out = raw
+        .whereType<String>()
+        .where((e) => e.trim().isNotEmpty)
+        .toList();
+    if (out.isNotEmpty) return out;
+  }
+  final single = d['insta_reel'] as String?;
+  if (single != null && single.trim().isNotEmpty) return [single];
+  return const [];
+}
+
 class Club {
   final String id;
   final String name;
@@ -17,6 +32,7 @@ class Club {
   final String? insta;
   final String? link;
   final String? instaReel;
+  final List<String> instaReels; // 멀티 릴스(없으면 [instaReel])
   final bool isVerified;
   final bool isUrgent;
   final String? urgentMsg;
@@ -35,6 +51,7 @@ class Club {
     this.insta,
     this.link,
     this.instaReel,
+    this.instaReels = const [],
     this.isVerified = false,
     this.isUrgent = false,
     this.urgentMsg,
@@ -58,6 +75,7 @@ class Club {
       insta: (d['insta'] ?? contact?['insta']) as String?,
       link: (d['link'] ?? contact?['link']) as String?,
       instaReel: d['insta_reel'] as String?,
+      instaReels: _reels(d),
       isVerified: (d['is_verified'] ?? false) as bool,
       isUrgent: (d['is_urgent'] ?? false) as bool,
       urgentMsg: d['urgent_msg'] as String?,

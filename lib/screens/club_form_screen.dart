@@ -104,7 +104,7 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
       _address.text = e.address ?? '';
       _price.text = e.price ?? '';
       _insta.text = e.insta ?? '';
-      _reel.text = e.instaReel ?? '';
+      _reel.text = e.instaReels.join('\n'); // 멀티 릴스: 한 줄에 하나
       _link.text = e.link ?? '';
       _lat = e.lat;
       _lng = e.lng;
@@ -194,11 +194,14 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
       link = s;
     }
     // 릴스/게시물(선택)
-    var reel = _reel.text.trim();
-    if (reel.isNotEmpty) {
-      final s = Sanitize.instaPostUrl(reel);
+    // 릴스(선택, 여러 개): 줄바꿈으로 구분, 각각 공개 permalink 검증
+    final reels = <String>[];
+    for (final line in _reel.text.split('\n')) {
+      final ln = line.trim();
+      if (ln.isEmpty) continue;
+      final s = Sanitize.instaPostUrl(ln);
       if (s.isEmpty) return _snack(t('f_reel_invalid'));
-      reel = s;
+      reels.add(s);
     }
 
     final fields = <String, dynamic>{
@@ -210,7 +213,8 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
       'schedule_raw': ScheduleBlock.toRaw(_blocks),
       'price': price,
       'contact': {'insta': insta, 'link': link},
-      'insta_reel': reel,
+      'insta_reel': reels.isNotEmpty ? reels.first : '', // 웹 호환(단일)
+      'insta_reels': reels,
     };
 
     setState(() => _saving = true);
@@ -268,7 +272,13 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
             ),
             _group(t('cf_price'), _input(_price, t('cf_price_hint'))),
             _group(t('cf_insta'), _input(_insta, t('cf_insta_hint'))),
-            _group(t('f_reel_label'), _input(_reel, t('f_reel_hint'))),
+            _group(
+                t('f_reel_label'),
+                TextField(
+                  controller: _reel,
+                  maxLines: 3,
+                  decoration: InputDecoration(hintText: t('f_reel_hint')),
+                )),
             _group(t('cf_link'), _input(_link, t('f_contact_hint'))),
             const SizedBox(height: 8),
             ElevatedButton(
