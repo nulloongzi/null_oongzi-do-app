@@ -88,6 +88,7 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void dispose() {
     detailPanel.value = null; // 화면 떠날 때 잔존 패널 정리
+    _labelFadeTimer?.cancel();
     _search.dispose();
     _deepLinks.dispose();
     super.dispose();
@@ -199,9 +200,16 @@ class _MapScreenState extends State<MapScreen> {
       NOverlayImage.fromAssetImage('assets/markers/marker_red.png');
   static const _markerSize = Size(38, 48); // 기본 핀(라벨 없음) — 약간 키움
   static const _labelSize = Size(170, 76); // 이름 알약 포함 마커
-  static const _labelZoomThreshold = 12.0; // 이 줌 이상에서만 이름 알약 노출
+  // 라벨 on/off 데드밴드(히스테리시스): 경계 근처 미세 줌이 표시를 깜빡이며 토글하지 않도록.
+  static const _labelZoomShow = 12.2; // 이 줌 이상 → 이름 알약 켜기
+  static const _labelZoomHide = 11.8; // 이 줌 미만 → 끄기 (사이 구간은 현 상태 유지)
   static const _focusZoom = 15.0; // 마커 탭 시 확대 축척
   bool _showLabels = false; // 현재 줌이 임계 이상? (스테이지3=알약 표시)
+
+  // 라벨 토글을 clear+add 없이 in-place(setIcon/setSize)로 적용하기 위한 보관.
+  Map<String, NMarker> _markersById = {};
+  List<_MarkerSpec> _lastSpecs = const [];
+  Timer? _labelFadeTimer;
 
   // 마커 라벨 아이콘 캐시(이름·상태별 1회 렌더) + 핀 에셋 프리캐시(미로드 시 핀이 빈칸으로 캡처되는 것 방지)
   final Map<String, NOverlayImage> _labelIconCache = {};
@@ -394,14 +402,22 @@ class _MapScreenState extends State<MapScreen> {
         currentUid: _repo.currentUid, isAdmin: _isAdmin, onChanged: _load);
   }
 
-  // 줌 변경 후: 임계 넘나들면 이름 알약 표시여부 전환 + 마커 재렌더(아이콘 캐시로 빠름).
+  // 줌 변경 후: 데드밴드(히스테리시스)로 라벨 on/off 결정 → 넘나들면 in-place로 아이콘만 교체.
   void _onCameraIdle() async {
     final cam = await _controller?.getCameraPosition();
     if (cam == null || !mounted) return;
-    final show = cam.zoom >= _labelZoomThreshold;
+    final z = cam.zoom;
+    final bool show;
+    if (z >= _labelZoomShow) {
+      show = true;
+    } else if (z < _labelZoomHide) {
+      show = false;
+    } else {
+      show = _showLabels; // 경계 사이 → 현 상태 유지(미세 줌 thrash 방지)
+    }
     if (show != _showLabels) {
       _showLabels = show;
-      _refreshMarkers(fade: true); // 줌 임계 전환 → 이름 알약 페이드 인
+      _applyLabelState(); // clear+add 없이 setIcon/setSize로 교체 + 페이드
     }
   }
 
@@ -545,12 +561,46 @@ class _MapScreenState extends State<MapScreen> {
     await c.clearOverlays();
     if (overlays.isNotEmpty) await c.addOverlayAll(overlays);
 
+    // 라벨 in-place 토글용으로 현재 마커/스펙 보관(인덱스 정렬됨).
+    _lastSpecs = items;
+    _markersById = {
+      for (var i = 0; i < items.length; i++) items[i].id: markers[i]
+    };
+
     // 5) 라벨 전환(줌) 시: 네이티브 마커 alpha 0→1 페이드 인(팝업 대신 부드러운 등장)
     if (fade && markers.isNotEmpty) _fadeInMarkers(markers);
   }
 
+  // 라벨 on/off를 clear+add 없이 적용: 보관된 기존 마커의 아이콘·크기만 교체 후 페이드.
+  // (보관된 마커가 없으면 풀 리프레시로 폴백)
+  Future<void> _applyLabelState() async {
+    final specs = _lastSpecs;
+    if (specs.isEmpty || _markersById.isEmpty) {
+      return _refreshMarkers(fade: true);
+    }
+    final icons = _showLabels
+        ? await Future.wait(specs.map((s) => _labeledIcon(s.name,
+            red: s.red, urgent: s.urgent, verified: s.verified)))
+        : const <NOverlayImage?>[];
+    if (!mounted) return;
+    final updated = <NMarker>[];
+    for (var i = 0; i < specs.length; i++) {
+      final m = _markersById[specs[i].id];
+      if (m == null) continue;
+      final icon = _showLabels ? icons[i] : null;
+      final fallback = specs[i].red ? _pickupIcon : _clubIcon;
+      try {
+        m.setIcon(icon ?? fallback);
+        m.setSize(icon != null ? _labelSize : _markerSize);
+      } catch (_) {}
+      updated.add(m);
+    }
+    if (updated.isNotEmpty) _fadeInMarkers(updated);
+  }
+
   // 마커 등장 페이드: alpha 0→1 짧은 트윈. 채널콜 폭주 방지를 위해 스텝 제한 + 가드.
   void _fadeInMarkers(List<NMarker> markers) {
+    _labelFadeTimer?.cancel(); // 이전 페이드 진행 중이면 취소(겹침 방지)
     for (final m in markers) {
       try {
         m.setAlpha(0.0);
@@ -558,7 +608,7 @@ class _MapScreenState extends State<MapScreen> {
     }
     const steps = 6;
     var i = 0;
-    Timer.periodic(const Duration(milliseconds: 36), (timer) {
+    _labelFadeTimer = Timer.periodic(const Duration(milliseconds: 36), (timer) {
       if (!mounted) {
         timer.cancel();
         return;
