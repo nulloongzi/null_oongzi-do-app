@@ -33,6 +33,15 @@ dependencies:
   google_sign_in: ^6.2.1  # 추가
   http: ^1.1.0            # 서버 통신용 추가 (선택)
 
+  # Firebase (네이티브 도시락 기능용 — Firestore 단일 소스 재사용)
+  firebase_core: ^3.6.0
+  cloud_firestore: ^5.4.4
+  firebase_auth: ^5.3.1
+
+  # 상태관리 / 로컬 폴백
+  provider: ^6.1.2
+  shared_preferences: ^2.3.2
+
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.2
