@@ -1,0 +1,49 @@
+name: Build APK
+
+# 이 샌드박스엔 Flutter/Android SDK가 없어 로컬 빌드가 불가능하므로,
+# GitHub 러너(풀 툴체인)에서 디버그 APK를 빌드해 아티팩트로 올린다.
+# Actions 탭 → 이 워크플로 실행 → Artifacts 에서 내려받아 폰에 사이드로드.
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [ "claude/intelligent-rubin-4ygx40" ]
+    paths:
+      - "lib/**"
+      - "android/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+      - ".github/workflows/build-apk.yml"
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # AGP 8.11 / Gradle 8.14 는 JDK 17 필요
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - run: flutter --version
+
+      - name: flutter pub get
+        run: flutter pub get
+
+      # 디버그 서명으로 빌드 → 별도 키스토어 없이 폰에 설치 가능
+      - name: Build debug APK
+        run: flutter build apk --debug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nulloongzido-debug-apk
+          path: build/app/outputs/flutter-apk/*.apk
+          if-no-files-found: error
+          retention-days: 14
