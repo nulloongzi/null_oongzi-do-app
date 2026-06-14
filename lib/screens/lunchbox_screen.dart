@@ -1,4 +1,5 @@
 // lunchbox_screen.dart — 내 도시락(찜한 팀 5칸 + 커스텀 + 식단표). 웹 lunchbox.js 포팅.
+// 개선: 빈 상태 안내 · 드래그 순서 변경 · 슬롯 일정 요약 · 빼기 확인 · 식단표 색상 범례.
 import 'package:flutter/material.dart';
 import '../models/club.dart';
 import '../services/data_repository.dart';
@@ -12,6 +13,16 @@ import '../widgets/diet_grid.dart';
 /// 도시락 팝업: 풀스크린 라우트 대신 지도 위로 뜨는 모달 바텀시트(웹 도시락 오버레이 대응).
 Future<void> showLunchboxSheet(BuildContext context) =>
     showAppSheet<void>(context, child: const LunchboxScreen());
+
+/// 슬롯/식단표 공통 색(밥·국·반찬1~3). 위치(=반찬 칸)에 색이 고정된다.
+const kSlotBg = [
+  Color(0xFFFFFDE7), Color(0xFFFFF3E0), Color(0xFFF1F8E9),
+  Color(0xFFFBE9E7), Color(0xFFF3E5F5),
+];
+const kSlotBorder = [
+  Color(0xFFFBC02D), Color(0xFFF57C00), Color(0xFF689F38),
+  Color(0xFFD84315), Color(0xFF8E24AA),
+];
 
 class LunchboxScreen extends StatefulWidget {
   const LunchboxScreen({super.key});
@@ -27,7 +38,6 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
   final Map<String, Club> _clubs = {};
   bool _loading = true;
   bool _showDiet = false;
-  int? _selectedSlot; // 순서 바꾸기: 선택된 칸
 
   List<String> get _placeholders => [
         t('lb_slot_rice'),
@@ -36,14 +46,9 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
         t('lb_slot_side2'),
         t('lb_slot_side3'),
       ];
-  static const _slotBg = [
-    Color(0xFFFFFDE7), Color(0xFFFFF3E0), Color(0xFFF1F8E9),
-    Color(0xFFFBE9E7), Color(0xFFF3E5F5),
-  ];
-  static const _slotBorder = [
-    Color(0xFFFBC02D), Color(0xFFF57C00), Color(0xFF689F38),
-    Color(0xFFD84315), Color(0xFF8E24AA),
-  ];
+
+  int get _filledCount =>
+      _data?.bookmarks.where((e) => e != null).length ?? 0;
 
   @override
   void initState() {
@@ -88,31 +93,35 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
   Future<void> _removeSlot(int i) async {
     final d = _data;
     if (d == null) return;
-    setState(() {
-      d.bookmarks[i] = null;
-      _selectedSlot = null;
-    });
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dctx) => AlertDialog(
+        content: Text(t('lb_remove_confirm')),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dctx, false),
+              child: Text(t('cancel'))),
+          TextButton(
+              onPressed: () => Navigator.pop(dctx, true),
+              child: Text(t('lb_remove'))),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    setState(() => d.bookmarks[i] = null);
     await _save();
+    _snack(t('lb_removed'));
   }
 
-  // 탭 1: 칸 선택, 탭 2: 두 칸 스왑(순서 변경) → 저장.
-  Future<void> _onSlotTap(int i) async {
+  // 드래그로 순서 변경. 칸 색(반찬 위치)은 고정, 팀만 이동한다.
+  Future<void> _onReorder(int oldIndex, int newIndex) async {
     final d = _data;
     if (d == null) return;
-    if (_selectedSlot == null) {
-      if (d.bookmarks[i] == null) return; // 빈 칸은 선택 시작 불가
-      setState(() => _selectedSlot = i);
-      return;
-    }
-    if (_selectedSlot == i) {
-      setState(() => _selectedSlot = null); // 같은 칸 다시 → 해제
-      return;
-    }
-    final from = _selectedSlot!;
-    final tmp = d.bookmarks[from];
-    d.bookmarks[from] = d.bookmarks[i];
-    d.bookmarks[i] = tmp;
-    setState(() => _selectedSlot = null);
+    setState(() {
+      if (newIndex > oldIndex) newIndex -= 1;
+      final item = d.bookmarks.removeAt(oldIndex);
+      d.bookmarks.insert(newIndex, item);
+    });
     await _save();
   }
 
@@ -153,21 +162,28 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
     );
   }
 
-  ({String name, bool isCustom, List<SchedEvent> events})? _resolve(String id) {
+  ({String name, bool isCustom, String? sched, List<SchedEvent> events})?
+      _resolve(String id) {
     final d = _data;
     if (d == null) return null;
     if (d.customTeams.containsKey(id)) {
       final m = d.customTeams[id];
-      final name = (m is Map ? m['name'] : null) as String? ?? t('lb_custom_team');
+      final name =
+          (m is Map ? m['name'] : null) as String? ?? t('lb_custom_team');
       final sched = (m is Map ? m['schedule'] : null) as String?;
-      return (name: name, isCustom: true, events: eventsFromText(sched));
+      return (
+        name: name,
+        isCustom: true,
+        sched: sched,
+        events: eventsFromText(sched)
+      );
     }
     final c = _clubs[id];
     if (c != null) {
       final ev = (c.scheduleRaw != null && c.scheduleRaw!.isNotEmpty)
           ? eventsFromRaw(c.scheduleRaw)
           : eventsFromText(c.schedule);
-      return (name: c.name, isCustom: false, events: ev);
+      return (name: c.name, isCustom: false, sched: c.schedule, events: ev);
     }
     return null;
   }
@@ -182,24 +198,35 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SheetTitle(t('lunchbox_title')),
+            Row(
+              children: [
+                Expanded(child: SheetTitle(t('lunchbox_title'))),
+                if (!_loading && _filledCount > 0) _countPill(),
+              ],
+            ),
             if (_loading)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 48),
                 child: Center(child: CircularProgressIndicator()),
               )
+            else if (_filledCount == 0)
+              _emptyState()
             else ...[
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Text(
-                  _selectedSlot == null
-                      ? t('lb_reorder_hint')
-                      : t('lb_reorder_pick'),
+                  t('lb_drag_hint'),
                   style: const TextStyle(
                       fontSize: 12, color: NurungjiColors.brown),
                 ),
               ),
-              for (var i = 0; i < 5; i++) _slotTile(i),
+              ReorderableListView(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                buildDefaultDragHandles: false,
+                onReorder: _onReorder,
+                children: [for (var i = 0; i < 5; i++) _slotTile(i)],
+              ),
               const SizedBox(height: 8),
               OutlinedButton.icon(
                 onPressed: _addCustom,
@@ -221,10 +248,103 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
                   ),
                 ],
               ),
-              if (_showDiet) DietGrid(teams: _dietTeams()),
+              if (_showDiet) ...[
+                _legend(),
+                DietGrid(teams: _dietTeams()),
+              ],
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _countPill() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: NurungjiColors.chipBg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        '${t('lb_count')} $_filledCount/5',
+        style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: NurungjiColors.chipFg),
+      ),
+    );
+  }
+
+  Widget _emptyState() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
+      child: Column(
+        children: [
+          const Text('🍱', style: TextStyle(fontSize: 56)),
+          const SizedBox(height: 12),
+          Text(
+            t('lb_empty_title'),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                color: NurungjiColors.dark),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            t('lb_empty_desc'),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+                fontSize: 13, height: 1.5, color: NurungjiColors.brown),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: _addCustom,
+            icon: const Icon(Icons.add, size: 18),
+            label: Text(t('add_custom')),
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: () => Navigator.of(context).maybePop(),
+            child: Text(t('lb_find_on_map')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 식단표 색상 범례: 담은 팀 ↔ 칸 색 매핑.
+  Widget _legend() {
+    final teams = _dietTeams();
+    if (teams.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 6),
+      child: Wrap(
+        spacing: 10,
+        runSpacing: 6,
+        children: [
+          for (final tm in teams)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: kSlotBorder[tm.slotIdx % 5],
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  tm.isCustom ? '🍙 ${tm.name}' : tm.name,
+                  style: const TextStyle(
+                      fontSize: 11, color: NurungjiColors.dark),
+                ),
+              ],
+            ),
+        ],
       ),
     );
   }
@@ -250,41 +370,70 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
     final filled = id != null;
     final label = !filled
         ? _placeholders[i]
-        : (r == null ? t('deleted_team') : (r.isCustom ? '🍙 ${r.name}' : r.name));
-    final selected = _selectedSlot == i;
+        : (r == null
+            ? t('deleted_team')
+            : (r.isCustom ? '🍙 ${r.name}' : r.name));
+    final sched = filled && r != null ? (r.sched ?? '') : '';
 
-    return GestureDetector(
-      onTap: () => _onSlotTap(i),
+    return Padding(
+      key: ValueKey('lb-slot-$i'),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      decoration: BoxDecoration(
-        color: filled ? _slotBg[i] : NurungjiColors.chipBg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border(left: BorderSide(color: _slotBorder[i], width: 5)),
-        boxShadow: selected
-            ? const [BoxShadow(color: NurungjiColors.teal, spreadRadius: 2)]
-            : null,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontWeight: filled ? FontWeight.w700 : FontWeight.w500,
-                color: filled ? NurungjiColors.dark : NurungjiColors.brown,
+        padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
+        decoration: BoxDecoration(
+          color: filled ? kSlotBg[i] : NurungjiColors.chipBg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border(left: BorderSide(color: kSlotBorder[i], width: 5)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontWeight: filled ? FontWeight.w700 : FontWeight.w500,
+                      color:
+                          filled ? NurungjiColors.dark : NurungjiColors.brown,
+                    ),
+                  ),
+                  if (sched.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      sched,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 11, color: NurungjiColors.brown),
+                    ),
+                  ],
+                ],
               ),
             ),
-          ),
-          if (filled)
-            IconButton(
-              onPressed: () => _removeSlot(i),
-              icon: const Icon(Icons.close, size: 18, color: NurungjiColors.brown),
-              tooltip: t('lb_remove'),
-            ),
-        ],
-      ),
+            if (filled) ...[
+              IconButton(
+                onPressed: () => _removeSlot(i),
+                icon: const Icon(Icons.close,
+                    size: 18, color: NurungjiColors.brown),
+                tooltip: t('lb_remove'),
+                visualDensity: VisualDensity.compact,
+              ),
+              ReorderableDragStartListener(
+                index: i,
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4),
+                  child: Icon(Icons.drag_handle,
+                      size: 20, color: NurungjiColors.brown),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

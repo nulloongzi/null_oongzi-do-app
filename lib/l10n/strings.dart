@@ -102,6 +102,18 @@ const Map<String, Map<String, String>> kStrings = {
   'lb_already': {'ko': '이미 도시락에 담겨 있어요', 'en': 'Already in your lunchbox'},
   'lb_added': {'ko': '도시락에 담았어요!', 'en': 'Added to lunchbox!'},
   'lb_removed': {'ko': '도시락에서 뺐어요', 'en': 'Removed from lunchbox'},
+  // 도시락(개선): 빈 상태 안내 · 드래그 편집 · 식단표 보강
+  'lb_empty_title': {'ko': '도시락이 비어있어요', 'en': 'Your lunchbox is empty'},
+  'lb_empty_desc': {
+    'ko': '지도에서 마음에 드는 팀을 “🍱 도시락에 담기” 하거나,\n아래에서 직접 팀을 추가해 식단표를 만들어 보세요.',
+    'en': 'Add teams from the map with “🍱 Add to lunchbox”,\nor add your own below to build a schedule.'
+  },
+  'lb_find_on_map': {'ko': '🗺️ 지도에서 팀 찾기', 'en': '🗺️ Find teams on the map'},
+  'lb_drag_hint': {'ko': '≡ 꾹 눌러 순서 바꾸기 · ✕ 빼기', 'en': 'Hold ≡ to reorder · ✕ to remove'},
+  'lb_remove_confirm': {'ko': '도시락에서 뺄까요?', 'en': 'Remove from lunchbox?'},
+  'lb_count': {'ko': '담은 팀', 'en': 'Saved'},
+  'lb_now': {'ko': '지금', 'en': 'Now'},
+  'lb_legend': {'ko': '색상 안내', 'en': 'Legend'},
   // 상세 시트(보완): 주소 복사 · 시간표 morph 펼침 힌트
   'copy_address': {'ko': '📍 주소 복사', 'en': '📍 Copy'},
   'address_copied': {'ko': '주소를 복사했어요', 'en': 'Address copied'},

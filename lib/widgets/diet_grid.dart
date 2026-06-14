@@ -60,19 +60,33 @@ class DietGrid extends StatelessWidget {
     final rowH = (320.0 / totalHours).clamp(34.0, 70.0).toDouble();
     final contentH = totalHours * rowH;
 
+    // 현재 시각 라인(오늘이 표시 범위 안일 때만).
+    final now = DateTime.now();
+    final todayIdx = now.weekday - 1; // 0=월 .. 6=일
+    final nowH = now.hour + now.minute / 60.0;
+    final showNow = nowH >= displayStart && nowH <= displayEnd;
+    final nowTop = (nowH - displayStart) * rowH;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _headerRow(),
+        _headerRow(todayIdx),
         SizedBox(
           height: contentH,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Stack(
             children: [
-              _timeCol(displayStart, displayEnd, rowH),
-              for (final day in scheduleDays)
-                Expanded(
-                    child: _dayCol(day, all, displayStart, totalHours, rowH)),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _timeCol(displayStart, displayEnd, rowH),
+                  for (var di = 0; di < scheduleDays.length; di++)
+                    Expanded(
+                        child: _dayCol(scheduleDays[di], all, displayStart,
+                            totalHours, rowH,
+                            isToday: di == todayIdx)),
+                ],
+              ),
+              if (showNow) _nowLine(nowTop),
             ],
           ),
         ),
@@ -80,17 +94,46 @@ class DietGrid extends StatelessWidget {
     );
   }
 
-  Widget _headerRow() {
+  Widget _nowLine(double top) {
+    return Positioned(
+      left: 36,
+      right: 0,
+      top: top - 1,
+      child: IgnorePointer(
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              decoration: BoxDecoration(
+                color: NurungjiColors.urgent,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(t('lb_now'),
+                  style: const TextStyle(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white)),
+            ),
+            const Expanded(child: Divider(color: NurungjiColors.urgent, height: 2, thickness: 1.5)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _headerRow(int todayIdx) {
     return Row(children: [
       const SizedBox(width: 36),
-      for (final d in scheduleDays)
+      for (var di = 0; di < scheduleDays.length; di++)
         Expanded(
           child: Center(
-            child: Text(i18nDay(d),
-                style: const TextStyle(
+            child: Text(i18nDay(scheduleDays[di]),
+                style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 12,
-                    color: NurungjiColors.dark)),
+                    color: di == todayIdx
+                        ? NurungjiColors.urgent
+                        : NurungjiColors.dark)),
           ),
         ),
     ]);
@@ -104,9 +147,16 @@ class DietGrid extends StatelessWidget {
           for (int h = start; h < end; h++)
             SizedBox(
               height: rowH,
-              child: Text(getHourLabel(h),
-                  style: const TextStyle(
-                      fontSize: 9, color: NurungjiColors.brown)),
+              width: double.infinity,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 4, top: 1),
+                child: Align(
+                  alignment: Alignment.topRight,
+                  child: Text(getHourLabel(h),
+                      style: const TextStyle(
+                          fontSize: 9, color: NurungjiColors.brown)),
+                ),
+              ),
             ),
         ],
       ),
@@ -114,13 +164,15 @@ class DietGrid extends StatelessWidget {
   }
 
   Widget _dayCol(String day, List<({SchedEvent e, DietTeam t})> all,
-      int displayStart, int totalHours, double rowH) {
+      int displayStart, int totalHours, double rowH,
+      {bool isToday = false}) {
     final dayEvents = all.where((x) => x.e.day == day).toList()
       ..sort((a, b) => a.e.start.compareTo(b.e.start));
 
     return Container(
-      decoration: const BoxDecoration(
-        border: Border(left: BorderSide(color: Color(0x11000000))),
+      decoration: BoxDecoration(
+        color: isToday ? const Color(0x14FF7043) : null, // 오늘 열 옅은 강조
+        border: const Border(left: BorderSide(color: Color(0x11000000))),
       ),
       child: Stack(
         children: [
@@ -155,7 +207,7 @@ class DietGrid extends StatelessWidget {
       final p = dayEvents[j].e;
       if (evt.start < p.end && evt.end > p.start) indent++;
     }
-    if (indent > 2) indent = 0;
+    if (indent > 3) indent = 3; // 너무 깊어지면 더는 안쪽으로 밀지 않음(겹쳐 보이게)
 
     final top = (evt.start - displayStart) * rowH;
     final height = ((evt.end - evt.start) * rowH - 2).clamp(18.0, 9999.0).toDouble();
