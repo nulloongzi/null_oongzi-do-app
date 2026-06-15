@@ -224,6 +224,10 @@ class DietGrid extends StatelessWidget {
           color: _slotBg[slot],
           borderRadius: BorderRadius.circular(4),
           border: Border(left: BorderSide(color: _slotBorder[slot], width: 3)),
+          boxShadow: const [
+            BoxShadow(
+                color: Color(0x14000000), blurRadius: 3, offset: Offset(0, 1)),
+          ],
         ),
         child: Text(
           team.isCustom ? '🍙${team.name}' : team.name,

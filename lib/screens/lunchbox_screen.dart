@@ -265,11 +265,15 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
                   ),
                 ),
               const SizedBox(height: 14),
-              // 📅 식단표 토글 + 애니메이션 펼침
+              // 📅 식단표 토글(브라운 채움 버튼) + 애니메이션 펼침
               SizedBox(
                 width: double.infinity,
-                child: OutlinedButton(
+                child: ElevatedButton(
                   onPressed: () => setState(() => _showDiet = !_showDiet),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: NurungjiColors.brown,
+                    foregroundColor: Colors.white,
+                  ),
                   child: Text(_showDiet ? t('lb_diet_close') : t('lb_diet_open')),
                 ),
               ),
@@ -278,8 +282,19 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
                 curve: Curves.easeInOutCubic,
                 alignment: Alignment.topCenter,
                 child: _showDiet
-                    ? Padding(
-                        padding: const EdgeInsets.only(top: 12),
+                    ? Container(
+                        margin: const EdgeInsets.only(top: 12),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: const [
+                            BoxShadow(
+                                color: Color(0x0F000000),
+                                blurRadius: 12,
+                                offset: Offset(0, 4)),
+                          ],
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           mainAxisSize: MainAxisSize.min,
@@ -393,58 +408,91 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
             : (r.isCustom ? '🍙 ${r.name}' : r.name));
     final selected = _selectedSlot == i;
 
-    return GestureDetector(
-      onTap: () => _onSlotTap(i),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: filled ? kSlotBg[i] : NurungjiColors.chipBg,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected ? NurungjiColors.teal : kSlotBorder[i],
-            width: selected ? 3 : 1.5,
+    // 웹 .lb-cell 규칙: 빈 칸=회색 점선, 채움=흰 배경+노란 실선, 선택=urgent+#ffecb3.
+    final content = Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Center(
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: filled ? 13 : 12,
+              fontWeight: filled ? FontWeight.w700 : FontWeight.w600,
+              color: filled ? NurungjiColors.dark : const Color(0xFFBCAAA4),
+            ),
           ),
         ),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Align(
-              alignment: Alignment.center,
-              child: Text(
-                label,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: filled ? FontWeight.w700 : FontWeight.w500,
-                  color: filled ? NurungjiColors.dark : NurungjiColors.brown,
+        if (_editMode && filled)
+          Positioned(
+            top: -8,
+            right: -8,
+            child: GestureDetector(
+              onTap: () => _removeSlot(i),
+              child: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF5252),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                  boxShadow: const [
+                    BoxShadow(
+                        color: Color(0x66FF5252),
+                        blurRadius: 8,
+                        offset: Offset(0, 3)),
+                  ],
                 ),
+                child: const Icon(Icons.close, size: 13, color: Colors.white),
               ),
             ),
-            if (_editMode && filled)
-              Positioned(
-                top: -4,
-                right: -4,
-                child: GestureDetector(
-                  onTap: () => _removeSlot(i),
-                  child: Container(
-                    width: 22,
-                    height: 22,
-                    decoration: const BoxDecoration(
-                      color: NurungjiColors.urgent,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.close,
-                        size: 14, color: Colors.white),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
+          ),
+      ],
     );
+
+    final inner = filled
+        ? AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: selected ? const Color(0xFFFFECB3) : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color:
+                    selected ? NurungjiColors.urgent : NurungjiColors.yellow,
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: selected
+                      ? const Color(0x33FF7043)
+                      : const Color(0x0A000000),
+                  blurRadius: selected ? 15 : 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: content,
+          )
+        : CustomPaint(
+            foregroundPainter: _DashedRRectPainter(
+              color: const Color(0x66BCAAA4),
+              radius: 16,
+              strokeWidth: 1.5,
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0x80FFFDE7),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: content,
+            ),
+          );
+
+    return GestureDetector(onTap: () => _onSlotTap(i), child: inner);
   }
 
   /// 식단표 색상 범례: 담은 팀 ↔ 칸 색 매핑.
@@ -496,4 +544,51 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
     }
     return out;
   }
+}
+
+/// 빈 슬롯 점선 테두리(웹 .lb-cell.empty의 dashed border 재현).
+class _DashedRRectPainter extends CustomPainter {
+  final Color color;
+  final double radius;
+  final double strokeWidth;
+  final double dashWidth;
+  final double dashGap;
+  _DashedRRectPainter({
+    required this.color,
+    required this.radius,
+    required this.strokeWidth,
+    this.dashWidth = 5,
+    this.dashGap = 4,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+    final inset = strokeWidth / 2;
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(inset, inset, size.width - strokeWidth, size.height - strokeWidth),
+      Radius.circular(radius),
+    );
+    final path = Path()..addRRect(rrect);
+    for (final metric in path.computeMetrics()) {
+      var dist = 0.0;
+      while (dist < metric.length) {
+        final next = dist + dashWidth;
+        canvas.drawPath(
+          metric.extractPath(dist, next.clamp(0, metric.length)),
+          paint,
+        );
+        dist = next + dashGap;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedRRectPainter old) =>
+      old.color != color ||
+      old.radius != radius ||
+      old.strokeWidth != strokeWidth;
 }

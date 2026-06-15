@@ -1,7 +1,12 @@
 // profile_screen.dart — 내 프로필(밥이름 카드). 웹 renderProfileCard/editNickname 포팅.
+import 'dart:io';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/club.dart';
 import '../models/profile.dart';
 import '../services/data_repository.dart';
@@ -11,7 +16,6 @@ import '../services/profile_service.dart';
 import '../theme.dart';
 import '../widgets/app_sheet.dart';
 import 'lunchbox_screen.dart';
-import 'share_image_screen.dart';
 
 /// 내 정보 팝업: 풀스크린 라우트 대신 지도 위로 뜨는 모달 바텀시트(웹 프로필 오버레이 대응).
 Future<void> showProfileSheet(BuildContext context) =>
@@ -28,10 +32,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _svc = ProfileService();
   final _repo = DataRepository();
   final _lb = LunchboxService();
+  final _cardKey = GlobalKey(); // 🎁 포장하기: 네임카드 본체만 캡처
   Profile? _profile;
   String? _mainTeam; // 🏆 대표 팀 = 도시락 첫 칸
   bool _loading = true;
+  bool _wrapping = false;
   String? _uid;
+
+  // 🎁 포장하기: .profile-card 본체만 RepaintBoundary로 캡처 → PNG → 네이티브 공유.
+  Future<void> _wrapShare() async {
+    setState(() => _wrapping = true);
+    try {
+      final boundary =
+          _cardKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) return;
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (bytes == null) return;
+      final dir = await getTemporaryDirectory();
+      final file = File(
+          '${dir.path}/nurungji_namecard_${DateTime.now().millisecondsSinceEpoch}.png');
+      await file.writeAsBytes(bytes.buffer.asUint8List());
+      await Share.shareXFiles([XFile(file.path)]);
+    } catch (e) {
+      _snack('${t('err_share')}: $e');
+    } finally {
+      if (mounted) setState(() => _wrapping = false);
+    }
+  }
 
   @override
   void initState() {
@@ -162,7 +190,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Center(child: CircularProgressIndicator()),
               )
             else ...[
-              if (_profile != null) _card(_profile!),
+              if (_profile != null)
+                RepaintBoundary(key: _cardKey, child: _card(_profile!)),
               const SizedBox(height: 20),
               ElevatedButton.icon(
                 // 도시락도 시트로 (이 시트 위에 스택). 풀스크린 전환 제거.
@@ -171,26 +200,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 label: Text(t('my_lunchbox')),
               ),
               const SizedBox(height: 10),
+              // 🎁 포장하기: 네임카드 본체만 캡처해 공유 (Primary, 시각 우선순위 최상).
               ElevatedButton.icon(
-                // 🎁 포장하기: 네임카드를 이미지로 캡처해 공유.
-                onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const ShareImageScreen())),
-                icon: const Icon(Icons.card_giftcard, size: 18),
+                onPressed: _wrapping ? null : _wrapShare,
+                icon: _wrapping
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.card_giftcard, size: 18),
                 label: Text(t('wrap_share')),
                 style: ElevatedButton.styleFrom(
                     backgroundColor: NurungjiColors.brown,
                     foregroundColor: Colors.white),
               ),
               const SizedBox(height: 10),
-              OutlinedButton.icon(
+              // 로그아웃: 회색 배경·짙은 회색 텍스트로 우선순위 낮춤.
+              ElevatedButton.icon(
                 onPressed: _signOut,
-                icon: const Icon(Icons.logout, size: 18, color: Colors.red),
-                label: Text(t('logout'),
-                    style: const TextStyle(color: Colors.red)),
-                style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.red)),
+                icon: const Icon(Icons.logout, size: 18, color: Color(0xFF555555)),
+                label: Text(t('logout')),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFE0E0E0),
+                    foregroundColor: const Color(0xFF555555),
+                    elevation: 0),
               ),
             ],
           ],
@@ -219,10 +253,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               left: 0,
               child: Text(
                 p.nickname,
-                style: TextStyle(
+                style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: NurungjiColors.dark.withValues(alpha: 0.3)),
+                    color: Color(0xFFBCAAA4)),
               ),
             ),
           Column(
@@ -266,11 +300,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   padding: const EdgeInsets.only(top: 12),
                   child: Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.7),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0x22000000)),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: const [
+                        BoxShadow(
+                            color: Color(0x1A000000),
+                            blurRadius: 8,
+                            offset: Offset(0, 3)),
+                      ],
                     ),
                     child: Text('🏆 $_mainTeam',
                         style: const TextStyle(
