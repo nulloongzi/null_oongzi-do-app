@@ -114,6 +114,13 @@ const Map<String, Map<String, String>> kStrings = {
   'lb_count': {'ko': '담은 팀', 'en': 'Saved'},
   'lb_now': {'ko': '지금', 'en': 'Now'},
   'lb_legend': {'ko': '색상 안내', 'en': 'Legend'},
+  // 도시락(그리드+편집모드) · 식단표 토글 · 원산지 네임카드
+  'lb_edit': {'ko': '🍽 편집', 'en': '🍽 Edit'},
+  'lb_done': {'ko': '완료', 'en': 'Done'},
+  'lb_diet_open': {'ko': '📅 식단표 (스케줄 확인)', 'en': '📅 Schedule'},
+  'lb_diet_close': {'ko': '📅 식단표 접기', 'en': '📅 Hide schedule'},
+  'lb_main_team': {'ko': '대표 팀', 'en': 'Main team'},
+  'wrap_share': {'ko': '🎁 포장하기', 'en': '🎁 Wrap & share'},
   // 상세 시트(보완): 주소 복사 · 시간표 morph 펼침 힌트
   'copy_address': {'ko': '📍 주소 복사', 'en': '📍 Copy'},
   'address_copied': {'ko': '주소를 복사했어요', 'en': 'Address copied'},

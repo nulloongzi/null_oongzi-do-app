@@ -2,8 +2,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../models/club.dart';
 import '../models/profile.dart';
+import '../services/data_repository.dart';
 import '../services/i18n.dart';
+import '../services/lunchbox_service.dart';
 import '../services/profile_service.dart';
 import '../theme.dart';
 import '../widgets/app_sheet.dart';
@@ -23,7 +26,10 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final _svc = ProfileService();
+  final _repo = DataRepository();
+  final _lb = LunchboxService();
   Profile? _profile;
+  String? _mainTeam; // 🏆 대표 팀 = 도시락 첫 칸
   bool _loading = true;
   String? _uid;
 
@@ -43,8 +49,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final p = await _svc.ensureProfile(uid);
       if (mounted) setState(() => _profile = p);
+      await _loadMainTeam(uid);
     } catch (_) {}
     if (mounted) setState(() => _loading = false);
+  }
+
+  // 대표 팀: 도시락 첫 번째로 채워진 칸의 팀 이름(클럽 또는 커스텀).
+  Future<void> _loadMainTeam(String uid) async {
+    try {
+      final results = await Future.wait([_repo.loadClubs(), _lb.load(uid)]);
+      final clubs = results[0] as List<Club>;
+      final data = results[1] as LunchboxData;
+      final id = data.bookmarks.firstWhere((e) => e != null, orElse: () => null);
+      if (id == null) return;
+      String? name;
+      if (data.customTeams.containsKey(id)) {
+        final m = data.customTeams[id];
+        name = (m is Map ? m['name'] : null) as String?;
+      } else {
+        for (final c in clubs) {
+          if (c.id == id) {
+            name = c.name;
+            break;
+          }
+        }
+      }
+      if (name != null && mounted) setState(() => _mainTeam = name);
+    } catch (_) {}
   }
 
   void _snack(String m) {
@@ -140,21 +171,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 label: Text(t('my_lunchbox')),
               ),
               const SizedBox(height: 10),
-              OutlinedButton.icon(
+              ElevatedButton.icon(
+                // 🎁 포장하기: 네임카드를 이미지로 캡처해 공유.
                 onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(
                         builder: (_) => const ShareImageScreen())),
-                icon: const Icon(Icons.ios_share, size: 18),
-                label: Text(t('share_image_btn_profile')),
+                icon: const Icon(Icons.card_giftcard, size: 18),
+                label: Text(t('wrap_share')),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: NurungjiColors.brown,
+                    foregroundColor: Colors.white),
               ),
-              const SizedBox(height: 10),
-              if (_profile != null)
-                OutlinedButton.icon(
-                  onPressed: _rename,
-                  icon: const Icon(Icons.edit, size: 18),
-                  label: Text(t('change_nickname')),
-                ),
               const SizedBox(height: 10),
               OutlinedButton.icon(
                 onPressed: _signOut,
@@ -182,22 +210,77 @@ class _ProfileScreenState extends State<ProfileScreen> {
           BoxShadow(color: Color(0x22000000), blurRadius: 16, offset: Offset(0, 6)),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          const Text('🍚', style: TextStyle(fontSize: 44)),
-          const SizedBox(height: 8),
-          Text(p.fullNickname,
-              style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                  color: NurungjiColors.dark)),
-          if (joined.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(joined,
-                  style: const TextStyle(color: NurungjiColors.brown)),
+          // 좌상단 워터마크: 밥 종류(등급/원산지 느낌).
+          if (p.nickname.isNotEmpty)
+            Positioned(
+              top: 0,
+              left: 0,
+              child: Text(
+                p.nickname,
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: NurungjiColors.dark.withValues(alpha: 0.3)),
+              ),
             ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 14),
+              const Text('🍚', style: TextStyle(fontSize: 44)),
+              const SizedBox(height: 8),
+              // 닉네임 + 🥢 인라인 수정
+              Row(
+                children: [
+                  Flexible(
+                    child: Text(p.fullNickname,
+                        style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            color: NurungjiColors.dark)),
+                  ),
+                  const SizedBox(width: 6),
+                  GestureDetector(
+                    onTap: _rename,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(
+                        color: Color(0x33FFFFFF),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Text('🥢', style: TextStyle(fontSize: 14)),
+                    ),
+                  ),
+                ],
+              ),
+              if (joined.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(joined,
+                      style: const TextStyle(color: NurungjiColors.brown)),
+                ),
+              if (_mainTeam != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0x22000000)),
+                    ),
+                    child: Text('🏆 $_mainTeam',
+                        style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: NurungjiColors.dark)),
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
     );
