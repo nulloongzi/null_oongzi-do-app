@@ -11,9 +11,9 @@ import '../theme.dart';
 import '../widgets/app_sheet.dart';
 import '../widgets/diet_grid.dart';
 
-/// 도시락 팝업: 풀스크린 라우트 대신 지도 위로 뜨는 모달 바텀시트(웹 도시락 오버레이 대응).
-Future<void> showLunchboxSheet(BuildContext context) =>
-    showAppSheet<void>(context, child: const LunchboxScreen());
+/// 도시락 팝업: 웹 도시락 오버레이처럼 화면 중앙에 뜨는 다이얼로그.
+Future<void> showLunchboxDialog(BuildContext context) =>
+    showAppDialog<void>(context, child: const LunchboxScreen());
 
 /// 슬롯/식단표 공통 색(밥·국·반찬1~3). 위치(=반찬 칸)에 색이 고정된다.
 const kSlotBg = [
@@ -209,15 +209,24 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // 헤더: 좌측 타이틀 · 우측 🍙 직접추가 / 🍽 편집(웹 .lb-header)
             Row(
               children: [
                 Expanded(child: SheetTitle(t('lunchbox_title'))),
-                if (!_loading && _filledCount > 0) _countPill(),
+                if (!_loading) ...[
+                  _headerBtn(t('lb_add_short'), _addCustom),
+                  if (_filledCount > 0)
+                    _headerBtn(
+                      _editMode ? t('lb_done') : t('lb_edit'),
+                      _toggleEdit,
+                      active: _editMode,
+                    ),
+                ],
               ],
             ),
             if (_loading)
@@ -226,31 +235,6 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
                 child: Center(child: CircularProgressIndicator()),
               )
             else ...[
-              // 상단 액션: 🍙 직접추가 · 🍽 편집/완료
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _addCustom,
-                      icon: const Icon(Icons.add, size: 18),
-                      label: Text(t('add_custom')),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  if (_filledCount > 0)
-                    OutlinedButton(
-                      onPressed: _toggleEdit,
-                      style: _editMode
-                          ? OutlinedButton.styleFrom(
-                              backgroundColor: NurungjiColors.yellow,
-                              side: const BorderSide(
-                                  color: NurungjiColors.yellow))
-                          : null,
-                      child: Text(_editMode ? t('lb_done') : t('lb_edit')),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 10),
               if (_filledCount == 0) _emptyBanner(),
               _bentoTray(),
               if (_editMode)
@@ -313,19 +297,22 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
     );
   }
 
-  Widget _countPill() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: NurungjiColors.chipBg,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        '${t('lb_count')} $_filledCount/5',
-        style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: NurungjiColors.chipFg),
+  Widget _headerBtn(String label, VoidCallback onTap, {bool active = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: TextButton(
+        onPressed: onTap,
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          minimumSize: const Size(0, 34),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          backgroundColor: active ? NurungjiColors.yellow : NurungjiColors.chipBg,
+          foregroundColor: NurungjiColors.dark,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        child: Text(label,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
       ),
     );
   }

@@ -119,6 +119,7 @@ const Map<String, Map<String, String>> kStrings = {
   'lb_done': {'ko': '완료', 'en': 'Done'},
   'lb_diet_open': {'ko': '📅 식단표 (스케줄 확인)', 'en': '📅 Schedule'},
   'lb_diet_close': {'ko': '📅 식단표 접기', 'en': '📅 Hide schedule'},
+  'lb_add_short': {'ko': '🍙 직접추가', 'en': '🍙 Add'},
   'lb_main_team': {'ko': '대표 팀', 'en': 'Main team'},
   'wrap_share': {'ko': '🎁 포장하기', 'en': '🎁 Wrap & share'},
   // 상세 시트(보완): 주소 복사 · 시간표 morph 펼침 힌트

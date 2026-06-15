@@ -128,10 +128,10 @@ class _MapScreenState extends State<MapScreen> {
     } catch (_) {}
   }
 
-  // 도시락/프로필: 풀스크린 라우트 대신 지도 위 모달 시트(웹 오버레이 동작 대응).
-  void _openLunchbox() => showLunchboxSheet(context);
+  // 도시락/프로필: 웹 오버레이처럼 화면 중앙 다이얼로그로.
+  void _openLunchbox() => showLunchboxDialog(context);
 
-  void _openProfile() => showProfileSheet(context);
+  void _openProfile() => showProfileDialog(context);
 
   // 딥링크(?club=/?spot=) → 탭 전환 + 상세 오픈. 메모리에 없으면 단건 조회.
   Future<void> _handleDeepLink(DeepLink d) async {

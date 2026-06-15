@@ -38,6 +38,42 @@ Future<void> _maybeShowCoach(BuildContext context) async {
   } catch (_) {}
 }
 
+/// 임의의 PNG(예: 프로필 네임카드 캡처)를 인스타 스토리로 공유. IG 미설치/실패 시 OS 공유시트 폴백.
+/// 상세시트의 스토리 공유와 동일한 경로(AppinioSocialShare)를 재사용한다.
+Future<void> shareImagePngToInstagramStory(
+  BuildContext context,
+  Uint8List png, {
+  String? url,
+}) async {
+  final messenger = ScaffoldMessenger.of(context);
+  if (url != null && url.isNotEmpty) await ShareService.copy(url);
+  final dir = await getTemporaryDirectory();
+  final file = File(
+      '${dir.path}/nurungji_share_${DateTime.now().millisecondsSinceEpoch}.png');
+  await file.writeAsBytes(png);
+
+  final appinio = AppinioSocialShare();
+  try {
+    if (Platform.isAndroid) {
+      await appinio.android.shareToInstagramStory(
+        kFacebookAppId,
+        stickerImage: file.path,
+        backgroundTopColor: '#fff8e1',
+        backgroundBottomColor: '#fac710',
+        attributionURL: url ?? '',
+      );
+    } else {
+      await Share.shareXFiles([XFile(file.path)], text: url);
+    }
+  } catch (e) {
+    try {
+      await Share.shareXFiles([XFile(file.path)], text: url);
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text('${t('err_share')}: $e')));
+    }
+  }
+}
+
 Future<void> shareStoryCard(BuildContext context, StoryCardData data) async {
   final messenger = ScaffoldMessenger.of(context);
   // 1회 코치: 링크 스티커 붙이는 법 안내

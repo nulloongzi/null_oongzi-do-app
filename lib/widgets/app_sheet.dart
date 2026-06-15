@@ -25,6 +25,33 @@ Future<T?> showAppSheet<T>(
   );
 }
 
+/// 화면 중앙 다이얼로그(웹 .lunchbox-overlay / .profile-overlay 대응).
+/// 배경 dim=black54, 둥근 베이지 카드, 내부 스크롤 가능(maxHeight 캡).
+/// 바텀시트 대신 중앙 모달로 띄울 때 사용(도시락·프로필).
+Future<T?> showAppDialog<T>(
+  BuildContext context, {
+  required Widget child,
+  Color? background,
+}) {
+  return showDialog<T>(
+    context: context,
+    barrierColor: Colors.black54,
+    builder: (ctx) {
+      final h = MediaQuery.of(ctx).size.height;
+      return Dialog(
+        backgroundColor: background ?? const Color(0xFFFFF8E1), // 연 베이지
+        insetPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 40),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        clipBehavior: Clip.antiAlias,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: 380, maxHeight: h * 0.9),
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
 /// 시트 본문 상단 제목 (AppBar를 대체). 좌측 정렬·굵게, 누룽지 다크.
 class SheetTitle extends StatelessWidget {
   final String text;
