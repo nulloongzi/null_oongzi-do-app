@@ -10,6 +10,7 @@ import '../services/schedule_parse.dart';
 import '../theme.dart';
 import '../widgets/app_sheet.dart';
 import '../widgets/diet_grid.dart';
+import 'add_custom_team_sheet.dart';
 
 /// 도시락 팝업: 웹 도시락 오버레이처럼 화면 중앙에 뜨는 다이얼로그.
 Future<void> showLunchboxDialog(BuildContext context) =>
@@ -150,38 +151,15 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
   Future<void> _addCustom() async {
     final uid = _repo.currentUid;
     if (uid == null) return;
-    final name = await _prompt(t('lb_team_name'), t('lb_add_name_hint'));
-    if (name == null || name.trim().isEmpty) return;
-    final sched = await _prompt(t('lb_sched_hint'), t('lb_add_sched_hint'));
-    if (sched == null || sched.trim().isEmpty) return;
-    final err = await _svc.addCustomTeam(uid, name.trim(), sched.trim());
+    final res = await showAddCustomTeamSheet(context);
+    if (res == null) return;
+    final err = await _svc.addCustomTeam(uid, res.name, res.schedule);
     if (err != null) {
       _snack(err);
       return;
     }
     await _load();
     _snack(t('lb_added'));
-  }
-
-  Future<String?> _prompt(String title, String hint) {
-    final c = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder: (dctx) => AlertDialog(
-        title: Text(title),
-        content: TextField(
-            controller: c,
-            autofocus: true,
-            decoration: InputDecoration(hintText: hint)),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(dctx), child: Text(t('cancel'))),
-          TextButton(
-              onPressed: () => Navigator.pop(dctx, c.text),
-              child: Text(t('confirm'))),
-        ],
-      ),
-    );
   }
 
   ({String name, bool isCustom, List<SchedEvent> events})? _resolve(String id) {
@@ -216,8 +194,17 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
           children: [
             // 헤더: 좌측 타이틀 · 우측 🍙 직접추가 / 🍽 편집(웹 .lb-header)
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Expanded(child: SheetTitle(t('lunchbox_title'))),
+                Expanded(
+                  child: Text(
+                    t('lunchbox_title'),
+                    style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: NurungjiColors.dark),
+                  ),
+                ),
                 if (!_loading) ...[
                   _headerBtn(t('lb_add_short'), _addCustom),
                   if (_filledCount > 0)
@@ -229,6 +216,7 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
                 ],
               ],
             ),
+            const SizedBox(height: 16),
             if (_loading)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 48),
