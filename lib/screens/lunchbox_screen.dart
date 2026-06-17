@@ -151,7 +151,7 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
   Future<void> _addCustom() async {
     final uid = _repo.currentUid;
     if (uid == null) return;
-    final res = await showAddCustomTeamSheet(context);
+    final res = await showAddCustomTeamDialog(context);
     if (res == null) return;
     final err = await _svc.addCustomTeam(uid, res.name, res.schedule);
     if (err != null) {

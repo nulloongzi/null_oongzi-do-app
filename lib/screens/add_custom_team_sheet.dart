@@ -1,4 +1,4 @@
-// add_custom_team_sheet.dart — 도시락 '🍙 직접추가' 폼. 팀 등록 폼과 동일 톤(흰 배경 시트).
+// add_custom_team_sheet.dart — 도시락 '🍙 직접추가' 폼. 도시락과 동일하게 중앙 다이얼로그.
 // 지도에 없는 나만의 팀/일정을 이름 + 요일·시간 블록으로 입력 → (name, schedule) 반환.
 import 'package:flutter/material.dart';
 import '../models/schedule_block.dart';
@@ -7,10 +7,10 @@ import '../theme.dart';
 import '../widgets/app_sheet.dart';
 import '../widgets/schedule_editor.dart';
 
-/// 직접추가 시트. 완료 시 (name, schedule) 레코드 반환, 취소면 null.
-Future<({String name, String schedule})?> showAddCustomTeamSheet(
+/// 직접추가 다이얼로그. 완료 시 (name, schedule) 레코드 반환, 취소면 null.
+Future<({String name, String schedule})?> showAddCustomTeamDialog(
         BuildContext context) =>
-    showAppSheet<({String name, String schedule})>(
+    showAppDialog<({String name, String schedule})>(
       context,
       background: Colors.white,
       child: const AddCustomTeamSheet(),
@@ -49,7 +49,7 @@ class _AddCustomTeamSheetState extends State<AddCustomTeamSheet> {
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
