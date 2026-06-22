@@ -121,6 +121,8 @@ const Map<String, Map<String, String>> kStrings = {
   'lb_slot_side2': {'ko': '반찬 2', 'en': 'Side 2'},
   'lb_slot_side3': {'ko': '반찬 3', 'en': 'Side 3'},
   'lb_save_fail': {'ko': '저장 실패', 'en': 'Save failed'},
+  'lb_save_err': {'ko': '저장에 실패했어요. 잠시 후 다시 시도해 주세요', 'en': 'Save failed. Please try again.'},
+  'err_anon_auth': {'ko': '로그인 처리에 실패했어요. 잠시 후 다시 시도해 주세요', 'en': 'Sign-in failed. Please try again shortly.'},
   'sched_add': {'ko': '시간대 추가', 'en': 'Add time'},
   'map_pick_title': {'ko': '위치 선택', 'en': 'Pick location'},
   'map_pick_set': {'ko': '이 위치로 설정', 'en': 'Use this location'},

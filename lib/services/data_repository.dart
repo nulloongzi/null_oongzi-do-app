@@ -64,7 +64,9 @@ class DataRepository {
     final u = FirebaseAuth.instance.currentUser;
     if (u != null) return u.uid;
     final cred = await FirebaseAuth.instance.signInAnonymously();
-    return cred.user!.uid;
+    final user = cred.user;
+    if (user == null) throw Exception(t('err_anon_auth'));
+    return user.uid;
   }
 
   // ── 픽업 (pickup_games) ──

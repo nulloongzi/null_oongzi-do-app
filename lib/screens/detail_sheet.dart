@@ -321,6 +321,7 @@ class _BookmarkButton extends StatefulWidget {
 class _BookmarkButtonState extends State<_BookmarkButton> {
   final _svc = LunchboxService();
   bool? _on; // null=로딩
+  bool _busy = false; // 토글 처리 중(더블탭 중복 방지)
 
   @override
   void initState() {
@@ -338,12 +339,14 @@ class _BookmarkButtonState extends State<_BookmarkButton> {
   }
 
   Future<void> _toggle() async {
-    if (_on == null) return;
+    if (_on == null || _busy) return;
+    _busy = true;
     final cur = _on!;
     setState(() => _on = !cur); // 낙관적 업데이트
     final err = cur
         ? await _svc.removeBookmark(widget.uid, widget.teamId)
         : await _svc.addBookmark(widget.uid, widget.teamId);
+    _busy = false;
     if (!mounted) return;
     if (err != null) {
       setState(() => _on = cur); // 실패 시 롤백

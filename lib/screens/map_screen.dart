@@ -210,6 +210,7 @@ class _MapScreenState extends State<MapScreen> {
   Map<String, NMarker> _markersById = {};
   List<_MarkerSpec> _lastSpecs = const [];
   Timer? _labelFadeTimer;
+  int _markerGen = 0; // 마커 새로고침 세대 토큰(동시 호출 재진입 가드)
 
   // 마커 라벨 아이콘 캐시(이름·상태별 1회 렌더) + 핀 에셋 프리캐시(미로드 시 핀이 빈칸으로 캡처되는 것 방지)
   final Map<String, NOverlayImage> _labelIconCache = {};
@@ -493,6 +494,7 @@ class _MapScreenState extends State<MapScreen> {
   Future<void> _refreshMarkers({bool fade = false}) async {
     final c = _controller;
     if (c == null) return;
+    final gen = ++_markerGen; // 동시 새로고침 시 최신만 반영(재진입 가드)
     // 1) 표시할 항목 수집(클럽/스팟 공통 스펙)
     final items = <_MarkerSpec>[];
     if (_tab == 'clubs') {
@@ -531,7 +533,7 @@ class _MapScreenState extends State<MapScreen> {
         ? await Future.wait(items.map((s) => _labeledIcon(s.name,
             red: s.red, urgent: s.urgent, verified: s.verified)))
         : const <NOverlayImage?>[];
-    if (!mounted || _controller == null) return;
+    if (gen != _markerGen || !mounted || _controller == null) return;
 
     // 3) 마커 생성(급구 클럽=비클러스터, 그 외=클러스터러블)
     final markers = <NMarker>[];
@@ -560,6 +562,7 @@ class _MapScreenState extends State<MapScreen> {
     // 4) 아이콘 빌드를 끝낸 뒤에 clear+add → 사라졌다 뜨는 끊김 최소화
     await c.clearOverlays();
     if (overlays.isNotEmpty) await c.addOverlayAll(overlays);
+    if (gen != _markerGen) return; // 더 새 새로고침 진행 중 → 보관/페이드 생략(그쪽이 덮어씀)
 
     // 라벨 in-place 토글용으로 현재 마커/스펙 보관(인덱스 정렬됨).
     _lastSpecs = items;
@@ -578,11 +581,12 @@ class _MapScreenState extends State<MapScreen> {
     if (specs.isEmpty || _markersById.isEmpty) {
       return _refreshMarkers(fade: true);
     }
+    final gen = _markerGen; // 적용 도중 풀 리프레시가 끼어들면 양보(재진입 가드)
     final icons = _showLabels
         ? await Future.wait(specs.map((s) => _labeledIcon(s.name,
             red: s.red, urgent: s.urgent, verified: s.verified)))
         : const <NOverlayImage?>[];
-    if (!mounted) return;
+    if (gen != _markerGen || !mounted) return;
     final updated = <NMarker>[];
     for (var i = 0; i < specs.length; i++) {
       final m = _markersById[specs[i].id];

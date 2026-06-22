@@ -16,14 +16,15 @@ class Profile {
   });
 
   factory Profile.fromMap(Map<String, dynamic> d) {
+    String? s(dynamic v) => v is String ? v : null; // 비문자열(스키마 변형) → null
     DateTime? created;
     final c = d['created_at'];
     if (c is Timestamp) created = c.toDate();
-    final full = (d['full_nickname'] ?? d['nickname'] ?? '') as String;
+    final full = s(d['full_nickname']) ?? s(d['nickname']) ?? '';
     return Profile(
       fullNickname: full,
-      nickname: (d['nickname'] ?? full.split('-').first) as String,
-      color: (d['color'] ?? '#FFF9C4') as String,
+      nickname: s(d['nickname']) ?? full.split('-').first,
+      color: s(d['color']) ?? '#FFF9C4',
       createdAt: created,
     );
   }

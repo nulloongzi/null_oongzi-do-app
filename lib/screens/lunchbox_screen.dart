@@ -74,25 +74,30 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
     }
   }
 
-  Future<void> _save() async {
+  Future<bool> _save() async {
     final uid = _repo.currentUid;
     final d = _data;
-    if (uid == null || d == null) return;
+    if (uid == null || d == null) return false;
     try {
       await _svc.save(uid, d);
+      return true;
     } catch (e) {
       _snack('${t('lb_save_fail')}: $e');
+      return false;
     }
   }
 
   Future<void> _removeSlot(int i) async {
     final d = _data;
     if (d == null) return;
+    final prev = d.bookmarks[i];
     setState(() {
       d.bookmarks[i] = null;
       _selectedSlot = null;
     });
-    await _save();
+    if (!await _save() && mounted) {
+      setState(() => d.bookmarks[i] = prev); // 저장 실패 → 롤백
+    }
   }
 
   // 탭 1: 칸 선택, 탭 2: 두 칸 스왑(순서 변경) → 저장.
@@ -109,11 +114,17 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
       return;
     }
     final from = _selectedSlot!;
-    final tmp = d.bookmarks[from];
-    d.bookmarks[from] = d.bookmarks[i];
-    d.bookmarks[i] = tmp;
+    final a = d.bookmarks[from];
+    final b = d.bookmarks[i];
+    d.bookmarks[from] = b;
+    d.bookmarks[i] = a;
     setState(() => _selectedSlot = null);
-    await _save();
+    if (!await _save() && mounted) {
+      setState(() {
+        d.bookmarks[from] = a; // 저장 실패 → 롤백
+        d.bookmarks[i] = b;
+      });
+    }
   }
 
   Future<void> _addCustom() async {
