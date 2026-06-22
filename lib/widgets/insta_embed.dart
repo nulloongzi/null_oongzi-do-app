@@ -60,7 +60,9 @@ class _InstaEmbedState extends State<InstaEmbed> {
           if (req.isMainFrame && !req.url.contains('/embed')) {
             final u = Uri.tryParse(req.url);
             if (u != null) {
-              launchUrl(u, mode: LaunchMode.externalApplication);
+              // 핸들러 없는 URL 등 실패 시 unhandled rejection 방지.
+              launchUrl(u, mode: LaunchMode.externalApplication)
+                  .catchError((_) => false);
             }
             return NavigationDecision.prevent;
           }

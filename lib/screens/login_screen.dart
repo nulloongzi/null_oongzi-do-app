@@ -44,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
       Track.event('login', {'method': 'google'});
       // 성공 시 AuthGate가 자동으로 홈으로 전환
     } catch (e) {
-      setState(() => _error = '구글 로그인 실패: $e');
+      setState(() => _error = t('login_google_fail'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -67,10 +67,10 @@ class _LoginScreenState extends State<LoginScreen> {
             .signInWithEmailAndPassword(email: email, password: pw);
         Track.event('login', {'method': 'email'});
       }
-    } on FirebaseAuthException catch (e) {
-      setState(() => _error = '오류: ${e.message ?? e.code}');
-    } catch (e) {
-      setState(() => _error = '오류: $e');
+    } on FirebaseAuthException catch (_) {
+      setState(() => _error = t('login_err'));
+    } catch (_) {
+      setState(() => _error = t('login_err'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

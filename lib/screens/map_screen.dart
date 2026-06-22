@@ -751,14 +751,22 @@ class _MapScreenState extends State<MapScreen> {
             // 픽업 목록뷰에선 패널과 겹치므로 숨김.
             if (!(_tab == 'pickup' && _pickupListView)) ...[
               Positioned(
-                  left: 15, bottom: 95, child: _fab('🍱', _openLunchbox)),
-              Positioned(left: 15, bottom: 30, child: _fab('🍚', _openProfile)),
+                  left: 15,
+                  bottom: 95,
+                  child: _fab('🍱', t('fab_lunchbox'), _openLunchbox)),
+              Positioned(
+                  left: 15,
+                  bottom: 30,
+                  child: _fab('🍚', t('fab_profile'), _openProfile)),
               Positioned(
                   right: 15,
                   bottom: 95,
-                  child: _fab('📝', _openRegister,
+                  child: _fab('📝', t('fab_register'), _openRegister,
                       bg: const Color(0xF2FAC710))), // 등록 = 브랜드 옐로
-              Positioned(right: 15, bottom: 30, child: _fab('📍', _moveToMe)),
+              Positioned(
+                  right: 15,
+                  bottom: 30,
+                  child: _fab('📍', t('fab_my_location'), _moveToMe)),
             ],
             if (_error != null)
               Positioned(bottom: 20, left: 90, right: 90, child: _errorBox()),
@@ -782,17 +790,22 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   // 플로팅 글래스 FAB (이모지) — 누르면 spring 축소.
-  Widget _fab(String emoji, VoidCallback onTap, {Color? bg, double size = 52}) {
-    return BounceTap(
-      onTap: onTap,
-      child: GlassSurface(
-        radius: BorderRadius.circular(size / 2),
-        color: bg ?? const Color(0xD9FFFFFF),
-        child: SizedBox(
-          width: size,
-          height: size,
-          child: Center(
-              child: Text(emoji, style: TextStyle(fontSize: size * 0.46))),
+  Widget _fab(String emoji, String label, VoidCallback onTap,
+      {Color? bg, double size = 52}) {
+    return Semantics(
+      button: true,
+      label: label, // 이모지 전용 FAB → 스크린리더용 라벨
+      child: BounceTap(
+        onTap: onTap,
+        child: GlassSurface(
+          radius: BorderRadius.circular(size / 2),
+          color: bg ?? const Color(0xD9FFFFFF),
+          child: SizedBox(
+            width: size,
+            height: size,
+            child: Center(
+                child: Text(emoji, style: TextStyle(fontSize: size * 0.46))),
+          ),
         ),
       ),
     );

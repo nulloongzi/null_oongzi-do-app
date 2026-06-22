@@ -652,7 +652,7 @@ Future<String?> _promptText(BuildContext ctx,
             child: Text(t('confirm'))),
       ],
     ),
-  );
+  ).whenComplete(ctrl.dispose);
 }
 
 // 상세 패널: OverlayEntry(모든 라우트 위) 대신 MapScreen Stack에서 렌더되도록 notifier로

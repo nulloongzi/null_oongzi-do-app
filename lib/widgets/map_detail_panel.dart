@@ -122,7 +122,8 @@ class _MapDetailPanelState extends State<MapDetailPanel> {
               onVerticalDragEnd: (_) => _onDragEnd(),
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.only(top: 12, bottom: 4),
+                // 터치 영역 ≥44px 확보(시각 바는 5px 유지) — 드래그 잡기 쉽게.
+                padding: const EdgeInsets.symmetric(vertical: 20),
                 alignment: Alignment.center,
                 child: Container(
                   width: 44,

@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
+import 'i18n.dart';
 import 'sanitize.dart';
 
 class VerificationService {
@@ -13,7 +14,7 @@ class VerificationService {
   Future<String?> submit(
       {required String clubId, required String clubName}) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return '로그인이 필요해요';
+    if (uid == null) return t('login_required');
 
     final XFile? file = await ImagePicker().pickImage(
       source: ImageSource.gallery,

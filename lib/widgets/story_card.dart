@@ -98,6 +98,7 @@ class StoryCardData {
       accent: const Color(0xFF13A89E),
       tags: tags,
       thisWeek: s.thisWeek,
+      thisWeekBadge: t('this_week'),
       schedule: i18nSchedule((s.schedule != null && s.schedule!.isNotEmpty)
           ? s.schedule
           : s.scheduleText),
@@ -333,7 +334,7 @@ class StoryCardPainter extends CustomPainter {
 
     // 제목 (+인증)
     final titleTp = _tp(
-      data.title.isEmpty ? '배구 모임' : data.title,
+      data.title.isEmpty ? t('card_title_fallback') : data.title,
       _st(72, FontWeight.w800, _dark),
       maxWidth: iw - (data.verified ? 64 : 0),
       maxLines: 2,
@@ -416,7 +417,7 @@ class StoryCardPainter extends CustomPainter {
 
     final tx = qrX + qrSize + 56;
     final twf = w - pad - tx;
-    final ctaTp = _tp('이 팀, 어때요? 지도에서 보기 👀',
+    final ctaTp = _tp(t('card_cta'),
         _st(48, FontWeight.w800, _dark),
         maxWidth: twf, maxLines: 2);
     ctaTp.paint(canvas, Offset(tx, footY + 60));

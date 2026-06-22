@@ -67,7 +67,9 @@ void showShareMenu(
               onTap: () async {
                 Navigator.pop(ctx);
                 Track.event('share', {'method': 'web', ...idP});
-                await ShareService.osShare('$shareTitle\n$url');
+                try {
+                  await ShareService.osShare('$shareTitle\n$url');
+                } catch (_) {}
               },
             ),
             const SizedBox(height: 2),

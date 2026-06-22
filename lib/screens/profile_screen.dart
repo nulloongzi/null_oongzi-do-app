@@ -76,6 +76,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
+    ctrl.dispose(); // 다이얼로그 종료 후 컨트롤러 정리(누수 방지)
     if (newName == null) return;
     final n = newName.trim();
     if (n.isEmpty || n == p.fullNickname) return;

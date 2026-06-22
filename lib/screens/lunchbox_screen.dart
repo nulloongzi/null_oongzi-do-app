@@ -161,7 +161,7 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
               child: Text(t('confirm'))),
         ],
       ),
-    );
+    ).whenComplete(c.dispose);
   }
 
   ({String name, bool isCustom, List<SchedEvent> events})? _resolve(String id) {
