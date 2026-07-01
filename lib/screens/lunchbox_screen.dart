@@ -36,14 +36,7 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
         t('lb_slot_side2'),
         t('lb_slot_side3'),
       ];
-  static const _slotBg = [
-    Color(0xFFFFFDE7), Color(0xFFFFF3E0), Color(0xFFF1F8E9),
-    Color(0xFFFBE9E7), Color(0xFFF3E5F5),
-  ];
-  static const _slotBorder = [
-    Color(0xFFFBC02D), Color(0xFFF57C00), Color(0xFF689F38),
-    Color(0xFFD84315), Color(0xFF8E24AA),
-  ];
+  // (칸별 색상은 diet_grid.dart로 이동 — 벤토 셀은 채움=노랑테두리/빈칸=점선 균일 스타일)
 
   @override
   void initState() {
@@ -210,7 +203,7 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
                       fontSize: 12, color: NurungjiColors.brown),
                 ),
               ),
-              for (var i = 0; i < 5; i++) _slotTile(i),
+              _bentoGrid(),
               const SizedBox(height: 8),
               OutlinedButton.icon(
                 onPressed: _addCustom,
@@ -255,47 +248,127 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
     return out;
   }
 
-  Widget _slotTile(int i) {
+  // 도시락(벤토) 그리드 — 웹 .lunchbox-grid 대응.
+  // 위 줄: 반찬1·2·3(작게, 0.8fr) / 아래 줄: 밥·국(크게, 1.2fr).
+  Widget _bentoGrid() {
+    const gap = 6.0;
+    return SizedBox(
+      height: 220,
+      child: Column(
+        children: [
+          Expanded(
+            flex: 8, // 0.8fr
+            child: Row(children: [
+              Expanded(child: _cell(2)),
+              const SizedBox(width: gap),
+              Expanded(child: _cell(3)),
+              const SizedBox(width: gap),
+              Expanded(child: _cell(4)),
+            ]),
+          ),
+          const SizedBox(height: gap),
+          Expanded(
+            flex: 12, // 1.2fr
+            child: Row(children: [
+              Expanded(child: _cell(0)),
+              const SizedBox(width: gap),
+              Expanded(child: _cell(1)),
+            ]),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 벤토 셀 하나. 채움=흰 배경+노랑 테두리 / 빈칸=옅은 점선풍 / 선택=주황 테두리.
+  Widget _cell(int i) {
     final id = _data?.bookmarks[i];
     final r = id == null ? null : _resolve(id);
     final filled = id != null;
+    final selected = _selectedSlot == i;
     final label = !filled
         ? _placeholders[i]
         : (r == null ? t('deleted_team') : (r.isCustom ? '🍙 ${r.name}' : r.name));
-    final selected = _selectedSlot == i;
+
+    final Color bg;
+    final Border border;
+    if (selected) {
+      bg = const Color(0xFFFFECB3);
+      border = Border.all(color: NurungjiColors.urgent, width: 2);
+    } else if (filled) {
+      bg = Colors.white;
+      border = Border.all(color: NurungjiColors.yellow, width: 2);
+    } else {
+      bg = const Color(0x80FFFDE7); // 옅은 아이보리
+      border = Border.all(color: const Color(0x59BCAAA4), width: 1.5);
+    }
 
     return GestureDetector(
       onTap: () => _onSlotTap(i),
       child: Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      decoration: BoxDecoration(
-        color: filled ? _slotBg[i] : NurungjiColors.chipBg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border(left: BorderSide(color: _slotBorder[i], width: 5)),
-        boxShadow: selected
-            ? const [BoxShadow(color: NurungjiColors.teal, spreadRadius: 2)]
-            : null,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontWeight: filled ? FontWeight.w700 : FontWeight.w500,
-                color: filled ? NurungjiColors.dark : NurungjiColors.brown,
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(16),
+          border: border,
+          boxShadow: filled && !selected
+              ? const [
+                  BoxShadow(
+                      color: Color(0x0F000000),
+                      blurRadius: 8,
+                      offset: Offset(0, 3)),
+                ]
+              : null,
+        ),
+        child: Stack(
+          children: [
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: filled ? FontWeight.w700 : FontWeight.w600,
+                    color:
+                        filled ? NurungjiColors.dark : const Color(0xFFBCAAA4),
+                  ),
+                ),
               ),
             ),
-          ),
-          if (filled)
-            IconButton(
-              onPressed: () => _removeSlot(i),
-              icon: const Icon(Icons.close, size: 18, color: NurungjiColors.brown),
-              tooltip: t('lb_remove'),
-            ),
-        ],
-      ),
+            if (filled)
+              Positioned(
+                top: 3,
+                right: 3,
+                child: Semantics(
+                  button: true,
+                  label: t('lb_remove'),
+                  child: GestureDetector(
+                    onTap: () => _removeSlot(i),
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFF5252),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                              color: Color(0x66FF5252),
+                              blurRadius: 6,
+                              offset: Offset(0, 2)),
+                        ],
+                      ),
+                      child: const Icon(Icons.close,
+                          size: 14, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
