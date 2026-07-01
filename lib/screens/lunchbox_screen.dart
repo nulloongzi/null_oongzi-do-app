@@ -7,6 +7,7 @@ import '../services/lunchbox_service.dart';
 import '../services/schedule_parse.dart';
 import '../theme.dart';
 import '../widgets/app_sheet.dart';
+import '../widgets/bounce_tap.dart';
 import '../widgets/diet_grid.dart';
 
 /// 도시락 팝업: 풀스크린 라우트 대신 지도 위로 뜨는 모달 바텀시트(웹 도시락 오버레이 대응).
@@ -28,6 +29,7 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
   bool _loading = true;
   bool _showDiet = false;
   int? _selectedSlot; // 순서 바꾸기: 선택된 칸
+  bool _editing = false; // 편집 모드(순서변경·빼기 활성)
 
   List<String> get _placeholders => [
         t('lb_slot_rice'),
@@ -195,10 +197,16 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
             else ...[
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
+                child: Row(children: [const Spacer(), _editToggle()]),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
                 child: Text(
-                  _selectedSlot == null
-                      ? t('lb_reorder_hint')
-                      : t('lb_reorder_pick'),
+                  !_editing
+                      ? t('lb_edit_hint')
+                      : (_selectedSlot == null
+                          ? t('lb_reorder_hint')
+                          : t('lb_reorder_pick')),
                   style: const TextStyle(
                       fontSize: 12, color: NurungjiColors.brown),
                 ),
@@ -225,7 +233,16 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
                   ),
                 ],
               ),
-              if (_showDiet) DietGrid(teams: _dietTeams()),
+              // 식단표 아코디언 애니메이션(웹 height transition 대응)
+              AnimatedSize(
+                duration: const Duration(milliseconds: 320),
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.topCenter,
+                clipBehavior: Clip.hardEdge,
+                child: _showDiet
+                    ? DietGrid(teams: _dietTeams())
+                    : const SizedBox(width: double.infinity, height: 0),
+              ),
             ],
           ],
         ),
@@ -246,6 +263,38 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
           name: r.name, isCustom: r.isCustom, slotIdx: i, events: r.events));
     }
     return out;
+  }
+
+  // 편집 토글 — 편집 모드에서만 칸 이동/스왑·빼기(웹 lb-edit-btn 대응).
+  Widget _editToggle() {
+    return BounceTap(
+      onTap: () => setState(() {
+        _editing = !_editing;
+        _selectedSlot = null;
+      }),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: _editing ? NurungjiColors.urgent : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+              color:
+                  _editing ? NurungjiColors.urgent : const Color(0x22000000)),
+          boxShadow: const [
+            BoxShadow(
+                color: Color(0x0D000000), blurRadius: 4, offset: Offset(0, 2)),
+          ],
+        ),
+        child: Text(
+          _editing ? '✅ ${t('lb_done')}' : '✏️ ${t('lb_edit')}',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
+            color: _editing ? Colors.white : NurungjiColors.dark,
+          ),
+        ),
+      ),
+    );
   }
 
   // 도시락(벤토) 그리드 — 웹 .lunchbox-grid 대응.
@@ -303,8 +352,8 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
       border = Border.all(color: const Color(0x59BCAAA4), width: 1.5);
     }
 
-    return GestureDetector(
-      onTap: () => _onSlotTap(i),
+    return BounceTap(
+      onTap: _editing ? () => _onSlotTap(i) : null,
       child: Container(
         decoration: BoxDecoration(
           color: bg,
@@ -338,7 +387,7 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
                 ),
               ),
             ),
-            if (filled)
+            if (filled && _editing)
               Positioned(
                 top: 3,
                 right: 3,

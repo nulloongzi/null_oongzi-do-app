@@ -146,6 +146,10 @@ const Map<String, Map<String, String>> kStrings = {
   'lb_no_sched': {'ko': '찜한 팀의 일정이 없어요', 'en': 'No schedule for saved teams'},
   'lb_reorder_hint': {'ko': '칸을 탭해 순서 바꾸기 · ✕ 빼기', 'en': 'Tap slots to reorder · ✕ remove'},
   'lb_reorder_pick': {'ko': '바꿀 칸을 한 번 더 탭하세요', 'en': 'Tap another slot to swap'},
+  'lb_edit': {'ko': '편집', 'en': 'Edit'},
+  'lb_done': {'ko': '완료', 'en': 'Done'},
+  'lb_edit_hint': {'ko': '‘편집’을 눌러 순서 변경·빼기', 'en': 'Tap Edit to reorder or remove'},
+  'no_saved_team': {'ko': '아직 찜한 팀이 없어요', 'en': 'No saved teams yet'},
   'lb_team_name': {'ko': '팀 이름', 'en': 'Team name'},
   'lb_sched_hint': {'ko': '일정 (예: 토 14:00~17:00)', 'en': 'Schedule (e.g. Sat 14:00~17:00)'},
 

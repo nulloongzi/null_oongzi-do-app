@@ -2,8 +2,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../models/club.dart';
 import '../models/profile.dart';
+import '../services/data_repository.dart';
 import '../services/i18n.dart';
+import '../services/lunchbox_service.dart';
 import '../services/profile_service.dart';
 import '../theme.dart';
 import '../widgets/app_sheet.dart';
@@ -26,6 +29,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Profile? _profile;
   bool _loading = true;
   String? _uid;
+  ({String name, bool isCustom})? _mainTeam; // 대표팀(첫 찜팀)
 
   @override
   void initState() {
@@ -44,7 +48,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final p = await _svc.ensureProfile(uid);
       if (mounted) setState(() => _profile = p);
     } catch (_) {}
+    await _loadMainTeam(uid);
     if (mounted) setState(() => _loading = false);
+  }
+
+  // 대표팀 = 도시락 첫 찜팀(bookmarks[0]). 커스텀이면 🍙, 클럽이면 🏆.
+  Future<void> _loadMainTeam(String uid) async {
+    try {
+      final lb = await LunchboxService().load(uid);
+      String? firstId;
+      for (final b in lb.bookmarks) {
+        if (b != null) {
+          firstId = b;
+          break;
+        }
+      }
+      if (firstId == null) return; // 찜한 팀 없음
+      final custom = lb.customTeams[firstId];
+      if (custom is Map && custom['name'] is String) {
+        _mainTeam = (name: custom['name'] as String, isCustom: true);
+        return;
+      }
+      final clubs = await DataRepository().loadClubs();
+      for (final c in clubs) {
+        if (c.id == firstId) {
+          _mainTeam = (name: c.name, isCustom: false);
+          return;
+        }
+      }
+    } catch (_) {}
   }
 
   void _snack(String m) {
@@ -174,8 +206,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _card(Profile p) {
     final joined = _joinedLabel(p);
+    final mt = _mainTeam;
     return Container(
-      padding: const EdgeInsets.all(24),
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
       decoration: BoxDecoration(
         color: p.bgColor,
         borderRadius: BorderRadius.circular(22),
@@ -183,22 +217,67 @@ class _ProfileScreenState extends State<ProfileScreen> {
           BoxShadow(color: Color(0x22000000), blurRadius: 16, offset: Offset(0, 6)),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          const Text('🍚', style: TextStyle(fontSize: 44)),
-          const SizedBox(height: 8),
-          Text(p.fullNickname,
-              style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                  color: NurungjiColors.dark)),
-          if (joined.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(joined,
-                  style: const TextStyle(color: NurungjiColors.brown)),
+          // 크기 결정용 본문(중앙 정렬)
+          SizedBox(
+            width: double.infinity,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(p.fullNickname,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        color: NurungjiColors.dark)),
+                if (joined.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(joined,
+                        style: const TextStyle(
+                            color: NurungjiColors.brown, fontSize: 13)),
+                  ),
+                Container(
+                  width: 90,
+                  height: 1,
+                  margin: const EdgeInsets.symmetric(vertical: 14),
+                  color: const Color(0x338D6E63), // 옅은 구분선(웹 .pc-divider)
+                ),
+                // 메인 팀 뱃지(웹 .pc-main-team)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xB3FFFFFF),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.white),
+                  ),
+                  child: Text(
+                    mt == null
+                        ? t('no_saved_team')
+                        : '${mt.isCustom ? '🍙' : '🏆'} ${mt.name}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: NurungjiColors.dark),
+                  ),
+                ),
+              ],
             ),
+          ),
+          // 누룽지 워터마크(밥 종류) — 좌상단 옅게(웹 .pc-rice-type)
+          Positioned(
+            top: 0,
+            left: 0,
+            child: Text(p.nickname,
+                style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0x4D5D4037))),
+          ),
         ],
       ),
     );
