@@ -1,4 +1,6 @@
 // profile_screen.dart — 내 프로필(밥이름 카드). 웹 renderProfileCard/editNickname 포팅.
+// 웹처럼 화면 중앙 팝업 모달(딤 blur + slideUp 스프링)로 표시.
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -9,13 +11,70 @@ import '../services/i18n.dart';
 import '../services/lunchbox_service.dart';
 import '../services/profile_service.dart';
 import '../theme.dart';
-import '../widgets/app_sheet.dart';
+import '../widgets/bounce_tap.dart';
 import 'lunchbox_screen.dart';
 import 'share_image_screen.dart';
 
-/// 내 정보 팝업: 풀스크린 라우트 대신 지도 위로 뜨는 모달 바텀시트(웹 프로필 오버레이 대응).
-Future<void> showProfileSheet(BuildContext context) =>
-    showAppSheet<void>(context, child: const ProfileScreen());
+/// 내 정보 팝업: 웹 프로필 오버레이 대응 — 화면 중앙 카드 모달(딤 blur + 스프링 등장).
+Future<void> showProfileSheet(BuildContext context) {
+  return showGeneralDialog<void>(
+    context: context,
+    barrierDismissible: false, // 딤·blur·바깥탭을 _ProfileModal에서 직접 처리
+    barrierLabel: 'profile',
+    barrierColor: Colors.transparent,
+    transitionDuration: const Duration(milliseconds: 300),
+    pageBuilder: (ctx, a1, a2) => const _ProfileModal(),
+    transitionBuilder: (ctx, anim, sec, child) =>
+        FadeTransition(opacity: anim, child: child), // 오버레이 fadeIn
+  );
+}
+
+// 중앙 모달: 배경 blur+갈색 딤(바깥 탭 닫기) + 스프링으로 떠오르는 카드.
+class _ProfileModal extends StatelessWidget {
+  const _ProfileModal();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => Navigator.of(context).maybePop(), // 바깥 탭 닫기
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+              child: Container(color: const Color(0x595D4037)), // 웹 rgba(93,64,55,.35)
+            ),
+          ),
+        ),
+        Center(
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: const Duration(milliseconds: 340),
+            curve: Curves.easeOutBack, // 통통 스프링(웹 slideUp)
+            builder: (ctx, v, child) => Transform.translate(
+              offset: Offset(0, (1 - v) * 40),
+              child: Transform.scale(scale: 0.95 + 0.05 * v, child: child),
+            ),
+            child: GestureDetector(
+              onTap: () {}, // 카드 탭 흡수(닫기 방지)
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: 360,
+                  maxHeight: MediaQuery.of(context).size.height * 0.85,
+                ),
+                child: const SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: ProfileScreen(),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -149,57 +208,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SheetTitle(t('profile_title')),
-            if (_loading)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 48),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else ...[
-              if (_profile != null) _card(_profile!),
-              const SizedBox(height: 20),
-              ElevatedButton.icon(
-                // 도시락도 시트로 (이 시트 위에 스택). 풀스크린 전환 제거.
-                onPressed: () => showLunchboxSheet(context),
-                icon: const Icon(Icons.lunch_dining, size: 18),
-                label: Text(t('my_lunchbox')),
-              ),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const ShareImageScreen())),
-                icon: const Icon(Icons.ios_share, size: 18),
-                label: Text(t('share_image_btn_profile')),
-              ),
-              const SizedBox(height: 10),
-              if (_profile != null)
-                OutlinedButton.icon(
-                  onPressed: _rename,
-                  icon: const Icon(Icons.edit, size: 18),
-                  label: Text(t('change_nickname')),
-                ),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                onPressed: _signOut,
-                icon: const Icon(Icons.logout, size: 18, color: Colors.red),
-                label: Text(t('logout'),
-                    style: const TextStyle(color: Colors.red)),
-                style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.red)),
-              ),
-            ],
+    return Material(
+      type: MaterialType.transparency,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 60),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else ...[
+            if (_profile != null) _card(_profile!),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () => showLunchboxSheet(context),
+              icon: const Icon(Icons.lunch_dining, size: 18),
+              label: Text(t('my_lunchbox')),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const ShareImageScreen())),
+              icon: const Icon(Icons.ios_share, size: 18),
+              label: Text(t('share_image_btn_profile')),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: _signOut,
+              icon: const Icon(Icons.logout, size: 18, color: Colors.red),
+              label: Text(t('logout'),
+                  style: const TextStyle(color: Colors.red)),
+              style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Colors.red)),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -226,12 +271,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(p.fullNickname,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w900,
-                        color: NurungjiColors.dark)),
+                // 닉네임 + 🥢 편집(웹 .pc-header / .pc-edit-btn)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: Text(p.fullNickname,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                              color: NurungjiColors.dark)),
+                    ),
+                    const SizedBox(width: 8),
+                    BounceTap(
+                      onTap: _rename,
+                      child: Container(
+                        width: 30,
+                        height: 30,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: const Color(0x99FFFFFF),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0x0D000000)),
+                        ),
+                        child: const Text('🥢', style: TextStyle(fontSize: 15)),
+                      ),
+                    ),
+                  ],
+                ),
                 if (joined.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
