@@ -1,4 +1,6 @@
 // lunchbox_screen.dart — 내 도시락(찜한 팀 5칸 + 커스텀 + 식단표). 웹 lunchbox.js 포팅.
+// 웹처럼 화면 중앙 팝업 모달(딤 blur + slideUp 스프링)로 표시.
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import '../models/club.dart';
 import '../services/data_repository.dart';
@@ -6,13 +8,80 @@ import '../services/i18n.dart';
 import '../services/lunchbox_service.dart';
 import '../services/schedule_parse.dart';
 import '../theme.dart';
-import '../widgets/app_sheet.dart';
 import '../widgets/bounce_tap.dart';
 import '../widgets/diet_grid.dart';
 
-/// 도시락 팝업: 풀스크린 라우트 대신 지도 위로 뜨는 모달 바텀시트(웹 도시락 오버레이 대응).
-Future<void> showLunchboxSheet(BuildContext context) =>
-    showAppSheet<void>(context, child: const LunchboxScreen());
+/// 도시락 팝업: 웹 도시락 오버레이 대응 — 화면 중앙 통(카드) 모달(딤 blur + 스프링 등장).
+Future<void> showLunchboxSheet(BuildContext context) {
+  return showGeneralDialog<void>(
+    context: context,
+    barrierDismissible: false, // 딤·blur·바깥탭을 _LunchboxModal에서 직접 처리
+    barrierLabel: 'lunchbox',
+    barrierColor: Colors.transparent,
+    transitionDuration: const Duration(milliseconds: 300),
+    pageBuilder: (ctx, a1, a2) => const _LunchboxModal(),
+    transitionBuilder: (ctx, anim, sec, child) =>
+        FadeTransition(opacity: anim, child: child),
+  );
+}
+
+// 중앙 모달: 배경 blur+갈색 딤(바깥 탭 닫기) + 스프링으로 떠오르는 도시락 통.
+class _LunchboxModal extends StatelessWidget {
+  const _LunchboxModal();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => Navigator.of(context).maybePop(),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+              child: Container(color: const Color(0x595D4037)),
+            ),
+          ),
+        ),
+        Center(
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: const Duration(milliseconds: 340),
+            curve: Curves.easeOutBack,
+            builder: (ctx, v, child) => Transform.translate(
+              offset: Offset(0, (1 - v) * 40),
+              child: Transform.scale(scale: 0.95 + 0.05 * v, child: child),
+            ),
+            child: GestureDetector(
+              onTap: () {}, // 통 탭 흡수(닫기 방지)
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: 380,
+                  maxHeight: MediaQuery.of(context).size.height * 0.9,
+                ),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: NurungjiColors.light, // 통 배경(웹 글래스 래퍼 대응)
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: const [
+                      BoxShadow(
+                          color: Color(0x335D4037),
+                          blurRadius: 40,
+                          offset: Offset(0, 16)),
+                    ],
+                  ),
+                  child: const SingleChildScrollView(child: LunchboxScreen()),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 class LunchboxScreen extends StatefulWidget {
   const LunchboxScreen({super.key});
@@ -180,72 +249,76 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SheetTitle(t('lunchbox_title')),
-            if (_loading)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 48),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else ...[
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(children: [const Spacer(), _editToggle()]),
+    return Material(
+      type: MaterialType.transparency,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // 헤더: 도시락 🍱 + [🍙 직접추가, 🍽 편집/완료] (웹 .lb-header)
+          Row(
+            children: [
+              Expanded(
+                child: Text(t('lunchbox_title'),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 19,
+                        color: NurungjiColors.dark)),
               ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  !_editing
-                      ? t('lb_edit_hint')
-                      : (_selectedSlot == null
-                          ? t('lb_reorder_hint')
-                          : t('lb_reorder_pick')),
-                  style: const TextStyle(
-                      fontSize: 12, color: NurungjiColors.brown),
-                ),
-              ),
-              _bentoGrid(),
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: _addCustom,
-                icon: const Icon(Icons.add, size: 18),
-                label: Text(t('add_custom')),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Text(t('lb_diet'),
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16,
-                          color: NurungjiColors.dark)),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () => setState(() => _showDiet = !_showDiet),
-                    child: Text(_showDiet ? t('collapse') : t('expand')),
-                  ),
-                ],
-              ),
-              // 식단표 아코디언 애니메이션(웹 height transition 대응)
-              AnimatedSize(
-                duration: const Duration(milliseconds: 320),
-                curve: Curves.easeOutCubic,
-                alignment: Alignment.topCenter,
-                clipBehavior: Clip.hardEdge,
-                child: _showDiet
-                    ? DietGrid(teams: _dietTeams())
-                    : const SizedBox(width: double.infinity, height: 0),
-              ),
+              if (!_loading) ...[
+                _addBtn(),
+                const SizedBox(width: 8),
+                _editToggle(),
+              ],
             ],
+          ),
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 48),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else ...[
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                !_editing
+                    ? t('lb_edit_hint')
+                    : (_selectedSlot == null
+                        ? t('lb_reorder_hint')
+                        : t('lb_reorder_pick')),
+                style: const TextStyle(
+                    fontSize: 12, color: NurungjiColors.brown),
+              ),
+            ),
+            _bentoGrid(),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Text(t('lb_diet'),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                        color: NurungjiColors.dark)),
+                const Spacer(),
+                TextButton(
+                  onPressed: () => setState(() => _showDiet = !_showDiet),
+                  child: Text(_showDiet ? t('collapse') : t('expand')),
+                ),
+              ],
+            ),
+            // 식단표 아코디언 애니메이션(웹 height transition 대응)
+            AnimatedSize(
+              duration: const Duration(milliseconds: 320),
+              curve: Curves.easeOutCubic,
+              alignment: Alignment.topCenter,
+              clipBehavior: Clip.hardEdge,
+              child: _showDiet
+                  ? DietGrid(teams: _dietTeams())
+                  : const SizedBox(width: double.infinity, height: 0),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -263,6 +336,30 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
           name: r.name, isCustom: r.isCustom, slotIdx: i, events: r.events));
     }
     return out;
+  }
+
+  // 직접추가 버튼(웹 lb-add-btn) — 연노랑 pill.
+  Widget _addBtn() {
+    return BounceTap(
+      onTap: _addCustom,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFFDE7),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0x22000000)),
+          boxShadow: const [
+            BoxShadow(
+                color: Color(0x0D000000), blurRadius: 4, offset: Offset(0, 2)),
+          ],
+        ),
+        child: Text(t('lb_add'),
+            style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+                color: NurungjiColors.dark)),
+      ),
+    );
   }
 
   // 편집 토글 — 편집 모드에서만 칸 이동/스왑·빼기(웹 lb-edit-btn 대응).
@@ -286,7 +383,7 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
           ],
         ),
         child: Text(
-          _editing ? '✅ ${t('lb_done')}' : '✏️ ${t('lb_edit')}',
+          _editing ? '✅ ${t('lb_done')}' : '🍽 ${t('lb_edit')}',
           style: TextStyle(
             fontWeight: FontWeight.w700,
             fontSize: 13,
