@@ -10,6 +10,7 @@ import '../services/schedule_parse.dart';
 import '../theme.dart';
 import '../widgets/bounce_tap.dart';
 import '../widgets/diet_grid.dart';
+import 'detail_sheet.dart';
 
 /// 도시락 팝업: 웹 도시락 오버레이 대응 — 화면 중앙 통(카드) 모달(딤 blur + 스프링 등장).
 Future<void> showLunchboxSheet(BuildContext context) {
@@ -353,6 +354,20 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
     return out;
   }
 
+  // 비편집 셀 탭 → 도시락(및 아래 모달) 닫고 해당 팀 상세 열기(웹 openClubDetail 대응).
+  // 상세 패널은 route가 아닌 전역 notifier(MapScreen Stack)라, 모달을 모두 닫은 뒤
+  // 루트 내비게이터 컨텍스트(pop 후에도 유효)로 연다. 커스텀/삭제된 팀은 상세 없음.
+  void _openTeamDetail(int i) {
+    final id = _data?.bookmarks[i];
+    if (id == null) return;
+    final c = _clubs[id];
+    if (c == null) return; // 커스텀 팀·삭제된 팀
+    final nav = Navigator.of(context, rootNavigator: true);
+    final uid = _repo.currentUid;
+    nav.popUntil((r) => r.isFirst); // 도시락(+프로필 경유 시 그것까지) 닫기
+    showClubDetail(nav.context, c, currentUid: uid);
+  }
+
   // 직접추가 버튼(웹 lb-add-btn) — 연노랑 pill.
   Widget _addBtn() {
     return BounceTap(
@@ -465,7 +480,10 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
     }
 
     return BounceTap(
-      onTap: _editing ? () => _onSlotTap(i) : null,
+      // 편집: 선택→스왑 / 비편집: 채워진 클럽 셀 탭 → 팀 상세(웹 openClubDetail)
+      onTap: _editing
+          ? () => _onSlotTap(i)
+          : (filled ? () => _openTeamDetail(i) : null),
       child: Container(
         decoration: BoxDecoration(
           color: bg,

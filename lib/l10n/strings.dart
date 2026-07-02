@@ -131,6 +131,7 @@ const Map<String, Map<String, String>> kStrings = {
   'err_share': {'ko': '공유 실패', 'en': 'Share failed'},
   'err_delete': {'ko': '삭제 실패', 'en': 'Delete failed'},
   'err_generic': {'ko': '오류', 'en': 'Error'},
+  'back_exit_hint': {'ko': '한 번 더 누르면 종료돼요', 'en': 'Press back again to exit'},
   'card_title_fallback': {'ko': '배구 모임', 'en': 'Volleyball meetup'},
   'card_cta': {'ko': '이 팀, 어때요? 지도에서 보기 👀', 'en': 'Check out this team on the map 👀'},
   'login_google_fail': {'ko': '구글 로그인 실패', 'en': 'Google sign-in failed'},

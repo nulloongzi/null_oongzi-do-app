@@ -73,6 +73,7 @@ class _MapScreenState extends State<MapScreen> {
   final _deepLinks = DeepLinkService();
   NOverlayImage? _clusterIcon; // 클러스터 노란 원 (런타임 생성)
   _ReelPeek? _reelPeek; // 마커 롱프레스 → 블러+릴스 미리보기(인스타 피드 꾹 누르기 느낌)
+  DateTime? _lastBackPress; // 뒤로가기 2번 종료 판정
 
   @override
   void initState() {
@@ -631,7 +632,11 @@ class _MapScreenState extends State<MapScreen> {
 
   void _onTab(String t) {
     if (_tab == t) return;
-    setState(() => _tab = t);
+    setState(() {
+      _tab = t;
+      _reelPeek = null; // 탭 전환: 이전 탭의 오버레이 정리
+    });
+    detailPanel.value = null; // 이전 탭 항목의 상세 패널 닫기
     Track.event('switch_tab', {'tab': t});
     _refreshMarkers();
   }
@@ -692,7 +697,15 @@ class _MapScreenState extends State<MapScreen> {
         } else if (detailPanel.value != null) {
           detailPanel.value = null;
         } else {
-          SystemNavigator.pop(); // 닫을 오버레이 없음 → 앱 종료
+          // 실수 종료 방지: 2초 안에 한 번 더 눌러야 종료
+          final now = DateTime.now();
+          if (_lastBackPress != null &&
+              now.difference(_lastBackPress!) < const Duration(seconds: 2)) {
+            SystemNavigator.pop();
+          } else {
+            _lastBackPress = now;
+            _snack(t('back_exit_hint'));
+          }
         }
       },
       child: Scaffold(
@@ -845,6 +858,8 @@ class _MapScreenState extends State<MapScreen> {
             // 바깥(지도·마커·버튼) 탭 시 포커스 해제 → 키보드 내려가고,
             // 다른 기능 다녀와도 키보드가 다시 올라오지 않음.
             onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
+            // 키보드 검색(돋보기) 버튼 → 키보드 닫기(검색은 입력 즉시 반영됨)
+            onSubmitted: (_) => FocusManager.instance.primaryFocus?.unfocus(),
             decoration: InputDecoration(
               isDense: true,
               filled: false, // 전역 테마의 흰색 fill 제거 — 글래스 톤과 색 얼룩 방지
