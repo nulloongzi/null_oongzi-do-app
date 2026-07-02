@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemNavigator;
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../models/club.dart';
@@ -680,7 +681,22 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    // 시스템 뒤로가기: 인앱 오버레이(릴스 피크 → 상세 패널)를 먼저 닫고, 없을 때만 앱 종료.
+    // (상세 패널·피크는 route가 아닌 Stack 오버레이라 처리 없인 back이 곧장 앱을 종료함)
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (_reelPeek != null) {
+          setState(() => _reelPeek = null);
+        } else if (detailPanel.value != null) {
+          detailPanel.value = null;
+        } else {
+          SystemNavigator.pop(); // 닫을 오버레이 없음 → 앱 종료
+        }
+      },
+      child: Scaffold(
+      resizeToAvoidBottomInset: false, // 키보드에 지도(플랫폼뷰) 리사이즈 방지
       body: SafeArea(
         child: Stack(
           children: [
@@ -786,6 +802,7 @@ class _MapScreenState extends State<MapScreen> {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -825,8 +842,12 @@ class _MapScreenState extends State<MapScreen> {
             controller: _search,
             onChanged: _onSearch,
             textInputAction: TextInputAction.search,
+            // 바깥(지도·마커·버튼) 탭 시 포커스 해제 → 키보드 내려가고,
+            // 다른 기능 다녀와도 키보드가 다시 올라오지 않음.
+            onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
             decoration: InputDecoration(
               isDense: true,
+              filled: false, // 전역 테마의 흰색 fill 제거 — 글래스 톤과 색 얼룩 방지
               border: InputBorder.none,
               hintText: t('search_ph'),
             ),
