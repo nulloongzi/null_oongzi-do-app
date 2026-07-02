@@ -12,7 +12,6 @@ import '../services/lunchbox_service.dart';
 import '../services/profile_service.dart';
 import '../theme.dart';
 import '../widgets/bounce_tap.dart';
-import 'lunchbox_screen.dart';
 import 'share_image_screen.dart';
 
 /// 내 정보 팝업: 웹 프로필 오버레이 대응 — 화면 중앙 카드 모달(딤 blur + 스프링 등장).
@@ -219,32 +218,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: EdgeInsets.symmetric(vertical: 60),
               child: Center(child: CircularProgressIndicator()),
             )
-          else ...[
-            if (_profile != null) _card(_profile!),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () => showLunchboxSheet(context),
-              icon: const Icon(Icons.lunch_dining, size: 18),
-              label: Text(t('my_lunchbox')),
-            ),
-            const SizedBox(height: 10),
-            OutlinedButton.icon(
-              onPressed: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const ShareImageScreen())),
-              icon: const Icon(Icons.ios_share, size: 18),
-              label: Text(t('share_image_btn_profile')),
-            ),
-            const SizedBox(height: 10),
-            OutlinedButton.icon(
-              onPressed: _signOut,
-              icon: const Icon(Icons.logout, size: 18, color: Colors.red),
-              label: Text(t('logout'),
-                  style: const TextStyle(color: Colors.red)),
-              style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.red)),
-            ),
-          ],
+          else if (_profile != null)
+            // 웹 profile-card 그대로: 카드 하나(푸터 버튼 포함)만 중앙에.
+            _card(_profile!),
         ],
+      ),
+    );
+  }
+
+  // 웹 .btn-logout/.pc-share-btn 톤의 알약 버튼(눌림 scale .95).
+  Widget _footerBtn({
+    required String label,
+    required Color bg,
+    required Color fg,
+    required VoidCallback onTap,
+  }) {
+    return BounceTap(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: const [
+            BoxShadow(
+                color: Color(0x14000000), blurRadius: 12, offset: Offset(0, 4)),
+          ],
+        ),
+        child: Text(label,
+            style: TextStyle(
+                fontSize: 14, fontWeight: FontWeight.w700, color: fg)),
       ),
     );
   }
@@ -332,6 +335,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         fontWeight: FontWeight.w700,
                         color: NurungjiColors.dark),
                   ),
+                ),
+                const SizedBox(height: 22),
+                // 푸터(웹 .pc-footer): [로그아웃 | 🎁 포장하기] 나란히
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _footerBtn(
+                      label: t('logout'),
+                      bg: const Color(0x99D7CCC8), // 웹 .btn-logout
+                      fg: NurungjiColors.dark,
+                      onTap: _signOut,
+                    ),
+                    const SizedBox(width: 12),
+                    _footerBtn(
+                      label: t('share_wrap'), // 🎁 포장하기
+                      bg: NurungjiColors.brown, // 웹 .pc-share-btn
+                      fg: Colors.white,
+                      onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const ShareImageScreen())),
+                    ),
+                  ],
                 ),
               ],
             ),
