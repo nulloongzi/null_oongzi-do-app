@@ -292,20 +292,32 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
               ),
             ),
             _bentoGrid(),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Text(t('lb_diet'),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16,
-                        color: NurungjiColors.dark)),
-                const Spacer(),
-                TextButton(
-                  onPressed: () => setState(() => _showDiet = !_showDiet),
-                  child: Text(_showDiet ? t('collapse') : t('expand')),
+            const SizedBox(height: 12),
+            // 식단표 토글(웹 .diet-toggle-btn): 갈색 풀폭 버튼, 열림에 따라 라벨 전환
+            BounceTap(
+              onTap: () => setState(() => _showDiet = !_showDiet),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: NurungjiColors.brown,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: const [
+                    BoxShadow(
+                        color: Color(0x4D8D6E63),
+                        blurRadius: 12,
+                        offset: Offset(0, 4)),
+                  ],
                 ),
-              ],
+                child: Text(
+                  _showDiet ? t('lb_diet_collapse') : t('lb_diet'),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14),
+                ),
+              ),
             ),
             // 식단표 아코디언 애니메이션(웹 height transition 대응)
             AnimatedSize(
@@ -314,7 +326,10 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
               alignment: Alignment.topCenter,
               clipBehavior: Clip.hardEdge,
               child: _showDiet
-                  ? DietGrid(teams: _dietTeams())
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: DietGrid(teams: _dietTeams()),
+                    )
                   : const SizedBox(width: double.infinity, height: 0),
             ),
           ],
@@ -476,7 +491,8 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: filled ? 13 : 12, // 빈칸=웹 .lb-cell.empty 12px
+                    height: 1.4,
                     fontWeight: filled ? FontWeight.w700 : FontWeight.w600,
                     color:
                         filled ? NurungjiColors.dark : const Color(0xFFBCAAA4),
