@@ -609,27 +609,92 @@ Widget _urgentToggle(
   );
 }
 
-// 인증 신청(사진 제출) — 소유자 & 미인증일 때만.
-Widget _verifyBtn(Club c, BuildContext outerCtx) {
-  return Padding(
-    padding: const EdgeInsets.only(top: 12),
-    child: SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: () async {
-          final err = await VerificationService()
-              .submit(clubId: c.id, clubName: c.name);
-          if (err == 'cancelled') return;
-          if (outerCtx.mounted) {
-            ScaffoldMessenger.of(outerCtx).showSnackBar(SnackBar(
-                content: Text(err ?? t('verify_done'))));
-          }
-        },
-        icon: const Icon(Icons.verified_outlined, size: 18),
-        label: Text(t('verify_btn')),
-      ),
-    ),
-  );
+// 인증 신청/상태 영역(웹 verifyStatusArea 대응) — 소유자 & 미인증일 때만.
+// 최신 요청 조회: 이력 없음→신청 버튼 / 심사 중→안내 / 거절→사유+재신청.
+class _VerificationSection extends StatefulWidget {
+  final Club club;
+  const _VerificationSection({required this.club});
+
+  @override
+  State<_VerificationSection> createState() => _VerificationSectionState();
+}
+
+class _VerificationSectionState extends State<_VerificationSection> {
+  ({String status, String? reason})? _req;
+
+  @override
+  void initState() {
+    super.initState();
+    VerificationService().latestRequest(widget.club.id).then((r) {
+      if (mounted && r != null) setState(() => _req = r);
+    });
+  }
+
+  Future<void> _apply() async {
+    final err = await VerificationService()
+        .submit(clubId: widget.club.id, clubName: widget.club.name);
+    if (err == 'cancelled' || !mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(err ?? t('verify_done'))));
+    if (err == null) setState(() => _req = (status: 'pending', reason: null));
+  }
+
+  Widget _applyBtn(String label) => SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: _apply,
+          icon: const Icon(Icons.verified_outlined, size: 18),
+          label: Text(label),
+        ),
+      );
+
+  // 좌측 색 보더 안내 박스(웹 pending/rejected 박스 톤)
+  Widget _noticeBox(Color border, Color bg, Widget child) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(8),
+          border: Border(left: BorderSide(color: border, width: 3)),
+        ),
+        child: child,
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final r = _req;
+    final Widget body;
+    if (r != null && r.status == 'pending') {
+      body = _noticeBox(
+        const Color(0xFF2196F3),
+        const Color(0x1A2196F3),
+        Text(t('vf_pending'),
+            style: const TextStyle(
+                fontSize: 13, height: 1.5, color: Color(0xFF1565C0))),
+      );
+    } else if (r != null && r.status == 'rejected') {
+      body = Column(children: [
+        _noticeBox(
+          const Color(0xFFF44336),
+          const Color(0x14F44336),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(t('vf_rejected'),
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600, color: Color(0xFFD32F2F))),
+            const SizedBox(height: 4),
+            Text('${t('vf_reason')}${r.reason ?? t('vf_no_reason')}',
+                style: const TextStyle(
+                    fontSize: 13, height: 1.5, color: Color(0xFF555555))),
+          ]),
+        ),
+        const SizedBox(height: 8),
+        _applyBtn(t('vf_reapply')),
+      ]);
+    } else {
+      body = _applyBtn(t('verify_btn')); // 이력 없음(또는 조회 실패 폴백)
+    }
+    return Padding(padding: const EdgeInsets.only(top: 12), child: body);
+  }
 }
 
 Future<String?> _promptText(BuildContext ctx,
@@ -880,7 +945,7 @@ void showClubDetail(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (c.instaReels.isNotEmpty) _ReelsSection(reels: c.instaReels),
-              if (canModify && !c.isVerified) _verifyBtn(c, context),
+              if (canModify && !c.isVerified) _VerificationSection(club: c),
               if (canModify) _urgentToggle(c, context, onChanged, close),
               if (canModify)
                 _modifyRow(

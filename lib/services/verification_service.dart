@@ -9,6 +9,28 @@ import 'i18n.dart';
 import 'sanitize.dart';
 
 class VerificationService {
+  /// 이 클럽의 최신 인증 요청 상태(웹 verifyStatusArea 조회와 동일 쿼리).
+  /// null=이력 없음 또는 조회 실패(→ 신청 버튼 폴백, 웹 동일).
+  Future<({String status, String? reason})?> latestRequest(
+      String clubId) async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('verification_requests')
+          .where('club_id', isEqualTo: clubId)
+          .orderBy('requested_at', descending: true)
+          .limit(1)
+          .get();
+      if (snap.docs.isEmpty) return null;
+      final d = snap.docs.first.data();
+      return (
+        status: (d['status'] as String?) ?? 'pending',
+        reason: d['reject_reason'] is String ? d['reject_reason'] as String : null,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// 갤러리에서 사진 선택 → 업로드 → 인증 요청 문서 생성.
   /// 반환: null=성공, 'cancelled'=사용자 취소, 그 외=오류 메시지.
   Future<String?> submit(
