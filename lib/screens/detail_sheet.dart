@@ -775,6 +775,9 @@ void showSpotDetail(
                   : null),
           full: ScheduleTimetable(events: spotEvents, accent: NurungjiColors.teal),
         ),
+        // 일정 메모(비정기): 구조화 일정이 있어 요약에 안 쓰였을 때 별도 행(웹 동일)
+        if ((s.schedule ?? '').isNotEmpty && (s.scheduleText ?? '').isNotEmpty)
+          _infoRow('🗓', s.scheduleText!),
         if (where.isNotEmpty) _addressRow(context, where, s.address ?? where),
         if (s.feeInfo != null && s.feeInfo!.isNotEmpty) _infoRow('💰', i18nPrice(s.feeInfo)),
         if (s.contactLink != null && s.contactLink!.isNotEmpty)
@@ -791,6 +794,8 @@ void showSpotDetail(
             onStory: () => shareStoryCard(context, StoryCardData.fromSpot(s)),
           ),
         ),
+        // 추가 안내(notes) — 웹 픽업 상세 메모 행 (폼 저장값 표시 누락 보완)
+        if (s.notes != null && s.notes!.isNotEmpty) _infoRow('📝', s.notes!),
         // 펼쳐야 보이는 영역: 릴스 + 소유자 수정/삭제
         _ExpandReveal(
           child: Column(
@@ -865,9 +870,15 @@ void showClubDetail(
                 child: Icon(Icons.verified, color: Color(0xFF1DA1F2), size: 22)),
           Expanded(child: Text(c.name, style: _titleStyle)),
           if (c.insta != null && c.insta!.isNotEmpty)
-            _instaIcon(() => _open('https://instagram.com/${c.insta}')),
+            _instaIcon(() {
+              Track.event('club_contact', {'type': 'insta', 'club_id': c.id});
+              _open('https://instagram.com/${c.insta}');
+            }),
           if (c.link != null && c.link!.isNotEmpty)
-            _homeIcon(() => _open(c.link)),
+            _homeIcon(() {
+              Track.event('club_contact', {'type': 'link', 'club_id': c.id});
+              _open(c.link);
+            }),
           if (currentUid != null)
             _BookmarkButton(uid: currentUid, teamId: c.id)
           else
@@ -929,8 +940,12 @@ void showClubDetail(
             if (c.lat != null && c.lng != null) ...[
               _actionPill(
                   t('directions_btn'),
-                  () => _open(
-                      'https://map.kakao.com/link/to/${c.name},${c.lat},${c.lng}'),
+                  () {
+                    Track.event(
+                        'club_contact', {'type': 'directions', 'club_id': c.id});
+                    _open(
+                        'https://map.kakao.com/link/to/${c.name},${c.lat},${c.lng}');
+                  },
                   bg: NurungjiColors.yellow,
                   fg: NurungjiColors.dark),
               const SizedBox(width: 8),
@@ -946,7 +961,9 @@ void showClubDetail(
             children: [
               if (c.instaReels.isNotEmpty) _ReelsSection(reels: c.instaReels),
               if (canModify && !c.isVerified) _VerificationSection(club: c),
-              if (canModify) _urgentToggle(c, context, onChanged, close),
+              // 급구는 인증팀만(웹 정책 통일 · A10)
+              if (canModify && c.isVerified)
+                _urgentToggle(c, context, onChanged, close),
               if (canModify)
                 _modifyRow(
                   onEdit: () async {

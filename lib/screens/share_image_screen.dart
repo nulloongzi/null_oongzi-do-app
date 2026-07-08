@@ -33,6 +33,7 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
   final Map<String, Club> _clubs = {};
   bool _loading = true;
   bool _sharing = false;
+  bool _feedMode = true; // 포장 형태: 피드형(식단표 포함)↔스토리형(웹 sh_pick_shape)
 
   static const _slotBorder = [
     Color(0xFFFBC02D), Color(0xFFF57C00), Color(0xFF689F38),
@@ -126,6 +127,18 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
                     ),
                   ),
                 ),
+                // 포장 형태 선택(웹 sh_pick_shape): 피드형=식단표 포함 / 스토리형=카드+도시락
+                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  ChoiceChip(
+                      label: Text(t('share_mode_feed')),
+                      selected: _feedMode,
+                      onSelected: (_) => setState(() => _feedMode = true)),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                      label: Text(t('share_mode_story')),
+                      selected: !_feedMode,
+                      onSelected: (_) => setState(() => _feedMode = false)),
+                ]),
                 SafeArea(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -170,7 +183,7 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
           if (p != null) _profileCard(p),
           const SizedBox(height: 14),
           _lunchbox(),
-          if (dietTeams.isNotEmpty) ...[
+          if (_feedMode && dietTeams.isNotEmpty) ...[
             const SizedBox(height: 14),
             Container(
               padding: const EdgeInsets.all(8),

@@ -381,7 +381,14 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _input(_address, t('pf_addr_hint')),
+        TextField(
+          controller: _address,
+          // 주소를 직접 고치면 이전 좌표 무효화(웹 동일) → 재검색/피커 유도
+          onChanged: (_) {
+            if (_lat != null) setState(() { _lat = null; _lng = null; });
+          },
+          decoration: InputDecoration(hintText: t('pf_addr_hint')),
+        ),
         const SizedBox(height: 8),
         Row(children: [
           Expanded(

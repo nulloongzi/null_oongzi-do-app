@@ -194,11 +194,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _signOut() async {
+    // 실수 방지 확인(웹 au_logout_confirm 대응)
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dctx) => AlertDialog(
+        content: Text(t('logout_confirm')),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dctx, false),
+              child: Text(t('cancel'))),
+          TextButton(
+              onPressed: () => Navigator.pop(dctx, true),
+              child: Text(t('logout'))),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
     try {
       await GoogleSignIn().signOut();
     } catch (_) {}
     await FirebaseAuth.instance.signOut();
-    if (mounted) Navigator.pop(context); // AuthGate가 로그인 화면으로 전환
+    if (mounted) Navigator.pop(context); // 게스트로 지도 복귀
   }
 
   String _joinedLabel(Profile p) => p.createdAt == null

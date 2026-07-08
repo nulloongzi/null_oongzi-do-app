@@ -887,7 +887,8 @@ class _MapScreenState extends State<MapScreen> {
               isDense: true,
               filled: false, // 전역 테마의 흰색 fill 제거 — 글래스 톤과 색 얼룩 방지
               border: InputBorder.none,
-              hintText: t('search_ph'),
+              hintText:
+                  t(_tab == 'pickup' ? 'pk_search_ph' : 'search_ph'),
             ),
             style: const TextStyle(
                 fontSize: 15,

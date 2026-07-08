@@ -1,5 +1,6 @@
 // club_form_screen.dart — 동호회(클럽) 등록/수정 폼. 웹 registration.js 포팅.
 // 로그인 필수(AuthGate가 보장). 좌표는 지도 피커로 직접 선택(지오코딩 불필요).
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import '../models/club.dart';
@@ -49,6 +50,8 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
   final _price = TextEditingController();
   final _insta = TextEditingController();
   final _link = TextEditingController();
+  final _ownerEmail = TextEditingController(); // 관리자 전용: 소유자 재지정(웹 regOwnerEmail)
+  bool _isAdminUser = false;
   final List<TextEditingController> _reels = []; // 릴스 다중 입력(행마다 1개)
 
   final Set<String> _targets = {};
@@ -120,11 +123,14 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
     }
     if (_blocks.isEmpty) _blocks.add(ScheduleBlock());
     if (_reels.isEmpty) _reels.add(TextEditingController()); // 최소 1행 노출
+    _repo.isAdmin().then((v) {
+      if (mounted && v) setState(() => _isAdminUser = true);
+    }).catchError((_) {});
   }
 
   @override
   void dispose() {
-    for (final c in [_name, _targetNote, _address, _price, _insta, _link]) {
+    for (final c in [_name, _targetNote, _address, _price, _insta, _link, _ownerEmail]) {
       c.dispose();
     }
     for (final c in _reels) {
@@ -228,6 +234,13 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
     try {
       if (_isEdit) {
         await _repo.updateClub(widget.editing!.id, fields);
+        // 관리자 전용: 이메일 → 소유자 재지정 (웹 adminReassignOwner 동일 호출)
+        final ownerEmail = _ownerEmail.text.trim().toLowerCase();
+        if (_isAdminUser && ownerEmail.isNotEmpty) {
+          await FirebaseFunctions.instance
+              .httpsCallable('adminReassignOwner')
+              .call({'clubId': widget.editing!.id, 'email': ownerEmail});
+        }
       } else {
         await _repo.createClub(fields);
       }
@@ -284,6 +297,9 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
               ReelEditor(controllers: _reels, onChanged: () => setState(() {})),
             ),
             _group(t('cf_link'), _input(_link, t('f_contact_hint'))),
+            if (_isAdminUser && _isEdit)
+              _group(t('cf_owner_email'),
+                  _input(_ownerEmail, t('cf_owner_email_hint'))),
             const SizedBox(height: 8),
             ElevatedButton(
               onPressed: _saving ? null : _submit,
@@ -329,7 +345,14 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _input(_address, t('cf_addr_hint')),
+        TextField(
+          controller: _address,
+          // 주소를 직접 고치면 이전 좌표 무효화(웹 동일) → 재검색/피커 유도
+          onChanged: (_) {
+            if (_lat != null) setState(() { _lat = null; _lng = null; });
+          },
+          decoration: InputDecoration(hintText: t('cf_addr_hint')),
+        ),
         const SizedBox(height: 8),
         Row(children: [
           Expanded(
