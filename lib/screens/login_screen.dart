@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../services/analytics.dart';
 import '../services/i18n.dart';
+import '../services/profile_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -42,7 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       await FirebaseAuth.instance.signInWithCredential(credential);
       Track.event('login', {'method': 'google'});
-      // 성공 시 AuthGate가 자동으로 홈으로 전환
+      await _afterLogin();
     } catch (e) {
       setState(() => _error = t('login_google_fail'));
     } finally {
@@ -67,12 +68,26 @@ class _LoginScreenState extends State<LoginScreen> {
             .signInWithEmailAndPassword(email: email, password: pw);
         Track.event('login', {'method': 'email'});
       }
+      await _afterLogin();
     } on FirebaseAuthException catch (_) {
       setState(() => _error = t('login_err'));
     } catch (_) {
       setState(() => _error = t('login_err'));
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  // 로그인 성공 공통: 밥이름 프로필 보장(조용히) 후, push로 열렸으면 지도로 복귀.
+  Future<void> _afterLogin() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      try {
+        await ProfileService().ensureProfile(uid);
+      } catch (_) {}
+    }
+    if (mounted && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop(true);
     }
   }
 
@@ -170,6 +185,17 @@ class _LoginScreenState extends State<LoginScreen> {
                   const Padding(
                     padding: EdgeInsets.only(top: 18),
                     child: CircularProgressIndicator(),
+                  ),
+                // 게스트 모드: 로그인 없이 계속 둘러보기(push로 열렸을 때만)
+                if (Navigator.of(context).canPop())
+                  Padding(
+                    padding: const EdgeInsets.only(top: 14),
+                    child: TextButton(
+                      onPressed:
+                          _busy ? null : () => Navigator.of(context).pop(false),
+                      child: Text(t('login_later'),
+                          style: const TextStyle(color: Color(0xFF8D6E63))),
+                    ),
                   ),
               ],
             ),

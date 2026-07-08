@@ -18,6 +18,7 @@ import '../services/profile_service.dart';
 import '../services/i18n.dart';
 import '../theme.dart';
 import 'detail_sheet.dart';
+import 'login_screen.dart';
 import 'pickup_form_screen.dart';
 import 'club_form_screen.dart';
 import 'lunchbox_screen.dart';
@@ -130,10 +131,30 @@ class _MapScreenState extends State<MapScreen> {
     } catch (_) {}
   }
 
-  // 도시락/프로필: 풀스크린 라우트 대신 지도 위 모달 시트(웹 오버레이 동작 대응).
-  void _openLunchbox() => showLunchboxSheet(context);
+  // 게스트 모드(A1): 로그인 필요한 액션 앞 공통 가드 — 로그인 화면 push 후 상태 갱신.
+  Future<bool> _ensureLogin() async {
+    if (_repo.currentUid != null) return true;
+    _snack(t('login_required'));
+    await Navigator.push(
+        context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+    if (!mounted || _repo.currentUid == null) return false;
+    // 세션 중 로그인 → 관리자 상태 갱신
+    _repo.isAdmin().then((v) {
+      if (mounted && v != _isAdmin) setState(() => _isAdmin = v);
+    }).catchError((_) {});
+    return true;
+  }
 
-  void _openProfile() => showProfileSheet(context);
+  // 도시락/프로필: 풀스크린 라우트 대신 지도 위 모달 시트(웹 오버레이 동작 대응).
+  Future<void> _openLunchbox() async {
+    if (!await _ensureLogin() || !mounted) return;
+    showLunchboxSheet(context);
+  }
+
+  Future<void> _openProfile() async {
+    if (!await _ensureLogin() || !mounted) return;
+    showProfileSheet(context);
+  }
 
   // 딥링크(?club=/?spot=) → 탭 전환 + 상세 오픈. 메모리에 없으면 단건 조회.
   Future<void> _handleDeepLink(DeepLink d) async {
@@ -643,6 +664,8 @@ class _MapScreenState extends State<MapScreen> {
 
   // ＋등록: 활성 탭에 따라 픽업/동호회 폼. 등록 성공 시 데이터 재로딩→마커 갱신.
   Future<void> _openRegister() async {
+    // 클럽 등록은 로그인 필수(웹과 동일). 픽업은 무로그인(익명) 허용.
+    if (_tab != 'pickup' && (!await _ensureLogin() || !mounted)) return;
     // 현재 지도 중심을 피커 초기 위치로 (없으면 폼 기본값 사용)
     final cam = await _controller?.getCameraPosition();
     if (!mounted) return;

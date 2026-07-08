@@ -1,13 +1,11 @@
-// main.dart — 네이티브 재작성 진입점 (P1: 인증)
-// webview 셸은 main 브랜치에 보존. 여기부터 풀 네이티브.
+// main.dart — 네이티브 재작성 진입점.
+// 게스트 모드(웹 패리티 A1): 열람은 무로그인, 등록/찜/프로필 등 액션 시점에 로그인 유도.
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'firebase_options.dart';
 import 'theme.dart';
 import 'services/i18n.dart';
-import 'screens/login_screen.dart';
 import 'screens/map_screen.dart';
 
 // ⚠️ 네이버 클라우드 '지도(Mobile Dynamic Map)' Client ID — console.ncloud.com 발급 후 교체.
@@ -37,29 +35,8 @@ class MyApp extends StatelessWidget {
         title: '누룽지도',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
-        home: const AuthGate(),
+        home: const MapScreen(), // 게스트도 바로 지도(웹과 동일)
       ),
-    );
-  }
-}
-
-// 로그인 상태에 따라 로그인 화면 / 홈 전환
-class AuthGate extends StatelessWidget {
-  const AuthGate({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-        if (snapshot.hasData) return const MapScreen();
-        return const LoginScreen();
-      },
     );
   }
 }

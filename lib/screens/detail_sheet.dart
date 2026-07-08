@@ -22,6 +22,7 @@ import '../widgets/share_menu.dart';
 import '../widgets/story_card.dart';
 import '../widgets/map_detail_panel.dart';
 import 'club_form_screen.dart';
+import 'login_screen.dart';
 import 'pickup_form_screen.dart';
 
 const _titleStyle = TextStyle(
@@ -803,7 +804,23 @@ void showClubDetail(
           if (c.link != null && c.link!.isNotEmpty)
             _homeIcon(() => _open(c.link)),
           if (currentUid != null)
-            _BookmarkButton(uid: currentUid, teamId: c.id),
+            _BookmarkButton(uid: currentUid, teamId: c.id)
+          else
+            // 게스트: 흐린 🍱 → 탭하면 로그인 유도(웹은 localStorage 폴백, 앱은 로그인 우선)
+            BounceTap(
+              onTap: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(t('login_required'))));
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()));
+              },
+              child: const Padding(
+                padding: EdgeInsets.only(left: 6),
+                child: Opacity(
+                    opacity: 0.32,
+                    child: Text('🍱', style: TextStyle(fontSize: 24))),
+              ),
+            ),
         ]),
         const SizedBox(height: 4),
         // 3. 일정 morph (타이틀 바로 아래)

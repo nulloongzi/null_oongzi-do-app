@@ -145,6 +145,7 @@ const Map<String, Map<String, String>> kStrings = {
   'lb_custom_team': {'ko': '커스텀 팀', 'en': 'Custom team'},
   'lb_remove': {'ko': '빼기', 'en': 'Remove'},
   'login_required': {'ko': '로그인이 필요해요', 'en': 'Login required'},
+  'login_later': {'ko': '나중에 할게요 (둘러보기)', 'en': 'Maybe later (keep browsing)'},
   'lb_no_sched': {'ko': '찜한 팀의 일정이 없어요', 'en': 'No schedule for saved teams'},
   'lb_reorder_hint': {'ko': '칸을 탭해 순서 바꾸기 · ✕ 빼기', 'en': 'Tap slots to reorder · ✕ remove'},
   'lb_reorder_pick': {'ko': '바꿀 칸을 한 번 더 탭하세요', 'en': 'Tap another slot to swap'},
