@@ -8,6 +8,9 @@
     
         <package android:name="com.instagram.android" />
 
+        <!-- 카카오톡 공유(SEND 인텐트 타깃) 설치 감지 -->
+        <package android:name="com.kakao.talk" />
+
         <!-- appinio_social_share: 페이스북/인스타 설치 감지·콘텐츠 전달용 -->
         <provider android:authorities="com.facebook.katana.provider.PlatformProvider" />
 

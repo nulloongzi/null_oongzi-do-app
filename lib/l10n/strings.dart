@@ -158,6 +158,7 @@ const Map<String, Map<String, String>> kStrings = {
   'share_mode_feed': {'ko': '피드형 (식단표 포함)', 'en': 'Feed (with schedule)'},
   'share_mode_story': {'ko': '스토리형', 'en': 'Story'},
   'lb_no_sched': {'ko': '찜한 팀의 일정이 없어요', 'en': 'No schedule for saved teams'},
+  'share_kakao': {'ko': '💬 카카오톡', 'en': '💬 KakaoTalk'},
   'lb_reorder_hint': {'ko': '칸을 탭해 순서 바꾸기 · ✕ 빼기', 'en': 'Tap slots to reorder · ✕ remove'},
   'lb_reorder_pick': {'ko': '바꿀 칸을 한 번 더 탭하세요', 'en': 'Tap another slot to swap'},
   'lb_edit': {'ko': '편집', 'en': 'Edit'},

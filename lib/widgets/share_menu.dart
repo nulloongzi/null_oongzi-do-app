@@ -1,5 +1,7 @@
 // share_menu.dart — 통합 공유 바텀시트. 웹 openShareMenu 포팅.
 // 헤드라인=인스타 스토리, 그 외 링크복사 / 다른앱(OS 공유시트). 카톡 리치카드는 후속.
+import 'dart:io' show Platform;
+import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter/material.dart';
 import '../services/analytics.dart';
 import '../services/i18n.dart';
@@ -49,6 +51,36 @@ void showShareMenu(
                   onStory();
                 },
               ),
+            _menuButton(
+              label: t('share_kakao'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                Track.event('share', {'method': 'kakao', ...idP});
+                // 콘솔/SDK 없이 카톡 직접 공유(텍스트+링크, 채팅 픽커로).
+                // 미설치·비안드로이드는 OS 공유시트 폴백 — 웹 카톡 공유의
+                // 폴백 체인(카드→OS시트→복사)과 같은 결말. 리치카드는
+                // 네이티브 앱 키+플랫폼 등록 후 kakao_flutter_sdk로 업그레이드.
+                var sent = false;
+                if (Platform.isAndroid) {
+                  try {
+                    await AndroidIntent(
+                      action: 'android.intent.action.SEND',
+                      type: 'text/plain',
+                      package: 'com.kakao.talk',
+                      arguments: {
+                        'android.intent.extra.TEXT': '$shareTitle\n$url'
+                      },
+                    ).launch();
+                    sent = true;
+                  } catch (_) {}
+                }
+                if (!sent) {
+                  try {
+                    await ShareService.osShare('$shareTitle\n$url');
+                  } catch (_) {}
+                }
+              },
+            ),
             _menuButton(
               label: t('share_copy'),
               onTap: () async {
