@@ -119,8 +119,8 @@
 
 ### 진행 현황 (2026-07-08)
 - ✅ 완료(앱): A1 게스트 모드 · A2 인증 상태 표시 · A4 소유자 재지정 · A5 픽업 비고/일정메모 표시 · A6 포장하기 2모드 · A7 탭별 placeholder · A8 club_contact 추적 · A9 좌표 리셋 · A10 급구 인증팀 제한(웹 기준 통일) · A11 로그아웃 confirm
-- ✅ 완료(1단계): A3 카카오톡 공유 — SEND 인텐트로 카톡 직접 공유(텍스트+링크, 키 불필요). 미설치/비안드로이드는 OS 시트 폴백.
-  - ⏫ 리치카드 업그레이드(웹 ①과 동일)에 필요한 사람 작업: developers.kakao.com → 누룽지도 앱 → ① **네이티브 앱 키** 복사 전달 ② **플랫폼 → Android 등록**: 패키지명 `com.nulloongzi.nulloongzido` + 키해시. 완료되면 kakao_flutter_sdk_share로 교체.
+- ✅ 완료: A3 카카오톡 공유 — kakao_flutter_sdk_share **리치카드**(제목+로고+'지도에서 보기' 버튼, 웹 Kakao.Share 대응). 미설치/실패는 OS 시트 폴백.
+  - 콘솔 등록값: 패키지명 `com.nulloongzi.nulloongzido` · **키 해시 `7+iGjU4VLiV7d68cUCIRKlmtUHA=`** (debug-fixed.keystore 기준 — CI/로컬 동일). 릴리즈 키스토어 도입 시 그 키 해시도 추가 등록 필요.
 - 🚫 제외: A12 라벨 겹침 각도 — 앱은 라벨+핀이 한 장의 합성 이미지라 웹처럼 라벨만 xAnchor 이동 불가(구조적). 필요 시 라벨을 Flutter 오버레이로 분리하는 별도 작업으로.
 - ✅ 완료(웹, `claude/keen-cannon-93mnA`): W1 멀티 릴스(폼 textarea·insta_reels 저장·상세 더보기) · W2 라벨 롱프레스 릴스 피크(릴스 없는 팀은 무시 — 앱은 스낵바) · W3 릴스 지연 로딩(포스터→탭재생) · W4 remove_bookmark 추적 · W5 라벨 등장 페이드 · W6 필터시트 키워드
 - 🏁 결론: 패리티 백로그 소진. 잔여는 A3(카카오 콘솔 대기)와 A12(구조적 제외)뿐.

@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
+import 'package:kakao_flutter_sdk_share/kakao_flutter_sdk_share.dart';
 import 'firebase_options.dart';
 import 'theme.dart';
 import 'services/i18n.dart';
@@ -14,6 +15,8 @@ const String kNaverMapClientId = 't4mzao93mh';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // 카카오톡 리치카드 공유 — 네이티브 앱 키(콘솔에 패키지명+키해시 등록 필요)
+  KakaoSdk.init(nativeAppKey: '24e0161dd5945250b37e5ec7fbdf8363');
   await initLang();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await FlutterNaverMap().init(

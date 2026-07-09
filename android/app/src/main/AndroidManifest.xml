@@ -23,6 +23,12 @@
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="kakaomap" />
         </intent>
+
+        <!-- 카카오톡 공유 SDK: 카톡 실행 가능 여부 조회 -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="kakaotalk" />
+        </intent>
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="instagram" />
@@ -88,6 +94,14 @@
                 <data android:scheme="https"
                       android:host="nulloongzi.github.io"
                       android:pathPrefix="/null_oongzi-do" />
+            </intent-filter>
+            <!-- 카카오톡 공유 후 앱 복귀(커스텀 스킴 kakao{네이티브앱키}) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="kakao24e0161dd5945250b37e5ec7fbdf8363"
+                    android:host="kakaolink" />
             </intent-filter>
         </activity>
         <meta-data
