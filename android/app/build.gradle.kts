@@ -34,7 +34,7 @@ android {
 
     defaultConfig {
         applicationId = "com.nulloongzi.nulloongzido"
-        minSdk = flutter.minSdkVersion
+        minSdk = maxOf(flutter.minSdkVersion, 23)  // Firebase Android SDK 최소 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -48,6 +48,14 @@ android {
                 storeFile = keystoreProperties["storeFile"]?.let { rootProject.file(it) }
                 storePassword = keystoreProperties["storePassword"] as String?
             }
+        }
+        // 고정 디버그 키스토어 → CI/로컬 어디서 빌드해도 SHA-1 동일 → 구글 로그인/App Links 1회 등록.
+        // (디버그 키스토어는 비밀이 아님 — 표준 관행)
+        getByName("debug") {
+            storeFile = file("debug-fixed.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
         }
     }
 

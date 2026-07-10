@@ -7,7 +7,13 @@
         <package android:name="net.daum.android.map" />
     
         <package android:name="com.instagram.android" />
-    
+
+        <!-- 카카오톡 공유(SEND 인텐트 타깃) 설치 감지 -->
+        <package android:name="com.kakao.talk" />
+
+        <!-- appinio_social_share: 페이스북/인스타 설치 감지·콘텐츠 전달용 -->
+        <provider android:authorities="com.facebook.katana.provider.PlatformProvider" />
+
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <category android:name="android.intent.category.BROWSABLE" />
@@ -16,6 +22,12 @@
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="kakaomap" />
+        </intent>
+
+        <!-- 카카오톡 공유 SDK: 카톡 실행 가능 여부 조회 -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="kakaotalk" />
         </intent>
         <intent>
             <action android:name="android.intent.action.VIEW" />
@@ -28,6 +40,34 @@
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon"
         android:usesCleartextTraffic="true">
+
+        <!-- appinio_social_share: 스토리 카드 임시 PNG를 인스타에 넘기는 FileProvider -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <!-- 인스타 스토리 'source_application'(=Facebook App ID). 발급 후 strings.xml 교체. -->
+        <meta-data
+            android:name="com.facebook.sdk.ApplicationId"
+            android:value="@string/facebook_app_id" />
+        <!-- 번들된 Facebook SDK 17이 시작 시 클라이언트 토큰을 요구한다. -->
+        <meta-data
+            android:name="com.facebook.sdk.ClientToken"
+            android:value="@string/facebook_client_token" />
+        <!-- placeholder 앱 ID로 FB에 이벤트/광고ID 전송 방지(공유 동작엔 불필요·프라이버시). -->
+        <meta-data
+            android:name="com.facebook.sdk.AutoLogAppEventsEnabled"
+            android:value="false" />
+        <meta-data
+            android:name="com.facebook.sdk.AdvertiserIDCollectionEnabled"
+            android:value="false" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -43,6 +83,25 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <!-- App Links: 공유 링크(?club=/?spot=)로 앱 열기.
+                 autoVerify 동작엔 https://nulloongzi.github.io/.well-known/assetlinks.json 필요
+                 (미배포 시 링크는 브라우저=웹앱으로 안전하게 폴백). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https"
+                      android:host="nulloongzi.github.io"
+                      android:pathPrefix="/null_oongzi-do" />
+            </intent-filter>
+            <!-- 카카오톡 공유 후 앱 복귀(커스텀 스킴 kakao{네이티브앱키}) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="kakao24e0161dd5945250b37e5ec7fbdf8363"
+                    android:host="kakaolink" />
             </intent-filter>
         </activity>
         <meta-data

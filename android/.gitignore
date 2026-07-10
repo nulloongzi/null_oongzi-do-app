@@ -12,3 +12,5 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+# 예외: 고정 디버그 키스토어는 비밀이 아니므로 커밋(SHA-1 안정화용). 릴리스 키스토어는 절대 커밋 금지.
+!app/debug-fixed.keystore

@@ -1,13 +1,28 @@
-import 'dart:async';
+// main.dart — 네이티브 재작성 진입점.
+// 게스트 모드(웹 패리티 A1): 열람은 무로그인, 등록/찜/프로필 등 액션 시점에 로그인 유도.
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-// 안드로이드 전용 기능을 위해 import
-import 'package:webview_flutter_android/webview_flutter_android.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_naver_map/flutter_naver_map.dart';
+import 'package:kakao_flutter_sdk_share/kakao_flutter_sdk_share.dart';
+import 'firebase_options.dart';
+import 'theme.dart';
+import 'services/i18n.dart';
+import 'screens/map_screen.dart';
 
-void main() {
+// ⚠️ 네이버 클라우드 '지도(Mobile Dynamic Map)' Client ID — console.ncloud.com 발급 후 교체.
+// placeholder면 지도가 인증 실패로 안 뜸(카운트·상세 등 나머지는 정상 동작).
+const String kNaverMapClientId = 't4mzao93mh';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // 카카오톡 리치카드 공유 — 네이티브 앱 키(콘솔에 패키지명+키해시 등록 필요)
+  KakaoSdk.init(nativeAppKey: '24e0161dd5945250b37e5ec7fbdf8363');
+  await initLang();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await FlutterNaverMap().init(
+    clientId: kNaverMapClientId,
+    onAuthFailed: (ex) => debugPrint('네이버지도 인증 실패: $ex'),
+  );
   runApp(const MyApp());
 }
 
@@ -16,119 +31,14 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: '누룽지도',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFFAC710)),
-        useMaterial3: true,
-      ),
-      home: const MapScreen(),
-    );
-  }
-}
-
-class MapScreen extends StatefulWidget {
-  const MapScreen({super.key});
-
-  @override
-  State<MapScreen> createState() => _MapScreenState();
-}
-
-class _MapScreenState extends State<MapScreen> {
-  late final WebViewController _controller;
-  int _loadingProgress = 0; // 로딩 상태 확인용 변수 추가
-
-  @override
-  void initState() {
-    super.initState();
-    _requestPermission();
-
-    final WebViewController controller = WebViewController();
-
-    controller
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0xFFFFFFFF))
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onProgress: (progress) {
-            setState(() {
-              _loadingProgress = progress; // 로딩 진행률 업데이트
-            });
-          },
-          onNavigationRequest: (NavigationRequest request) async {
-            // 기존 외부 링크 처리 로직 유지
-            if (request.url.contains('map.kakao.com') ||
-                request.url.contains('instagram.com') ||
-                request.url.startsWith('kakaomap:') ||
-                request.url.startsWith('intent:') ||
-                request.url.startsWith('tel:') ||
-                request.url.startsWith('mailto:')) {
-              if (await canLaunchUrl(Uri.parse(request.url))) {
-                await launchUrl(
-                  Uri.parse(request.url),
-                  mode: LaunchMode.externalApplication,
-                );
-              }
-              return NavigationDecision.prevent;
-            }
-            return NavigationDecision.navigate;
-          },
-        ),
-      )
-      ..loadRequest(Uri.parse('https://nulloongzi.github.io/null_oongzi-do/'));
-
-    // 안드로이드 특정 설정 유지
-    if (controller.platform is AndroidWebViewController) {
-      AndroidWebViewController.enableDebugging(true);
-      (controller.platform as AndroidWebViewController)
-          .setGeolocationPermissionsPromptCallbacks(
-            onShowPrompt: (origin) async {
-              return const GeolocationPermissionsResponse(
-                allow: true,
-                retain: false,
-              );
-            },
-          );
-    }
-
-    _controller = controller;
-  }
-
-  // 권한 요청 함수
-  Future<void> _requestPermission() async {
-    await [Permission.location].request();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) return;
-        if (await _controller.canGoBack()) {
-          await _controller.goBack();
-        } else {
-          SystemNavigator.pop();
-        }
-      },
-      child: Scaffold(
-        body: SafeArea(
-          child: Stack(
-            // Stack을 사용하여 로딩바를 웹뷰 위에 배치
-            children: [
-              WebViewWidget(controller: _controller),
-              // 로딩이 진행 중일 때만 상단에 바 표시
-              if (_loadingProgress < 100)
-                LinearProgressIndicator(
-                  value: _loadingProgress / 100.0,
-                  backgroundColor: Colors.white,
-                  color: const Color(0xFFFAC710), // 앱 메인 컬러
-                  minHeight: 3,
-                ),
-            ],
-          ),
-        ),
+    // appLang 변경 시 앱 전체 리빌드 → t()가 새 언어로 재평가됨.
+    return ValueListenableBuilder<String>(
+      valueListenable: appLang,
+      builder: (_, __, ___) => MaterialApp(
+        title: '누룽지도',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light,
+        home: const MapScreen(), // 게스트도 바로 지도(웹과 동일)
       ),
     );
   }
