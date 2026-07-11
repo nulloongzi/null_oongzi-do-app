@@ -1,0 +1,50 @@
+name: CI
+
+# Phase 1 테스트 게이팅 CI (Flutter 앱).
+# 빠른 게이트(analyze + test)를 매 push/PR 에. 무거운 APK 빌드는 build-apk.yml(수동).
+# 방법론: docs/testing-methodology.md
+
+on:
+  push:
+    branches: ["main", "claude/**"]
+  pull_request:
+    branches: ["main"]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze-test:
+    name: Analyze + Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # AGP/Gradle 툴체인은 여기선 불필요하지만 flutter가 JDK를 참조할 수 있어 고정.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - run: flutter --version
+
+      - name: Install deps
+        run: flutter pub get
+
+      # 티어 0: 정적 분석 — error/warning 게이트 (신규 info lint 는 비게이팅).
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos
+
+      # 티어 1: 순수 유닛 + 위젯 테스트 게이트.
+      - name: Test
+        run: flutter test
+
+      # 포맷 드리프트는 우선 리포팅만(비차단). Phase 2 에서 게이팅 승격.
+      - name: Format check (report-only)
+        continue-on-error: true
+        run: dart format --output=none --set-exit-if-changed .
