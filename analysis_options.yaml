@@ -13,6 +13,9 @@ analyzer:
     - "lib/firebase_options.dart"
     - "**/*.g.dart"
     - "**/*.freezed.dart"
+    # 루트 패키지(nulloongzido)와 무관한 오래된 중첩 스캐폴드 — 별도 pubspec 을 갖고
+    # 있어 루트 분석 컨텍스트에선 URI 해석 실패(에러) → 분석 대상에서 제외.
+    - "volleyball_map/**"
 
 linter:
   rules:

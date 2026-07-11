@@ -1,7 +1,6 @@
 // share_image_screen.dart — 내 네임카드+도시락+식단표를 이미지로 캡처해 공유. 웹 generateShareImage 포팅.
 // RepaintBoundary → toImage(pixelRatio) → PNG → share_plus.
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';

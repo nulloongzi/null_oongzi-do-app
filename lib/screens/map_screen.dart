@@ -340,13 +340,6 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  NOverlayCaption _caption(String text, {bool urgent = false}) => NOverlayCaption(
-        text: urgent ? '🔥 $text' : text,
-        textSize: 13,
-        color: urgent ? const Color(0xFFD32F2F) : NurungjiColors.dark,
-        haloColor: Colors.white,
-      );
-
   // 클러스터용 노란 원 아이콘 1회 생성
   Future<void> _ensureClusterIcon() async {
     if (_clusterIcon != null || !mounted) return;
