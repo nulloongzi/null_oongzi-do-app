@@ -1,28 +1,29 @@
-# This file configures the analyzer, which statically analyzes Dart code to
-# check for errors, warnings, and lints.
+# 정적 분석 설정. `flutter analyze` 게이트의 기준.
+# Phase 1(정적 티어): flutter_lints 기반 + 순수 로직 버그를 잡는 추가 lint(정보 수준).
+# CI 게이트는 error/warning 만 실패시키고(info 는 --no-fatal-infos), 리팩터 없이
+# 가시성만 올린다.
 #
-# The issues identified by the analyzer are surfaced in the UI of Dart-enabled
-# IDEs (https://dart.dev/tools#ides-and-editors). The analyzer can also be
-# invoked from the command line by running `flutter analyze`.
+# strict-casts / strict-raw-types 는 raw `List`(club.scheduleRaw 등) 사용처가 있어
+# Phase 2(DI 시임 + 타입 정리)에서 켠다 — docs/testing-methodology.md 참고.
 
-# The following line activates a set of recommended lints for Flutter apps,
-# packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
-linter:
-  # The lint rules applied to this project can be customized in the
-  # section below to disable rules from the `package:flutter_lints/flutter.yaml`
-  # included above or to enable additional rules. A list of all available lints
-  # and their documentation is published at https://dart.dev/lints.
-  #
-  # Instead of disabling a lint rule for the entire project in the
-  # section below, it can also be suppressed for a single line of code
-  # or a specific dart file by using the `// ignore: name_of_lint` and
-  # `// ignore_for_file: name_of_lint` syntax on the line or in the file
-  # producing the lint.
-  rules:
-    # avoid_print: false  # Uncomment to disable the `avoid_print` rule
-    # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
+analyzer:
+  exclude:
+    - "lib/firebase_options.dart"
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    # 루트 패키지(nulloongzido)와 무관한 오래된 중첩 스캐폴드 — 별도 pubspec 을 갖고
+    # 있어 루트 분석 컨텍스트에선 URI 해석 실패(에러) → 분석 대상에서 제외.
+    - "volleyball_map/**"
 
-# Additional information about this file can be found at
-# https://dart.dev/guides/language/analysis-options
+linter:
+  rules:
+    # 순수 로직/정합성 버그를 잡는 안전한 추가 규칙 (대부분 info 수준).
+    - unrelated_type_equality_checks
+    - no_duplicate_case_values
+    - avoid_empty_else
+    - valid_regexps
+    - prefer_void_to_null
+    - unnecessary_null_checks
+    - throw_in_finally
