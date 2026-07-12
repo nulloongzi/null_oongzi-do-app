@@ -55,42 +55,58 @@ class StoryCardData {
   });
 
   StoryCardData copyWith({String? station}) => StoryCardData(
-        title: title,
-        url: url,
-        verified: verified,
-        accent: accent,
-        icon: icon,
-        tags: tags,
-        thisWeek: thisWeek,
-        thisWeekBadge: thisWeekBadge,
-        schedule: schedule,
-        fee: fee,
-        venue: venue,
-        address: address,
-        lat: lat,
-        lng: lng,
-        station: station ?? this.station,
-      );
+    title: title,
+    url: url,
+    verified: verified,
+    accent: accent,
+    icon: icon,
+    tags: tags,
+    thisWeek: thisWeek,
+    thisWeekBadge: thisWeekBadge,
+    schedule: schedule,
+    fee: fee,
+    venue: venue,
+    address: address,
+    lat: lat,
+    lng: lng,
+    station: station ?? this.station,
+  );
 
   factory StoryCardData.fromSpot(PickupSpot s) {
-    final sportL = t(s.sport == '6s'
-        ? 'sport_6s'
-        : (s.sport == '9s' ? 'sport_9s' : 'sport_mixed'));
-    final levelL = t(const {
-          'beginner': 'lv_beginner',
-          'intermediate': 'lv_intermediate',
-          'advanced': 'lv_advanced',
-        }[s.level] ??
-        'lv_any');
+    final sportL = t(
+      s.sport == '6s'
+          ? 'sport_6s'
+          : (s.sport == '9s' ? 'sport_9s' : 'sport_mixed'),
+    );
+    final levelL = t(
+      const {
+            'beginner': 'lv_beginner',
+            'intermediate': 'lv_intermediate',
+            'advanced': 'lv_advanced',
+          }[s.level] ??
+          'lv_any',
+    );
     final tags = <StoryTag>[
       StoryTag(sportL, const Color(0xFFFAC710), const Color(0xFF4E342E)),
       StoryTag(levelL, const Color(0xFFF0ECE2), const Color(0xFF6D6258)),
     ];
     if (s.beginnerFriendly) {
-      tags.add(StoryTag(t('beginner_ok'), const Color(0xFFE7F6E7), const Color(0xFF2E7D32)));
+      tags.add(
+        StoryTag(
+          t('beginner_ok'),
+          const Color(0xFFE7F6E7),
+          const Color(0xFF2E7D32),
+        ),
+      );
     }
     if (s.englishOk) {
-      tags.add(StoryTag(t('english_ok'), const Color(0xFFE6F0FB), const Color(0xFF1565C0)));
+      tags.add(
+        StoryTag(
+          t('english_ok'),
+          const Color(0xFFE6F0FB),
+          const Color(0xFF1565C0),
+        ),
+      );
     }
     return StoryCardData(
       title: s.title,
@@ -99,9 +115,11 @@ class StoryCardData {
       tags: tags,
       thisWeek: s.thisWeek,
       thisWeekBadge: t('this_week'),
-      schedule: i18nSchedule((s.schedule != null && s.schedule!.isNotEmpty)
-          ? s.schedule
-          : s.scheduleText),
+      schedule: i18nSchedule(
+        (s.schedule != null && s.schedule!.isNotEmpty)
+            ? s.schedule
+            : s.scheduleText,
+      ),
       fee: i18nPrice(s.feeInfo),
       venue: s.venueName,
       address: s.address,
@@ -117,8 +135,13 @@ class StoryCardData {
         .toList();
     final tags = <StoryTag>[];
     for (var i = 0; i < tgt.length && i < 4; i++) {
-      tags.add(StoryTag(
-          i18nTarget(tgt[i]), const Color(0xFFF0ECE2), const Color(0xFF6D6258)));
+      tags.add(
+        StoryTag(
+          i18nTarget(tgt[i]),
+          const Color(0xFFF0ECE2),
+          const Color(0xFF6D6258),
+        ),
+      );
     }
     return StoryCardData(
       title: c.name,
@@ -171,11 +194,19 @@ class StoryCardPainter extends CustomPainter {
   static const _brown = Color(0xFF8D6E63);
   static const _yellow = Color(0xFFFAC710);
 
-  TextStyle _st(double size, FontWeight w, Color c) =>
-      GoogleFonts.notoSansKr(fontSize: size, fontWeight: w, color: c, height: 1.1);
+  TextStyle _st(double size, FontWeight w, Color c) => GoogleFonts.notoSansKr(
+    fontSize: size,
+    fontWeight: w,
+    color: c,
+    height: 1.1,
+  );
 
-  TextPainter _tp(String text, TextStyle style,
-      {double maxWidth = double.infinity, int maxLines = 1}) {
+  TextPainter _tp(
+    String text,
+    TextStyle style, {
+    double maxWidth = double.infinity,
+    int maxLines = 1,
+  }) {
     final tp = TextPainter(
       text: TextSpan(text: text, style: style),
       textDirection: TextDirection.ltr,
@@ -188,8 +219,14 @@ class StoryCardPainter extends CustomPainter {
   void _rrect(Canvas c, Rect r, double radius, Paint p) =>
       c.drawRRect(RRect.fromRectAndRadius(r, Radius.circular(radius)), p);
 
-  void _shadow(Canvas c, Rect r, double radius,
-      {double blur = 20, double dy = 14, Color color = const Color(0x2E5D4037)}) {
+  void _shadow(
+    Canvas c,
+    Rect r,
+    double radius, {
+    double blur = 20,
+    double dy = 14,
+    Color color = const Color(0x2E5D4037),
+  }) {
     c.drawRRect(
       RRect.fromRectAndRadius(r.translate(0, dy), Radius.circular(radius)),
       Paint()
@@ -222,8 +259,11 @@ class StoryCardPainter extends CustomPainter {
 
     const specks = [Color(0x33D8A441), Color(0x29B47832), Color(0x38FFFFFF)];
     for (var sp = 0; sp < 520; sp++) {
-      canvas.drawCircle(Offset(rnd() * w, rnd() * h), 1.5 + rnd() * 4,
-          Paint()..color = specks[sp % specks.length]);
+      canvas.drawCircle(
+        Offset(rnd() * w, rnd() * h),
+        1.5 + rnd() * 4,
+        Paint()..color = specks[sp % specks.length],
+      );
     }
 
     // ── 상단 브랜드 (로고 + 누룽지도) ──
@@ -262,21 +302,33 @@ class StoryCardPainter extends CustomPainter {
 
     for (double bx = mpX + 10; bx < mpX + mpW - 30; bx += 150) {
       for (double by = mpY + 10; by < mpY + mpH - 70; by += 120) {
-        final col =
-            brnd() > 0.5 ? const Color(0xFFF1E3BF) : const Color(0xFFEFE6CF);
+        final col = brnd() > 0.5
+            ? const Color(0xFFF1E3BF)
+            : const Color(0xFFEFE6CF);
         _rrect(
-            canvas,
-            Rect.fromLTWH(
-                bx + brnd() * 18, by + brnd() * 14, 84 + brnd() * 46, 60 + brnd() * 34),
-            12,
-            Paint()..color = col);
+          canvas,
+          Rect.fromLTWH(
+            bx + brnd() * 18,
+            by + brnd() * 14,
+            84 + brnd() * 46,
+            60 + brnd() * 34,
+          ),
+          12,
+          Paint()..color = col,
+        );
       }
     }
     // 하천 느낌
     final river = Path()
       ..moveTo(mpX, mpY + mpH - 60)
-      ..cubicTo(mpX + mpW * 0.3, mpY + mpH - 100, mpX + mpW * 0.6, mpY + mpH - 20,
-          mpX + mpW, mpY + mpH - 70)
+      ..cubicTo(
+        mpX + mpW * 0.3,
+        mpY + mpH - 100,
+        mpX + mpW * 0.6,
+        mpY + mpH - 20,
+        mpX + mpW,
+        mpY + mpH - 70,
+      )
       ..lineTo(mpX + mpW, mpY + mpH)
       ..lineTo(mpX, mpY + mpH)
       ..close();
@@ -287,21 +339,25 @@ class StoryCardPainter extends CustomPainter {
     final pinX = mpX + mpW / 2;
     const headY = mpY + 178.0, rPin = 66.0;
     canvas.drawOval(
-        Rect.fromCenter(center: Offset(pinX, headY + 104), width: 92, height: 28),
-        Paint()..color = const Color(0x1A000000));
+      Rect.fromCenter(center: Offset(pinX, headY + 104), width: 92, height: 28),
+      Paint()..color = const Color(0x1A000000),
+    );
     final pinPaint = Paint()..color = accent;
     canvas.drawPath(
-        Path()
-          ..moveTo(pinX - 36, headY + 22)
-          ..lineTo(pinX + 36, headY + 22)
-          ..lineTo(pinX, headY + 100)
-          ..close(),
-        pinPaint);
+      Path()
+        ..moveTo(pinX - 36, headY + 22)
+        ..lineTo(pinX + 36, headY + 22)
+        ..lineTo(pinX, headY + 100)
+        ..close(),
+      pinPaint,
+    );
     canvas.drawCircle(Offset(pinX, headY), rPin, pinPaint);
     canvas.drawCircle(Offset(pinX, headY), 42, Paint()..color = Colors.white);
     final iconTp = _tp(data.icon, _st(44, FontWeight.w400, _dark));
     iconTp.paint(
-        canvas, Offset(pinX - iconTp.width / 2, headY - iconTp.height / 2));
+      canvas,
+      Offset(pinX - iconTp.width / 2, headY - iconTp.height / 2),
+    );
 
     // 지역 라벨 + 위치 칩
     final region = _region(data.address);
@@ -312,16 +368,23 @@ class StoryCardPainter extends CustomPainter {
     final chipText = (data.station != null && data.station!.isNotEmpty)
         ? data.station!
         : (data.venue != null && data.venue!.isNotEmpty)
-            ? data.venue!
-            : region;
+        ? data.venue!
+        : region;
     if (chipText.isNotEmpty) {
       final ct = _tp(chipText, _st(34, FontWeight.w800, _dark));
       final chW = (ct.width + 56).clamp(0.0, mpW - 60);
       final chX = mpX + (mpW - chW) / 2;
       const chY = mpY + mpH - 94.0;
-      _rrect(canvas, Rect.fromLTWH(chX, chY, chW, 64), 32,
-          Paint()..color = Colors.white);
-      ct.paint(canvas, Offset(mpX + mpW / 2 - ct.width / 2, chY + 32 - ct.height / 2));
+      _rrect(
+        canvas,
+        Rect.fromLTWH(chX, chY, chW, 64),
+        32,
+        Paint()..color = Colors.white,
+      );
+      ct.paint(
+        canvas,
+        Offset(mpX + mpW / 2 - ct.width / 2, chY + 32 - ct.height / 2),
+      );
     }
 
     // ── 정보 카드 ──
@@ -343,8 +406,10 @@ class StoryCardPainter extends CustomPainter {
     if (data.verified) {
       final lm = titleTp.computeLineMetrics();
       final firstW = lm.isNotEmpty ? lm.first.width : titleTp.width;
-      _tp('✔', _st(46, FontWeight.w700, const Color(0xFF1DA1F2)))
-          .paint(canvas, Offset(ix + firstW + 14, y + 10));
+      _tp(
+        '✔',
+        _st(46, FontWeight.w700, const Color(0xFF1DA1F2)),
+      ).paint(canvas, Offset(ix + firstW + 14, y + 10));
     }
     y += titleTp.height + 20;
 
@@ -360,8 +425,12 @@ class StoryCardPainter extends CustomPainter {
           cx = ix.toDouble();
           cl += chipH + chipGap;
         }
-        _rrect(canvas, Rect.fromLTWH(cx, cl, cw, chipH), chipH / 2,
-            Paint()..color = t.bg);
+        _rrect(
+          canvas,
+          Rect.fromLTWH(cx, cl, cw, chipH),
+          chipH / 2,
+          Paint()..color = t.bg,
+        );
         tt.paint(canvas, Offset(cx + chipPad, cl + chipH / 2 - tt.height / 2));
         cx += cw + chipGap;
       }
@@ -370,15 +439,27 @@ class StoryCardPainter extends CustomPainter {
 
     // 이번주 배너
     if (data.thisWeek != null && data.thisWeek!.isNotEmpty) {
-      final twTp = _tp(data.thisWeek!, _st(34, FontWeight.w700, _dark),
-          maxWidth: iw - 48, maxLines: 2);
+      final twTp = _tp(
+        data.thisWeek!,
+        _st(34, FontWeight.w700, _dark),
+        maxWidth: iw - 48,
+        maxLines: 2,
+      );
       final bannerH = 84 + twTp.height + 18;
-      _rrect(canvas, Rect.fromLTWH(ix, y, iw, bannerH), 20,
-          Paint()..color = const Color(0x38FAC710));
+      _rrect(
+        canvas,
+        Rect.fromLTWH(ix, y, iw, bannerH),
+        20,
+        Paint()..color = const Color(0x38FAC710),
+      );
       final badgeTp = _tp(data.thisWeekBadge, _st(28, FontWeight.w800, _dark));
       final badgeW = badgeTp.width + 32;
-      _rrect(canvas, Rect.fromLTWH(ix + 22, y + 22, badgeW, 44), 22,
-          Paint()..color = _yellow);
+      _rrect(
+        canvas,
+        Rect.fromLTWH(ix + 22, y + 22, badgeW, 44),
+        22,
+        Paint()..color = _yellow,
+      );
       badgeTp.paint(canvas, Offset(ix + 38, y + 44 - badgeTp.height / 2));
       twTp.paint(canvas, Offset(ix + 22, y + 84));
       y += bannerH + 30;
@@ -389,8 +470,12 @@ class StoryCardPainter extends CustomPainter {
       if (text == null || text.isEmpty) return;
       final it = _tp(icon, _st(38, FontWeight.w600, _dark));
       it.paint(canvas, Offset(ix, y));
-      final tt = _tp(text, _st(38, FontWeight.w600, _dark),
-          maxWidth: iw - 62, maxLines: maxLines);
+      final tt = _tp(
+        text,
+        _st(38, FontWeight.w600, _dark),
+        maxWidth: iw - 62,
+        maxLines: maxLines,
+      );
       tt.paint(canvas, Offset(ix + 62, y));
       y += (tt.height > it.height ? tt.height : it.height) + 14;
     }
@@ -399,9 +484,9 @@ class StoryCardPainter extends CustomPainter {
     infoRow('💰', data.fee, 1);
     final place = (data.venue != null && data.venue!.isNotEmpty)
         ? (data.venue! +
-            (data.address != null && data.address!.isNotEmpty
-                ? ' · ${data.address}'
-                : ''))
+              (data.address != null && data.address!.isNotEmpty
+                  ? ' · ${data.address}'
+                  : ''))
         : data.address;
     infoRow('📍', place, 2);
 
@@ -409,21 +494,38 @@ class StoryCardPainter extends CustomPainter {
     const footY = 1545.0, footH = 300.0, qrSize = 250.0;
     const qrX = pad;
     const qrY = footY + (footH - qrSize) / 2;
-    _shadow(canvas, Rect.fromLTWH(qrX - 16, qrY - 16, qrSize + 32, qrSize + 32), 24,
-        blur: 12, dy: 8, color: const Color(0x1F000000));
-    _rrect(canvas, Rect.fromLTWH(qrX - 16, qrY - 16, qrSize + 32, qrSize + 32), 24,
-        Paint()..color = Colors.white);
+    _shadow(
+      canvas,
+      Rect.fromLTWH(qrX - 16, qrY - 16, qrSize + 32, qrSize + 32),
+      24,
+      blur: 12,
+      dy: 8,
+      color: const Color(0x1F000000),
+    );
+    _rrect(
+      canvas,
+      Rect.fromLTWH(qrX - 16, qrY - 16, qrSize + 32, qrSize + 32),
+      24,
+      Paint()..color = Colors.white,
+    );
     _drawQr(canvas, data.url, qrX, qrY, qrSize);
 
     final tx = qrX + qrSize + 56;
     final twf = w - pad - tx;
-    final ctaTp = _tp(t('card_cta'),
-        _st(48, FontWeight.w800, _dark),
-        maxWidth: twf, maxLines: 2);
+    final ctaTp = _tp(
+      t('card_cta'),
+      _st(48, FontWeight.w800, _dark),
+      maxWidth: twf,
+      maxLines: 2,
+    );
     ctaTp.paint(canvas, Offset(tx, footY + 60));
     final urlStr = data.url.replaceFirst(RegExp(r'^https?://'), '');
-    _tp(urlStr, _st(28, FontWeight.w600, _brown), maxWidth: twf, maxLines: 2)
-        .paint(canvas, Offset(tx, footY + 60 + ctaTp.height + 16));
+    _tp(
+      urlStr,
+      _st(28, FontWeight.w600, _brown),
+      maxWidth: twf,
+      maxLines: 2,
+    ).paint(canvas, Offset(tx, footY + 60 + ctaTp.height + 16));
   }
 
   void _drawQr(Canvas canvas, String url, double x, double y, double size) {
@@ -434,9 +536,13 @@ class StoryCardPainter extends CustomPainter {
         errorCorrectionLevel: QrErrorCorrectLevel.M,
         gapless: true,
         eyeStyle: const QrEyeStyle(
-            eyeShape: QrEyeShape.square, color: Color(0xFF1C140D)),
+          eyeShape: QrEyeShape.square,
+          color: Color(0xFF1C140D),
+        ),
         dataModuleStyle: const QrDataModuleStyle(
-            dataModuleShape: QrDataModuleShape.square, color: Color(0xFF1C140D)),
+          dataModuleShape: QrDataModuleShape.square,
+          color: Color(0xFF1C140D),
+        ),
       );
       canvas.save();
       canvas.translate(x, y);

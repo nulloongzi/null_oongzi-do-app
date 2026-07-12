@@ -57,7 +57,9 @@ class GlassSurface extends StatelessWidget {
               color: color,
               borderRadius: radius,
               border: Border.all(
-                  color: const Color(0x80FFFFFF), width: 1), // 흰 50% 테두리
+                color: const Color(0x80FFFFFF),
+                width: 1,
+              ), // 흰 50% 테두리
             ),
             child: child,
           ),

@@ -22,10 +22,11 @@ Future<bool?> showPickupFormSheet(
   BuildContext context, {
   required NLatLng initialCenter,
   PickupSpot? editing,
-}) =>
-    showAppSheet<bool>(context,
-        background: Colors.white, // 웹 등록 모달: 흰 배경
-        child: PickupFormScreen(initialCenter: initialCenter, editing: editing));
+}) => showAppSheet<bool>(
+  context,
+  background: Colors.white, // 웹 등록 모달: 흰 배경
+  child: PickupFormScreen(initialCenter: initialCenter, editing: editing),
+);
 
 class PickupFormScreen extends StatefulWidget {
   /// 폼 진입 시 지도 중심 (피커 초기 위치). 기본 서울.
@@ -101,22 +102,22 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
   }
 
   List<ChipOption> get _sportOptions => [
-        (label: t('sport_6s'), value: '6s'),
-        (label: t('sport_9s'), value: '9s'),
-        (label: t('sport_mixed'), value: 'mixed'),
-      ];
+    (label: t('sport_6s'), value: '6s'),
+    (label: t('sport_9s'), value: '9s'),
+    (label: t('sport_mixed'), value: 'mixed'),
+  ];
   List<ChipOption> get _levelOptions => [
-        (label: t('lv_beginner'), value: 'beginner'),
-        (label: t('lv_intermediate'), value: 'intermediate'),
-        (label: t('lv_advanced'), value: 'advanced'),
-        (label: t('lv_any'), value: 'any'),
-      ];
+    (label: t('lv_beginner'), value: 'beginner'),
+    (label: t('lv_intermediate'), value: 'intermediate'),
+    (label: t('lv_advanced'), value: 'advanced'),
+    (label: t('lv_any'), value: 'any'),
+  ];
   List<ChipOption> get _expireOptions => [
-        (label: t('pk_exp_weekend'), value: 'weekend'),
-        (label: t('pk_exp_1m'), value: '1m'),
-        (label: t('pk_exp_3m'), value: '3m'),
-        (label: t('pk_exp_always'), value: 'always'),
-      ];
+    (label: t('pk_exp_weekend'), value: 'weekend'),
+    (label: t('pk_exp_1m'), value: '1m'),
+    (label: t('pk_exp_3m'), value: '3m'),
+    (label: t('pk_exp_always'), value: 'always'),
+  ];
 
   // 유효기간 프리셋 → DateTime|null (웹 computeExpireAt 포팅). null=상시.
   DateTime? _computeExpireAt(String preset) {
@@ -124,14 +125,26 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
     if (preset == 'always') return null;
     if (preset == 'weekend') {
       final wd = now.weekday % 7; // 일=0..토=6 (웹 getDay와 동일)
-      var s = DateTime(now.year, now.month, now.day + (wd == 0 ? 0 : 7 - wd),
-          23, 59, 59);
+      var s = DateTime(
+        now.year,
+        now.month,
+        now.day + (wd == 0 ? 0 : 7 - wd),
+        23,
+        59,
+        59,
+      );
       if (s.isBefore(now)) s = s.add(const Duration(days: 7));
       return s;
     }
     final months = preset == '3m' ? 3 : 1; // 기본 1개월
     return DateTime(
-        now.year, now.month + months, now.day, now.hour, now.minute, now.second);
+      now.year,
+      now.month + months,
+      now.day,
+      now.hour,
+      now.minute,
+      now.second,
+    );
   }
 
   @override
@@ -166,8 +179,14 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
   @override
   void dispose() {
     for (final c in [
-      _title, _venue, _address, _scheduleMemo,
-      _thisWeek, _fee, _contact, _notes,
+      _title,
+      _venue,
+      _address,
+      _scheduleMemo,
+      _thisWeek,
+      _fee,
+      _contact,
+      _notes,
     ]) {
       c.dispose();
     }
@@ -179,8 +198,7 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
 
   void _snack(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   Future<void> _pickLocation() async {
@@ -253,7 +271,9 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
       'insta_reel': reels.isNotEmpty ? reels.first : '', // 웹 호환(단일)
       'insta_reels': reels,
       'notes': _notes.text.trim(),
-      'expire_at': _computeExpireAt(_expire), // DateTime?→Firestore Timestamp/null
+      'expire_at': _computeExpireAt(
+        _expire,
+      ), // DateTime?→Firestore Timestamp/null
     };
 
     setState(() => _saving = true);
@@ -276,7 +296,9 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
         child: Column(
@@ -304,12 +326,21 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
                     onChanged: (v) => setState(() => _level = v),
                   ),
                   const SizedBox(height: 8),
-                  Wrap(spacing: 8, children: [
-                    _toggle(t('pf_beginner'), _beginnerFriendly,
-                        (v) => setState(() => _beginnerFriendly = v)),
-                    _toggle(t('pf_english'), _englishOk,
-                        (v) => setState(() => _englishOk = v)),
-                  ]),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      _toggle(
+                        t('pf_beginner'),
+                        _beginnerFriendly,
+                        (v) => setState(() => _beginnerFriendly = v),
+                      ),
+                      _toggle(
+                        t('pf_english'),
+                        _englishOk,
+                        (v) => setState(() => _englishOk = v),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -319,7 +350,10 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
               t('pf_sched'),
               ScheduleEditor(blocks: _blocks, onChanged: () => setState(() {})),
             ),
-            _group(t('pf_sched_memo'), _input(_scheduleMemo, t('pf_sched_memo_hint'))),
+            _group(
+              t('pf_sched_memo'),
+              _input(_scheduleMemo, t('pf_sched_memo_hint')),
+            ),
             _group(t('pf_thisweek'), _input(_thisWeek, t('pf_thisweek_hint'))),
             _group(t('pf_fee'), _input(_fee, t('pf_fee_hint'))),
             _group(t('pf_contact'), _input(_contact, t('f_contact_hint'))),
@@ -344,7 +378,10 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
                       height: 20,
                       width: 20,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: NurungjiColors.dark))
+                        strokeWidth: 2,
+                        color: NurungjiColors.dark,
+                      ),
+                    )
                   : Text(_isEdit ? t('save') : t('pf_submit')),
             ),
           ],
@@ -359,9 +396,13 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w700, color: NurungjiColors.dark)),
+          Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              color: NurungjiColors.dark,
+            ),
+          ),
           const SizedBox(height: 8),
           child,
         ],
@@ -385,46 +426,61 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
           controller: _address,
           // 주소를 직접 고치면 이전 좌표 무효화(웹 동일) → 재검색/피커 유도
           onChanged: (_) {
-            if (_lat != null) setState(() { _lat = null; _lng = null; });
+            if (_lat != null) {
+              setState(() {
+                _lat = null;
+                _lng = null;
+              });
+            }
           },
           decoration: InputDecoration(hintText: t('pf_addr_hint')),
         ),
         const SizedBox(height: 8),
-        Row(children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: _geocoding ? null : _geocode,
-              icon: _geocoding
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Icon(Icons.search, size: 18),
-              label: Text(t('f_addr_search')),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _geocoding ? null : _geocode,
+                icon: _geocoding
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.search, size: 18),
+                label: Text(t('f_addr_search')),
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: _pickLocation,
-              icon: const Icon(Icons.map_outlined, size: 18),
-              label: Text(t('f_addr_map')),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _pickLocation,
+                icon: const Icon(Icons.map_outlined, size: 18),
+                label: Text(t('f_addr_map')),
+              ),
             ),
-          ),
-        ]),
+          ],
+        ),
         if (picked)
           Padding(
             padding: const EdgeInsets.only(top: 6),
-            child: Row(children: [
-              const Icon(Icons.check_circle,
-                  size: 16, color: NurungjiColors.teal),
-              const SizedBox(width: 4),
-              Text(
-                '${t('f_loc_set')} (${_lat!.toStringAsFixed(5)}, ${_lng!.toStringAsFixed(5)})',
-                style: const TextStyle(
-                    fontSize: 12, color: NurungjiColors.brown),
-              ),
-            ]),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.check_circle,
+                  size: 16,
+                  color: NurungjiColors.teal,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '${t('f_loc_set')} (${_lat!.toStringAsFixed(5)}, ${_lng!.toStringAsFixed(5)})',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: NurungjiColors.brown,
+                  ),
+                ),
+              ],
+            ),
           ),
       ],
     );

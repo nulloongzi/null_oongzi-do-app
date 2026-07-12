@@ -9,8 +9,11 @@ import '../theme.dart';
 class ReelEditor extends StatelessWidget {
   final List<TextEditingController> controllers;
   final VoidCallback onChanged;
-  const ReelEditor(
-      {super.key, required this.controllers, required this.onChanged});
+  const ReelEditor({
+    super.key,
+    required this.controllers,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -33,8 +36,8 @@ class ReelEditor extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           buildDefaultDragHandles: false,
           itemCount: controllers.length,
-          onReorder: (oldIndex, newIndex) {
-            if (newIndex > oldIndex) newIndex -= 1;
+          // onReorder(deprecated) → onReorderItem: newIndex가 사전 보정돼 수동 -1 불필요.
+          onReorderItem: (oldIndex, newIndex) {
             final moved = controllers.removeAt(oldIndex);
             controllers.insert(newIndex, moved);
             onChanged();
@@ -67,8 +70,10 @@ class ReelEditor extends StatelessWidget {
               index: i,
               child: Padding(
                 padding: const EdgeInsets.only(right: 2),
-                child: Icon(Icons.drag_indicator,
-                    color: NurungjiColors.brown.withValues(alpha: 0.7)),
+                child: Icon(
+                  Icons.drag_indicator,
+                  color: NurungjiColors.brown.withValues(alpha: 0.7),
+                ),
               ),
             ),
           Expanded(
@@ -83,8 +88,9 @@ class ReelEditor extends StatelessWidget {
               final removed = controllers.removeAt(i);
               onChanged();
               // 리빌드로 TextField가 트리에서 빠진 뒤 dispose(사용 후 dispose 방지).
-              WidgetsBinding.instance
-                  .addPostFrameCallback((_) => removed.dispose());
+              WidgetsBinding.instance.addPostFrameCallback(
+                (_) => removed.dispose(),
+              );
             },
             icon: const Icon(Icons.delete_outline, color: NurungjiColors.brown),
             tooltip: t('delete'),

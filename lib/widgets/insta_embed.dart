@@ -34,41 +34,48 @@ class _InstaEmbedState extends State<InstaEmbed> {
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(const Color(0xFFFFFFFF))
       // 임베드 페이지 높이를 받아 컨테이너에 맞춤(빈 공간/잘림 제거)
-      ..addJavaScriptChannel('NurungjiResize', onMessageReceived: (m) {
-        final h = double.tryParse(m.message);
-        if (h == null || h <= 80 || !mounted) return;
-        final clamped = h.clamp(220.0, 1000.0).toDouble();
-        // 8px 미만 변화는 무시 → 임베드 로딩 중 반복 resize의 불필요한 relayout(점프) 방지.
-        if ((clamped - _height).abs() < 8) return;
-        setState(() => _height = clamped);
-      })
-      ..setNavigationDelegate(NavigationDelegate(
-        onPageFinished: (_) {
-          _ctrl?.runJavaScript(
-            "(function(){function p(){try{NurungjiResize.postMessage(String(document.body.scrollHeight));}catch(e){}}"
-            "p();setTimeout(p,500);setTimeout(p,1500);setTimeout(p,3000);"
-            "window.addEventListener('resize',p);})();",
-          );
+      ..addJavaScriptChannel(
+        'NurungjiResize',
+        onMessageReceived: (m) {
+          final h = double.tryParse(m.message);
+          if (h == null || h <= 80 || !mounted) return;
+          final clamped = h.clamp(220.0, 1000.0).toDouble();
+          // 8px 미만 변화는 무시 → 임베드 로딩 중 반복 resize의 불필요한 relayout(점프) 방지.
+          if ((clamped - _height).abs() < 8) return;
+          setState(() => _height = clamped);
         },
-        onWebResourceError: (e) {
-          if (mounted && e.isForMainFrame == true) {
-            setState(() => _failed = true);
-          }
-        },
-        // 임베드 안에서 게시물/프로필 등 '링크' 탭 → 인스타 앱/브라우저로(영상 재생은 인라인 유지).
-        onNavigationRequest: (req) {
-          if (req.isMainFrame && !req.url.contains('/embed')) {
-            final u = Uri.tryParse(req.url);
-            if (u != null) {
-              // 핸들러 없는 URL 등 실패 시 unhandled rejection 방지.
-              launchUrl(u, mode: LaunchMode.externalApplication)
-                  .catchError((_) => false);
+      )
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageFinished: (_) {
+            _ctrl?.runJavaScript(
+              "(function(){function p(){try{NurungjiResize.postMessage(String(document.body.scrollHeight));}catch(e){}}"
+              "p();setTimeout(p,500);setTimeout(p,1500);setTimeout(p,3000);"
+              "window.addEventListener('resize',p);})();",
+            );
+          },
+          onWebResourceError: (e) {
+            if (mounted && e.isForMainFrame == true) {
+              setState(() => _failed = true);
             }
-            return NavigationDecision.prevent;
-          }
-          return NavigationDecision.navigate;
-        },
-      ))
+          },
+          // 임베드 안에서 게시물/프로필 등 '링크' 탭 → 인스타 앱/브라우저로(영상 재생은 인라인 유지).
+          onNavigationRequest: (req) {
+            if (req.isMainFrame && !req.url.contains('/embed')) {
+              final u = Uri.tryParse(req.url);
+              if (u != null) {
+                // 핸들러 없는 URL 등 실패 시 unhandled rejection 방지.
+                launchUrl(
+                  u,
+                  mode: LaunchMode.externalApplication,
+                ).catchError((_) => false);
+              }
+              return NavigationDecision.prevent;
+            }
+            return NavigationDecision.navigate;
+          },
+        ),
+      )
       ..loadRequest(Uri.parse(embedUrl));
   }
 
@@ -95,64 +102,79 @@ class _InstaEmbedState extends State<InstaEmbed> {
 
   // 임베드 실패 시 폴백: 탭하면 인스타에서 보기 카드.
   Widget _fallbackCard() => Padding(
-        padding: const EdgeInsets.only(top: 14),
-        child: BounceTap(
-          onTap: () async {
-            final u = Uri.tryParse(_safe);
-            if (u == null) return;
-            try {
-              await launchUrl(u, mode: LaunchMode.externalApplication);
-            } catch (_) {}
-          },
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0x1A000000)),
-            ),
-            child: Row(children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  gradient: const LinearGradient(
-                    begin: Alignment.bottomLeft,
-                    end: Alignment.topRight,
-                    colors: [
-                      Color(0xFFFEDA75),
-                      Color(0xFFFA7E1E),
-                      Color(0xFFD62976),
-                      Color(0xFF962FBF),
-                      Color(0xFF4F5BD5),
-                    ],
-                  ),
-                ),
-                child: const Icon(Icons.play_arrow_rounded,
-                    color: Colors.white, size: 30),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(t('insta_reel_title'),
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 14.5,
-                            color: NurungjiColors.dark)),
-                    const SizedBox(height: 2),
-                    Text(t('insta_reel_open'),
-                        style: const TextStyle(
-                            fontSize: 12, color: NurungjiColors.brown)),
+    padding: const EdgeInsets.only(top: 14),
+    child: BounceTap(
+      onTap: () async {
+        final u = Uri.tryParse(_safe);
+        if (u == null) return;
+        try {
+          await launchUrl(u, mode: LaunchMode.externalApplication);
+        } catch (_) {}
+      },
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0x1A000000)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                gradient: const LinearGradient(
+                  begin: Alignment.bottomLeft,
+                  end: Alignment.topRight,
+                  colors: [
+                    Color(0xFFFEDA75),
+                    Color(0xFFFA7E1E),
+                    Color(0xFFD62976),
+                    Color(0xFF962FBF),
+                    Color(0xFF4F5BD5),
                   ],
                 ),
               ),
-              const Icon(Icons.open_in_new_rounded,
-                  size: 18, color: NurungjiColors.brown),
-            ]),
-          ),
+              child: const Icon(
+                Icons.play_arrow_rounded,
+                color: Colors.white,
+                size: 30,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    t('insta_reel_title'),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14.5,
+                      color: NurungjiColors.dark,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    t('insta_reel_open'),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: NurungjiColors.brown,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.open_in_new_rounded,
+              size: 18,
+              color: NurungjiColors.brown,
+            ),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 }

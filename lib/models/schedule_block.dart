@@ -5,7 +5,7 @@ class ScheduleBlock {
   String end; // '22:00'
 
   ScheduleBlock({List<String>? days, this.start = '19:00', this.end = '22:00'})
-      : days = days ?? [];
+    : days = days ?? [];
 
   /// 30분 간격 시간 옵션 06:00 ~ 23:30
   static List<String> timeOptions() {
@@ -34,8 +34,10 @@ class ScheduleBlock {
   /// 블록들 → 표시용 텍스트 "월 19:00~22:00, 수 ..." (요일 순 정렬)
   static String toText(List<ScheduleBlock> blocks) {
     final raw = toRaw(blocks)
-      ..sort((a, b) =>
-          dayOrder.indexOf(a['day']!).compareTo(dayOrder.indexOf(b['day']!)));
+      ..sort(
+        (a, b) =>
+            dayOrder.indexOf(a['day']!).compareTo(dayOrder.indexOf(b['day']!)),
+      );
     return raw.map((r) => '${r['day']} ${r['start']}~${r['end']}').join(', ');
   }
 
@@ -50,7 +52,10 @@ class ScheduleBlock {
       final end = row['end'] as String?;
       if (day == null || start == null || end == null) continue;
       final key = '$start|$end';
-      final g = groups.putIfAbsent(key, () => ScheduleBlock(start: start, end: end));
+      final g = groups.putIfAbsent(
+        key,
+        () => ScheduleBlock(start: start, end: end),
+      );
       if (!g.days.contains(day)) g.days.add(day);
     }
     return groups.values.toList();

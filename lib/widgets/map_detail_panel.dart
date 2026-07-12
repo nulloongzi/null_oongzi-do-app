@@ -107,7 +107,10 @@ class _MapDetailPanelState extends State<MapDetailPanel> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           boxShadow: [
             BoxShadow(
-                color: Color(0x265D4037), blurRadius: 28, offset: Offset(0, -6)),
+              color: Color(0x265D4037),
+              blurRadius: 28,
+              offset: Offset(0, -6),
+            ),
           ],
         ),
         clipBehavior: Clip.antiAlias,
@@ -118,7 +121,8 @@ class _MapDetailPanelState extends State<MapDetailPanel> {
               behavior: HitTestBehavior.opaque,
               onVerticalDragStart: (_) => setState(() => _dragging = true),
               onVerticalDragUpdate: (d) => setState(
-                  () => _apply((_height - d.delta.dy).clamp(0.0, _expanded))),
+                () => _apply((_height - d.delta.dy).clamp(0.0, _expanded)),
+              ),
               onVerticalDragEnd: (_) => _onDragEnd(),
               child: Container(
                 width: double.infinity,
@@ -138,12 +142,14 @@ class _MapDetailPanelState extends State<MapDetailPanel> {
             // 펼침 힌트 (웹 #expandHint): peek=올려보기 / expand=접기
             ValueListenableBuilder<double>(
               valueListenable: _expand,
-              builder: (_, r, __) => Padding(
+              builder: (_, r, _) => Padding(
                 padding: const EdgeInsets.only(bottom: 6),
                 child: Text(
                   r >= 0.5 ? t('detail_collapse_hint') : t('detail_pull_hint'),
                   style: const TextStyle(
-                      fontSize: 11.5, color: Color(0xFF9E9E9E)),
+                    fontSize: 11.5,
+                    color: Color(0xFF9E9E9E),
+                  ),
                 ),
               ),
             ),

@@ -34,7 +34,7 @@ class MyApp extends StatelessWidget {
     // appLang 변경 시 앱 전체 리빌드 → t()가 새 언어로 재평가됨.
     return ValueListenableBuilder<String>(
       valueListenable: appLang,
-      builder: (_, __, ___) => MaterialApp(
+      builder: (_, _, _) => MaterialApp(
         title: '누룽지도',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,

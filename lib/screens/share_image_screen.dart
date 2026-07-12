@@ -35,8 +35,11 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
   bool _feedMode = true; // 포장 형태: 피드형(식단표 포함)↔스토리형(웹 sh_pick_shape)
 
   static const _slotBorder = [
-    Color(0xFFFBC02D), Color(0xFFF57C00), Color(0xFF689F38),
-    Color(0xFFD84315), Color(0xFF8E24AA),
+    Color(0xFFFBC02D),
+    Color(0xFFF57C00),
+    Color(0xFF689F38),
+    Color(0xFFD84315),
+    Color(0xFF8E24AA),
   ];
 
   @override
@@ -52,8 +55,11 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
       return;
     }
     try {
-      final results = await Future.wait(
-          [_repo.loadClubs(), _lb.load(uid), ProfileService().ensureProfile(uid)]);
+      final results = await Future.wait([
+        _repo.loadClubs(),
+        _lb.load(uid),
+        ProfileService().ensureProfile(uid),
+      ]);
       _clubs
         ..clear()
         ..addEntries((results[0] as List<Club>).map((c) => MapEntry(c.id, c)));
@@ -85,8 +91,9 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
   Future<void> _share() async {
     setState(() => _sharing = true);
     try {
-      final boundary = _repaintKey.currentContext?.findRenderObject()
-          as RenderRepaintBoundary?;
+      final boundary =
+          _repaintKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
       if (boundary == null) return;
       final image = await boundary.toImage(pixelRatio: 3.0);
       final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -94,13 +101,15 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
       final png = bytes.buffer.asUint8List();
       final dir = await getTemporaryDirectory();
       final file = File(
-          '${dir.path}/nurungji_card_${DateTime.now().millisecondsSinceEpoch}.png');
+        '${dir.path}/nurungji_card_${DateTime.now().millisecondsSinceEpoch}.png',
+      );
       await file.writeAsBytes(png);
       await Share.shareXFiles([XFile(file.path)]);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('${t('share_title')}: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('${t('share_title')}: $e')));
       }
     } finally {
       if (mounted) setState(() => _sharing = false);
@@ -119,25 +128,27 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(16),
                     child: Center(
-                      child: RepaintBoundary(
-                        key: _repaintKey,
-                        child: _card(),
-                      ),
+                      child: RepaintBoundary(key: _repaintKey, child: _card()),
                     ),
                   ),
                 ),
                 // 포장 형태 선택(웹 sh_pick_shape): 피드형=식단표 포함 / 스토리형=카드+도시락
-                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  ChoiceChip(
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ChoiceChip(
                       label: Text(t('share_mode_feed')),
                       selected: _feedMode,
-                      onSelected: (_) => setState(() => _feedMode = true)),
-                  const SizedBox(width: 8),
-                  ChoiceChip(
+                      onSelected: (_) => setState(() => _feedMode = true),
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
                       label: Text(t('share_mode_story')),
                       selected: !_feedMode,
-                      onSelected: (_) => setState(() => _feedMode = false)),
-                ]),
+                      onSelected: (_) => setState(() => _feedMode = false),
+                    ),
+                  ],
+                ),
                 SafeArea(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -150,7 +161,10 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
                                 width: 18,
                                 height: 18,
                                 child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: NurungjiColors.dark))
+                                  strokeWidth: 2,
+                                  color: NurungjiColors.dark,
+                                ),
+                              )
                             : const Icon(Icons.ios_share),
                         label: Text(t('share_image_btn')),
                       ),
@@ -187,16 +201,21 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14)),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+              ),
               child: DietGrid(teams: dietTeams),
             ),
           ],
           const SizedBox(height: 14),
           Center(
-            child: Text('🍚 ${t('brand')}',
-                style: const TextStyle(
-                    fontWeight: FontWeight.w900, color: NurungjiColors.brown)),
+            child: Text(
+              '🍚 ${t('brand')}',
+              style: const TextStyle(
+                fontWeight: FontWeight.w900,
+                color: NurungjiColors.brown,
+              ),
+            ),
           ),
         ],
       ),
@@ -215,11 +234,14 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
         children: [
           const Text('🍚', style: TextStyle(fontSize: 36)),
           const SizedBox(height: 6),
-          Text(p.fullNickname,
-              style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                  color: NurungjiColors.dark)),
+          Text(
+            p.fullNickname,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              color: NurungjiColors.dark,
+            ),
+          ),
         ],
       ),
     );
@@ -230,13 +252,19 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-          color: Colors.white, borderRadius: BorderRadius.circular(14)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(t('lunchbox_title'),
-              style: const TextStyle(
-                  fontWeight: FontWeight.w800, color: NurungjiColors.dark)),
+          Text(
+            t('lunchbox_title'),
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              color: NurungjiColors.dark,
+            ),
+          ),
           const SizedBox(height: 8),
           for (var i = 0; i < 5; i++) _slot(i, d),
         ],
@@ -250,7 +278,9 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
     final filled = id != null;
     final label = !filled
         ? '—'
-        : (r == null ? t('deleted_team') : (r.isCustom ? '🍙 ${r.name}' : r.name));
+        : (r == null
+              ? t('deleted_team')
+              : (r.isCustom ? '🍙 ${r.name}' : r.name));
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -259,10 +289,13 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
         borderRadius: BorderRadius.circular(10),
         border: Border(left: BorderSide(color: _slotBorder[i], width: 4)),
       ),
-      child: Text(label,
-          style: TextStyle(
-              fontWeight: filled ? FontWeight.w700 : FontWeight.w400,
-              color: filled ? NurungjiColors.dark : NurungjiColors.brown)),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontWeight: filled ? FontWeight.w700 : FontWeight.w400,
+          color: filled ? NurungjiColors.dark : NurungjiColors.brown,
+        ),
+      ),
     );
   }
 
@@ -275,8 +308,14 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
       if (id == null) continue;
       final r = _resolve(id);
       if (r == null) continue;
-      out.add(DietTeam(
-          name: r.name, isCustom: r.isCustom, slotIdx: i, events: r.events));
+      out.add(
+        DietTeam(
+          name: r.name,
+          isCustom: r.isCustom,
+          slotIdx: i,
+          events: r.events,
+        ),
+      );
     }
     return out;
   }
