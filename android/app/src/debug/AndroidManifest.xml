@@ -4,4 +4,7 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- debug 전용: Firebase Local Emulator(10.0.2.2 평문 http/gRPC) 접속 허용.
+         integration_test(e2e)가 에뮬레이터 스위트에 붙기 위해 필요. release엔 미적용. -->
+    <application android:usesCleartextTraffic="true" />
 </manifest>

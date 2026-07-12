@@ -18,7 +18,12 @@ void main() async {
   // 카카오톡 리치카드 공유 — 네이티브 앱 키(콘솔에 패키지명+키해시 등록 필요)
   KakaoSdk.init(nativeAppKey: '24e0161dd5945250b37e5ec7fbdf8363');
   await initLang();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // integration_test(e2e)가 에뮬레이터 연결을 위해 Firebase를 먼저 초기화하므로 중복 init 가드.
+  if (Firebase.apps.isEmpty) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  }
   await FlutterNaverMap().init(
     clientId: kNaverMapClientId,
     onAuthFailed: (ex) => debugPrint('네이버지도 인증 실패: $ex'),
