@@ -74,11 +74,13 @@ jobs:
             --config firebase.e2e.json \
             --project nulloongzi-do \
             --only auth,firestore,storage > emulators.log 2>&1 &
-          # 3개 포트가 열릴 때까지 대기 (최대 90초)
-          for i in $(seq 1 90); do
-            if curl -sf http://localhost:9099 >/dev/null 2>&1 \
-               && curl -sf http://localhost:8080 >/dev/null 2>&1 \
-               && curl -sf http://localhost:9199 >/dev/null 2>&1; then
+          # 3개 포트가 응답할 때까지 대기 (최대 120초).
+          # 주의: -f 금지 — Storage 에뮬 루트는 4xx/5xx를 반환하므로(정상),
+          # HTTP 응답 수신(=포트 오픈) 자체를 준비 신호로 본다.
+          for i in $(seq 1 120); do
+            if curl -s -o /dev/null http://localhost:9099 \
+               && curl -s -o /dev/null http://localhost:8080 \
+               && curl -s -o /dev/null http://localhost:9199; then
               echo "emulators up (${i}s)"; exit 0
             fi
             sleep 1
