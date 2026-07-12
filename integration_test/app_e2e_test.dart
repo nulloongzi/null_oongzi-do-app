@@ -59,14 +59,20 @@ void main() {
       await FirebaseAuth.instance.signOut();
       app.main();
       // 지도 셸 UI(도시락 FAB)가 뜰 때까지 대기 = Firebase init + 첫 로드 완료
-      await pumpUntil(tester, find.text('🍱'),
-          timeout: const Duration(seconds: 40));
+      await pumpUntil(
+        tester,
+        find.text('🍱'),
+        timeout: const Duration(seconds: 40),
+      );
 
       // ── 1. 게스트 게이트: 로그인 없이 도시락 → LoginScreen ──
       await tester.tap(find.text('🍱'));
       await pumpUntil(tester, find.byType(LoginScreen));
-      expect(find.byType(LunchboxScreen), findsNothing,
-          reason: '게스트에게 도시락이 바로 열리면 안 됨');
+      expect(
+        find.byType(LunchboxScreen),
+        findsNothing,
+        reason: '게스트에게 도시락이 바로 열리면 안 됨',
+      );
       tester.state<NavigatorState>(find.byType(Navigator).first).pop();
       await tester.pump(const Duration(milliseconds: 600));
 
