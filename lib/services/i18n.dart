@@ -26,12 +26,22 @@ bool get isKo => appLang.value == 'ko';
 // ── 데이터 표시 변환 (저장은 KO, 영어모드에서 표시만 변환) — 웹 i18n.js 포팅 ──
 // 모르는 토큰은 원문 유지(best-effort). 긴 토큰부터(부분 겹침 방지).
 const List<List<String>> _targetMap = [
-  ['여성전용', 'Women only'], ['남성전용', 'Men only'],
-  ['선출가능', 'Ex-players OK'], ['군미필 상관x', 'pre-service OK'], ['군미필', 'pre-service OK'],
-  ['대학생', 'College'], ['청소년', 'Youth'], ['성인', 'Adults'],
-  ['6인제', '6s'], ['9인제', '9s'], ['무관', 'Anyone'],
-  ['선출', 'Ex-player'], ['구력', 'exp.'], ['이상', '+'],
-  ['남', 'M'], ['여', 'W'],
+  ['여성전용', 'Women only'],
+  ['남성전용', 'Men only'],
+  ['선출가능', 'Ex-players OK'],
+  ['군미필 상관x', 'pre-service OK'],
+  ['군미필', 'pre-service OK'],
+  ['대학생', 'College'],
+  ['청소년', 'Youth'],
+  ['성인', 'Adults'],
+  ['6인제', '6s'],
+  ['9인제', '9s'],
+  ['무관', 'Anyone'],
+  ['선출', 'Ex-player'],
+  ['구력', 'exp.'],
+  ['이상', '+'],
+  ['남', 'M'],
+  ['여', 'W'],
 ];
 
 /// 대상/특징 어휘 변환. KO 모드면 원문.
@@ -45,11 +55,21 @@ String i18nTarget(String? str) {
 }
 
 const List<List<String>> _priceMap = [
-  ['게스트비', 'Guest fee'], ['게스트', 'Guest'], ['학생', 'Student'],
-  ['회비', 'Fee'], ['분기', 'Quarterly'], ['무료', 'Free'],
-  ['주1회', '1×/wk'], ['주2회', '2×/wk'], ['주3회', '3×/wk'],
-  ['주 1회', '1×/wk'], ['주 2회', '2×/wk'], ['주 3회', '3×/wk'],
-  ['월 기준', '/mo'], ['월', 'Monthly'], ['없음', 'none'],
+  ['게스트비', 'Guest fee'],
+  ['게스트', 'Guest'],
+  ['학생', 'Student'],
+  ['회비', 'Fee'],
+  ['분기', 'Quarterly'],
+  ['무료', 'Free'],
+  ['주1회', '1×/wk'],
+  ['주2회', '2×/wk'],
+  ['주3회', '3×/wk'],
+  ['주 1회', '1×/wk'],
+  ['주 2회', '2×/wk'],
+  ['주 3회', '3×/wk'],
+  ['월 기준', '/mo'],
+  ['월', 'Monthly'],
+  ['없음', 'none'],
 ];
 final RegExp _reMan = RegExp(r'(\d+(?:\.\d+)?)\s*만\s*원?');
 final RegExp _reCheon = RegExp(r'(\d+(?:\.\d+)?)\s*천\s*원?');
@@ -59,9 +79,13 @@ String i18nPrice(String? str) {
   if (isKo || str == null || str.isEmpty) return str ?? '';
   var s = str;
   s = s.replaceAllMapped(
-      _reMan, (m) => '₩${_comma((double.parse(m[1]!) * 10000).round())}');
+    _reMan,
+    (m) => '₩${_comma((double.parse(m[1]!) * 10000).round())}',
+  );
   s = s.replaceAllMapped(
-      _reCheon, (m) => '₩${_comma((double.parse(m[1]!) * 1000).round())}');
+    _reCheon,
+    (m) => '₩${_comma((double.parse(m[1]!) * 1000).round())}',
+  );
   for (final p in _priceMap) {
     s = s.replaceAll(p[0], p[1]);
   }
@@ -79,8 +103,13 @@ String _comma(int n) {
 }
 
 const Map<String, String> _dayKey = {
-  '월': 'd_mon', '화': 'd_tue', '수': 'd_wed', '목': 'd_thu',
-  '금': 'd_fri', '토': 'd_sat', '일': 'd_sun',
+  '월': 'd_mon',
+  '화': 'd_tue',
+  '수': 'd_wed',
+  '목': 'd_thu',
+  '금': 'd_fri',
+  '토': 'd_sat',
+  '일': 'd_sun',
 };
 
 /// 한글 요일 글자 → 현재 언어 표기('월'→Mon). 스케줄 키는 KO 유지, 표시만.
@@ -90,8 +119,14 @@ String i18nDay(String kchar) {
 }
 
 const Map<String, String> _regionEn = {
-  '서울': 'Seoul', '경기': 'Gyeonggi', '인천': 'Incheon', '강원': 'Gangwon',
-  '충청': 'Chungcheong', '전라': 'Jeolla', '경상': 'Gyeongsang', '제주': 'Jeju',
+  '서울': 'Seoul',
+  '경기': 'Gyeonggi',
+  '인천': 'Incheon',
+  '강원': 'Gangwon',
+  '충청': 'Chungcheong',
+  '전라': 'Jeolla',
+  '경상': 'Gyeongsang',
+  '제주': 'Jeju',
 };
 
 /// 지역명 표시 변환(서울→Seoul). 값은 KO 유지, 표시만.
@@ -116,8 +151,7 @@ Future<void> initLang() async {
       appLang.value = saved!;
       return;
     }
-    final code =
-        WidgetsBinding.instance.platformDispatcher.locale.languageCode;
+    final code = WidgetsBinding.instance.platformDispatcher.locale.languageCode;
     appLang.value = code == 'ko' ? 'ko' : 'en';
   } catch (_) {}
 }

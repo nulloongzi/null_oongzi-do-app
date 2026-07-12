@@ -25,8 +25,10 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
         children: [
           NaverMap(
             options: NaverMapViewOptions(
-              initialCameraPosition:
-                  NCameraPosition(target: widget.initial, zoom: 15),
+              initialCameraPosition: NCameraPosition(
+                target: widget.initial,
+                zoom: 15,
+              ),
             ),
             onMapReady: (c) => _controller = c,
           ),
@@ -34,8 +36,11 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
           const IgnorePointer(
             child: Padding(
               padding: EdgeInsets.only(bottom: 44),
-              child: Icon(Icons.location_on,
-                  size: 50, color: NurungjiColors.teal),
+              child: Icon(
+                Icons.location_on,
+                size: 50,
+                color: NurungjiColors.teal,
+              ),
             ),
           ),
           Positioned(
@@ -46,8 +51,10 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
               onPressed: () async {
                 final pos = await _controller?.getCameraPosition();
                 if (pos != null && context.mounted) {
-                  Navigator.pop(
-                      context, (pos.target.latitude, pos.target.longitude));
+                  Navigator.pop(context, (
+                    pos.target.latitude,
+                    pos.target.longitude,
+                  ));
                 }
               },
               child: Text(t('map_pick_set')),

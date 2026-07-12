@@ -60,12 +60,16 @@ class _LoginScreenState extends State<LoginScreen> {
       final email = _email.text.trim();
       final pw = _pw.text;
       if (signUp) {
-        await FirebaseAuth.instance
-            .createUserWithEmailAndPassword(email: email, password: pw);
+        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: email,
+          password: pw,
+        );
         Track.event('sign_up', {'method': 'email'});
       } else {
-        await FirebaseAuth.instance
-            .signInWithEmailAndPassword(email: email, password: pw);
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: email,
+          password: pw,
+        );
         Track.event('login', {'method': 'email'});
       }
       await _afterLogin();
@@ -111,21 +115,28 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 const Text('🍚', style: TextStyle(fontSize: 64)),
                 const SizedBox(height: 8),
-                Text(t('brand'),
-                    style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF4E342E))),
+                Text(
+                  t('brand'),
+                  style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF4E342E),
+                  ),
+                ),
                 const SizedBox(height: 6),
-                Text(t('login_subtitle'),
-                    style: const TextStyle(color: Color(0xFF8D6E63))),
+                Text(
+                  t('login_subtitle'),
+                  style: const TextStyle(color: Color(0xFF8D6E63)),
+                ),
                 const SizedBox(height: 28),
                 if (_error != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: Text(_error!,
-                        style: const TextStyle(color: Colors.red),
-                        textAlign: TextAlign.center),
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(color: Colors.red),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 SizedBox(
                   width: double.infinity,
@@ -145,37 +156,44 @@ class _LoginScreenState extends State<LoginScreen> {
                   controller: _email,
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                      labelText: t('email'),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: const OutlineInputBorder()),
+                    labelText: t('email'),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: const OutlineInputBorder(),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: _pw,
                   obscureText: true,
                   decoration: InputDecoration(
-                      labelText: t('password'),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: const OutlineInputBorder()),
+                    labelText: t('password'),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: const OutlineInputBorder(),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: _busy ? null : () => _emailAuth(signUp: false),
+                        onPressed: _busy
+                            ? null
+                            : () => _emailAuth(signUp: false),
                         style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFAC710),
-                            foregroundColor: const Color(0xFF4E342E)),
+                          backgroundColor: const Color(0xFFFAC710),
+                          foregroundColor: const Color(0xFF4E342E),
+                        ),
                         child: Text(t('sign_in')),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: _busy ? null : () => _emailAuth(signUp: true),
+                        onPressed: _busy
+                            ? null
+                            : () => _emailAuth(signUp: true),
                         child: Text(t('sign_up')),
                       ),
                     ),
@@ -191,10 +209,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   Padding(
                     padding: const EdgeInsets.only(top: 14),
                     child: TextButton(
-                      onPressed:
-                          _busy ? null : () => Navigator.of(context).pop(false),
-                      child: Text(t('login_later'),
-                          style: const TextStyle(color: Color(0xFF8D6E63))),
+                      onPressed: _busy
+                          ? null
+                          : () => Navigator.of(context).pop(false),
+                      child: Text(
+                        t('login_later'),
+                        style: const TextStyle(color: Color(0xFF8D6E63)),
+                      ),
                     ),
                   ),
               ],

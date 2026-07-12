@@ -41,7 +41,9 @@ class _ProfileModal extends StatelessWidget {
             onTap: () => Navigator.of(context).maybePop(), // 바깥 탭 닫기
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-              child: Container(color: const Color(0x595D4037)), // 웹 rgba(93,64,55,.35)
+              child: Container(
+                color: const Color(0x595D4037),
+              ), // 웹 rgba(93,64,55,.35)
             ),
           ),
         ),
@@ -158,10 +160,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(dctx), child: Text(t('cancel'))),
+            onPressed: () => Navigator.pop(dctx),
+            child: Text(t('cancel')),
+          ),
           TextButton(
-              onPressed: () => Navigator.pop(dctx, ctrl.text),
-              child: Text(t('confirm'))),
+            onPressed: () => Navigator.pop(dctx, ctrl.text),
+            child: Text(t('confirm')),
+          ),
         ],
       ),
     );
@@ -180,11 +185,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
       await _svc.rename(uid, n);
       if (mounted) {
-        setState(() => _profile = Profile(
+        setState(
+          () => _profile = Profile(
             fullNickname: n,
             nickname: p.nickname,
             color: p.color,
-            createdAt: p.createdAt));
+            createdAt: p.createdAt,
+          ),
+        );
       }
       _snack(t('nickname_done'));
     } catch (e) {
@@ -200,11 +208,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         content: Text(t('logout_confirm')),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(dctx, false),
-              child: Text(t('cancel'))),
+            onPressed: () => Navigator.pop(dctx, false),
+            child: Text(t('cancel')),
+          ),
           TextButton(
-              onPressed: () => Navigator.pop(dctx, true),
-              child: Text(t('logout'))),
+            onPressed: () => Navigator.pop(dctx, true),
+            child: Text(t('logout')),
+          ),
         ],
       ),
     );
@@ -257,12 +267,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: const [
             BoxShadow(
-                color: Color(0x14000000), blurRadius: 12, offset: Offset(0, 4)),
+              color: Color(0x14000000),
+              blurRadius: 12,
+              offset: Offset(0, 4),
+            ),
           ],
         ),
-        child: Text(label,
-            style: TextStyle(
-                fontSize: 14, fontWeight: FontWeight.w700, color: fg)),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: fg,
+          ),
+        ),
       ),
     );
   }
@@ -277,7 +295,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         color: p.bgColor,
         borderRadius: BorderRadius.circular(22),
         boxShadow: const [
-          BoxShadow(color: Color(0x22000000), blurRadius: 16, offset: Offset(0, 6)),
+          BoxShadow(
+            color: Color(0x22000000),
+            blurRadius: 16,
+            offset: Offset(0, 6),
+          ),
         ],
       ),
       child: Stack(
@@ -294,12 +316,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Flexible(
-                      child: Text(p.fullNickname,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w900,
-                              color: NurungjiColors.dark)),
+                      child: Text(
+                        p.fullNickname,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                          color: NurungjiColors.dark,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     BounceTap(
@@ -321,9 +346,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 if (joined.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
-                    child: Text(joined,
-                        style: const TextStyle(
-                            color: NurungjiColors.brown, fontSize: 13)),
+                    child: Text(
+                      joined,
+                      style: const TextStyle(
+                        color: NurungjiColors.brown,
+                        fontSize: 13,
+                      ),
+                    ),
                   ),
                 Container(
                   width: 90,
@@ -333,8 +362,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 // 메인 팀 뱃지(웹 .pc-main-team)
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xB3FFFFFF),
                     borderRadius: BorderRadius.circular(14),
@@ -346,9 +377,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         : '${mt.isCustom ? '🍙' : '🏆'} ${mt.name}',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: NurungjiColors.dark),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: NurungjiColors.dark,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 22),
@@ -368,9 +400,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       bg: NurungjiColors.brown, // 웹 .pc-share-btn
                       fg: Colors.white,
                       onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const ShareImageScreen())),
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ShareImageScreen(),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -381,11 +415,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Positioned(
             top: 0,
             left: 0,
-            child: Text(p.nickname,
-                style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0x4D5D4037))),
+            child: Text(
+              p.nickname,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Color(0x4D5D4037),
+              ),
+            ),
           ),
         ],
       ),

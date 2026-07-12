@@ -27,12 +27,15 @@ class _FilterSheetState extends State<_FilterSheet> {
   late final Set<String> _regions = {...widget.initial.regions};
   late final Set<String> _days = {...widget.initial.days};
   late final Set<String> _targets = {...widget.initial.targets};
-  late final TextEditingController _kw =
-      TextEditingController(text: widget.initial.keyword);
+  late final TextEditingController _kw = TextEditingController(
+    text: widget.initial.keyword,
+  );
 
   // 값(KO)은 필터 매칭용으로 유지, 라벨만 표시 언어로 변환.
-  static List<ChipOption> _opts(List<String> v, String Function(String) labelOf) =>
-      v.map((e) => (label: labelOf(e), value: e)).toList();
+  static List<ChipOption> _opts(
+    List<String> v,
+    String Function(String) labelOf,
+  ) => v.map((e) => (label: labelOf(e), value: e)).toList();
 
   // 대상: 영어모드면 6인제를 맨 앞 + '🏐 6s' 강조(외국인 축), 나머지는 i18nTarget.
   List<ChipOption> _targetOpts() {
@@ -75,17 +78,24 @@ class _FilterSheetState extends State<_FilterSheet> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.fromLTRB(
-          20, 4, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+        20,
+        4,
+        20,
+        MediaQuery.of(context).viewInsets.bottom + 20,
+      ),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(t('filter_title'),
-                style: const TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w800,
-                    color: NurungjiColors.dark)),
+            Text(
+              t('filter_title'),
+              style: const TextStyle(
+                fontSize: 19,
+                fontWeight: FontWeight.w800,
+                color: NurungjiColors.dark,
+              ),
+            ),
             const SizedBox(height: 14),
             TextField(
               controller: _kw,
@@ -94,20 +104,34 @@ class _FilterSheetState extends State<_FilterSheet> {
                 prefixIcon: const Icon(Icons.search),
               ),
             ),
-            _section(t('filter_region'),
-                _opts(ClubFilter.regionOptions, i18nRegion), _regions),
-            _section(t('filter_day'), _opts(ClubFilter.dayOptions, i18nDay), _days),
+            _section(
+              t('filter_region'),
+              _opts(ClubFilter.regionOptions, i18nRegion),
+              _regions,
+            ),
+            _section(
+              t('filter_day'),
+              _opts(ClubFilter.dayOptions, i18nDay),
+              _days,
+            ),
             _section(t('filter_target'), _targetOpts(), _targets),
             if (!isKo) _enHint(),
             const SizedBox(height: 18),
-            Row(children: [
-              OutlinedButton(onPressed: _reset, child: Text(t('filter_reset'))),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                    onPressed: _apply, child: Text(t('filter_apply'))),
-              ),
-            ]),
+            Row(
+              children: [
+                OutlinedButton(
+                  onPressed: _reset,
+                  child: Text(t('filter_reset')),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _apply,
+                    child: Text(t('filter_apply')),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -115,28 +139,40 @@ class _FilterSheetState extends State<_FilterSheet> {
   }
 
   Widget _enHint() => Container(
-        margin: const EdgeInsets.only(top: 12),
-        padding: const EdgeInsets.all(12),
-        decoration: const BoxDecoration(
-          color: Color(0x1AFAC710),
-          border:
-              Border(left: BorderSide(color: NurungjiColors.yellow, width: 4)),
-          borderRadius: BorderRadius.all(Radius.circular(8)),
-        ),
-        child: Text(t('fs_en_hint'),
-            style: const TextStyle(
-                fontSize: 13, height: 1.35, color: NurungjiColors.dark)),
-      );
+    margin: const EdgeInsets.only(top: 12),
+    padding: const EdgeInsets.all(12),
+    decoration: const BoxDecoration(
+      color: Color(0x1AFAC710),
+      border: Border(left: BorderSide(color: NurungjiColors.yellow, width: 4)),
+      borderRadius: BorderRadius.all(Radius.circular(8)),
+    ),
+    child: Text(
+      t('fs_en_hint'),
+      style: const TextStyle(
+        fontSize: 13,
+        height: 1.35,
+        color: NurungjiColors.dark,
+      ),
+    ),
+  );
 
-  Widget _section(String label, List<ChipOption> options, Set<String> selected) {
+  Widget _section(
+    String label,
+    List<ChipOption> options,
+    Set<String> selected,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(top: 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w700, color: NurungjiColors.dark)),
+          Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              color: NurungjiColors.dark,
+            ),
+          ),
           const SizedBox(height: 8),
           MultiChoiceChips(
             options: options,

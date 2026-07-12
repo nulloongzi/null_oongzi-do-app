@@ -15,8 +15,10 @@ void showShareMenu(
 }) {
   final u = Uri.tryParse(url);
   final idP = <String, Object?>{
-    if (u?.queryParameters['club'] != null) 'club_id': u!.queryParameters['club'],
-    if (u?.queryParameters['spot'] != null) 'spot_id': u!.queryParameters['spot'],
+    if (u?.queryParameters['club'] != null)
+      'club_id': u!.queryParameters['club'],
+    if (u?.queryParameters['spot'] != null)
+      'spot_id': u!.queryParameters['spot'],
   };
   showDialog(
     context: context,
@@ -33,11 +35,14 @@ void showShareMenu(
           children: [
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: Text(t('share_title'),
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 17,
-                      color: NurungjiColors.dark)),
+              child: Text(
+                t('share_title'),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 17,
+                  color: NurungjiColors.dark,
+                ),
+              ),
             ),
             if (onStory != null)
               _menuButton(
@@ -67,7 +72,8 @@ void showShareMenu(
                         title: shareTitle,
                         description: t('login_subtitle'),
                         imageUrl: Uri.parse(
-                            'https://nulloongzi.github.io/null_oongzi-do/logo.png'),
+                          'https://nulloongzi.github.io/null_oongzi-do/logo.png',
+                        ),
                         link: kakao.Link(webUrl: u, mobileWebUrl: u),
                       ),
                       buttons: [
@@ -97,9 +103,9 @@ void showShareMenu(
                 Track.event('share', {'method': 'copy', ...idP});
                 await ShareService.copy(url);
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(t('link_copied'))),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(t('link_copied'))));
                 }
               },
             ),
@@ -115,7 +121,9 @@ void showShareMenu(
             ),
             const SizedBox(height: 2),
             TextButton(
-                onPressed: () => Navigator.pop(ctx), child: Text(t('cancel'))),
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(t('cancel')),
+            ),
           ],
         ),
       ),
@@ -143,18 +151,24 @@ Widget _menuButton({
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label,
-                  style: TextStyle(
-                      fontWeight:
-                          primary ? FontWeight.w800 : FontWeight.w700,
-                      color: NurungjiColors.dark,
-                      fontSize: 15)),
+              Text(
+                label,
+                style: TextStyle(
+                  fontWeight: primary ? FontWeight.w800 : FontWeight.w700,
+                  color: NurungjiColors.dark,
+                  fontSize: 15,
+                ),
+              ),
               if (hint != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 3),
-                  child: Text(hint,
-                      style: const TextStyle(
-                          fontSize: 12, color: NurungjiColors.brown)),
+                  child: Text(
+                    hint,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: NurungjiColors.brown,
+                    ),
+                  ),
                 ),
             ],
           ),

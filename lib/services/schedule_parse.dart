@@ -26,7 +26,11 @@ List<SchedEvent> eventsFromRaw(List? raw) {
     final day = r['day'] as String?;
     final s = _hm(r['start'] as String?);
     final e = _hm(r['end'] as String?);
-    if (day != null && scheduleDays.contains(day) && s != null && e != null && e > s) {
+    if (day != null &&
+        scheduleDays.contains(day) &&
+        s != null &&
+        e != null &&
+        e > s) {
       out.add(SchedEvent(day, s, e));
     }
   }

@@ -23,10 +23,11 @@ Future<bool?> showClubFormSheet(
   BuildContext context, {
   required NLatLng initialCenter,
   Club? editing,
-}) =>
-    showAppSheet<bool>(context,
-        background: Colors.white, // 웹 등록 모달: 흰 배경
-        child: ClubFormScreen(initialCenter: initialCenter, editing: editing));
+}) => showAppSheet<bool>(
+  context,
+  background: Colors.white, // 웹 등록 모달: 흰 배경
+  child: ClubFormScreen(initialCenter: initialCenter, editing: editing),
+);
 
 class ClubFormScreen extends StatefulWidget {
   final NLatLng initialCenter;
@@ -50,7 +51,8 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
   final _price = TextEditingController();
   final _insta = TextEditingController();
   final _link = TextEditingController();
-  final _ownerEmail = TextEditingController(); // 관리자 전용: 소유자 재지정(웹 regOwnerEmail)
+  final _ownerEmail =
+      TextEditingController(); // 관리자 전용: 소유자 재지정(웹 regOwnerEmail)
   bool _isAdminUser = false;
   final List<TextEditingController> _reels = []; // 릴스 다중 입력(행마다 1개)
 
@@ -89,15 +91,15 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
 
   // 웹 reg-target-chip data-val: 값은 한글 고정(필터·기존데이터 호환), 라벨만 한/영.
   List<ChipOption> get _targetOptions => [
-        (label: t('t_adult'), value: '성인'),
-        (label: t('t_college'), value: '대학생'),
-        (label: t('t_youth'), value: '청소년'),
-        (label: t('t_any'), value: '무관'),
-        (label: t('t_women'), value: '여성전용'),
-        (label: t('t_men'), value: '남성전용'),
-        (label: t('t_expro'), value: '선출가능'),
-        (label: t('t_6s'), value: '6인제'),
-      ];
+    (label: t('t_adult'), value: '성인'),
+    (label: t('t_college'), value: '대학생'),
+    (label: t('t_youth'), value: '청소년'),
+    (label: t('t_any'), value: '무관'),
+    (label: t('t_women'), value: '여성전용'),
+    (label: t('t_men'), value: '남성전용'),
+    (label: t('t_expro'), value: '선출가능'),
+    (label: t('t_6s'), value: '6인제'),
+  ];
 
   @override
   void initState() {
@@ -123,14 +125,25 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
     }
     if (_blocks.isEmpty) _blocks.add(ScheduleBlock());
     if (_reels.isEmpty) _reels.add(TextEditingController()); // 최소 1행 노출
-    _repo.isAdmin().then((v) {
-      if (mounted && v) setState(() => _isAdminUser = true);
-    }).catchError((_) {});
+    _repo
+        .isAdmin()
+        .then((v) {
+          if (mounted && v) setState(() => _isAdminUser = true);
+        })
+        .catchError((_) {});
   }
 
   @override
   void dispose() {
-    for (final c in [_name, _targetNote, _address, _price, _insta, _link, _ownerEmail]) {
+    for (final c in [
+      _name,
+      _targetNote,
+      _address,
+      _price,
+      _insta,
+      _link,
+      _ownerEmail,
+    ]) {
       c.dispose();
     }
     for (final c in _reels) {
@@ -141,8 +154,7 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
 
   void _snack(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   // 웹 getRegTargetValue: 선택칩 ', ' 결합 + 메모를 괄호로 덧붙임
@@ -257,7 +269,9 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
         child: Column(
@@ -298,8 +312,10 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
             ),
             _group(t('cf_link'), _input(_link, t('f_contact_hint'))),
             if (_isAdminUser && _isEdit)
-              _group(t('cf_owner_email'),
-                  _input(_ownerEmail, t('cf_owner_email_hint'))),
+              _group(
+                t('cf_owner_email'),
+                _input(_ownerEmail, t('cf_owner_email_hint')),
+              ),
             const SizedBox(height: 8),
             ElevatedButton(
               onPressed: _saving ? null : _submit,
@@ -308,7 +324,10 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
                       height: 20,
                       width: 20,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: NurungjiColors.dark))
+                        strokeWidth: 2,
+                        color: NurungjiColors.dark,
+                      ),
+                    )
                   : Text(_isEdit ? t('save') : t('cf_submit')),
             ),
           ],
@@ -323,9 +342,13 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w700, color: NurungjiColors.dark)),
+          Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              color: NurungjiColors.dark,
+            ),
+          ),
           const SizedBox(height: 8),
           child,
         ],
@@ -349,46 +372,61 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
           controller: _address,
           // 주소를 직접 고치면 이전 좌표 무효화(웹 동일) → 재검색/피커 유도
           onChanged: (_) {
-            if (_lat != null) setState(() { _lat = null; _lng = null; });
+            if (_lat != null) {
+              setState(() {
+                _lat = null;
+                _lng = null;
+              });
+            }
           },
           decoration: InputDecoration(hintText: t('cf_addr_hint')),
         ),
         const SizedBox(height: 8),
-        Row(children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: _geocoding ? null : _geocode,
-              icon: _geocoding
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Icon(Icons.search, size: 18),
-              label: Text(t('f_addr_search')),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _geocoding ? null : _geocode,
+                icon: _geocoding
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.search, size: 18),
+                label: Text(t('f_addr_search')),
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: _pickLocation,
-              icon: const Icon(Icons.map_outlined, size: 18),
-              label: Text(t('f_addr_map')),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _pickLocation,
+                icon: const Icon(Icons.map_outlined, size: 18),
+                label: Text(t('f_addr_map')),
+              ),
             ),
-          ),
-        ]),
+          ],
+        ),
         if (picked)
           Padding(
             padding: const EdgeInsets.only(top: 6),
-            child: Row(children: [
-              const Icon(Icons.check_circle,
-                  size: 16, color: NurungjiColors.teal),
-              const SizedBox(width: 4),
-              Text(
-                '${t('f_loc_set')} (${_lat!.toStringAsFixed(5)}, ${_lng!.toStringAsFixed(5)})',
-                style: const TextStyle(
-                    fontSize: 12, color: NurungjiColors.brown),
-              ),
-            ]),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.check_circle,
+                  size: 16,
+                  color: NurungjiColors.teal,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '${t('f_loc_set')} (${_lat!.toStringAsFixed(5)}, ${_lng!.toStringAsFixed(5)})',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: NurungjiColors.brown,
+                  ),
+                ),
+              ],
+            ),
           ),
       ],
     );

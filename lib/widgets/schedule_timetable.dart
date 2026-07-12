@@ -50,8 +50,14 @@ class ScheduleTimetable extends StatelessWidget {
                 _timeCol(displayStart, displayEnd, rowH),
                 for (var i = 0; i < scheduleDays.length; i++)
                   Expanded(
-                      child: _dayCol(scheduleDays[i], i == todayIdx,
-                          displayStart, totalHours, rowH)),
+                    child: _dayCol(
+                      scheduleDays[i],
+                      i == todayIdx,
+                      displayStart,
+                      totalHours,
+                      rowH,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -61,22 +67,24 @@ class ScheduleTimetable extends StatelessWidget {
   }
 
   Widget _headerRow(int todayIdx) {
-    return Row(children: [
-      const SizedBox(width: 32),
-      for (var i = 0; i < scheduleDays.length; i++)
-        Expanded(
-          child: Center(
-            child: Text(
-              i18nDay(scheduleDays[i]),
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: i == todayIdx ? FontWeight.w900 : FontWeight.w600,
-                color: i == todayIdx ? accent : NurungjiColors.dark,
+    return Row(
+      children: [
+        const SizedBox(width: 32),
+        for (var i = 0; i < scheduleDays.length; i++)
+          Expanded(
+            child: Center(
+              child: Text(
+                i18nDay(scheduleDays[i]),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: i == todayIdx ? FontWeight.w900 : FontWeight.w600,
+                  color: i == todayIdx ? accent : NurungjiColors.dark,
+                ),
               ),
             ),
           ),
-        ),
-    ]);
+      ],
+    );
   }
 
   Widget _timeCol(int start, int end, double rowH) {
@@ -87,9 +95,13 @@ class ScheduleTimetable extends StatelessWidget {
           for (int h = start; h < end; h++)
             SizedBox(
               height: rowH,
-              child: Text(getHourLabel(h),
-                  style: const TextStyle(
-                      fontSize: 9, color: NurungjiColors.brown)),
+              child: Text(
+                getHourLabel(h),
+                style: const TextStyle(
+                  fontSize: 9,
+                  color: NurungjiColors.brown,
+                ),
+              ),
             ),
         ],
       ),
@@ -97,7 +109,12 @@ class ScheduleTimetable extends StatelessWidget {
   }
 
   Widget _dayCol(
-      String day, bool isToday, int displayStart, int totalHours, double rowH) {
+    String day,
+    bool isToday,
+    int displayStart,
+    int totalHours,
+    double rowH,
+  ) {
     final dayEvents = events.where((e) => e.day == day).toList();
     return Container(
       decoration: BoxDecoration(
@@ -122,7 +139,9 @@ class ScheduleTimetable extends StatelessWidget {
               top: (e.start - displayStart) * rowH,
               left: 1,
               right: 1,
-              height: ((e.end - e.start) * rowH - 2).clamp(16.0, 9999.0).toDouble(),
+              height: ((e.end - e.start) * rowH - 2)
+                  .clamp(16.0, 9999.0)
+                  .toDouble(),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
                 decoration: BoxDecoration(
@@ -130,36 +149,43 @@ class ScheduleTimetable extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 // 웹 #fullContent 블록: 시작·종료·길이 (12시간제)
-                child: Builder(builder: (_) {
-                  // 짧은 블록(<1h)은 시작만 — 오버플로 방지.
-                  final showEnd = (e.end - e.start) >= 1.0;
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: showEnd
-                        ? MainAxisAlignment.spaceBetween
-                        : MainAxisAlignment.start,
-                    children: [
-                      Text(time12(e.start),
+                child: Builder(
+                  builder: (_) {
+                    // 짧은 블록(<1h)은 시작만 — 오버플로 방지.
+                    final showEnd = (e.end - e.start) >= 1.0;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: showEnd
+                          ? MainAxisAlignment.spaceBetween
+                          : MainAxisAlignment.start,
+                      children: [
+                        Text(
+                          time12(e.start),
                           style: const TextStyle(
-                              fontSize: 8,
-                              height: 1.1,
-                              fontWeight: FontWeight.w800,
-                              color: NurungjiColors.dark),
+                            fontSize: 8,
+                            height: 1.1,
+                            fontWeight: FontWeight.w800,
+                            color: NurungjiColors.dark,
+                          ),
                           maxLines: 1,
-                          overflow: TextOverflow.clip),
-                      if (showEnd)
-                        Text('${time12(e.end)}\n(${durLabel(e.end - e.start)})',
+                          overflow: TextOverflow.clip,
+                        ),
+                        if (showEnd)
+                          Text(
+                            '${time12(e.end)}\n(${durLabel(e.end - e.start)})',
                             style: TextStyle(
-                                fontSize: 7,
-                                height: 1.15,
-                                fontWeight: FontWeight.w600,
-                                color:
-                                    NurungjiColors.dark.withValues(alpha: 0.7)),
+                              fontSize: 7,
+                              height: 1.15,
+                              fontWeight: FontWeight.w600,
+                              color: NurungjiColors.dark.withValues(alpha: 0.7),
+                            ),
                             maxLines: 2,
-                            overflow: TextOverflow.clip),
-                    ],
-                  );
-                }),
+                            overflow: TextOverflow.clip,
+                          ),
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
         ],

@@ -23,12 +23,18 @@ class DietGrid extends StatelessWidget {
   const DietGrid({super.key, required this.teams});
 
   static const _slotBg = [
-    Color(0xFFFFFDE7), Color(0xFFFFF3E0), Color(0xFFF1F8E9),
-    Color(0xFFFBE9E7), Color(0xFFF3E5F5),
+    Color(0xFFFFFDE7),
+    Color(0xFFFFF3E0),
+    Color(0xFFF1F8E9),
+    Color(0xFFFBE9E7),
+    Color(0xFFF3E5F5),
   ];
   static const _slotBorder = [
-    Color(0xFFFBC02D), Color(0xFFF57C00), Color(0xFF689F38),
-    Color(0xFFD84315), Color(0xFF8E24AA),
+    Color(0xFFFBC02D),
+    Color(0xFFF57C00),
+    Color(0xFF689F38),
+    Color(0xFFD84315),
+    Color(0xFF8E24AA),
   ];
 
   @override
@@ -43,8 +49,10 @@ class DietGrid extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 24),
         child: Center(
-          child: Text(t('lb_no_sched'),
-              style: const TextStyle(color: NurungjiColors.brown)),
+          child: Text(
+            t('lb_no_sched'),
+            style: const TextStyle(color: NurungjiColors.brown),
+          ),
         ),
       );
     }
@@ -72,7 +80,8 @@ class DietGrid extends StatelessWidget {
               _timeCol(displayStart, displayEnd, rowH),
               for (final day in scheduleDays)
                 Expanded(
-                    child: _dayCol(day, all, displayStart, totalHours, rowH)),
+                  child: _dayCol(day, all, displayStart, totalHours, rowH),
+                ),
             ],
           ),
         ),
@@ -81,19 +90,24 @@ class DietGrid extends StatelessWidget {
   }
 
   Widget _headerRow() {
-    return Row(children: [
-      const SizedBox(width: 36),
-      for (final d in scheduleDays)
-        Expanded(
-          child: Center(
-            child: Text(i18nDay(d),
+    return Row(
+      children: [
+        const SizedBox(width: 36),
+        for (final d in scheduleDays)
+          Expanded(
+            child: Center(
+              child: Text(
+                i18nDay(d),
                 style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                    color: NurungjiColors.dark)),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                  color: NurungjiColors.dark,
+                ),
+              ),
+            ),
           ),
-        ),
-    ]);
+      ],
+    );
   }
 
   Widget _timeCol(int start, int end, double rowH) {
@@ -104,17 +118,26 @@ class DietGrid extends StatelessWidget {
           for (int h = start; h < end; h++)
             SizedBox(
               height: rowH,
-              child: Text(getHourLabel(h),
-                  style: const TextStyle(
-                      fontSize: 9, color: NurungjiColors.brown)),
+              child: Text(
+                getHourLabel(h),
+                style: const TextStyle(
+                  fontSize: 9,
+                  color: NurungjiColors.brown,
+                ),
+              ),
             ),
         ],
       ),
     );
   }
 
-  Widget _dayCol(String day, List<({SchedEvent e, DietTeam t})> all,
-      int displayStart, int totalHours, double rowH) {
+  Widget _dayCol(
+    String day,
+    List<({SchedEvent e, DietTeam t})> all,
+    int displayStart,
+    int totalHours,
+    double rowH,
+  ) {
     final dayEvents = all.where((x) => x.e.day == day).toList()
       ..sort((a, b) => a.e.start.compareTo(b.e.start));
 
@@ -131,8 +154,7 @@ class DietGrid extends StatelessWidget {
                 Container(
                   height: rowH,
                   decoration: const BoxDecoration(
-                    border:
-                        Border(top: BorderSide(color: Color(0x0D000000))),
+                    border: Border(top: BorderSide(color: Color(0x0D000000))),
                   ),
                 ),
             ],
@@ -145,8 +167,12 @@ class DietGrid extends StatelessWidget {
     );
   }
 
-  Widget _eventBlock(List<({SchedEvent e, DietTeam t})> dayEvents, int i,
-      int displayStart, double rowH) {
+  Widget _eventBlock(
+    List<({SchedEvent e, DietTeam t})> dayEvents,
+    int i,
+    int displayStart,
+    double rowH,
+  ) {
     final evt = dayEvents[i].e;
     final team = dayEvents[i].t;
     // 겹침 들여쓰기 (웹과 동일)
@@ -158,7 +184,9 @@ class DietGrid extends StatelessWidget {
     if (indent > 2) indent = 0;
 
     final top = (evt.start - displayStart) * rowH;
-    final height = ((evt.end - evt.start) * rowH - 2).clamp(18.0, 9999.0).toDouble();
+    final height = ((evt.end - evt.start) * rowH - 2)
+        .clamp(18.0, 9999.0)
+        .toDouble();
     final slot = team.slotIdx % 5;
 
     return Positioned(
@@ -176,7 +204,10 @@ class DietGrid extends StatelessWidget {
         child: Text(
           team.isCustom ? '🍙${team.name}' : team.name,
           style: const TextStyle(
-              fontSize: 9, height: 1.1, color: NurungjiColors.dark),
+            fontSize: 9,
+            height: 1.1,
+            color: NurungjiColors.dark,
+          ),
           maxLines: (height ~/ 12).clamp(1, 6).toInt(),
           overflow: TextOverflow.ellipsis,
         ),

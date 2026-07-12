@@ -19,7 +19,13 @@ class ClubFilter {
   static const regionOptions = ['서울', '경기', '인천', '강원', '충청', '전라', '경상', '제주'];
   static const dayOptions = ['월', '화', '수', '목', '금', '토', '일'];
   static const targetOptions = [
-    '성인', '대학생', '청소년', '여성전용', '남성전용', '선출가능', '6인제'
+    '성인',
+    '대학생',
+    '청소년',
+    '여성전용',
+    '남성전용',
+    '선출가능',
+    '6인제',
   ];
   static const _special = {'여성전용', '남성전용', '선출가능', '6인제'};
 
@@ -31,13 +37,12 @@ class ClubFilter {
     Set<String>? days,
     Set<String>? targets,
     String? keyword,
-  }) =>
-      ClubFilter(
-        regions: regions ?? this.regions,
-        days: days ?? this.days,
-        targets: targets ?? this.targets,
-        keyword: keyword ?? this.keyword,
-      );
+  }) => ClubFilter(
+    regions: regions ?? this.regions,
+    days: days ?? this.days,
+    targets: targets ?? this.targets,
+    keyword: keyword ?? this.keyword,
+  );
 
   bool matches(Club c) {
     final addr = c.address ?? '';

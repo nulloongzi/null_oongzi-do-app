@@ -1,0 +1,114 @@
+name: E2E (Android + Firebase emulators)
+
+# Tier 4 e2e (방법론 Phase 3): 안드로이드 에뮬레이터에서 앱을 실제 부팅해
+# Firebase Local Emulator(Auth/Firestore/Storage) 스위트 대상 시나리오 검증.
+# 무거운 잡이라 매 push 게이트가 아니라 수동 + 주간 스케줄 + e2e 관련 파일 변경 시 실행.
+# 룰(firestore.rules/storage.rules)은 웹 레포가 단일 소스 → 체크아웃해서 사용.
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "0 20 * * 5" # 매주 토요일 05:00 KST
+  push:
+    branches: ["claude/**"]
+    paths:
+      - "integration_test/**"
+      - ".github/workflows/e2e.yml"
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      # 룰 단일 소스: 웹 레포 체크아웃 (공개 레포)
+      - uses: actions/checkout@v4
+        with:
+          repository: nulloongzi/null_oongzi-do
+          path: webrepo
+
+      # firebase-tools(최신)가 Java 21+ 요구. Gradle 8.14/AGP 8.11도 21 지원.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install deps
+        run: flutter pub get
+
+      # Firebase 에뮬레이터: 포트는 e2e가 소유하고 룰만 웹 레포에서 참조
+      # (웹 firebase.json 상태에 비의존 — auth 포트 등 e2e 요구를 자체 정의)
+      - name: Write emulator config
+        run: |
+          cat > firebase.e2e.json <<'EOF'
+          {
+            "firestore": { "rules": "webrepo/firestore.rules" },
+            "storage": { "rules": "webrepo/storage.rules" },
+            "emulators": {
+              "auth": { "port": 9099, "host": "0.0.0.0" },
+              "firestore": { "port": 8080, "host": "0.0.0.0" },
+              "storage": { "port": 9199, "host": "0.0.0.0" },
+              "ui": { "enabled": false },
+              "singleProjectMode": true
+            }
+          }
+          EOF
+
+      - name: Start Firebase emulators
+        run: |
+          npm install -g firebase-tools
+          nohup firebase emulators:start \
+            --config firebase.e2e.json \
+            --project nulloongzi-do \
+            --only auth,firestore,storage > emulators.log 2>&1 &
+          # 3개 포트가 응답할 때까지 대기 (최대 120초).
+          # 주의: -f 금지 — Storage 에뮬 루트는 4xx/5xx를 반환하므로(정상),
+          # HTTP 응답 수신(=포트 오픈) 자체를 준비 신호로 본다.
+          for i in $(seq 1 120); do
+            if curl -s -o /dev/null http://localhost:9099 \
+               && curl -s -o /dev/null http://localhost:8080 \
+               && curl -s -o /dev/null http://localhost:9199; then
+              echo "emulators up (${i}s)"; exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::Firebase emulators failed to start"; tail -50 emulators.log; exit 1
+
+      # 안드 에뮬 가속(KVM) 활성화 — ubuntu-latest 기본 러너
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run e2e on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          # 에뮬레이터 안에서 호스트(러너)의 Firebase 에뮬은 10.0.2.2
+          script: flutter test integration_test --dart-define=EMU_HOST=10.0.2.2 --timeout 6m
+
+      - name: Upload emulator logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: firebase-emulator-logs
+          path: emulators.log
+          if-no-files-found: ignore

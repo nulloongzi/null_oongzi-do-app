@@ -9,7 +9,13 @@ import '../models/pickup_spot.dart';
 import 'i18n.dart';
 
 class DataRepository {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  // DI 시임: 테스트에서 fake/mock 주입. 기본값은 프로덕션 싱글턴(동작 불변).
+  DataRepository({FirebaseFirestore? db, FirebaseAuth? auth})
+    : _db = db ?? FirebaseFirestore.instance,
+      _auth = auth ?? FirebaseAuth.instance;
+
+  final FirebaseFirestore _db;
+  final FirebaseAuth _auth;
 
   Future<List<Club>> loadClubs() async {
     final snap = await _db.collection('clubs').get();
@@ -38,7 +44,7 @@ class DataRepository {
   }
 
   /// 현재 로그인 uid (없으면 null). 클럽 등록/권한 판정용.
-  String? get currentUid => FirebaseAuth.instance.currentUser?.uid;
+  String? get currentUid => _auth.currentUser?.uid;
 
   // 관리자 여부 캐시 — uid별로 보관(계정 전환 시 이전 값이 남는 버그 방지).
   static String? _adminUid;
@@ -61,9 +67,9 @@ class DataRepository {
 
   /// 로그인돼 있으면 그 uid, 아니면 익명 로그인. (픽업 무로그인 등록 허용)
   Future<String> ensureUid() async {
-    final u = FirebaseAuth.instance.currentUser;
+    final u = _auth.currentUser;
     if (u != null) return u.uid;
-    final cred = await FirebaseAuth.instance.signInAnonymously();
+    final cred = await _auth.signInAnonymously();
     final user = cred.user;
     if (user == null) throw Exception(t('err_anon_auth'));
     return user.uid;

@@ -37,9 +37,9 @@ class SheetTitle extends StatelessWidget {
       child: Text(
         text,
         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: const Color(0xFF4E342E), // NurungjiColors.dark
-            ),
+          fontWeight: FontWeight.w800,
+          color: const Color(0xFF4E342E), // NurungjiColors.dark
+        ),
       ),
     );
   }

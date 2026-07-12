@@ -10,7 +10,10 @@ const Map<String, Map<String, String>> kStrings = {
   'save': {'ko': '저장', 'en': 'Save'},
 
   // 로그인
-  'login_subtitle': {'ko': '우리 동네 배구, 여기서', 'en': 'Your neighborhood volleyball'},
+  'login_subtitle': {
+    'ko': '우리 동네 배구, 여기서',
+    'en': 'Your neighborhood volleyball',
+  },
   'login_google': {'ko': '구글로 로그인', 'en': 'Sign in with Google'},
   'email': {'ko': '이메일', 'en': 'Email'},
   'password': {'ko': '비밀번호 (6자 이상)', 'en': 'Password (6+ chars)'},
@@ -51,40 +54,60 @@ const Map<String, Map<String, String>> kStrings = {
   'home_btn': {'ko': '🔗 홈페이지', 'en': '🔗 Website'},
   'directions_btn': {'ko': '🚀 길찾기', 'en': '🚀 Directions'},
   'verify_btn': {'ko': '인증 신청 (사진 제출)', 'en': 'Apply for verification'},
-  'verify_done': {'ko': '인증 신청 완료! 검토 후 반영돼요', 'en': 'Verification requested! Pending review'},
-  'vf_pending': {'ko': '⏳ 인증 심사 중입니다. 관리자 확인 후 인증 배지가 부여됩니다.', 'en': '⏳ Verification under review. A badge is granted after admin review.'},
+  'verify_done': {
+    'ko': '인증 신청 완료! 검토 후 반영돼요',
+    'en': 'Verification requested! Pending review',
+  },
+  'vf_pending': {
+    'ko': '⏳ 인증 심사 중입니다. 관리자 확인 후 인증 배지가 부여됩니다.',
+    'en': '⏳ Verification under review. A badge is granted after admin review.',
+  },
   'vf_rejected': {'ko': '❌ 인증이 거절되었습니다', 'en': '❌ Verification rejected'},
   'vf_reason': {'ko': '사유: ', 'en': 'Reason: '},
   'vf_no_reason': {'ko': '사유가 기재되지 않았습니다.', 'en': 'No reason was provided.'},
   'vf_reapply': {'ko': '🔄 인증 재신청', 'en': '🔄 Re-apply'},
   'urgent_on': {'ko': '🔥 급구 올리기', 'en': '🔥 Post urgent'},
   'urgent_off': {'ko': '급구 내리기', 'en': 'Remove urgent'},
-  'urgent_msg_hint': {'ko': '예: 이번주 토 세터 1명 급구!', 'en': 'e.g. Need 1 setter this Sat!'},
+  'urgent_msg_hint': {
+    'ko': '예: 이번주 토 세터 1명 급구!',
+    'en': 'e.g. Need 1 setter this Sat!',
+  },
   'modify_delete_title': {'ko': '삭제할까요?', 'en': 'Delete?'},
-  'modify_delete_body': {'ko': '이 작업은 되돌릴 수 없어요.', 'en': "This can't be undone."},
+  'modify_delete_body': {
+    'ko': '이 작업은 되돌릴 수 없어요.',
+    'en': "This can't be undone.",
+  },
 
   // 공유 메뉴
   'share_title': {'ko': '공유하기', 'en': 'Share'},
   'share_story': {'ko': '📸 인스타 스토리', 'en': '📸 Instagram Story'},
-  'share_story_hint': {'ko': '링크 자동 복사 — 보는 사람은 탭 1번에 입장', 'en': 'Link auto-copied — 1 tap to open'},
+  'share_story_hint': {
+    'ko': '링크 자동 복사 — 보는 사람은 탭 1번에 입장',
+    'en': 'Link auto-copied — 1 tap to open',
+  },
   'share_copy': {'ko': '🔗 링크 복사', 'en': '🔗 Copy link'},
   'share_more': {'ko': '📤 다른 앱으로 공유', 'en': '📤 Share to other apps'},
   'link_copied': {'ko': '링크가 복사됐어요', 'en': 'Link copied'},
   'story_link_hint': {
     'ko': '링크 복사됨 — 스토리에 "링크 스티커"로 붙여넣으면 탭 1번에 입장돼요',
-    'en': 'Link copied — paste as a "link sticker" in your Story'
+    'en': 'Link copied — paste as a "link sticker" in your Story',
   },
   'coach_title': {'ko': "스토리에 '링크 스티커' 붙이기", 'en': 'Add a "link sticker"'},
   'coach_steps': {
-    'ko': '링크는 이미 복사됐어요! 인스타 편집 화면에서:\n\n①  상단 스티커 아이콘 탭\n②  "링크" 선택\n③  붙여넣기 → 완료\n\n그러면 보는 사람이 탭 1번에 들어와요.\n(안 붙여도 카드의 QR·주소로 입장 가능)',
-    'en': 'Link already copied! In the Instagram editor:\n\n1.  Tap the sticker icon (top)\n2.  Choose "Link"\n3.  Paste → done\n\nThen viewers open it in 1 tap.\n(Or they can use the QR/URL on the card.)'
+    'ko':
+        '링크는 이미 복사됐어요! 인스타 편집 화면에서:\n\n①  상단 스티커 아이콘 탭\n②  "링크" 선택\n③  붙여넣기 → 완료\n\n그러면 보는 사람이 탭 1번에 들어와요.\n(안 붙여도 카드의 QR·주소로 입장 가능)',
+    'en':
+        'Link already copied! In the Instagram editor:\n\n1.  Tap the sticker icon (top)\n2.  Choose "Link"\n3.  Paste → done\n\nThen viewers open it in 1 tap.\n(Or they can use the QR/URL on the card.)',
   },
   'coach_go': {'ko': '인스타로 이동', 'en': 'Open Instagram'},
   'coach_dont_show': {'ko': '다시 보지 않기', 'en': "Don't show again"},
 
   // 프로필
   'profile_title': {'ko': '내 프로필', 'en': 'My profile'},
-  'my_lunchbox': {'ko': '내 도시락 (찜한 팀·식단표)', 'en': 'My lunchbox (saved teams & schedule)'},
+  'my_lunchbox': {
+    'ko': '내 도시락 (찜한 팀·식단표)',
+    'en': 'My lunchbox (saved teams & schedule)',
+  },
   'share_image_title': {'ko': '이미지로 공유', 'en': 'Share as image'},
   'share_image_btn': {'ko': '이미지로 공유 / 저장', 'en': 'Share / save image'},
   'share_wrap': {'ko': '🎁 포장하기', 'en': '🎁 Wrap it up'},
@@ -92,8 +115,14 @@ const Map<String, Map<String, String>> kStrings = {
   'logout': {'ko': '로그아웃', 'en': 'Log out'},
   'joined': {'ko': '가입', 'en': 'Joined'},
   'nickname_hint': {'ko': '새 닉네임 (하이픈 - 금지)', 'en': 'New nickname (no hyphen)'},
-  'nickname_hyphen': {'ko': '하이픈(-)은 밥아저씨가 지어준 이름에만 쓸 수 있어요', 'en': 'Hyphens are only for auto-generated names'},
-  'nickname_dup': {'ko': '이미 누군가 쓰고 있는 이름이에요', 'en': 'That name is already taken'},
+  'nickname_hyphen': {
+    'ko': '하이픈(-)은 밥아저씨가 지어준 이름에만 쓸 수 있어요',
+    'en': 'Hyphens are only for auto-generated names',
+  },
+  'nickname_dup': {
+    'ko': '이미 누군가 쓰고 있는 이름이에요',
+    'en': 'That name is already taken',
+  },
   'nickname_done': {'ko': '닉네임 변경 완료!', 'en': 'Nickname updated!'},
 
   // 도시락
@@ -112,13 +141,22 @@ const Map<String, Map<String, String>> kStrings = {
   'copy_address': {'ko': '📍 주소 복사', 'en': '📍 Copy'},
   'address_copied': {'ko': '주소를 복사했어요', 'en': 'Address copied'},
   'share_link': {'ko': '🔗 공유', 'en': '🔗 Share'}, // 컴팩트 액션 줄용
-  'insta_reel_title': {'ko': '📷 인스타 릴스 · 게시물', 'en': '📷 Instagram reel · post'},
+  'insta_reel_title': {
+    'ko': '📷 인스타 릴스 · 게시물',
+    'en': '📷 Instagram reel · post',
+  },
   'insta_reel_open': {'ko': '탭하면 인스타그램에서 봐요', 'en': 'Tap to view on Instagram'},
   'reel_tap_play': {'ko': '탭하면 여기서 재생', 'en': 'Tap to play here'},
   'reels_more_label': {'ko': '릴스 더 보기', 'en': 'More reels'},
   'reels_hide': {'ko': '릴스 접기', 'en': 'Hide reels'},
-  'reel_peek_hint': {'ko': '탭하면 재생 · 바깥을 누르면 닫기', 'en': 'Tap to play · tap outside to close'},
-  'reel_peek_none': {'ko': '이 팀은 아직 릴스가 없어요', 'en': 'No reel for this team yet'},
+  'reel_peek_hint': {
+    'ko': '탭하면 재생 · 바깥을 누르면 닫기',
+    'en': 'Tap to play · tap outside to close',
+  },
+  'reel_peek_none': {
+    'ko': '이 팀은 아직 릴스가 없어요',
+    'en': 'No reel for this team yet',
+  },
   'detail_pull_hint': {'ko': '▴ 위로 올려 시간표 보기', 'en': '▴ Pull up for schedule'},
   'detail_collapse_hint': {'ko': '▾ 접기', 'en': '▾ Collapse'},
   'lb_slot_rice': {'ko': '밥을\n담아주세요🍚', 'en': 'Add rice 🍚'},
@@ -127,8 +165,14 @@ const Map<String, Map<String, String>> kStrings = {
   'lb_slot_side2': {'ko': '반찬2🥗', 'en': 'Side 2 🥗'},
   'lb_slot_side3': {'ko': '반찬3🥢', 'en': 'Side 3 🥢'},
   'lb_save_fail': {'ko': '저장 실패', 'en': 'Save failed'},
-  'lb_save_err': {'ko': '저장에 실패했어요. 잠시 후 다시 시도해 주세요', 'en': 'Save failed. Please try again.'},
-  'err_anon_auth': {'ko': '로그인 처리에 실패했어요. 잠시 후 다시 시도해 주세요', 'en': 'Sign-in failed. Please try again shortly.'},
+  'lb_save_err': {
+    'ko': '저장에 실패했어요. 잠시 후 다시 시도해 주세요',
+    'en': 'Save failed. Please try again.',
+  },
+  'err_anon_auth': {
+    'ko': '로그인 처리에 실패했어요. 잠시 후 다시 시도해 주세요',
+    'en': 'Sign-in failed. Please try again shortly.',
+  },
   'sched_add': {'ko': '시간대 추가', 'en': 'Add time'},
   'map_pick_title': {'ko': '위치 선택', 'en': 'Pick location'},
   'map_pick_set': {'ko': '이 위치로 설정', 'en': 'Use this location'},
@@ -138,7 +182,10 @@ const Map<String, Map<String, String>> kStrings = {
   'err_generic': {'ko': '오류', 'en': 'Error'},
   'back_exit_hint': {'ko': '한 번 더 누르면 종료돼요', 'en': 'Press back again to exit'},
   'card_title_fallback': {'ko': '배구 모임', 'en': 'Volleyball meetup'},
-  'card_cta': {'ko': '이 팀, 어때요? 지도에서 보기 👀', 'en': 'Check out this team on the map 👀'},
+  'card_cta': {
+    'ko': '이 팀, 어때요? 지도에서 보기 👀',
+    'en': 'Check out this team on the map 👀',
+  },
   'login_google_fail': {'ko': '구글 로그인 실패', 'en': 'Google sign-in failed'},
   'login_err': {'ko': '로그인 오류가 발생했어요', 'en': 'A sign-in error occurred'},
   'fab_lunchbox': {'ko': '도시락', 'en': 'Lunchbox'},
@@ -152,7 +199,10 @@ const Map<String, Map<String, String>> kStrings = {
   'login_required': {'ko': '로그인이 필요해요', 'en': 'Login required'},
   'login_later': {'ko': '나중에 할게요 (둘러보기)', 'en': 'Maybe later (keep browsing)'},
   'pk_search_ph': {'ko': '픽업, 장소로 검색...', 'en': 'Search pickups or venues...'},
-  'cf_owner_email': {'ko': '소유자 지정 (관리자 전용)', 'en': 'Reassign owner (admin only)'},
+  'cf_owner_email': {
+    'ko': '소유자 지정 (관리자 전용)',
+    'en': 'Reassign owner (admin only)',
+  },
   'cf_owner_email_hint': {'ko': '새 소유자 이메일', 'en': 'New owner email'},
   'logout_confirm': {'ko': '로그아웃 하시겠습니까?', 'en': 'Log out?'},
   'share_mode_feed': {'ko': '피드형 (식단표 포함)', 'en': 'Feed (with schedule)'},
@@ -160,15 +210,27 @@ const Map<String, Map<String, String>> kStrings = {
   'lb_no_sched': {'ko': '찜한 팀의 일정이 없어요', 'en': 'No schedule for saved teams'},
   'share_kakao': {'ko': '💬 카카오톡', 'en': '💬 KakaoTalk'},
   'kakao_view_btn': {'ko': '지도에서 보기', 'en': 'View on map'},
-  'lb_reorder_hint': {'ko': '칸을 탭해 순서 바꾸기 · ✕ 빼기', 'en': 'Tap slots to reorder · ✕ remove'},
-  'lb_reorder_pick': {'ko': '바꿀 칸을 한 번 더 탭하세요', 'en': 'Tap another slot to swap'},
+  'lb_reorder_hint': {
+    'ko': '칸을 탭해 순서 바꾸기 · ✕ 빼기',
+    'en': 'Tap slots to reorder · ✕ remove',
+  },
+  'lb_reorder_pick': {
+    'ko': '바꿀 칸을 한 번 더 탭하세요',
+    'en': 'Tap another slot to swap',
+  },
   'lb_edit': {'ko': '편집', 'en': 'Edit'},
   'lb_add': {'ko': '🍙 직접추가', 'en': '🍙 Add team'},
   'lb_done': {'ko': '완료', 'en': 'Done'},
-  'lb_edit_hint': {'ko': '‘편집’을 눌러 순서 변경·빼기', 'en': 'Tap Edit to reorder or remove'},
+  'lb_edit_hint': {
+    'ko': '‘편집’을 눌러 순서 변경·빼기',
+    'en': 'Tap Edit to reorder or remove',
+  },
   'no_saved_team': {'ko': '아직 찜한 팀이 없어요', 'en': 'No saved teams yet'},
   'lb_team_name': {'ko': '팀 이름', 'en': 'Team name'},
-  'lb_sched_hint': {'ko': '일정 (예: 토 14:00~17:00)', 'en': 'Schedule (e.g. Sat 14:00~17:00)'},
+  'lb_sched_hint': {
+    'ko': '일정 (예: 토 14:00~17:00)',
+    'en': 'Schedule (e.g. Sat 14:00~17:00)',
+  },
 
   // 필터
   'filter_title': {'ko': '검색 · 필터', 'en': 'Search & filter'},
@@ -185,41 +247,86 @@ const Map<String, Map<String, String>> kStrings = {
   'f_loc_set': {'ko': '위치 선택됨', 'en': 'Location set'},
   'f_addr_empty': {'ko': '주소를 입력해주세요', 'en': 'Enter an address'},
   'f_addr_found': {'ko': '주소를 찾았어요!', 'en': 'Address found!'},
-  'f_addr_notfound': {'ko': '주소를 못 찾았어요 — 지도에서 선택해주세요', 'en': "Couldn't find it — pick on the map"},
+  'f_addr_notfound': {
+    'ko': '주소를 못 찾았어요 — 지도에서 선택해주세요',
+    'en': "Couldn't find it — pick on the map",
+  },
   'f_pick_loc': {'ko': '지도에서 위치를 선택해주세요', 'en': 'Pick a location on the map'},
-  'f_link_invalid': {'ko': '링크 형식이 올바르지 않아요 (http/https)', 'en': 'Invalid link (http/https)'},
-  'f_reel_invalid': {'ko': '인스타 게시물/릴스 링크 형식이 올바르지 않아요', 'en': 'Invalid Instagram post/reel link'},
+  'f_link_invalid': {
+    'ko': '링크 형식이 올바르지 않아요 (http/https)',
+    'en': 'Invalid link (http/https)',
+  },
+  'f_reel_invalid': {
+    'ko': '인스타 게시물/릴스 링크 형식이 올바르지 않아요',
+    'en': 'Invalid Instagram post/reel link',
+  },
   'f_updated': {'ko': '수정됐어요!', 'en': 'Updated!'},
   'f_reel_label': {'ko': '릴스/게시물 링크 (선택)', 'en': 'Reel/post link (optional)'},
-  'f_reel_hint': {'ko': '예: https://www.instagram.com/reel/...', 'en': 'e.g. https://www.instagram.com/reel/...'},
+  'f_reel_hint': {
+    'ko': '예: https://www.instagram.com/reel/...',
+    'en': 'e.g. https://www.instagram.com/reel/...',
+  },
   'reel_add': {'ko': '릴스 추가', 'en': 'Add reel'},
-  'reel_first_hint': {'ko': '맨 위 릴스가 마커 미리보기로 표시돼요 · ≡ 꾹 눌러 순서 변경', 'en': 'Top reel shows as the marker preview · hold ≡ to reorder'},
-  'f_contact_hint': {'ko': '예: https://open.kakao.com/o/...', 'en': 'e.g. https://open.kakao.com/o/...'},
+  'reel_first_hint': {
+    'ko': '맨 위 릴스가 마커 미리보기로 표시돼요 · ≡ 꾹 눌러 순서 변경',
+    'en': 'Top reel shows as the marker preview · hold ≡ to reorder',
+  },
+  'f_contact_hint': {
+    'ko': '예: https://open.kakao.com/o/...',
+    'en': 'e.g. https://open.kakao.com/o/...',
+  },
   // 픽업 폼
   'pf_title': {'ko': '픽업 게임 열기', 'en': 'Open a pickup game'},
   'pf_edit_title': {'ko': '픽업 수정', 'en': 'Edit pickup'},
   'pf_submit': {'ko': '픽업 등록', 'en': 'Post pickup'},
   'pf_name': {'ko': '게임 이름 (필수)', 'en': 'Game name (required)'},
-  'pf_name_hint': {'ko': '예: 토요일 저녁 6인제 픽업', 'en': 'e.g. Sat evening 6s pickup'},
+  'pf_name_hint': {
+    'ko': '예: 토요일 저녁 6인제 픽업',
+    'en': 'e.g. Sat evening 6s pickup',
+  },
   'pf_sport': {'ko': '종목', 'en': 'Sport'},
   'pf_level': {'ko': '레벨', 'en': 'Level'},
   'pf_beginner': {'ko': '초보 환영', 'en': 'Beginners welcome'},
-  'pf_english': {'ko': '🌐 외국인 환영 (English OK)', 'en': '🌐 Foreigners welcome (English OK)'},
+  'pf_english': {
+    'ko': '🌐 외국인 환영 (English OK)',
+    'en': '🌐 Foreigners welcome (English OK)',
+  },
   'pf_venue': {'ko': '체육관/장소 이름', 'en': 'Gym / venue name'},
   'pf_venue_hint': {'ko': '예: 잠실학생체육관', 'en': 'e.g. Jamsil Student Gym'},
   'pf_addr': {'ko': '주소 (필수)', 'en': 'Address (required)'},
-  'pf_addr_hint': {'ko': '예: 서울 송파구 올림픽로 25', 'en': 'e.g. 25 Olympic-ro, Songpa-gu'},
+  'pf_addr_hint': {
+    'ko': '예: 서울 송파구 올림픽로 25',
+    'en': 'e.g. 25 Olympic-ro, Songpa-gu',
+  },
   'pf_sched': {'ko': '보통 일정 (요일·시간)', 'en': 'Usual schedule (day · time)'},
-  'pf_sched_memo': {'ko': '일정 메모 (비정기·기타, 선택)', 'en': 'Schedule note (optional)'},
-  'pf_sched_memo_hint': {'ko': '예: 셋째주 휴무 · 우천시 취소', 'en': 'e.g. off 3rd week · cancel if rain'},
+  'pf_sched_memo': {
+    'ko': '일정 메모 (비정기·기타, 선택)',
+    'en': 'Schedule note (optional)',
+  },
+  'pf_sched_memo_hint': {
+    'ko': '예: 셋째주 휴무 · 우천시 취소',
+    'en': 'e.g. off 3rd week · cancel if rain',
+  },
   'pf_thisweek': {'ko': '이번주 공지 (선택)', 'en': 'This-week notice (optional)'},
-  'pf_thisweek_hint': {'ko': '예: 이번주 토 7시 잠실', 'en': 'e.g. this Sat 7pm Jamsil'},
+  'pf_thisweek_hint': {
+    'ko': '예: 이번주 토 7시 잠실',
+    'en': 'e.g. this Sat 7pm Jamsil',
+  },
   'pf_fee': {'ko': '게임비 정보 (선택)', 'en': 'Fee info (optional)'},
   'pf_fee_hint': {'ko': '예: 보통 1만원 · 현장', 'en': 'e.g. ~10,000 won · on-site'},
-  'pf_contact': {'ko': '단톡/Meetup 링크 (들어가는 문)', 'en': 'Group chat / Meetup link'},
+  'pf_contact': {
+    'ko': '단톡/Meetup 링크 (들어가는 문)',
+    'en': 'Group chat / Meetup link',
+  },
   'pf_notes': {'ko': '추가 안내 (선택)', 'en': 'Extra notes (optional)'},
-  'pf_notes_hint': {'ko': '예: 실내화 필수 · 네트 6인제 높이', 'en': 'e.g. indoor shoes · 6s net height'},
-  'pk_f_expire': {'ko': '언제까지 보일까요? (지나면 자동 숨김)', 'en': 'Show until? (auto-hidden after)'},
+  'pf_notes_hint': {
+    'ko': '예: 실내화 필수 · 네트 6인제 높이',
+    'en': 'e.g. indoor shoes · 6s net height',
+  },
+  'pk_f_expire': {
+    'ko': '언제까지 보일까요? (지나면 자동 숨김)',
+    'en': 'Show until? (auto-hidden after)',
+  },
   'pk_exp_weekend': {'ko': '이번 주말', 'en': 'This weekend'},
   'pk_exp_1m': {'ko': '1개월', 'en': '1 month'},
   'pk_exp_3m': {'ko': '3개월', 'en': '3 months'},
@@ -233,26 +340,43 @@ const Map<String, Map<String, String>> kStrings = {
   'cf_name': {'ko': '팀 이름 (필수)', 'en': 'Team name (required)'},
   'cf_name_hint': {'ko': '예: GVT 배구클럽', 'en': 'e.g. GVT Volleyball Club'},
   'cf_target': {'ko': '대상 (필수)', 'en': 'For whom (required)'},
-  'cf_target_note': {'ko': '기타 조건 (예: 구력 1년 이상) — 선택', 'en': 'Other (e.g. 1+ yr exp) — optional'},
-  'cf_addr': {'ko': '주소 (필수) — 실제 체육관', 'en': 'Address (required) — actual gym'},
-  'cf_addr_hint': {'ko': '예: 서울 송파구 올림픽로 424', 'en': 'e.g. 424 Olympic-ro, Songpa-gu'},
+  'cf_target_note': {
+    'ko': '기타 조건 (예: 구력 1년 이상) — 선택',
+    'en': 'Other (e.g. 1+ yr exp) — optional',
+  },
+  'cf_addr': {
+    'ko': '주소 (필수) — 실제 체육관',
+    'en': 'Address (required) — actual gym',
+  },
+  'cf_addr_hint': {
+    'ko': '예: 서울 송파구 올림픽로 424',
+    'en': 'e.g. 424 Olympic-ro, Songpa-gu',
+  },
   'cf_sched': {'ko': '운동 시간 (스케줄)', 'en': 'Practice times'},
   'cf_price': {'ko': '회비 및 게스트비', 'en': 'Dues & guest fee'},
-  'cf_price_hint': {'ko': '예: 월 3만원 / 게스트 1만원', 'en': 'e.g. 30k/mo / guest 10k'},
+  'cf_price_hint': {
+    'ko': '예: 월 3만원 / 게스트 1만원',
+    'en': 'e.g. 30k/mo / guest 10k',
+  },
   'cf_insta': {'ko': '인스타그램 핸들 (선택)', 'en': 'Instagram handle (optional)'},
   'cf_insta_hint': {'ko': '예: gvt__official', 'en': 'e.g. gvt__official'},
   'cf_link': {'ko': '가입/문의 링크 (선택)', 'en': 'Join/contact link (optional)'},
   'cf_req': {'ko': '이름·대상·주소는 필수예요', 'en': 'Name, target, address required'},
   'cf_created': {'ko': '동호회가 등록됐어요!', 'en': 'Club registered!'},
-  'cf_insta_invalid': {'ko': '인스타 핸들 형식이 올바르지 않아요', 'en': 'Invalid Instagram handle'},
+  'cf_insta_invalid': {
+    'ko': '인스타 핸들 형식이 올바르지 않아요',
+    'en': 'Invalid Instagram handle',
+  },
   'cf_name_max': {'ko': '팀 이름은 60자 이하로', 'en': 'Name must be ≤ 60 chars'},
   'cf_target_max': {'ko': '대상은 80자 이하로', 'en': 'Target must be ≤ 80 chars'},
   'cf_addr_max': {'ko': '주소는 200자 이하로', 'en': 'Address must be ≤ 200 chars'},
   'cf_price_max': {'ko': '회비는 100자 이하로', 'en': 'Dues must be ≤ 100 chars'},
   // 영어모드 필터 힌트 (외국인 6s 안내, KO는 미표시)
   'fs_en_hint': {
-    'ko': 'New to Korea? Most international players look for 6s — tap it above.',
-    'en': 'New to Korea? Most international players look for 6s — tap it above.'
+    'ko':
+        'New to Korea? Most international players look for 6s — tap it above.',
+    'en':
+        'New to Korea? Most international players look for 6s — tap it above.',
   },
   // 요일 (표시 변환 i18nDay)
   'd_mon': {'ko': '월', 'en': 'Mon'},

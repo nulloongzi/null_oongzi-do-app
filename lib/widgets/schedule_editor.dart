@@ -9,7 +9,11 @@ import 'chip_select.dart';
 class ScheduleEditor extends StatelessWidget {
   final List<ScheduleBlock> blocks;
   final VoidCallback onChanged;
-  const ScheduleEditor({super.key, required this.blocks, required this.onChanged});
+  const ScheduleEditor({
+    super.key,
+    required this.blocks,
+    required this.onChanged,
+  });
 
   static final _dayOptions = ScheduleBlock.dayOrder
       .map((d) => (label: d, value: d))
@@ -76,8 +80,10 @@ class ScheduleEditor extends StatelessWidget {
                   blocks.removeAt(i);
                   onChanged();
                 },
-                icon: const Icon(Icons.delete_outline,
-                    color: NurungjiColors.brown),
+                icon: const Icon(
+                  Icons.delete_outline,
+                  color: NurungjiColors.brown,
+                ),
                 tooltip: t('delete'),
               ),
             ],
@@ -87,7 +93,11 @@ class ScheduleEditor extends StatelessWidget {
     );
   }
 
-  Widget _timeDropdown(List<String> times, String value, ValueChanged<String> onCh) {
+  Widget _timeDropdown(
+    List<String> times,
+    String value,
+    ValueChanged<String> onCh,
+  ) {
     final v = times.contains(value) ? value : times.first;
     return DropdownButton<String>(
       value: v,

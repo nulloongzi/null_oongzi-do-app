@@ -68,9 +68,10 @@ class _LunchboxModal extends StatelessWidget {
                     borderRadius: BorderRadius.circular(28),
                     boxShadow: const [
                       BoxShadow(
-                          color: Color(0x335D4037),
-                          blurRadius: 40,
-                          offset: Offset(0, 16)),
+                        color: Color(0x335D4037),
+                        blurRadius: 40,
+                        offset: Offset(0, 16),
+                      ),
                     ],
                   ),
                   child: const SingleChildScrollView(child: LunchboxScreen()),
@@ -102,12 +103,12 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
   bool _editing = false; // 편집 모드(순서변경·빼기 활성)
 
   List<String> get _placeholders => [
-        t('lb_slot_rice'),
-        t('lb_slot_soup'),
-        t('lb_slot_side1'),
-        t('lb_slot_side2'),
-        t('lb_slot_side3'),
-      ];
+    t('lb_slot_rice'),
+    t('lb_slot_soup'),
+    t('lb_slot_side1'),
+    t('lb_slot_side2'),
+    t('lb_slot_side3'),
+  ];
   // (칸별 색상은 diet_grid.dart로 이동 — 벤토 셀은 채움=노랑테두리/빈칸=점선 균일 스타일)
 
   @override
@@ -215,15 +216,19 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
       builder: (dctx) => AlertDialog(
         title: Text(title),
         content: TextField(
-            controller: c,
-            autofocus: true,
-            decoration: InputDecoration(hintText: hint)),
+          controller: c,
+          autofocus: true,
+          decoration: InputDecoration(hintText: hint),
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(dctx), child: Text(t('cancel'))),
+            onPressed: () => Navigator.pop(dctx),
+            child: Text(t('cancel')),
+          ),
           TextButton(
-              onPressed: () => Navigator.pop(dctx, c.text),
-              child: Text(t('confirm'))),
+            onPressed: () => Navigator.pop(dctx, c.text),
+            child: Text(t('confirm')),
+          ),
         ],
       ),
     ).whenComplete(c.dispose);
@@ -234,7 +239,8 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
     if (d == null) return null;
     if (d.customTeams.containsKey(id)) {
       final m = d.customTeams[id];
-      final name = (m is Map ? m['name'] : null) as String? ?? t('lb_custom_team');
+      final name =
+          (m is Map ? m['name'] : null) as String? ?? t('lb_custom_team');
       final sched = (m is Map ? m['schedule'] : null) as String?;
       return (name: name, isCustom: true, events: eventsFromText(sched));
     }
@@ -260,11 +266,14 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
           Row(
             children: [
               Expanded(
-                child: Text(t('lunchbox_title'),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 19,
-                        color: NurungjiColors.dark)),
+                child: Text(
+                  t('lunchbox_title'),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 19,
+                    color: NurungjiColors.dark,
+                  ),
+                ),
               ),
               if (!_loading) ...[
                 _addBtn(),
@@ -286,10 +295,12 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
                 !_editing
                     ? t('lb_edit_hint')
                     : (_selectedSlot == null
-                        ? t('lb_reorder_hint')
-                        : t('lb_reorder_pick')),
+                          ? t('lb_reorder_hint')
+                          : t('lb_reorder_pick')),
                 style: const TextStyle(
-                    fontSize: 12, color: NurungjiColors.brown),
+                  fontSize: 12,
+                  color: NurungjiColors.brown,
+                ),
               ),
             ),
             _bentoGrid(),
@@ -306,17 +317,19 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: const [
                     BoxShadow(
-                        color: Color(0x4D8D6E63),
-                        blurRadius: 12,
-                        offset: Offset(0, 4)),
+                      color: Color(0x4D8D6E63),
+                      blurRadius: 12,
+                      offset: Offset(0, 4),
+                    ),
                   ],
                 ),
                 child: Text(
                   _showDiet ? t('lb_diet_collapse') : t('lb_diet'),
                   style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14),
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
                 ),
               ),
             ),
@@ -348,8 +361,14 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
       if (id == null) continue;
       final r = _resolve(id);
       if (r == null) continue;
-      out.add(DietTeam(
-          name: r.name, isCustom: r.isCustom, slotIdx: i, events: r.events));
+      out.add(
+        DietTeam(
+          name: r.name,
+          isCustom: r.isCustom,
+          slotIdx: i,
+          events: r.events,
+        ),
+      );
     }
     return out;
   }
@@ -380,14 +399,20 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
           border: Border.all(color: const Color(0x22000000)),
           boxShadow: const [
             BoxShadow(
-                color: Color(0x0D000000), blurRadius: 4, offset: Offset(0, 2)),
+              color: Color(0x0D000000),
+              blurRadius: 4,
+              offset: Offset(0, 2),
+            ),
           ],
         ),
-        child: Text(t('lb_add'),
-            style: const TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
-                color: NurungjiColors.dark)),
+        child: Text(
+          t('lb_add'),
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
+            color: NurungjiColors.dark,
+          ),
+        ),
       ),
     );
   }
@@ -405,11 +430,14 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
           color: _editing ? NurungjiColors.urgent : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-              color:
-                  _editing ? NurungjiColors.urgent : const Color(0x22000000)),
+            color: _editing ? NurungjiColors.urgent : const Color(0x22000000),
+          ),
           boxShadow: const [
             BoxShadow(
-                color: Color(0x0D000000), blurRadius: 4, offset: Offset(0, 2)),
+              color: Color(0x0D000000),
+              blurRadius: 4,
+              offset: Offset(0, 2),
+            ),
           ],
         ),
         child: Text(
@@ -434,22 +462,26 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
         children: [
           Expanded(
             flex: 8, // 0.8fr
-            child: Row(children: [
-              Expanded(child: _cell(2)),
-              const SizedBox(width: gap),
-              Expanded(child: _cell(3)),
-              const SizedBox(width: gap),
-              Expanded(child: _cell(4)),
-            ]),
+            child: Row(
+              children: [
+                Expanded(child: _cell(2)),
+                const SizedBox(width: gap),
+                Expanded(child: _cell(3)),
+                const SizedBox(width: gap),
+                Expanded(child: _cell(4)),
+              ],
+            ),
           ),
           const SizedBox(height: gap),
           Expanded(
             flex: 12, // 1.2fr
-            child: Row(children: [
-              Expanded(child: _cell(0)),
-              const SizedBox(width: gap),
-              Expanded(child: _cell(1)),
-            ]),
+            child: Row(
+              children: [
+                Expanded(child: _cell(0)),
+                const SizedBox(width: gap),
+                Expanded(child: _cell(1)),
+              ],
+            ),
           ),
         ],
       ),
@@ -464,7 +496,9 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
     final selected = _selectedSlot == i;
     final label = !filled
         ? _placeholders[i]
-        : (r == null ? t('deleted_team') : (r.isCustom ? '🍙 ${r.name}' : r.name));
+        : (r == null
+              ? t('deleted_team')
+              : (r.isCustom ? '🍙 ${r.name}' : r.name));
 
     final Color bg;
     final Border border;
@@ -492,9 +526,10 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
           boxShadow: filled && !selected
               ? const [
                   BoxShadow(
-                      color: Color(0x0F000000),
-                      blurRadius: 8,
-                      offset: Offset(0, 3)),
+                    color: Color(0x0F000000),
+                    blurRadius: 8,
+                    offset: Offset(0, 3),
+                  ),
                 ]
               : null,
         ),
@@ -512,8 +547,9 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
                     fontSize: filled ? 13 : 12, // 빈칸=웹 .lb-cell.empty 12px
                     height: 1.4,
                     fontWeight: filled ? FontWeight.w700 : FontWeight.w600,
-                    color:
-                        filled ? NurungjiColors.dark : const Color(0xFFBCAAA4),
+                    color: filled
+                        ? NurungjiColors.dark
+                        : const Color(0xFFBCAAA4),
                   ),
                 ),
               ),
@@ -536,13 +572,17 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                              color: Color(0x66FF5252),
-                              blurRadius: 6,
-                              offset: Offset(0, 2)),
+                            color: Color(0x66FF5252),
+                            blurRadius: 6,
+                            offset: Offset(0, 2),
+                          ),
                         ],
                       ),
-                      child: const Icon(Icons.close,
-                          size: 14, color: Colors.white),
+                      child: const Icon(
+                        Icons.close,
+                        size: 14,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),

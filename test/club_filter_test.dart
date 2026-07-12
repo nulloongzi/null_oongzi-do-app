@@ -9,8 +9,13 @@ Club _club({
   String? address,
   String? schedule,
   String? target,
-}) =>
-    Club(id: 'x', name: name, address: address, schedule: schedule, target: target);
+}) => Club(
+  id: 'x',
+  name: name,
+  address: address,
+  schedule: schedule,
+  target: target,
+);
 
 void main() {
   group('지역 매칭', () {
@@ -20,15 +25,24 @@ void main() {
       expect(const ClubFilter(regions: {'경기'}).matches(c), false);
     });
     test('묶음 지역(충청 = 충남/충북/대전/세종)', () {
-      expect(const ClubFilter(regions: {'충청'}).matches(_club(address: '대전 유성구')),
-          true);
-      expect(const ClubFilter(regions: {'충청'}).matches(_club(address: '세종시')), true);
-      expect(const ClubFilter(regions: {'충청'}).matches(_club(address: '서울 강남')),
-          false);
+      expect(
+        const ClubFilter(regions: {'충청'}).matches(_club(address: '대전 유성구')),
+        true,
+      );
+      expect(
+        const ClubFilter(regions: {'충청'}).matches(_club(address: '세종시')),
+        true,
+      );
+      expect(
+        const ClubFilter(regions: {'충청'}).matches(_club(address: '서울 강남')),
+        false,
+      );
     });
     test('묶음 지역(경상 = 대구/부산/울산/경남/경북)', () {
-      expect(const ClubFilter(regions: {'경상'}).matches(_club(address: '부산 해운대')),
-          true);
+      expect(
+        const ClubFilter(regions: {'경상'}).matches(_club(address: '부산 해운대')),
+        true,
+      );
     });
   });
 
@@ -54,8 +68,10 @@ void main() {
       expect(const ClubFilter(targets: {'여성전용'}).matches(c), false);
     });
     test('부분일치', () {
-      expect(const ClubFilter(targets: {'대학생'}).matches(_club(target: '대학생 성인')),
-          true);
+      expect(
+        const ClubFilter(targets: {'대학생'}).matches(_club(target: '대학생 성인')),
+        true,
+      );
     });
   });
 
@@ -77,8 +93,13 @@ void main() {
     test('AND 결합 (지역 AND 키워드)', () {
       final c = _club(name: '스파이크', address: '서울 강남');
       expect(
-          const ClubFilter(regions: {'서울'}, keyword: '스파이크').matches(c), true);
-      expect(const ClubFilter(regions: {'경기'}, keyword: '스파이크').matches(c), false);
+        const ClubFilter(regions: {'서울'}, keyword: '스파이크').matches(c),
+        true,
+      );
+      expect(
+        const ClubFilter(regions: {'경기'}, keyword: '스파이크').matches(c),
+        false,
+      );
     });
     test('chipCount 합산', () {
       const f = ClubFilter(regions: {'서울'}, days: {'월', '수'}, targets: {'성인'});

@@ -115,8 +115,8 @@ class _MapScreenState extends State<MapScreen> {
     return _spots.where((s) {
       if (_pkEnglishOnly && !s.englishOk) return false;
       if (kw.isEmpty) return true;
-      final hay =
-          '${s.title} ${s.venueName ?? ''} ${s.address ?? ''}'.toLowerCase();
+      final hay = '${s.title} ${s.venueName ?? ''} ${s.address ?? ''}'
+          .toLowerCase();
       return hay.contains(kw);
     }).toList();
   }
@@ -136,12 +136,17 @@ class _MapScreenState extends State<MapScreen> {
     if (_repo.currentUid != null) return true;
     _snack(t('login_required'));
     await Navigator.push(
-        context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+    );
     if (!mounted || _repo.currentUid == null) return false;
     // 세션 중 로그인 → 관리자 상태 갱신
-    _repo.isAdmin().then((v) {
-      if (mounted && v != _isAdmin) setState(() => _isAdmin = v);
-    }).catchError((_) {});
+    _repo
+        .isAdmin()
+        .then((v) {
+          if (mounted && v != _isAdmin) setState(() => _isAdmin = v);
+        })
+        .catchError((_) {});
     return true;
   }
 
@@ -159,7 +164,10 @@ class _MapScreenState extends State<MapScreen> {
   // 딥링크(?club=/?spot=) → 탭 전환 + 상세 오픈. 메모리에 없으면 단건 조회.
   Future<void> _handleDeepLink(DeepLink d) async {
     if (!mounted) return;
-    Track.event('deep_link_open', d.kind == 'club' ? {'club_id': d.id} : {'spot_id': d.id});
+    Track.event(
+      'deep_link_open',
+      d.kind == 'club' ? {'club_id': d.id} : {'spot_id': d.id},
+    );
     if (d.kind == 'club') {
       Club? c;
       for (final x in _clubs) {
@@ -172,8 +180,13 @@ class _MapScreenState extends State<MapScreen> {
       if (c != null && mounted) {
         setState(() => _tab = 'clubs');
         _refreshMarkers();
-        showClubDetail(context, c,
-            currentUid: _repo.currentUid, isAdmin: _isAdmin, onChanged: _load);
+        showClubDetail(
+          context,
+          c,
+          currentUid: _repo.currentUid,
+          isAdmin: _isAdmin,
+          onChanged: _load,
+        );
       }
     } else {
       PickupSpot? s;
@@ -187,16 +200,23 @@ class _MapScreenState extends State<MapScreen> {
       if (s != null && mounted) {
         setState(() => _tab = 'pickup');
         _refreshMarkers();
-        showSpotDetail(context, s,
-            currentUid: _repo.currentUid, isAdmin: _isAdmin, onChanged: _load);
+        showSpotDetail(
+          context,
+          s,
+          currentUid: _repo.currentUid,
+          isAdmin: _isAdmin,
+          onChanged: _load,
+        );
       }
     }
   }
 
   Future<void> _load() async {
     try {
-      final results =
-          await Future.wait([_repo.loadClubs(), _repo.loadPickups()]);
+      final results = await Future.wait([
+        _repo.loadClubs(),
+        _repo.loadPickups(),
+      ]);
       if (!mounted) return;
       setState(() {
         _clubs = results[0] as List<Club>;
@@ -209,18 +229,22 @@ class _MapScreenState extends State<MapScreen> {
         if (mounted && v != _isAdmin) setState(() => _isAdmin = v);
       });
     } catch (e) {
-      if (mounted) setState(() {
-        _error = '$e';
-        _loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = '$e';
+          _loading = false;
+        });
+      }
     }
   }
 
   // 웹과 동일한 마커 이미지(assets/markers). 원본 224x294 → 32x42로 표시.
-  static final _clubIcon =
-      NOverlayImage.fromAssetImage('assets/markers/marker_yellow.png');
-  static final _pickupIcon =
-      NOverlayImage.fromAssetImage('assets/markers/marker_red.png');
+  static final _clubIcon = NOverlayImage.fromAssetImage(
+    'assets/markers/marker_yellow.png',
+  );
+  static final _pickupIcon = NOverlayImage.fromAssetImage(
+    'assets/markers/marker_red.png',
+  );
   static const _markerSize = Size(38, 48); // 기본 핀(라벨 없음) — 약간 키움
   static const _labelSize = Size(170, 76); // 이름 알약 포함 마커
   // 라벨 on/off 데드밴드(히스테리시스): 경계 근처 미세 줌이 표시를 깜빡이며 토글하지 않도록.
@@ -242,16 +266,25 @@ class _MapScreenState extends State<MapScreen> {
     return _prewarm ??= () async {
       try {
         await precacheImage(
-            const AssetImage('assets/markers/marker_yellow.png'), context);
+          const AssetImage('assets/markers/marker_yellow.png'),
+          context,
+        );
+        if (!mounted) return; // await 사이 화면 이탈 시 context 사용 금지
         await precacheImage(
-            const AssetImage('assets/markers/marker_red.png'), context);
+          const AssetImage('assets/markers/marker_red.png'),
+          context,
+        );
       } catch (_) {}
     }();
   }
 
   // 핀 위에 이름 알약(흰 배경 + 인증 배지) — 웹 마커 라벨. fromWidget 1회 렌더 후 캐시.
-  Future<NOverlayImage?> _labeledIcon(String name,
-      {required bool red, required bool urgent, required bool verified}) async {
+  Future<NOverlayImage?> _labeledIcon(
+    String name, {
+    required bool red,
+    required bool urgent,
+    required bool verified,
+  }) async {
     final key =
         '${red ? "r" : "y"}|${urgent ? "u" : "n"}|${verified ? "v" : ""}|$name';
     final hit = _labelIconCache[key];
@@ -271,27 +304,34 @@ class _MapScreenState extends State<MapScreen> {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(9),
                     border: Border.all(
-                        color: urgent
-                            ? const Color(0xFFE53935)
-                            : const Color(0x22000000),
-                        width: urgent ? 1.5 : 1),
+                      color: urgent
+                          ? const Color(0xFFE53935)
+                          : const Color(0x22000000),
+                      width: urgent ? 1.5 : 1,
+                    ),
                     boxShadow: [
                       const BoxShadow(
-                          color: Color(0x33000000),
-                          blurRadius: 3,
-                          offset: Offset(0, 1)),
+                        color: Color(0x33000000),
+                        blurRadius: 3,
+                        offset: Offset(0, 1),
+                      ),
                       // 급구: 붉은 글로우로 시선 끌기
                       if (urgent)
                         BoxShadow(
-                            color: const Color(0xFFE53935).withValues(alpha: 0.55),
-                            blurRadius: 8,
-                            spreadRadius: 1),
+                          color: const Color(
+                            0xFFE53935,
+                          ).withValues(alpha: 0.55),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
                     ],
                   ),
                   child: Row(
@@ -314,8 +354,11 @@ class _MapScreenState extends State<MapScreen> {
                       if (verified)
                         const Padding(
                           padding: EdgeInsets.only(left: 3),
-                          child: Icon(Icons.verified,
-                              color: Color(0xFF1DA1F2), size: 14),
+                          child: Icon(
+                            Icons.verified,
+                            color: Color(0xFF1DA1F2),
+                            size: 14,
+                          ),
                         ),
                     ],
                   ),
@@ -352,7 +395,13 @@ class _MapScreenState extends State<MapScreen> {
           decoration: const BoxDecoration(
             color: NurungjiColors.yellow,
             shape: BoxShape.circle,
-            boxShadow: [BoxShadow(color: Color(0x55000000), blurRadius: 4, offset: Offset(0, 2))],
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x55000000),
+                blurRadius: 4,
+                offset: Offset(0, 2),
+              ),
+            ],
           ),
         ),
         size: const Size(46, 46),
@@ -383,8 +432,9 @@ class _MapScreenState extends State<MapScreen> {
     final mapH = h - mapTop - mq.padding.bottom;
     const topChrome = 172.0; // 검색바+티커+탭(대략, SafeArea 기준 px)
     final sheetTopInMap = h * 0.58 - mapTop; // 시트 peek(42%) 윗변
-    final pivotY =
-        (((topChrome + sheetTopInMap) / 2) / mapH).clamp(0.18, 0.5).toDouble();
+    final pivotY = (((topChrome + sheetTopInMap) / 2) / mapH)
+        .clamp(0.18, 0.5)
+        .toDouble();
     // 정해진 축척으로 확대(현재가 더 크면 유지 — 줌아웃 방지)
     double z = _focusZoom;
     try {
@@ -392,14 +442,16 @@ class _MapScreenState extends State<MapScreen> {
       if (cam.zoom > z) z = cam.zoom;
     } catch (_) {}
     try {
-      final update =
-          NCameraUpdate.scrollAndZoomTo(target: NLatLng(lat, lng), zoom: z)
-            ..setPivot(NPoint(0.5, pivotY));
+      final update = NCameraUpdate.scrollAndZoomTo(
+        target: NLatLng(lat, lng),
+        zoom: z,
+      )..setPivot(NPoint(0.5, pivotY));
       await c.updateCamera(update);
     } catch (_) {
       try {
         await c.updateCamera(
-            NCameraUpdate.scrollAndZoomTo(target: NLatLng(lat, lng), zoom: z));
+          NCameraUpdate.scrollAndZoomTo(target: NLatLng(lat, lng), zoom: z),
+        );
       } catch (_) {}
     }
   }
@@ -408,15 +460,25 @@ class _MapScreenState extends State<MapScreen> {
   Future<void> _focusAndShowClub(Club club) async {
     await _centerOnPin(club.lat, club.lng);
     if (!mounted) return;
-    showClubDetail(context, club,
-        currentUid: _repo.currentUid, isAdmin: _isAdmin, onChanged: _load);
+    showClubDetail(
+      context,
+      club,
+      currentUid: _repo.currentUid,
+      isAdmin: _isAdmin,
+      onChanged: _load,
+    );
   }
 
   Future<void> _focusAndShowSpot(PickupSpot spot) async {
     await _centerOnPin(spot.lat, spot.lng);
     if (!mounted) return;
-    showSpotDetail(context, spot,
-        currentUid: _repo.currentUid, isAdmin: _isAdmin, onChanged: _load);
+    showSpotDetail(
+      context,
+      spot,
+      currentUid: _repo.currentUid,
+      isAdmin: _isAdmin,
+      onChanged: _load,
+    );
   }
 
   // 줌 변경 후: 데드밴드(히스테리시스)로 라벨 on/off 결정 → 넘나들면 in-place로 아이콘만 교체.
@@ -461,7 +523,8 @@ class _MapScreenState extends State<MapScreen> {
     } catch (_) {}
     if (!mounted) return;
     // 화면상 ~52px 반경 안에서만 인식 → 줌 기준 m/px로 환산해 거리 임계로 사용(줌 무관).
-    final mpp = 156543.03392 *
+    final mpp =
+        156543.03392 *
         math.cos(latLng.latitude * math.pi / 180) /
         math.pow(2, zoom);
     final thresholdM = 52 * mpp;
@@ -499,7 +562,9 @@ class _MapScreenState extends State<MapScreen> {
       return;
     }
     Track.event('reel_peek', {'tab': _tab});
-    setState(() => _reelPeek = _ReelPeek(title: title!, reel: reel!, urgent: urgent));
+    setState(
+      () => _reelPeek = _ReelPeek(title: title!, reel: reel!, urgent: urgent),
+    );
   }
 
   void _snack(String msg) {
@@ -517,37 +582,49 @@ class _MapScreenState extends State<MapScreen> {
       for (final club in _clubs.where(_filter.matches)) {
         if (club.lat == null || club.lng == null) continue;
         final urgent = club.isUrgent && (club.urgentMsg?.isNotEmpty ?? false);
-        items.add(_MarkerSpec(
-          id: 'c_${club.id}',
-          pos: NLatLng(club.lat!, club.lng!),
-          name: club.name,
-          red: urgent,
-          urgent: urgent,
-          verified: club.isVerified,
-          clusterable: !urgent, // 급구: 클러스터 제외(항상 표시)
-          onTap: () => _focusAndShowClub(club),
-        ));
+        items.add(
+          _MarkerSpec(
+            id: 'c_${club.id}',
+            pos: NLatLng(club.lat!, club.lng!),
+            name: club.name,
+            red: urgent,
+            urgent: urgent,
+            verified: club.isVerified,
+            clusterable: !urgent, // 급구: 클러스터 제외(항상 표시)
+            onTap: () => _focusAndShowClub(club),
+          ),
+        );
       }
     } else {
       for (final spot in _visibleSpots()) {
         if (spot.lat == null || spot.lng == null) continue;
-        items.add(_MarkerSpec(
-          id: 's_${spot.id}',
-          pos: NLatLng(spot.lat!, spot.lng!),
-          name: spot.title,
-          red: true,
-          urgent: false,
-          verified: false,
-          clusterable: true,
-          onTap: () => _focusAndShowSpot(spot),
-        ));
+        items.add(
+          _MarkerSpec(
+            id: 's_${spot.id}',
+            pos: NLatLng(spot.lat!, spot.lng!),
+            name: spot.title,
+            red: true,
+            urgent: false,
+            verified: false,
+            clusterable: true,
+            onTap: () => _focusAndShowSpot(spot),
+          ),
+        );
       }
     }
 
     // 2) 이름 알약 아이콘을 병렬로 빌드(순차 await 제거 → 줌 인 시 끊김 완화). 캐시 히트는 즉시.
     final icons = _showLabels
-        ? await Future.wait(items.map((s) => _labeledIcon(s.name,
-            red: s.red, urgent: s.urgent, verified: s.verified)))
+        ? await Future.wait(
+            items.map(
+              (s) => _labeledIcon(
+                s.name,
+                red: s.red,
+                urgent: s.urgent,
+                verified: s.verified,
+              ),
+            ),
+          )
         : const <NOverlayImage?>[];
     if (gen != _markerGen || !mounted || _controller == null) return;
 
@@ -562,12 +639,20 @@ class _MapScreenState extends State<MapScreen> {
       final NMarker m;
       if (s.clusterable) {
         final cm = NClusterableMarker(
-            id: s.id, position: s.pos, icon: icon ?? fallback, size: size);
+          id: s.id,
+          position: s.pos,
+          icon: icon ?? fallback,
+          size: size,
+        );
         cm.setOnTapListener((NClusterableMarker o) => s.onTap());
         m = cm;
       } else {
         final nm = NMarker(
-            id: s.id, position: s.pos, icon: icon ?? fallback, size: size);
+          id: s.id,
+          position: s.pos,
+          icon: icon ?? fallback,
+          size: size,
+        );
         nm.setOnTapListener((NMarker o) => s.onTap());
         m = nm;
       }
@@ -583,7 +668,7 @@ class _MapScreenState extends State<MapScreen> {
     // 라벨 in-place 토글용으로 현재 마커/스펙 보관(인덱스 정렬됨).
     _lastSpecs = items;
     _markersById = {
-      for (var i = 0; i < items.length; i++) items[i].id: markers[i]
+      for (var i = 0; i < items.length; i++) items[i].id: markers[i],
     };
 
     // 5) 라벨 전환(줌) 시: 네이티브 마커 alpha 0→1 페이드 인(팝업 대신 부드러운 등장)
@@ -599,8 +684,16 @@ class _MapScreenState extends State<MapScreen> {
     }
     final gen = _markerGen; // 적용 도중 풀 리프레시가 끼어들면 양보(재진입 가드)
     final icons = _showLabels
-        ? await Future.wait(specs.map((s) => _labeledIcon(s.name,
-            red: s.red, urgent: s.urgent, verified: s.verified)))
+        ? await Future.wait(
+            specs.map(
+              (s) => _labeledIcon(
+                s.name,
+                red: s.red,
+                urgent: s.urgent,
+                verified: s.verified,
+              ),
+            ),
+          )
         : const <NOverlayImage?>[];
     if (gen != _markerGen || !mounted) return;
     final updated = <NMarker>[];
@@ -696,7 +789,8 @@ class _MapScreenState extends State<MapScreen> {
     try {
       final bounds = NLatLngBounds.from(pts);
       _controller?.updateCamera(
-          NCameraUpdate.fitBounds(bounds, padding: const EdgeInsets.all(64)));
+        NCameraUpdate.fitBounds(bounds, padding: const EdgeInsets.all(64)),
+      );
     } catch (_) {}
   }
 
@@ -725,119 +819,151 @@ class _MapScreenState extends State<MapScreen> {
         }
       },
       child: Scaffold(
-      resizeToAvoidBottomInset: false, // 키보드에 지도(플랫폼뷰) 리사이즈 방지
-      body: SafeArea(
-        child: Stack(
-          children: [
-            NaverMap(
-              options: const NaverMapViewOptions(
-                initialCameraPosition: NCameraPosition(
-                  target: NLatLng(37.5559, 127.0838),
-                  zoom: 10.5,
+        resizeToAvoidBottomInset: false, // 키보드에 지도(플랫폼뷰) 리사이즈 방지
+        body: SafeArea(
+          child: Stack(
+            children: [
+              NaverMap(
+                options: const NaverMapViewOptions(
+                  initialCameraPosition: NCameraPosition(
+                    target: NLatLng(37.5559, 127.0838),
+                    zoom: 10.5,
+                  ),
+                  locationButtonEnable: false, // 커스텀 📍 FAB 사용
                 ),
-                locationButtonEnable: false, // 커스텀 📍 FAB 사용
-              ),
-              clusterOptions: NaverMapClusteringOptions(
-                clusterMarkerBuilder: (info, clusterMarker) {
-                  if (_clusterIcon != null) clusterMarker.setIcon(_clusterIcon!);
-                  clusterMarker.setIsFlat(true);
-                  clusterMarker.setCaption(NOverlayCaption(
-                    text: info.size.toString(),
-                    textSize: 15,
-                    color: NurungjiColors.dark,
-                    haloColor: NurungjiColors.yellow,
-                  ));
+                clusterOptions: NaverMapClusteringOptions(
+                  clusterMarkerBuilder: (info, clusterMarker) {
+                    if (_clusterIcon != null) {
+                      clusterMarker.setIcon(_clusterIcon);
+                    }
+                    clusterMarker.setIsFlat(true);
+                    clusterMarker.setCaption(
+                      NOverlayCaption(
+                        text: info.size.toString(),
+                        textSize: 15,
+                        color: NurungjiColors.dark,
+                        haloColor: NurungjiColors.yellow,
+                      ),
+                    );
+                  },
+                ),
+                onMapReady: (controller) async {
+                  _controller = controller;
+                  await _ensureClusterIcon();
+                  await _enableMyLocation();
+                  _refreshMarkers();
                 },
+                // 줌이 임계를 넘나들면 이름 알약 표시/숨김 전환(스테이지 2↔3)
+                onCameraIdle: _onCameraIdle,
+                // 마커 꾹 누르기 → 배경 블러 + 릴스 미리보기(인스타 피드 느낌)
+                onMapLongTapped: _onMapLongTapped,
               ),
-              onMapReady: (controller) async {
-                _controller = controller;
-                await _ensureClusterIcon();
-                await _enableMyLocation();
-                _refreshMarkers();
-              },
-              // 줌이 임계를 넘나들면 이름 알약 표시/숨김 전환(스테이지 2↔3)
-              onCameraIdle: _onCameraIdle,
-              // 마커 꾹 누르기 → 배경 블러 + 릴스 미리보기(인스타 피드 느낌)
-              onMapLongTapped: _onMapLongTapped,
-            ),
-            // 검색바 (design §2.1)
-            Positioned(top: 12, left: 15, right: 15, child: _searchBar()),
-            // 급구 티커(동호회) / 지도·목록 토글(픽업) — 검색바 바로 아래(우선 노출)
-            if (_tab == 'clubs' && _hasUrgent)
-              Positioned(top: 70, left: 15, right: 15, child: _urgentTicker()),
-            if (_tab == 'pickup')
+              // 검색바 (design §2.1)
+              Positioned(top: 12, left: 15, right: 15, child: _searchBar()),
+              // 급구 티커(동호회) / 지도·목록 토글(픽업) — 검색바 바로 아래(우선 노출)
+              if (_tab == 'clubs' && _hasUrgent)
+                Positioned(
+                  top: 70,
+                  left: 15,
+                  right: 15,
+                  child: _urgentTicker(),
+                ),
+              if (_tab == 'pickup')
+                Positioned(
+                  top: 70,
+                  left: 0,
+                  right: 0,
+                  child: Center(child: _pickupToggle()),
+                ),
+              // 동호회/픽업 탭 — 위 컨텍스트바가 있으면 122, 없으면 70.
               Positioned(
-                  top: 70, left: 0, right: 0, child: Center(child: _pickupToggle())),
-            // 동호회/픽업 탭 — 위 컨텍스트바가 있으면 122, 없으면 70.
-            Positioned(
                 top: (_tab == 'pickup' || (_tab == 'clubs' && _hasUrgent))
                     ? 122
                     : 70,
                 left: 0,
                 right: 0,
-                child: Center(child: _tabPill())),
-            if (_tab == 'pickup' && _pickupListView)
-              Positioned(
-                top: 166,
-                left: 8,
-                right: 8,
-                bottom: 8,
-                child: GlassSurface(
-                  color: const Color(0xF5FFFFFF), // 흰 0.96
-                  blur: 10,
-                  child: PickupListPanel(
-                    spots: _visibleSpots(),
-                    onTap: (s) => showSpotDetail(context, s,
-                        currentUid: _repo.currentUid, isAdmin: _isAdmin, onChanged: _load),
+                child: Center(child: _tabPill()),
+              ),
+              if (_tab == 'pickup' && _pickupListView)
+                Positioned(
+                  top: 166,
+                  left: 8,
+                  right: 8,
+                  bottom: 8,
+                  child: GlassSurface(
+                    color: const Color(0xF5FFFFFF), // 흰 0.96
+                    blur: 10,
+                    child: PickupListPanel(
+                      spots: _visibleSpots(),
+                      onTap: (s) => showSpotDetail(
+                        context,
+                        s,
+                        currentUid: _repo.currentUid,
+                        isAdmin: _isAdmin,
+                        onChanged: _load,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            // 플로팅 FAB (design §2.4): 좌(도시락/프로필) · 우(등록/내위치)
-            // 픽업 목록뷰에선 패널과 겹치므로 숨김.
-            if (!(_tab == 'pickup' && _pickupListView)) ...[
-              Positioned(
+              // 플로팅 FAB (design §2.4): 좌(도시락/프로필) · 우(등록/내위치)
+              // 픽업 목록뷰에선 패널과 겹치므로 숨김.
+              if (!(_tab == 'pickup' && _pickupListView)) ...[
+                Positioned(
                   left: 15,
                   bottom: 95,
-                  child: _fab('🍱', t('fab_lunchbox'), _openLunchbox)),
-              Positioned(
-                  left: 15,
-                  bottom: 30,
-                  child: _fab('🍚', t('fab_profile'), _openProfile)),
-              Positioned(
-                  right: 15,
-                  bottom: 95,
-                  child: _fab('📝', t('fab_register'), _openRegister,
-                      bg: const Color(0xF2FAC710))), // 등록 = 브랜드 옐로
-              Positioned(
-                  right: 15,
-                  bottom: 30,
-                  child: _fab('📍', t('fab_my_location'), _moveToMe)),
-            ],
-            if (_error != null)
-              Positioned(bottom: 20, left: 90, right: 90, child: _errorBox()),
-            // 상세 패널(비모달) — Stack의 일부라 상세에서 띄우는 모달(공유 등)이 그 위에 뜸.
-            ValueListenableBuilder<Widget?>(
-              valueListenable: detailPanel,
-              builder: (_, panel, __) => panel ?? const SizedBox.shrink(),
-            ),
-            // 마커 롱프레스 릴스 미리보기(최상단) — 배경 블러 + 릴스 크게.
-            if (_reelPeek != null)
-              Positioned.fill(
-                child: _ReelPeekOverlay(
-                  data: _reelPeek!,
-                  onClose: () => setState(() => _reelPeek = null),
+                  child: _fab('🍱', t('fab_lunchbox'), _openLunchbox),
                 ),
+                Positioned(
+                  left: 15,
+                  bottom: 30,
+                  child: _fab('🍚', t('fab_profile'), _openProfile),
+                ),
+                Positioned(
+                  right: 15,
+                  bottom: 95,
+                  child: _fab(
+                    '📝',
+                    t('fab_register'),
+                    _openRegister,
+                    bg: const Color(0xF2FAC710),
+                  ),
+                ), // 등록 = 브랜드 옐로
+                Positioned(
+                  right: 15,
+                  bottom: 30,
+                  child: _fab('📍', t('fab_my_location'), _moveToMe),
+                ),
+              ],
+              if (_error != null)
+                Positioned(bottom: 20, left: 90, right: 90, child: _errorBox()),
+              // 상세 패널(비모달) — Stack의 일부라 상세에서 띄우는 모달(공유 등)이 그 위에 뜸.
+              ValueListenableBuilder<Widget?>(
+                valueListenable: detailPanel,
+                builder: (_, panel, _) => panel ?? const SizedBox.shrink(),
               ),
-          ],
+              // 마커 롱프레스 릴스 미리보기(최상단) — 배경 블러 + 릴스 크게.
+              if (_reelPeek != null)
+                Positioned.fill(
+                  child: _ReelPeekOverlay(
+                    data: _reelPeek!,
+                    onClose: () => setState(() => _reelPeek = null),
+                  ),
+                ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
 
   // 플로팅 글래스 FAB (이모지) — 누르면 spring 축소.
-  Widget _fab(String emoji, String label, VoidCallback onTap,
-      {Color? bg, double size = 52}) {
+  Widget _fab(
+    String emoji,
+    String label,
+    VoidCallback onTap, {
+    Color? bg,
+    double size = 52,
+  }) {
     return Semantics(
       button: true,
       label: label, // 이모지 전용 FAB → 스크린리더용 라벨
@@ -850,7 +976,8 @@ class _MapScreenState extends State<MapScreen> {
             width: size,
             height: size,
             child: Center(
-                child: Text(emoji, style: TextStyle(fontSize: size * 0.46))),
+              child: Text(emoji, style: TextStyle(fontSize: size * 0.46)),
+            ),
           ),
         ),
       ),
@@ -863,75 +990,98 @@ class _MapScreenState extends State<MapScreen> {
     return GlassSurface(
       radius: BorderRadius.circular(20),
       padding: const EdgeInsets.only(left: 12, right: 4),
-      child: Row(children: [
-        const Icon(Icons.search, size: 20, color: NurungjiColors.brown),
-        const SizedBox(width: 6),
-        Expanded(
-          child: TextField(
-            controller: _search,
-            onChanged: _onSearch,
-            textInputAction: TextInputAction.search,
-            // 바깥(지도·마커·버튼) 탭 시 포커스 해제 → 키보드 내려가고,
-            // 다른 기능 다녀와도 키보드가 다시 올라오지 않음.
-            onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
-            // 키보드 검색(돋보기) 버튼 → 키보드 닫기(검색은 입력 즉시 반영됨)
-            onSubmitted: (_) => FocusManager.instance.primaryFocus?.unfocus(),
-            decoration: InputDecoration(
-              isDense: true,
-              filled: false, // 전역 테마의 흰색 fill 제거 — 글래스 톤과 색 얼룩 방지
-              border: InputBorder.none,
-              hintText:
-                  t(_tab == 'pickup' ? 'pk_search_ph' : 'search_ph'),
-            ),
-            style: const TextStyle(
+      child: Row(
+        children: [
+          const Icon(Icons.search, size: 20, color: NurungjiColors.brown),
+          const SizedBox(width: 6),
+          Expanded(
+            child: TextField(
+              controller: _search,
+              onChanged: _onSearch,
+              textInputAction: TextInputAction.search,
+              // 바깥(지도·마커·버튼) 탭 시 포커스 해제 → 키보드 내려가고,
+              // 다른 기능 다녀와도 키보드가 다시 올라오지 않음.
+              onTapOutside: (_) =>
+                  FocusManager.instance.primaryFocus?.unfocus(),
+              // 키보드 검색(돋보기) 버튼 → 키보드 닫기(검색은 입력 즉시 반영됨)
+              onSubmitted: (_) => FocusManager.instance.primaryFocus?.unfocus(),
+              decoration: InputDecoration(
+                isDense: true,
+                filled: false, // 전역 테마의 흰색 fill 제거 — 글래스 톤과 색 얼룩 방지
+                border: InputBorder.none,
+                hintText: t(_tab == 'pickup' ? 'pk_search_ph' : 'search_ph'),
+              ),
+              style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: NurungjiColors.dark),
+                color: NurungjiColors.dark,
+              ),
+            ),
           ),
-        ),
-        TextButton(
-          onPressed: toggleLang,
-          style: TextButton.styleFrom(
+          TextButton(
+            onPressed: toggleLang,
+            style: TextButton.styleFrom(
               minimumSize: const Size(34, 40),
-              padding: const EdgeInsets.symmetric(horizontal: 4)),
-          child: Text(isKo ? 'EN' : '한',
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+            ),
+            child: Text(
+              isKo ? 'EN' : '한',
               style: const TextStyle(
-                  fontWeight: FontWeight.w800, color: NurungjiColors.brown)),
-        ),
-        if (_loading)
-          const Padding(
-            padding: EdgeInsets.only(right: 6),
-            child: SizedBox(
+                fontWeight: FontWeight.w800,
+                color: NurungjiColors.brown,
+              ),
+            ),
+          ),
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.only(right: 6),
+              child: SizedBox(
                 width: 16,
                 height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2)),
-          )
-        else if (isClubs)
-          Stack(alignment: Alignment.center, children: [
-            IconButton(
-              onPressed: _openFilter,
-              icon: Icon(Icons.tune,
-                  color: _filter.isEmpty ? NurungjiColors.brown : NurungjiColors.urgent),
-              tooltip: t('search_filter'),
-            ),
-            if (!_filter.isEmpty)
-              const Positioned(
-                top: 8,
-                right: 8,
-                child: CircleAvatar(radius: 4, backgroundColor: NurungjiColors.urgent),
+                child: CircularProgressIndicator(strokeWidth: 2),
               ),
-          ])
-        else
-          IconButton(
-            onPressed: () {
-              setState(() => _pkEnglishOnly = !_pkEnglishOnly);
-              _refreshMarkers();
-            },
-            icon: Icon(Icons.language,
-                color: _pkEnglishOnly ? NurungjiColors.teal : NurungjiColors.brown),
-            tooltip: t('english_only'),
-          ),
-      ]),
+            )
+          else if (isClubs)
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                IconButton(
+                  onPressed: _openFilter,
+                  icon: Icon(
+                    Icons.tune,
+                    color: _filter.isEmpty
+                        ? NurungjiColors.brown
+                        : NurungjiColors.urgent,
+                  ),
+                  tooltip: t('search_filter'),
+                ),
+                if (!_filter.isEmpty)
+                  const Positioned(
+                    top: 8,
+                    right: 8,
+                    child: CircleAvatar(
+                      radius: 4,
+                      backgroundColor: NurungjiColors.urgent,
+                    ),
+                  ),
+              ],
+            )
+          else
+            IconButton(
+              onPressed: () {
+                setState(() => _pkEnglishOnly = !_pkEnglishOnly);
+                _refreshMarkers();
+              },
+              icon: Icon(
+                Icons.language,
+                color: _pkEnglishOnly
+                    ? NurungjiColors.teal
+                    : NurungjiColors.brown,
+              ),
+              tooltip: t('english_only'),
+            ),
+        ],
+      ),
     );
   }
 
@@ -945,14 +1095,16 @@ class _MapScreenState extends State<MapScreen> {
     return GlassSurface(
       radius: BorderRadius.circular(22),
       padding: const EdgeInsets.all(4),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        _tabBtn('🏐 ${t('clubs')}', 'clubs'),
-        const SizedBox(width: 4),
-        _tabBtn('📍 ${t('pickup')}', 'pickup'),
-      ]),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _tabBtn('🏐 ${t('clubs')}', 'clubs'),
+          const SizedBox(width: 4),
+          _tabBtn('📍 ${t('pickup')}', 'pickup'),
+        ],
+      ),
     );
   }
-
 
   Widget _tabBtn(String label, String key) {
     final on = _tab == key;
@@ -965,10 +1117,13 @@ class _MapScreenState extends State<MapScreen> {
           color: on ? NurungjiColors.yellow : NurungjiColors.chipBg,
           borderRadius: BorderRadius.circular(18), // 작은 알약
         ),
-        child: Text(label,
-            style: TextStyle(
-                fontWeight: on ? FontWeight.w800 : FontWeight.w600,
-                color: NurungjiColors.dark)),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontWeight: on ? FontWeight.w800 : FontWeight.w600,
+            color: NurungjiColors.dark,
+          ),
+        ),
       ),
     );
   }
@@ -988,12 +1143,21 @@ class _MapScreenState extends State<MapScreen> {
     return GlassSurface(
       radius: BorderRadius.circular(22),
       padding: const EdgeInsets.all(3),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        _seg('🗺 ${t('map_view')}', !_pickupListView,
-            () => setState(() => _pickupListView = false)),
-        _seg('☰ ${t('list_view')}', _pickupListView,
-            () => setState(() => _pickupListView = true)),
-      ]),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _seg(
+            '🗺 ${t('map_view')}',
+            !_pickupListView,
+            () => setState(() => _pickupListView = false),
+          ),
+          _seg(
+            '☰ ${t('list_view')}',
+            _pickupListView,
+            () => setState(() => _pickupListView = true),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1003,26 +1167,32 @@ class _MapScreenState extends State<MapScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
         decoration: BoxDecoration(
-            color: on ? NurungjiColors.yellow : Colors.transparent,
-            borderRadius: BorderRadius.circular(20)),
-        child: Text(label,
-            style: TextStyle(
-                fontWeight: on ? FontWeight.w800 : FontWeight.w600,
-                color: NurungjiColors.dark,
-                fontSize: 13)),
+          color: on ? NurungjiColors.yellow : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontWeight: on ? FontWeight.w800 : FontWeight.w600,
+            color: NurungjiColors.dark,
+            fontSize: 13,
+          ),
+        ),
       ),
     );
   }
 
   Widget _errorBox() => Material(
-        color: Colors.red.shade50,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Text('${t('data_load_err')}: $_error',
-              style: TextStyle(color: Colors.red.shade900, fontSize: 12)),
-        ),
-      );
+    color: Colors.red.shade50,
+    borderRadius: BorderRadius.circular(12),
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Text(
+        '${t('data_load_err')}: $_error',
+        style: TextStyle(color: Colors.red.shade900, fontSize: 12),
+      ),
+    ),
+  );
 }
 
 // 상단 급구 롤링 티커: 여러 급구 팀을 4초마다 위로 굴려 노출. 탭 → 핀 이동 + 상세.
@@ -1083,31 +1253,36 @@ class _UrgentTickerState extends State<_UrgentTicker> {
           onTap: () => widget.onTap(c),
           child: SizedBox(
             height: 40,
-            child: Row(children: [
-              const SizedBox(width: 12),
-              const Text('🔥', style: TextStyle(fontSize: 16)),
-              const SizedBox(width: 8),
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 400),
-                  transitionBuilder: (child, anim) => SlideTransition(
-                    position: Tween<Offset>(
-                            begin: const Offset(0, 1), end: Offset.zero)
-                        .animate(anim),
-                    child: FadeTransition(opacity: anim, child: child),
-                  ),
-                  child: Text(
-                    '[${c.name}] ${c.urgentMsg}',
-                    key: ValueKey('${c.id}_$_i'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700, color: NurungjiColors.dark),
+            child: Row(
+              children: [
+                const SizedBox(width: 12),
+                const Text('🔥', style: TextStyle(fontSize: 16)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 400),
+                    transitionBuilder: (child, anim) => SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 1),
+                        end: Offset.zero,
+                      ).animate(anim),
+                      child: FadeTransition(opacity: anim, child: child),
+                    ),
+                    child: Text(
+                      '[${c.name}] ${c.urgentMsg}',
+                      key: ValueKey('${c.id}_$_i'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: NurungjiColors.dark,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-            ]),
+                const SizedBox(width: 12),
+              ],
+            ),
           ),
         ),
       ),
@@ -1120,8 +1295,11 @@ class _ReelPeek {
   final String title;
   final String reel;
   final bool urgent;
-  const _ReelPeek(
-      {required this.title, required this.reel, required this.urgent});
+  const _ReelPeek({
+    required this.title,
+    required this.reel,
+    required this.urgent,
+  });
 }
 
 // 배경 블러 + 릴스 크게 — 인스타 피드 '꾹 누르면 릴스' 느낌. 바깥 탭/✕ → 닫힘.
@@ -1166,7 +1344,8 @@ class _ReelPeekOverlayState extends State<_ReelPeekOverlay>
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 18 * v, sigmaY: 18 * v),
                   child: Container(
-                      color: Colors.black.withValues(alpha: 0.42 * v)),
+                    color: Colors.black.withValues(alpha: 0.42 * v),
+                  ),
                 ),
               ),
             ),
@@ -1189,7 +1368,10 @@ class _ReelPeekOverlayState extends State<_ReelPeekOverlay>
           borderRadius: BorderRadius.circular(20),
           boxShadow: const [
             BoxShadow(
-                color: Color(0x55000000), blurRadius: 30, offset: Offset(0, 12)),
+              color: Color(0x55000000),
+              blurRadius: 30,
+              offset: Offset(0, 12),
+            ),
           ],
         ),
         clipBehavior: Clip.antiAlias,
@@ -1199,29 +1381,32 @@ class _ReelPeekOverlayState extends State<_ReelPeekOverlay>
             // 헤더: 이름(+급구 불꽃) · 닫기
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 6, 2),
-              child: Row(children: [
-                if (d.urgent)
-                  const Padding(
-                    padding: EdgeInsets.only(right: 6),
-                    child: Text('🔥', style: TextStyle(fontSize: 16)),
-                  ),
-                Expanded(
-                  child: Text(
-                    d.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+              child: Row(
+                children: [
+                  if (d.urgent)
+                    const Padding(
+                      padding: EdgeInsets.only(right: 6),
+                      child: Text('🔥', style: TextStyle(fontSize: 16)),
+                    ),
+                  Expanded(
+                    child: Text(
+                      d.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
                         fontWeight: FontWeight.w800,
                         fontSize: 16,
-                        color: NurungjiColors.dark),
+                        color: NurungjiColors.dark,
+                      ),
+                    ),
                   ),
-                ),
-                IconButton(
-                  onPressed: widget.onClose,
-                  icon: const Icon(Icons.close, size: 20),
-                  color: NurungjiColors.brown,
-                ),
-              ]),
+                  IconButton(
+                    onPressed: widget.onClose,
+                    icon: const Icon(Icons.close, size: 20),
+                    color: NurungjiColors.brown,
+                  ),
+                ],
+              ),
             ),
             // 릴스 임베드(탭하면 인라인/인스타 재생)
             Flexible(
@@ -1236,9 +1421,10 @@ class _ReelPeekOverlayState extends State<_ReelPeekOverlay>
               child: Text(
                 t('reel_peek_hint'),
                 style: const TextStyle(
-                    fontSize: 12,
-                    color: NurungjiColors.brown,
-                    fontWeight: FontWeight.w600),
+                  fontSize: 12,
+                  color: NurungjiColors.brown,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],

@@ -26,17 +26,20 @@ import 'login_screen.dart';
 import 'pickup_form_screen.dart';
 
 const _titleStyle = TextStyle(
-    fontSize: 20.5, fontWeight: FontWeight.w800, color: NurungjiColors.dark);
+  fontSize: 20.5,
+  fontWeight: FontWeight.w800,
+  color: NurungjiColors.dark,
+);
 
 String _sportLabel(String? s) =>
     s == '6s' ? t('sport_6s') : (s == '9s' ? t('sport_9s') : t('sport_mixed'));
 String _levelLabel(String? l) => l == 'beginner'
     ? t('lv_beginner')
     : l == 'intermediate'
-        ? t('lv_intermediate')
-        : l == 'advanced'
-            ? t('lv_advanced')
-            : t('lv_any');
+    ? t('lv_intermediate')
+    : l == 'advanced'
+    ? t('lv_advanced')
+    : t('lv_any');
 
 Future<void> _open(String? url) async {
   if (url == null || url.trim().isEmpty) return;
@@ -49,76 +52,107 @@ Future<void> _open(String? url) async {
 
 // 웹 .tag/.ps-tags 톤: 작고 아담한 칩.
 Widget _chip(String text, Color bg, Color fg) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(9)),
-      child: Text(text,
-          style: TextStyle(color: fg, fontWeight: FontWeight.w600, fontSize: 11.5)),
-    );
+  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+  decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(9)),
+  child: Text(
+    text,
+    style: TextStyle(color: fg, fontWeight: FontWeight.w600, fontSize: 11.5),
+  ),
+);
 
 // 급구/이번주 배너 — 웹처럼 컴팩트(작은 크림-오렌지). 텍스트 크기 명시.
 Widget _banner(String badge, String text) => Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(top: 8, bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-          color: const Color(0xFFFFF3E0),
-          borderRadius: BorderRadius.circular(12)),
-      child: Row(children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-              color: NurungjiColors.urgent,
-              borderRadius: BorderRadius.circular(20)),
-          child: Text(badge,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 11,
-                  color: Colors.white)),
+  width: double.infinity,
+  margin: const EdgeInsets.only(top: 8, bottom: 12),
+  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+  decoration: BoxDecoration(
+    color: const Color(0xFFFFF3E0),
+    borderRadius: BorderRadius.circular(12),
+  ),
+  child: Row(
+    children: [
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: NurungjiColors.urgent,
+          borderRadius: BorderRadius.circular(20),
         ),
-        const SizedBox(width: 8),
-        Expanded(
-            child: Text(text,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13.5,
-                    height: 1.3,
-                    color: NurungjiColors.dark))),
-      ]),
-    );
+        child: Text(
+          badge,
+          style: const TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 11,
+            color: Colors.white,
+          ),
+        ),
+      ),
+      const SizedBox(width: 8),
+      Expanded(
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 13.5,
+            height: 1.3,
+            color: NurungjiColors.dark,
+          ),
+        ),
+      ),
+    ],
+  ),
+);
 
 Widget _infoRow(String icon, String text) => Padding(
-      padding: const EdgeInsets.only(top: 12),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(icon, style: const TextStyle(fontSize: 17)),
-        const SizedBox(width: 10),
-        Expanded(
-            child: Text(text,
-                style: const TextStyle(
-                    fontSize: 15.5, color: NurungjiColors.dark, height: 1.4))),
-      ]),
-    );
+  padding: const EdgeInsets.only(top: 12),
+  child: Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(icon, style: const TextStyle(fontSize: 17)),
+      const SizedBox(width: 10),
+      Expanded(
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontSize: 15.5,
+            color: NurungjiColors.dark,
+            height: 1.4,
+          ),
+        ),
+      ),
+    ],
+  ),
+);
 
 // 📍 주소 행 + 복사 알약 (웹 #sheetAddressVal + #btnCopy). display=표시값, copyText=복사값.
 Widget _addressRow(BuildContext context, String display, String copyText) =>
     Padding(
       padding: const EdgeInsets.only(top: 12),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('📍', style: TextStyle(fontSize: 17)),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(display,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('📍', style: TextStyle(fontSize: 17)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              display,
               style: const TextStyle(
-                  fontSize: 15.5, color: NurungjiColors.dark, height: 1.4)),
-        ),
-        const SizedBox(width: 8),
-        _outlineBtn(t('copy_address'), () async {
-          await Clipboard.setData(ClipboardData(text: copyText));
-          if (context.mounted) {
-            ScaffoldMessenger.of(context)
-                .showSnackBar(SnackBar(content: Text(t('address_copied'))));
-          }
-        }),
-      ]),
+                fontSize: 15.5,
+                color: NurungjiColors.dark,
+                height: 1.4,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          _outlineBtn(t('copy_address'), () async {
+            await Clipboard.setData(ClipboardData(text: copyText));
+            if (context.mounted) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(t('address_copied'))));
+            }
+          }),
+        ],
+      ),
     );
 
 // 시간표 morph (웹 #timeMorphContainer/interpolateMorph): peek=요약 텍스트, expand=주간 그리드.
@@ -146,11 +180,12 @@ class _ScheduleMorph extends StatelessWidget {
       onTap: scope.toggle,
       child: ValueListenableBuilder<double>(
         valueListenable: scope.expand,
-        builder: (_, r, __) => AnimatedCrossFade(
+        builder: (_, r, _) => AnimatedCrossFade(
           duration: const Duration(milliseconds: 220),
           sizeCurve: Curves.easeOut,
-          crossFadeState:
-              r >= 0.5 ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          crossFadeState: r >= 0.5
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
           firstChild: summary,
           secondChild: full,
         ),
@@ -171,7 +206,7 @@ class _ExpandReveal extends StatelessWidget {
     if (scope == null) return child; // 패널 밖이면 그냥 표시
     return ValueListenableBuilder<double>(
       valueListenable: scope.expand,
-      builder: (_, r, __) => AnimatedSize(
+      builder: (_, r, _) => AnimatedSize(
         duration: const Duration(milliseconds: 220),
         alignment: Alignment.topCenter,
         curve: Curves.easeOut,
@@ -215,17 +250,26 @@ class _ReelsSectionState extends State<_ReelsSection> {
                 color: NurungjiColors.chipBg,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Text(
-                  _open ? t('reels_hide') : '${t('reels_more_label')} ($more)',
-                  style: const TextStyle(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _open
+                        ? t('reels_hide')
+                        : '${t('reels_more_label')} ($more)',
+                    style: const TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
-                      color: NurungjiColors.chipFg),
-                ),
-                Icon(_open ? Icons.expand_less : Icons.expand_more,
-                    size: 18, color: NurungjiColors.chipFg),
-              ]),
+                      color: NurungjiColors.chipFg,
+                    ),
+                  ),
+                  Icon(
+                    _open ? Icons.expand_less : Icons.expand_more,
+                    size: 18,
+                    color: NurungjiColors.chipFg,
+                  ),
+                ],
+              ),
             ),
           ),
         if (_open)
@@ -262,47 +306,62 @@ class _LazyReelState extends State<_LazyReel> {
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: const Color(0x1A000000)),
           ),
-          child: Row(children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(13),
-                gradient: const LinearGradient(
-                  begin: Alignment.bottomLeft,
-                  end: Alignment.topRight,
-                  colors: [
-                    Color(0xFFFEDA75),
-                    Color(0xFFFA7E1E),
-                    Color(0xFFD62976),
-                    Color(0xFF962FBF),
-                    Color(0xFF4F5BD5),
+          child: Row(
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(13),
+                  gradient: const LinearGradient(
+                    begin: Alignment.bottomLeft,
+                    end: Alignment.topRight,
+                    colors: [
+                      Color(0xFFFEDA75),
+                      Color(0xFFFA7E1E),
+                      Color(0xFFD62976),
+                      Color(0xFF962FBF),
+                      Color(0xFF4F5BD5),
+                    ],
+                  ),
+                ),
+                child: const Icon(
+                  Icons.play_arrow_rounded,
+                  color: Colors.white,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      t('insta_reel_title'),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14.5,
+                        color: NurungjiColors.dark,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      t('reel_tap_play'),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: NurungjiColors.brown,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              child: const Icon(Icons.play_arrow_rounded,
-                  color: Colors.white, size: 32),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(t('insta_reel_title'),
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 14.5,
-                          color: NurungjiColors.dark)),
-                  const SizedBox(height: 2),
-                  Text(t('reel_tap_play'),
-                      style: const TextStyle(
-                          fontSize: 12, color: NurungjiColors.brown)),
-                ],
+              const Icon(
+                Icons.play_circle_outline,
+                size: 20,
+                color: NurungjiColors.brown,
               ),
-            ),
-            const Icon(Icons.play_circle_outline,
-                size: 20, color: NurungjiColors.brown),
-          ]),
+            ],
+          ),
         ),
       ),
     );
@@ -382,84 +441,95 @@ class _BookmarkButtonState extends State<_BookmarkButton> {
 
 // 주 CTA(단톡·공유): 옐로 풀폭, 웹 .btn-way/.ps-join-btn 톤(약간 컴팩트).
 Widget _primaryBtn(String label, VoidCallback onTap) => Padding(
-      padding: const EdgeInsets.only(top: 14),
-      child: SizedBox(
-        width: double.infinity,
-        child: BounceTap(
-          child: ElevatedButton(
-            onPressed: onTap,
-            style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12)),
-            child: Text(label, style: const TextStyle(fontSize: 14.5)),
-          ),
+  padding: const EdgeInsets.only(top: 14),
+  child: SizedBox(
+    width: double.infinity,
+    child: BounceTap(
+      child: ElevatedButton(
+        onPressed: onTap,
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 12),
         ),
+        child: Text(label, style: const TextStyle(fontSize: 14.5)),
       ),
-    );
+    ),
+  ),
+);
 
 // 보조 액션: 웹 .btn-copy 톤의 작은 연회색 알약(아기자기).
 Widget _outlineBtn(String label, VoidCallback onTap) => BounceTap(
-      child: Material(
-        color: const Color(0xFFF0ECE2),
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-            child: Text(label,
-                style: const TextStyle(
-                    color: NurungjiColors.chipFg,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13.5)),
+  child: Material(
+    color: const Color(0xFFF0ECE2),
+    borderRadius: BorderRadius.circular(12),
+    child: InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: NurungjiColors.chipFg,
+            fontWeight: FontWeight.w700,
+            fontSize: 13.5,
           ),
         ),
       ),
-    );
+    ),
+  ),
+);
 
 // 인스타 아이콘 (웹 .instagram 그라데이션) — 타이틀 옆. 탭하면 인스타 열기.
 Widget _instaIcon(VoidCallback onTap) => BounceTap(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(left: 6),
-        width: 24,
-        height: 24,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(7),
-          gradient: const LinearGradient(
-            begin: Alignment.bottomLeft,
-            end: Alignment.topRight,
-            colors: [
-              Color(0xFFFEDA75),
-              Color(0xFFFA7E1E),
-              Color(0xFFD62976),
-              Color(0xFF962FBF),
-              Color(0xFF4F5BD5),
-            ],
-          ),
-        ),
-        child: const Icon(Icons.camera_alt_outlined, size: 14, color: Colors.white),
+  onTap: onTap,
+  child: Container(
+    margin: const EdgeInsets.only(left: 6),
+    width: 24,
+    height: 24,
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(7),
+      gradient: const LinearGradient(
+        begin: Alignment.bottomLeft,
+        end: Alignment.topRight,
+        colors: [
+          Color(0xFFFEDA75),
+          Color(0xFFFA7E1E),
+          Color(0xFFD62976),
+          Color(0xFF962FBF),
+          Color(0xFF4F5BD5),
+        ],
       ),
-    );
+    ),
+    child: const Icon(Icons.camera_alt_outlined, size: 14, color: Colors.white),
+  ),
+);
 
 // 홈페이지 집 아이콘 — 타이틀 옆(인스타·북마크와 한 줄). 탭하면 홈/링크 열기.
 Widget _homeIcon(VoidCallback onTap) => BounceTap(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(left: 6),
-        width: 24,
-        height: 24,
-        decoration: BoxDecoration(
-          color: NurungjiColors.chipBg,
-          borderRadius: BorderRadius.circular(7),
-        ),
-        child: const Icon(Icons.home_rounded,
-            size: 15, color: NurungjiColors.brown),
-      ),
-    );
+  onTap: onTap,
+  child: Container(
+    margin: const EdgeInsets.only(left: 6),
+    width: 24,
+    height: 24,
+    decoration: BoxDecoration(
+      color: NurungjiColors.chipBg,
+      borderRadius: BorderRadius.circular(7),
+    ),
+    child: const Icon(
+      Icons.home_rounded,
+      size: 15,
+      color: NurungjiColors.brown,
+    ),
+  ),
+);
 
 // 컴팩트 액션 알약 (웹 .action-buttons .btn): flex로 한 줄에 여러 개.
-Widget _actionPill(String label, VoidCallback onTap,
-    {required Color bg, required Color fg}) {
+Widget _actionPill(
+  String label,
+  VoidCallback onTap, {
+  required Color bg,
+  required Color fg,
+}) {
   return Expanded(
     child: BounceTap(
       child: Material(
@@ -471,11 +541,16 @@ Widget _actionPill(String label, VoidCallback onTap,
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 11),
             alignment: Alignment.center,
-            child: Text(label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    color: fg, fontWeight: FontWeight.w700, fontSize: 13)),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: fg,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
           ),
         ),
       ),
@@ -484,42 +559,46 @@ Widget _actionPill(String label, VoidCallback onTap,
 }
 
 Widget _sheet(List<Widget> children) => Padding(
-      padding: const EdgeInsets.fromLTRB(22, 4, 22, 30),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: children,
-      ),
-    );
+  padding: const EdgeInsets.fromLTRB(22, 4, 22, 30),
+  child: Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: children,
+  ),
+);
 
 // 소유자 수정/삭제 — 웹처럼 풀폭 스택(수정=노랑, 삭제=흰 아웃라인).
-Widget _modifyRow({required VoidCallback onEdit, required VoidCallback onDelete}) =>
-    Column(children: [
-      Padding(
-        padding: const EdgeInsets.only(top: 10),
-        child: SizedBox(
-          width: double.infinity,
-          child: BounceTap(
-            child: ElevatedButton.icon(
-              onPressed: onEdit,
-              icon: const Icon(Icons.edit, size: 18),
-              label: Text(t('edit')),
-            ),
+Widget _modifyRow({
+  required VoidCallback onEdit,
+  required VoidCallback onDelete,
+}) => Column(
+  children: [
+    Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: SizedBox(
+        width: double.infinity,
+        child: BounceTap(
+          child: ElevatedButton.icon(
+            onPressed: onEdit,
+            icon: const Icon(Icons.edit, size: 18),
+            label: Text(t('edit')),
           ),
         ),
       ),
-      Padding(
-        padding: const EdgeInsets.only(top: 10),
-        child: SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: onDelete,
-            icon: const Icon(Icons.delete_outline, size: 18),
-            label: Text(t('delete')),
-          ),
+    ),
+    Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: onDelete,
+          icon: const Icon(Icons.delete_outline, size: 18),
+          label: Text(t('delete')),
         ),
       ),
-    ]);
+    ),
+  ],
+);
 
 // coords가 있으면 그 위치, 없으면 서울 — 폼 지도피커 초기 중심.
 NLatLng _centerOf(double? lat, double? lng) => (lat != null && lng != null)
@@ -540,11 +619,13 @@ Future<void> _confirmDelete(
       content: Text(t('modify_delete_body')),
       actions: [
         TextButton(
-            onPressed: () => Navigator.pop(dctx, false),
-            child: Text(t('cancel'))),
+          onPressed: () => Navigator.pop(dctx, false),
+          child: Text(t('cancel')),
+        ),
         TextButton(
-            onPressed: () => Navigator.pop(dctx, true),
-            child: Text(t('delete'), style: const TextStyle(color: Colors.red))),
+          onPressed: () => Navigator.pop(dctx, true),
+          child: Text(t('delete'), style: const TextStyle(color: Colors.red)),
+        ),
       ],
     ),
   );
@@ -553,8 +634,9 @@ Future<void> _confirmDelete(
     await doDelete();
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('${t('err_delete')}: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('${t('err_delete')}: $e')));
     }
     return;
   }
@@ -571,12 +653,15 @@ Widget _urgentToggle(
 ) {
   Future<void> apply(bool urgent, String msg) async {
     try {
-      await DataRepository().updateClub(
-          c.id, {'is_urgent': urgent, 'urgent_msg': urgent ? msg : ''});
+      await DataRepository().updateClub(c.id, {
+        'is_urgent': urgent,
+        'urgent_msg': urgent ? msg : '',
+      });
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('${t('err_generic')}: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('${t('err_generic')}: $e')));
       }
       return;
     }
@@ -590,19 +675,27 @@ Widget _urgentToggle(
       width: double.infinity,
       child: ElevatedButton.icon(
         style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFE53935),
-            foregroundColor: Colors.white),
+          backgroundColor: const Color(0xFFE53935),
+          foregroundColor: Colors.white,
+        ),
         onPressed: () async {
           if (c.isUrgent) {
             await apply(false, '');
           } else {
-            final msg = await _promptText(context,
-                title: t('urgent_on'), hint: t('urgent_msg_hint'));
-            if (msg != null && msg.trim().isNotEmpty) await apply(true, msg.trim());
+            final msg = await _promptText(
+              context,
+              title: t('urgent_on'),
+              hint: t('urgent_msg_hint'),
+            );
+            if (msg != null && msg.trim().isNotEmpty) {
+              await apply(true, msg.trim());
+            }
           }
         },
-        icon: Icon(c.isUrgent ? Icons.notifications_off : Icons.campaign,
-            size: 18),
+        icon: Icon(
+          c.isUrgent ? Icons.notifications_off : Icons.campaign,
+          size: 18,
+        ),
         label: Text(c.isUrgent ? t('urgent_off') : t('urgent_on')),
       ),
     ),
@@ -631,34 +724,37 @@ class _VerificationSectionState extends State<_VerificationSection> {
   }
 
   Future<void> _apply() async {
-    final err = await VerificationService()
-        .submit(clubId: widget.club.id, clubName: widget.club.name);
+    final err = await VerificationService().submit(
+      clubId: widget.club.id,
+      clubName: widget.club.name,
+    );
     if (err == 'cancelled' || !mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(err ?? t('verify_done'))));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(err ?? t('verify_done'))));
     if (err == null) setState(() => _req = (status: 'pending', reason: null));
   }
 
   Widget _applyBtn(String label) => SizedBox(
-        width: double.infinity,
-        child: OutlinedButton.icon(
-          onPressed: _apply,
-          icon: const Icon(Icons.verified_outlined, size: 18),
-          label: Text(label),
-        ),
-      );
+    width: double.infinity,
+    child: OutlinedButton.icon(
+      onPressed: _apply,
+      icon: const Icon(Icons.verified_outlined, size: 18),
+      label: Text(label),
+    ),
+  );
 
   // 좌측 색 보더 안내 박스(웹 pending/rejected 박스 톤)
   Widget _noticeBox(Color border, Color bg, Widget child) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(8),
-          border: Border(left: BorderSide(color: border, width: 3)),
-        ),
-        child: child,
-      );
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    decoration: BoxDecoration(
+      color: bg,
+      borderRadius: BorderRadius.circular(8),
+      border: Border(left: BorderSide(color: border, width: 3)),
+    ),
+    child: child,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -668,28 +764,47 @@ class _VerificationSectionState extends State<_VerificationSection> {
       body = _noticeBox(
         const Color(0xFF2196F3),
         const Color(0x1A2196F3),
-        Text(t('vf_pending'),
-            style: const TextStyle(
-                fontSize: 13, height: 1.5, color: Color(0xFF1565C0))),
+        Text(
+          t('vf_pending'),
+          style: const TextStyle(
+            fontSize: 13,
+            height: 1.5,
+            color: Color(0xFF1565C0),
+          ),
+        ),
       );
     } else if (r != null && r.status == 'rejected') {
-      body = Column(children: [
-        _noticeBox(
-          const Color(0xFFF44336),
-          const Color(0x14F44336),
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(t('vf_rejected'),
-                style: const TextStyle(
-                    fontWeight: FontWeight.w600, color: Color(0xFFD32F2F))),
-            const SizedBox(height: 4),
-            Text('${t('vf_reason')}${r.reason ?? t('vf_no_reason')}',
-                style: const TextStyle(
-                    fontSize: 13, height: 1.5, color: Color(0xFF555555))),
-          ]),
-        ),
-        const SizedBox(height: 8),
-        _applyBtn(t('vf_reapply')),
-      ]);
+      body = Column(
+        children: [
+          _noticeBox(
+            const Color(0xFFF44336),
+            const Color(0x14F44336),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  t('vf_rejected'),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFFD32F2F),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${t('vf_reason')}${r.reason ?? t('vf_no_reason')}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    height: 1.5,
+                    color: Color(0xFF555555),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          _applyBtn(t('vf_reapply')),
+        ],
+      );
     } else {
       body = _applyBtn(t('verify_btn')); // 이력 없음(또는 조회 실패 폴백)
     }
@@ -697,8 +812,11 @@ class _VerificationSectionState extends State<_VerificationSection> {
   }
 }
 
-Future<String?> _promptText(BuildContext ctx,
-    {required String title, required String hint}) {
+Future<String?> _promptText(
+  BuildContext ctx, {
+  required String title,
+  required String hint,
+}) {
   final ctrl = TextEditingController();
   return showDialog<String>(
     context: ctx,
@@ -712,10 +830,13 @@ Future<String?> _promptText(BuildContext ctx,
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.pop(dctx), child: Text(t('cancel'))),
+          onPressed: () => Navigator.pop(dctx),
+          child: Text(t('cancel')),
+        ),
         TextButton(
-            onPressed: () => Navigator.pop(dctx, ctrl.text),
-            child: Text(t('confirm'))),
+          onPressed: () => Navigator.pop(dctx, ctrl.text),
+          child: Text(t('confirm')),
+        ),
       ],
     ),
   ).whenComplete(ctrl.dispose);
@@ -746,80 +867,115 @@ void showSpotDetail(
   Future<void> Function()? onChanged,
 }) {
   Track.event('view_pickup', {'id': s.id});
-  final where = [s.venueName, s.address].where((e) => e != null && e.isNotEmpty).join(' · ');
+  final where = [
+    s.venueName,
+    s.address,
+  ].where((e) => e != null && e.isNotEmpty).join(' · ');
   // 수정/삭제: 소유자 OR 관리자(모더레이션). Firestore 규칙도 동일 조건.
   final canModify =
       (currentUid != null && s.ownerUid != null && s.ownerUid == currentUid) ||
-          isAdmin;
+      isAdmin;
   final spotEvents = (s.scheduleRaw != null && s.scheduleRaw!.isNotEmpty)
       ? eventsFromRaw(s.scheduleRaw)
       : eventsFromText(s.schedule ?? s.scheduleText);
-  _showDetailSheet(context, (close) => [
-        Text(s.title, style: _titleStyle),
-        const SizedBox(height: 12),
-        Wrap(spacing: 6, runSpacing: 6, children: [
-          _chip(_sportLabel(s.sport), NurungjiColors.yellow, NurungjiColors.dark),
-          _chip(_levelLabel(s.level), NurungjiColors.chipBg, NurungjiColors.chipFg),
+  _showDetailSheet(
+    context,
+    (close) => [
+      Text(s.title, style: _titleStyle),
+      const SizedBox(height: 12),
+      Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: [
+          _chip(
+            _sportLabel(s.sport),
+            NurungjiColors.yellow,
+            NurungjiColors.dark,
+          ),
+          _chip(
+            _levelLabel(s.level),
+            NurungjiColors.chipBg,
+            NurungjiColors.chipFg,
+          ),
           if (s.beginnerFriendly)
-            _chip(t('beginner_ok'), const Color(0xFFE7F6E7), const Color(0xFF2E7D32)),
+            _chip(
+              t('beginner_ok'),
+              const Color(0xFFE7F6E7),
+              const Color(0xFF2E7D32),
+            ),
           if (s.englishOk)
-            _chip(t('english_ok'), const Color(0xFFE6F0FB), const Color(0xFF1565C0)),
-        ]),
-        if (s.thisWeek != null && s.thisWeek!.isNotEmpty) _banner(t('this_week'), s.thisWeek!),
-        _ScheduleMorph(
-          summaryText: spotEvents.isNotEmpty
-              ? scheduleSummary(spotEvents)
-              : (((s.schedule ?? s.scheduleText) != null &&
+            _chip(
+              t('english_ok'),
+              const Color(0xFFE6F0FB),
+              const Color(0xFF1565C0),
+            ),
+        ],
+      ),
+      if (s.thisWeek != null && s.thisWeek!.isNotEmpty)
+        _banner(t('this_week'), s.thisWeek!),
+      _ScheduleMorph(
+        summaryText: spotEvents.isNotEmpty
+            ? scheduleSummary(spotEvents)
+            : (((s.schedule ?? s.scheduleText) != null &&
                       (s.schedule ?? s.scheduleText)!.isNotEmpty)
                   ? i18nSchedule(s.schedule ?? s.scheduleText)
                   : null),
-          full: ScheduleTimetable(events: spotEvents, accent: NurungjiColors.teal),
+        full: ScheduleTimetable(
+          events: spotEvents,
+          accent: NurungjiColors.teal,
         ),
-        // 일정 메모(비정기): 구조화 일정이 있어 요약에 안 쓰였을 때 별도 행(웹 동일)
-        if ((s.schedule ?? '').isNotEmpty && (s.scheduleText ?? '').isNotEmpty)
-          _infoRow('🗓', s.scheduleText!),
-        if (where.isNotEmpty) _addressRow(context, where, s.address ?? where),
-        if (s.feeInfo != null && s.feeInfo!.isNotEmpty) _infoRow('💰', i18nPrice(s.feeInfo)),
-        if (s.contactLink != null && s.contactLink!.isNotEmpty)
-          _primaryBtn(t('chat_join'), () {
-            Track.event('pickup_contact', {'id': s.id, 'sport': s.sport});
-            _open(s.contactLink);
-          }),
-        _primaryBtn(
-          t('share_btn'),
-          () => showShareMenu(
-            context,
-            url: ShareService.spotUrl(s.id),
-            shareTitle: s.title,
-            onStory: () => shareStoryCard(context, StoryCardData.fromSpot(s)),
-          ),
+      ),
+      // 일정 메모(비정기): 구조화 일정이 있어 요약에 안 쓰였을 때 별도 행(웹 동일)
+      if ((s.schedule ?? '').isNotEmpty && (s.scheduleText ?? '').isNotEmpty)
+        _infoRow('🗓', s.scheduleText!),
+      if (where.isNotEmpty) _addressRow(context, where, s.address ?? where),
+      if (s.feeInfo != null && s.feeInfo!.isNotEmpty)
+        _infoRow('💰', i18nPrice(s.feeInfo)),
+      if (s.contactLink != null && s.contactLink!.isNotEmpty)
+        _primaryBtn(t('chat_join'), () {
+          Track.event('pickup_contact', {'id': s.id, 'sport': s.sport});
+          _open(s.contactLink);
+        }),
+      _primaryBtn(
+        t('share_btn'),
+        () => showShareMenu(
+          context,
+          url: ShareService.spotUrl(s.id),
+          shareTitle: s.title,
+          onStory: () => shareStoryCard(context, StoryCardData.fromSpot(s)),
         ),
-        // 추가 안내(notes) — 웹 픽업 상세 메모 행 (폼 저장값 표시 누락 보완)
-        if (s.notes != null && s.notes!.isNotEmpty) _infoRow('📝', s.notes!),
-        // 펼쳐야 보이는 영역: 릴스 + 소유자 수정/삭제
-        _ExpandReveal(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (s.instaReels.isNotEmpty) _ReelsSection(reels: s.instaReels),
-              if (canModify)
-                _modifyRow(
-                  onEdit: () async {
-                    close();
-                    final ok = await showPickupFormSheet(
-                      context,
-                      editing: s,
-                      initialCenter: _centerOf(s.lat, s.lng),
-                    );
-                    if (ok == true) await onChanged?.call();
-                  },
-                  onDelete: () => _confirmDelete(context, onChanged, close,
-                      () => DataRepository().deletePickup(s.id)),
+      ),
+      // 추가 안내(notes) — 웹 픽업 상세 메모 행 (폼 저장값 표시 누락 보완)
+      if (s.notes != null && s.notes!.isNotEmpty) _infoRow('📝', s.notes!),
+      // 펼쳐야 보이는 영역: 릴스 + 소유자 수정/삭제
+      _ExpandReveal(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (s.instaReels.isNotEmpty) _ReelsSection(reels: s.instaReels),
+            if (canModify)
+              _modifyRow(
+                onEdit: () async {
+                  close();
+                  final ok = await showPickupFormSheet(
+                    context,
+                    editing: s,
+                    initialCenter: _centerOf(s.lat, s.lng),
+                  );
+                  if (ok == true) await onChanged?.call();
+                },
+                onDelete: () => _confirmDelete(
+                  context,
+                  onChanged,
+                  close,
+                  () => DataRepository().deletePickup(s.id),
                 ),
-            ],
-          ),
+              ),
+          ],
         ),
-      ]);
+      ),
+    ],
+  );
 }
 
 void showClubDetail(
@@ -835,7 +991,8 @@ void showClubDetail(
       .where((e) => e.isNotEmpty)
       .toList();
   // 수정/삭제: 소유자 OR 관리자(문서 02 §7, 규칙도 동일).
-  final canModify = (currentUid != null &&
+  final canModify =
+      (currentUid != null &&
           c.registeredBy != null &&
           c.registeredBy == currentUid) ||
       isAdmin;
@@ -844,30 +1001,35 @@ void showClubDetail(
       ? eventsFromRaw(c.scheduleRaw)
       : eventsFromText(c.schedule);
   void shareClub() => showShareMenu(
-        context,
-        url: ShareService.clubUrl(c.id),
-        shareTitle: c.name,
-        onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
-      );
+    context,
+    url: ShareService.clubUrl(c.id),
+    shareTitle: c.name,
+    onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
+  );
   Future<void> copyAddr() async {
     await Clipboard.setData(ClipboardData(text: c.address ?? ''));
     if (context.mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(t('address_copied'))));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('address_copied'))));
     }
   }
 
   // 웹 클럽 상세 순서: 급구→타이틀→일정→태그→가격→주소→액션줄→임베드→소유자
-  _showDetailSheet(context, (close) => [
-        // 1. 급구 배너 (맨 위, 컴팩트)
-        if (c.isUrgent && c.urgentMsg != null && c.urgentMsg!.isNotEmpty)
-          _banner(t('urgent'), c.urgentMsg!),
-        // 2. 타이틀: ✓ + 이름 + 인스타 아이콘 + 🍱 북마크
-        Row(children: [
+  _showDetailSheet(
+    context,
+    (close) => [
+      // 1. 급구 배너 (맨 위, 컴팩트)
+      if (c.isUrgent && c.urgentMsg != null && c.urgentMsg!.isNotEmpty)
+        _banner(t('urgent'), c.urgentMsg!),
+      // 2. 타이틀: ✓ + 이름 + 인스타 아이콘 + 🍱 북마크
+      Row(
+        children: [
           if (c.isVerified)
             const Padding(
-                padding: EdgeInsets.only(right: 6),
-                child: Icon(Icons.verified, color: Color(0xFF1DA1F2), size: 22)),
+              padding: EdgeInsets.only(right: 6),
+              child: Icon(Icons.verified, color: Color(0xFF1DA1F2), size: 22),
+            ),
           Expanded(child: Text(c.name, style: _titleStyle)),
           if (c.insta != null && c.insta!.isNotEmpty)
             _instaIcon(() {
@@ -885,101 +1047,132 @@ void showClubDetail(
             // 게스트: 흐린 🍱 → 탭하면 로그인 유도(웹은 localStorage 폴백, 앱은 로그인 우선)
             BounceTap(
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(t('login_required'))));
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const LoginScreen()));
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(t('login_required'))));
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                );
               },
               child: const Padding(
                 padding: EdgeInsets.only(left: 6),
                 child: Opacity(
-                    opacity: 0.32,
-                    child: Text('🍱', style: TextStyle(fontSize: 24))),
+                  opacity: 0.32,
+                  child: Text('🍱', style: TextStyle(fontSize: 24)),
+                ),
               ),
             ),
-        ]),
-        const SizedBox(height: 4),
-        // 3. 일정 morph (타이틀 바로 아래)
-        _ScheduleMorph(
-          summaryText: clubEvents.isNotEmpty
-              ? scheduleSummary(clubEvents)
-              : ((c.schedule != null && c.schedule!.isNotEmpty)
+        ],
+      ),
+      const SizedBox(height: 4),
+      // 3. 일정 morph (타이틀 바로 아래)
+      _ScheduleMorph(
+        summaryText: clubEvents.isNotEmpty
+            ? scheduleSummary(clubEvents)
+            : ((c.schedule != null && c.schedule!.isNotEmpty)
                   ? i18nSchedule(c.schedule)
                   : null),
-          full: ScheduleTimetable(
-              events: clubEvents, accent: NurungjiColors.yellow),
+        full: ScheduleTimetable(
+          events: clubEvents,
+          accent: NurungjiColors.yellow,
         ),
-        // 4. 모집 키워드 — 해시태그 느낌(#)
-        if (tags.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: tags
-                  .map((tag) => _chip('#${i18nTarget(tag)}',
-                      NurungjiColors.chipBg, NurungjiColors.chipFg))
-                  .toList(),
-            ),
-          ),
-        // 5. 가격
-        if (c.price != null && c.price!.isNotEmpty)
-          _infoRow('💰', i18nPrice(c.price)),
-        // 6. 주소 텍스트(유지)
-        if (c.address != null && c.address!.isNotEmpty)
-          _infoRow('📍', c.address!),
-        // 7. 액션 줄: 주소복사 / 길찾기 / 공유 (컴팩트 3)
+      ),
+      // 4. 모집 키워드 — 해시태그 느낌(#)
+      if (tags.isNotEmpty)
         Padding(
           padding: const EdgeInsets.only(top: 12),
-          child: Row(children: [
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: tags
+                .map(
+                  (tag) => _chip(
+                    '#${i18nTarget(tag)}',
+                    NurungjiColors.chipBg,
+                    NurungjiColors.chipFg,
+                  ),
+                )
+                .toList(),
+          ),
+        ),
+      // 5. 가격
+      if (c.price != null && c.price!.isNotEmpty)
+        _infoRow('💰', i18nPrice(c.price)),
+      // 6. 주소 텍스트(유지)
+      if (c.address != null && c.address!.isNotEmpty)
+        _infoRow('📍', c.address!),
+      // 7. 액션 줄: 주소복사 / 길찾기 / 공유 (컴팩트 3)
+      Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: Row(
+          children: [
             if (c.address != null && c.address!.isNotEmpty) ...[
-              _actionPill(t('copy_address'), copyAddr,
-                  bg: const Color(0xFFECEFF1), fg: const Color(0xFF455A64)),
+              _actionPill(
+                t('copy_address'),
+                copyAddr,
+                bg: const Color(0xFFECEFF1),
+                fg: const Color(0xFF455A64),
+              ),
               const SizedBox(width: 8),
             ],
             if (c.lat != null && c.lng != null) ...[
               _actionPill(
-                  t('directions_btn'),
-                  () {
-                    Track.event(
-                        'club_contact', {'type': 'directions', 'club_id': c.id});
-                    _open(
-                        'https://map.kakao.com/link/to/${c.name},${c.lat},${c.lng}');
-                  },
-                  bg: NurungjiColors.yellow,
-                  fg: NurungjiColors.dark),
+                t('directions_btn'),
+                () {
+                  Track.event('club_contact', {
+                    'type': 'directions',
+                    'club_id': c.id,
+                  });
+                  _open(
+                    'https://map.kakao.com/link/to/${c.name},${c.lat},${c.lng}',
+                  );
+                },
+                bg: NurungjiColors.yellow,
+                fg: NurungjiColors.dark,
+              ),
               const SizedBox(width: 8),
             ],
-            _actionPill(t('share_link'), shareClub,
-                bg: const Color(0xFFECEFF1), fg: const Color(0xFF455A64)),
-          ]),
+            _actionPill(
+              t('share_link'),
+              shareClub,
+              bg: const Color(0xFFECEFF1),
+              fg: const Color(0xFF455A64),
+            ),
+          ],
         ),
-        // 8~9. 펼쳐야 보이는 영역: 릴스 임베드 + 소유자(인증/급구/수정·삭제)
-        _ExpandReveal(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (c.instaReels.isNotEmpty) _ReelsSection(reels: c.instaReels),
-              if (canModify && !c.isVerified) _VerificationSection(club: c),
-              // 급구는 인증팀만(웹 정책 통일 · A10)
-              if (canModify && c.isVerified)
-                _urgentToggle(c, context, onChanged, close),
-              if (canModify)
-                _modifyRow(
-                  onEdit: () async {
-                    close();
-                    final ok = await showClubFormSheet(
-                      context,
-                      editing: c,
-                      initialCenter: _centerOf(c.lat, c.lng),
-                    );
-                    if (ok == true) await onChanged?.call();
-                  },
-                  onDelete: () => _confirmDelete(context, onChanged, close,
-                      () => DataRepository().deleteClub(c.id)),
+      ),
+      // 8~9. 펼쳐야 보이는 영역: 릴스 임베드 + 소유자(인증/급구/수정·삭제)
+      _ExpandReveal(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (c.instaReels.isNotEmpty) _ReelsSection(reels: c.instaReels),
+            if (canModify && !c.isVerified) _VerificationSection(club: c),
+            // 급구는 인증팀만(웹 정책 통일 · A10)
+            if (canModify && c.isVerified)
+              _urgentToggle(c, context, onChanged, close),
+            if (canModify)
+              _modifyRow(
+                onEdit: () async {
+                  close();
+                  final ok = await showClubFormSheet(
+                    context,
+                    editing: c,
+                    initialCenter: _centerOf(c.lat, c.lng),
+                  );
+                  if (ok == true) await onChanged?.call();
+                },
+                onDelete: () => _confirmDelete(
+                  context,
+                  onChanged,
+                  close,
+                  () => DataRepository().deleteClub(c.id),
                 ),
-            ],
-          ),
+              ),
+          ],
         ),
-      ]);
+      ),
+    ],
+  );
 }
