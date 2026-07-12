@@ -49,15 +49,20 @@ void main() {
 
   group('Sanitize.instaPostUrl', () {
     test('p/reel 정규 permalink 반환', () {
-      expect(Sanitize.instaPostUrl('https://www.instagram.com/p/ABC_123/'),
-          'https://www.instagram.com/p/ABC_123/');
-      expect(Sanitize.instaPostUrl('https://instagram.com/reel/XyZ9/'),
-          'https://www.instagram.com/reel/XyZ9/');
+      expect(
+        Sanitize.instaPostUrl('https://www.instagram.com/p/ABC_123/'),
+        'https://www.instagram.com/p/ABC_123/',
+      );
+      expect(
+        Sanitize.instaPostUrl('https://instagram.com/reel/XyZ9/'),
+        'https://www.instagram.com/reel/XyZ9/',
+      );
     });
     test('reels → reel 정규화, 사용자경로 허용', () {
       expect(
-          Sanitize.instaPostUrl('https://www.instagram.com/someuser/reels/AbC/'),
-          'https://www.instagram.com/reel/AbC/');
+        Sanitize.instaPostUrl('https://www.instagram.com/someuser/reels/AbC/'),
+        'https://www.instagram.com/reel/AbC/',
+      );
     });
     test('무효 URL → 빈값', () {
       expect(Sanitize.instaPostUrl('https://instagram.com/someuser/'), '');

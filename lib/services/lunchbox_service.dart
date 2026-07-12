@@ -11,7 +11,11 @@ class LunchboxData {
 }
 
 class LunchboxService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  // DI 시임: 테스트에서 fake 주입. 기본값은 프로덕션 싱글턴(동작 불변).
+  LunchboxService({FirebaseFirestore? db})
+    : _db = db ?? FirebaseFirestore.instance;
+
+  final FirebaseFirestore _db;
 
   DocumentReference<Map<String, dynamic>> _ref(String uid) =>
       _db.collection('users').doc(uid).collection('private').doc('profile');
@@ -44,9 +48,10 @@ class LunchboxService {
   // 트랜잭션 기반 read-modify-write(동시 쓰기 클로버 방지).
   // apply: bookmarks(길이5)·customTeams를 제자리 변형. null 반환=성공(커밋), 그 외=메시지(쓰기 없음).
   Future<String?> _mutate(
-      String uid,
-      String? Function(List<String?> bookmarks, Map<String, dynamic> custom)
-          apply) async {
+    String uid,
+    String? Function(List<String?> bookmarks, Map<String, dynamic> custom)
+    apply,
+  ) async {
     try {
       return await _db.runTransaction<String?>((txn) async {
         final ref = _ref(uid);
@@ -63,12 +68,15 @@ class LunchboxService {
         final ct = d['customTeams'];
         final custom = ct is Map
             ? Map<String, dynamic>.from(
-                ct.map((k, v) => MapEntry(k.toString(), v)))
+                ct.map((k, v) => MapEntry(k.toString(), v)),
+              )
             : <String, dynamic>{};
         final err = apply(slots, custom);
         if (err != null) return err; // 검증 실패 → 쓰기 없이 메시지
-        txn.set(ref, {'bookmarks': slots, 'customTeams': custom},
-            SetOptions(merge: true));
+        txn.set(ref, {
+          'bookmarks': slots,
+          'customTeams': custom,
+        }, SetOptions(merge: true));
         return null;
       });
     } catch (_) {
@@ -108,7 +116,10 @@ class LunchboxService {
 
   /// 커스텀 팀 추가 + 찜. null=성공, 그 외=메시지.
   Future<String?> addCustomTeam(
-      String uid, String name, String schedule) async {
+    String uid,
+    String name,
+    String schedule,
+  ) async {
     return _mutate(uid, (bm, custom) {
       final idx = bm.indexWhere((e) => e == null);
       if (idx == -1) return t('lb_full');

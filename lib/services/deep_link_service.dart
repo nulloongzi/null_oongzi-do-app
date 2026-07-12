@@ -35,13 +35,10 @@ class DeepLinkService {
         if (d != null) onLink(d);
       }
     } catch (_) {}
-    _sub = _appLinks.uriLinkStream.listen(
-      (uri) {
-        final d = parseDeepLink(uri);
-        if (d != null) onLink(d);
-      },
-      onError: (_) {},
-    );
+    _sub = _appLinks.uriLinkStream.listen((uri) {
+      final d = parseDeepLink(uri);
+      if (d != null) onLink(d);
+    }, onError: (_) {});
   }
 
   void dispose() {

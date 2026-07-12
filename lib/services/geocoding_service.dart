@@ -15,8 +15,9 @@ class GeocodingService {
     final q = address.trim();
     if (q.isEmpty) return null;
     try {
-      final callable =
-          FirebaseFunctions.instance.httpsCallable('geocodeAddress');
+      final callable = FirebaseFunctions.instance.httpsCallable(
+        'geocodeAddress',
+      );
       final res = await callable.call({'address': q});
       final d = Map<String, dynamic>.from(res.data as Map);
       final lat = (d['lat'] as num?)?.toDouble();

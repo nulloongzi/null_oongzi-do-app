@@ -15,8 +15,13 @@ class RiceName {
 }
 
 class ProfileService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final Random _rnd = Random();
+  // DI 시임: 테스트에서 fake db·고정 시드 Random 주입. 기본값은 프로덕션(동작 불변).
+  ProfileService({FirebaseFirestore? db, Random? rnd})
+    : _db = db ?? FirebaseFirestore.instance,
+      _rnd = rnd ?? Random();
+
+  final FirebaseFirestore _db;
+  final Random _rnd;
 
   // 웹 profile.js riceData 포팅 (가중치 + 색)
   static const List<_Rice> _rice = [
@@ -59,8 +64,10 @@ class ProfileService {
       n -= r.weight;
     }
     const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    final suffix =
-        List.generate(3, (_) => chars[_rnd.nextInt(chars.length)]).join();
+    final suffix = List.generate(
+      3,
+      (_) => chars[_rnd.nextInt(chars.length)],
+    ).join();
     return RiceName(sel.name, suffix, '${sel.name}-$suffix', sel.color);
   }
 
@@ -80,10 +87,11 @@ class ProfileService {
       'created_at': FieldValue.serverTimestamp(),
     });
     return Profile(
-        fullNickname: rn.full,
-        nickname: rn.base,
-        color: rn.color,
-        createdAt: DateTime.now());
+      fullNickname: rn.full,
+      nickname: rn.base,
+      color: rn.color,
+      createdAt: DateTime.now(),
+    );
   }
 
   Future<bool> isDuplicate(String fullNickname) async {

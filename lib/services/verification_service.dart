@@ -9,12 +9,22 @@ import 'i18n.dart';
 import 'sanitize.dart';
 
 class VerificationService {
+  // DI 시임: 인라인 싱글턴 → 필드화 + 생성자 주입. 기본값은 프로덕션(동작 불변).
+  // (Storage/ImagePicker는 submit 전용이라 현 단계에선 인라인 유지 — Phase 3.)
+  VerificationService({FirebaseFirestore? db, FirebaseAuth? auth})
+    : _db = db ?? FirebaseFirestore.instance,
+      _auth = auth ?? FirebaseAuth.instance;
+
+  final FirebaseFirestore _db;
+  final FirebaseAuth _auth;
+
   /// 이 클럽의 최신 인증 요청 상태(웹 verifyStatusArea 조회와 동일 쿼리).
   /// null=이력 없음 또는 조회 실패(→ 신청 버튼 폴백, 웹 동일).
   Future<({String status, String? reason})?> latestRequest(
-      String clubId) async {
+    String clubId,
+  ) async {
     try {
-      final snap = await FirebaseFirestore.instance
+      final snap = await _db
           .collection('verification_requests')
           .where('club_id', isEqualTo: clubId)
           .orderBy('requested_at', descending: true)
@@ -24,7 +34,9 @@ class VerificationService {
       final d = snap.docs.first.data();
       return (
         status: (d['status'] as String?) ?? 'pending',
-        reason: d['reject_reason'] is String ? d['reject_reason'] as String : null,
+        reason: d['reject_reason'] is String
+            ? d['reject_reason'] as String
+            : null,
       );
     } catch (_) {
       return null;
@@ -33,9 +45,11 @@ class VerificationService {
 
   /// 갤러리에서 사진 선택 → 업로드 → 인증 요청 문서 생성.
   /// 반환: null=성공, 'cancelled'=사용자 취소, 그 외=오류 메시지.
-  Future<String?> submit(
-      {required String clubId, required String clubName}) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+  Future<String?> submit({
+    required String clubId,
+    required String clubName,
+  }) async {
+    final uid = _auth.currentUser?.uid;
     if (uid == null) return t('login_required');
 
     final XFile? file = await ImagePicker().pickImage(
@@ -47,14 +61,18 @@ class VerificationService {
 
     try {
       final safe = Sanitize.filename(file.name);
-      final fileName = '${clubId}_${DateTime.now().millisecondsSinceEpoch}_$safe';
-      final ref =
-          FirebaseStorage.instance.ref('verification_photos/$uid/$fileName');
+      final fileName =
+          '${clubId}_${DateTime.now().millisecondsSinceEpoch}_$safe';
+      final ref = FirebaseStorage.instance.ref(
+        'verification_photos/$uid/$fileName',
+      );
       await ref.putFile(
-          File(file.path), SettableMetadata(contentType: _contentType(file.name)));
+        File(file.path),
+        SettableMetadata(contentType: _contentType(file.name)),
+      );
       final url = await ref.getDownloadURL();
 
-      await FirebaseFirestore.instance.collection('verification_requests').add({
+      await _db.collection('verification_requests').add({
         'club_id': clubId,
         'club_name': clubName,
         'photo_url': url,

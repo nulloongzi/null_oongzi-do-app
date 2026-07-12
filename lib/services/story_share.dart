@@ -44,10 +44,12 @@ Future<void> shareStoryCard(BuildContext context, StoryCardData data) async {
   await _maybeShowCoach(context);
   // IG '링크 스티커' 붙여넣기 쉽게 링크 자동 복사 + 매번 안내 스낵바
   await ShareService.copy(data.url);
-  messenger.showSnackBar(SnackBar(
-    content: Text(t('story_link_hint')),
-    duration: const Duration(seconds: 4),
-  ));
+  messenger.showSnackBar(
+    SnackBar(
+      content: Text(t('story_link_hint')),
+      duration: const Duration(seconds: 4),
+    ),
+  );
 
   // 가까운 지하철역 enrich (실패해도 무시 → 지역 라벨 폴백)
   var card = data;
@@ -67,7 +69,8 @@ Future<void> shareStoryCard(BuildContext context, StoryCardData data) async {
 
   final dir = await getTemporaryDirectory();
   final file = File(
-      '${dir.path}/nurungji_story_${DateTime.now().millisecondsSinceEpoch}.png');
+    '${dir.path}/nurungji_story_${DateTime.now().millisecondsSinceEpoch}.png',
+  );
   await file.writeAsBytes(png);
 
   final appinio = AppinioSocialShare();
