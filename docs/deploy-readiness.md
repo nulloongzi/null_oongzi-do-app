@@ -15,23 +15,25 @@
 
 ## 1. 가장 먼저 확정할 3가지 (배포 경로를 가름 — 코드로 알 수 없음)
 
-### 1-1. 패키지명 일치 여부  ⚠️
+### 1-1. 패키지명 일치 여부  ✅ 확정 (2026-07)
 - 이 앱 `applicationId` = **`com.nulloongzi.nulloongzido`**
   (`android/app/build.gradle.kts` ✅ 확인).
-- **할 일:** Play Console → 기존 "누룽지도" 웹뷰 앱의 패키지명이 위와 **동일한지 확인.**
-  - 동일 → 같은 리스팅 업데이트 가능(무중단, 다운로드/리뷰 유지).
-  - 다름 → 같은 리스팅 업데이트 **불가.** 신규 앱으로 출시하거나, applicationId를 기존 값에
-    맞춰야 함(단, Firebase/카카오/네이버 콘솔의 패키지명 등록도 함께 바꿔야 함).
+- Play Console 대시보드 + 디지털 애셋 링크 JSON(`"package_name": "com.nulloongzi.nulloongzido"`)
+  **정확히 일치 확인.** → 같은 리스팅 업데이트 가능(무중단, 다운로드/리뷰 유지).
 
-### 1-2. 업로드 서명 키 확보  ⚠️ (가장 큰 리스크)
+### 1-2. 업로드 서명 키  ✅ 시나리오 A 확정 (2026-07)
 - 레포엔 **릴리즈 키스토어 없음**(`android/key.properties` 부재 ✅ — 비밀이므로 정상).
   커밋된 건 `debug-fixed.keystore`(디버그 전용, 스토어 제출 불가).
-- **할 일:** 아래 중 어디에 해당하는지 확인 → 경로 결정:
-  - **원본 업로드 키스토어 보유** → 그 키로 서명하면 같은 리스팅 업데이트 OK. (가장 깔끔)
-  - **Play App Signing 등록됨**(구글이 앱 서명 키 관리) → 업로드 키를 새로 만들어
-    Play Console에서 재설정 가능 → 같은 리스팅 업데이트 OK.
-  - **둘 다 아님 / 분실** → 같은 리스팅 업데이트 **불가.** 패키지명 바꿔 신규 출시해야 함
-    (다운로드/리뷰 리셋, 마케팅 전략도 '신규'로 전환 — `marketing-plan.md` 시나리오 B).
+- Play Console → 앱 서명 페이지에서 **Play App Signing 활성** 확인 —
+  앱 서명 키 인증서(구글 관리) + 업로드 키 인증서 존재, **"업로드 키 재설정 요청" 경로 열림.**
+  → 원본 업로드 keystore가 없어도 새 업로드 키를 만들어 재설정해 계속 업데이트 가능. **시나리오 A.**
+- **할 일 (택1):**
+  - **원본 업로드 keystore 보유 시** → 그 키로 서명. 재설정 불필요(가장 빠름).
+  - **미보유 시** → 새 업로드 keystore 생성(§3-2) → Play Console "업로드 키 재설정 요청"에
+    새 키의 인증서(.pem) 제출 → 구글 승인(보통 몇 시간~2일) 후 그 키로 서명.
+- **중요(Play App Signing 특성):** 사용자가 받는 앱은 **구글의 '앱 서명 키'로 서명**된다.
+  따라서 구글 로그인·카카오·네이버에 등록할 **릴리즈 SHA-1/키해시는 '앱 서명 키' 것**
+  (Play Console 앱 서명 페이지에 표시됨) — 업로드 키가 아님. (§3-3)
 
 ### 1-3. iOS 포함 여부  ⚠️
 - 코드에 `ios/` 타깃 존재 ✅, 그러나 App Store 출시 이력 불명.
@@ -45,13 +47,13 @@
 
 | 항목 | 상태 | 근거 / 할 일 |
 |---|---|---|
-| 패키지명 확인 | ⚠️ | `com.nulloongzi.nulloongzido` (§1-1) |
-| 업로드 서명 키 | ⚠️ | 미커밋(정상). 키 확보/등록 필요 (§1-2) |
-| versionCode 증가 | ⚠️ | 현재 `pubspec.yaml` = `1.0.0+5` → **스토어 live 값보다 커야** 함. live가 5 이상이면 `+6` 등으로 올릴 것 |
+| 패키지명 확인 | ✅ | `com.nulloongzi.nulloongzido` — 스토어와 일치 확정 (§1-1) |
+| 업로드 서명 키 | ✅ | Play App Signing 활성, 재설정 경로 있음 = 시나리오 A (§1-2). 업로드 키만 준비하면 됨 |
+| versionCode 증가 | ⚠️ | 현재 `pubspec.yaml` = `1.0.0+5` → **스토어 live 값보다 커야** 함. live 확인 위치: Play Console → 앱 번들 탐색기 / 프로덕션 트랙. live가 5 이상이면 `+6` 등으로 |
 | **릴리즈 빌드(AAB)** | ⛔→✅ | 기존 CI는 **디버그 APK만**(`build-apk.yml`) → **`release-aab.yml` 추가함**(서명된 AAB). Secrets 등록 후 실행 (§3) |
-| 네이버맵 Client ID | ✅(값) / ⚠️(등록) | `lib/main.dart` `kNaverMapClientId = 't4mzao93mh'`. 네이버 콘솔에 **릴리즈 패키지명/키해시** 등록 확인 필요 |
-| 카카오 네이티브 앱키 | ✅(값) / ⚠️(등록) | `lib/main.dart` `KakaoSdk.init(nativeAppKey:'24e0161…')`. 카카오 콘솔에 **릴리즈 키해시** 등록 확인 필요 |
-| Firebase SHA-1 | ⚠️ | 디버그 키 SHA-1은 등록됨(고정 키스토어). **릴리즈 업로드 키 SHA-1도** Firebase에 추가해야 구글 로그인 정상 |
+| 네이버맵 Client ID | ✅(값) / ⚠️(등록) | `lib/main.dart` `kNaverMapClientId = 't4mzao93mh'`. 네이버 콘솔에 **앱 서명 키 해시** 등록 확인 (§1-2 중요) |
+| 카카오 네이티브 앱키 | ✅(값) / ⚠️(등록) | `lib/main.dart` `KakaoSdk.init(nativeAppKey:'24e0161…')`. 카카오 콘솔에 **앱 서명 키 해시** 등록 확인 |
+| Firebase SHA-1 | ⚠️ | 디버그 키 SHA-1은 등록됨(고정 키스토어). **앱 서명 키 SHA-1**(Play Console 표시분)을 Firebase에 추가해야 릴리즈 구글 로그인 정상 |
 | 개인정보처리방침 | ✅(존재) / ⚠️(최신성) | 웹 레포 `privacy.md` 라이브. 네이티브 수집 항목(위치·기기·Analytics)과 일치하는지 검토 |
 | 스토어 리스팅 갱신 | ⚠️ | 웹뷰→네이티브 전환 반영해 스크린샷/설명 업데이트 (`marketing-plan.md` §스토어 최적화) |
 | 데이터 마이그레이션 | ✅ | 없음 — 기존 Firestore 컬렉션 재사용(`NATIVE_REWRITE_PLAN.md`) |
@@ -61,18 +63,39 @@
 
 ## 3. 실행 순서 (Android 리론치)
 
-1. **§1의 3가지 확정** (패키지명 · 서명 키 · iOS 여부).
-2. **versionCode 확인/증가** — Play Console의 현재 live versionCode 확인 → `pubspec.yaml`의
-   `+N`을 그보다 크게. (커밋)
-3. **콘솔 키 등록 점검** — 릴리즈 업로드 키의 SHA-1/키해시를 Firebase·카카오·네이버 콘솔에 등록.
-   - 키해시 산출: `keytool -exportcert -alias <alias> -keystore <keystore> | openssl sha1 -binary | openssl base64` (카카오/네이버) · SHA-1은 `keytool -list -v` (Firebase).
-4. **GitHub Secrets 등록** (`release-aab.yml`용):
+1. **업로드 키 확보** — 원본 보유 시 그대로. 미보유 시 새 키 생성 후 Play Console에서
+   "업로드 키 재설정 요청"(§3-2). iOS 포함 여부만 별도 결정(§1-3).
+2. **versionCode 확인/증가** — Play Console 앱 번들 탐색기의 현재 live versionCode 확인 →
+   `pubspec.yaml`의 `+N`을 그보다 크게. (커밋)
+3. **콘솔 키 등록 점검** — Play App Signing이므로 **'앱 서명 키'의 SHA-1/키해시**(Play Console
+   앱 서명 페이지에 표시)를 Firebase·카카오·네이버에 등록. Play Console이 카카오/네이버용
+   키해시를 바로 보여주지 않으면 SHA-1(hex)을 base64로 변환해 등록.
+   (참고: 업로드 키의 SHA-1은 로컬/CI 디버깅용으로만 추가 등록해도 됨)
+4. **GitHub Secrets 등록** (`release-aab.yml`용) — **업로드 키** 기준:
    `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`.
 5. **AAB 빌드** — Actions → **Release AAB** → Run workflow → 아티팩트 `nulloongzido-release-aab` 내려받기.
    (로컬 Flutter 있으면 `flutter build appbundle --release` 로 동일)
 6. **내부 테스트 트랙 업로드** — Play Console → 내부 테스트에 AAB 올려 실기기 설치·로그인·지도·등록 스모크.
 7. **스토어 리스팅 갱신** — 스크린샷/설명/무엇이 새로운지(네이티브 전환) 업데이트.
 8. **단계적 출시** — 프로덕션에 20%부터 롤아웃 → 크래시/ANR 모니터 → 100%.
+
+### 3-2. 새 업로드 키 생성 (원본 미보유 시)
+```bash
+# 1) 업로드 키스토어 생성 (alias/비밀번호는 안전하게 보관)
+keytool -genkeypair -v -keystore upload-keystore.jks \
+  -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+
+# 2) Play Console '업로드 키 재설정 요청'에 낼 인증서(.pem) 추출
+keytool -export -rfc -keystore upload-keystore.jks -alias upload -file upload_certificate.pem
+
+# 3) release-aab.yml Secret 용 base64 (Linux)
+base64 -w0 upload-keystore.jks    # macOS: base64 -i upload-keystore.jks
+
+# 4) 이 업로드 키의 SHA-1 (로컬/CI 디버깅 등록용)
+keytool -list -v -keystore upload-keystore.jks -alias upload
+```
+→ `.pem`을 Play Console 재설정 요청에 제출, 승인 후 이 키로 서명한 AAB 업로드.
+콘솔에 등록할 **릴리즈 SHA-1/키해시는 '앱 서명 키'** 것을 쓸 것(§1-2 중요).
 
 ---
 
