@@ -1,7 +1,7 @@
 // theme.dart — 웹앱(css/main.css :root)의 누룽지 디자인 토큰을 Flutter로 재현.
 // CSS를 직접 못 쓰므로 색·모양·폰트를 동일하게 맞춰 통일성 확보.
+// 폰트: Pretendard(가변, assets/fonts) — 웹앱과 동일 타이포. pubspec fonts에 등록.
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class NurungjiColors {
   static const yellow = Color(0xFFFAC710); // --nurungji-yellow
@@ -22,12 +22,16 @@ class AppTheme {
       brightness: Brightness.light,
     ).copyWith(primary: NurungjiColors.yellow, surface: Colors.white);
 
-    final base = ThemeData(useMaterial3: true, colorScheme: scheme);
+    // fontFamily: Pretendard → 전 textTheme에 적용. 가변폰트라 각 스타일의
+    // fontWeight가 wght 축으로 매핑됨(w400~w900).
+    final base = ThemeData(
+      useMaterial3: true,
+      colorScheme: scheme,
+      fontFamily: 'Pretendard',
+    );
 
     return base.copyWith(
       scaffoldBackgroundColor: NurungjiColors.bg,
-      // 폰트: Noto Sans KR (google_fonts) — 누룽지 따뜻한 톤. 런타임 페치+캐시.
-      textTheme: GoogleFonts.notoSansKrTextTheme(base.textTheme),
       appBarTheme: const AppBarTheme(
         backgroundColor: NurungjiColors.yellow,
         foregroundColor: NurungjiColors.dark,

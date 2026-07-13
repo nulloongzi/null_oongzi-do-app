@@ -5,7 +5,6 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../models/club.dart';
 import '../models/pickup_spot.dart';
@@ -159,11 +158,10 @@ class StoryCardData {
   }
 }
 
-/// 카드를 1080×1920 PNG 바이트로 렌더. 한글 폰트 선로딩으로 tofu 방지.
+/// 카드를 1080×1920 PNG 바이트로 렌더. 번들 Pretendard 사용으로 한글 tofu 방지.
 Future<Uint8List?> renderStoryCardPng(StoryCardData data) async {
-  try {
-    await GoogleFonts.pendingFonts([GoogleFonts.notoSansKr()]);
-  } catch (_) {}
+  // Pretendard는 pubspec fonts로 번들 → 앱 시작 시 등록되어 즉시 사용 가능
+  // (google_fonts의 런타임 페치/pendingFonts 불필요).
   final logo = await _loadLogo();
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder);
@@ -194,7 +192,8 @@ class StoryCardPainter extends CustomPainter {
   static const _brown = Color(0xFF8D6E63);
   static const _yellow = Color(0xFFFAC710);
 
-  TextStyle _st(double size, FontWeight w, Color c) => GoogleFonts.notoSansKr(
+  TextStyle _st(double size, FontWeight w, Color c) => TextStyle(
+    fontFamily: 'Pretendard',
     fontSize: size,
     fontWeight: w,
     color: c,
