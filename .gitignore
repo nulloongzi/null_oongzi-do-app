@@ -43,3 +43,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Android signing — 릴리즈/업로드 키는 절대 커밋 금지 (GitHub Secrets로만 주입).
+# debug-fixed.keystore 는 디버그 전용(비밀 아님)이라 예외로 계속 추적한다.
+**/key.properties
+*.jks
+*.keystore
+!android/app/debug-fixed.keystore
