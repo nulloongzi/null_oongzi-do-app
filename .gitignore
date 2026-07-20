@@ -43,3 +43,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# 릴리즈 서명 비밀 — 절대 커밋 금지 (CI가 Secrets에서 런타임 주입).
+# 주의: debug-fixed.keystore 는 의도적으로 커밋된 디버그 키라 여기서 제외.
+android/key.properties
+android/upload-keystore.jks
+*.aab
