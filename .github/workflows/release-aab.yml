@@ -1,0 +1,113 @@
+name: Release AAB
+
+# 프로덕션 릴리즈용 "서명된" App Bundle(.aab) 빌드.
+# 서명 키는 절대 레포에 커밋하지 않는다 — GitHub Secrets에서 런타임 주입:
+#   ANDROID_KEYSTORE_BASE64    : base64로 인코딩한 릴리즈 .jks
+#   ANDROID_KEYSTORE_PASSWORD  : 키스토어 비밀번호
+#   ANDROID_KEY_ALIAS          : 키 alias
+#   ANDROID_KEY_PASSWORD       : 키 비밀번호
+# 산출물: app-release.aab (아티팩트) → Play Console 업로드용.
+# 수동 실행만(workflow_dispatch) — 릴리즈는 의도적 행위라 push 게이트로 두지 않음.
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_name:
+        description: "versionName 오버라이드 (예: 1.0.1). 비우면 pubspec 값 사용"
+        required: false
+        default: ""
+      build_number:
+        description: "versionCode 오버라이드 (예: 6). 비우면 pubspec 값. Play live보다 커야 함"
+        required: false
+        default: ""
+
+concurrency:
+  group: release-aab-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-aab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # 시크릿 미등록 상태에서 돌리면 디버그로 조용히 빌드되는 사고를 막는다.
+      - name: 시크릿 존재 확인
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KS_B64" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 시크릿이 없습니다. 릴리즈 키스토어/비번을 레포 Settings→Secrets and variables→Actions 에 먼저 등록하세요."
+            exit 1
+          fi
+
+      # AGP 8.11 / Gradle 8.14 는 JDK 17 필요
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - run: flutter --version
+
+      # base64 → android/upload-keystore.jks 복원.
+      # build.gradle.kts 는 rootProject(=android/) 기준으로 storeFile 을 찾으므로
+      # 파일명만 key.properties 에 넣는다(storeFile=upload-keystore.jks).
+      - name: 키스토어 복원
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: echo "$KS_B64" | base64 -d > android/upload-keystore.jks
+
+      - name: key.properties 생성
+        env:
+          STORE_PW: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PW: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          {
+            echo "storeFile=upload-keystore.jks"
+            echo "storePassword=$STORE_PW"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PW"
+          } > android/key.properties
+
+      - name: flutter pub get
+        run: flutter pub get
+
+      - name: Build signed AAB
+        env:
+          BUILD_NAME: ${{ github.event.inputs.build_name }}
+          BUILD_NUMBER: ${{ github.event.inputs.build_number }}
+        run: |
+          ARGS=""
+          [ -n "$BUILD_NAME" ]   && ARGS="$ARGS --build-name=$BUILD_NAME"
+          [ -n "$BUILD_NUMBER" ] && ARGS="$ARGS --build-number=$BUILD_NUMBER"
+          echo "flutter build appbundle --release$ARGS"
+          flutter build appbundle --release $ARGS
+
+      # 릴리즈 키로 서명됐는지 확인 — 디버그 키(CN=Android Debug)면 실패시킨다.
+      - name: 서명 인증서 확인
+        run: |
+          AAB=build/app/outputs/bundle/release/app-release.aab
+          keytool -printcert -jarfile "$AAB" | tee cert.txt || true
+          if grep -q "CN=Android Debug" cert.txt; then
+            echo "::error::AAB가 디버그 키로 서명됨 — 릴리즈 키 주입 실패. 시크릿/키 alias 확인."
+            exit 1
+          fi
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nulloongzido-release-aab
+          path: build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 14
+
+      # 러너 디스크에서 비밀 흔적 제거(아티팩트엔 포함 안 됨).
+      - name: Cleanup secrets on disk
+        if: always()
+        run: rm -f android/key.properties android/upload-keystore.jks
