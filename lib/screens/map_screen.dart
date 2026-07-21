@@ -751,6 +751,10 @@ class _MapScreenState extends State<MapScreen> {
   // ＋등록: 활성 탭에 따라 픽업/동호회 폼. 등록 성공 시 데이터 재로딩→마커 갱신.
   Future<void> _openRegister() async {
     // 클럽 등록은 로그인 필수(웹과 동일). 픽업은 무로그인(익명) 허용.
+    // 측정 파리티(웹 registration_login_gate): 미로그인 상태로 등록 시도한 신호
+    if (_tab != 'pickup' && _repo.currentUid == null) {
+      Track.event('registration_login_gate');
+    }
     if (_tab != 'pickup' && (!await _ensureLogin() || !mounted)) return;
     // 현재 지도 중심을 피커 초기 위치로 (없으면 폼 기본값 사용)
     final cam = await _controller?.getCameraPosition();

@@ -64,7 +64,17 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
   bool _saving = false;
   bool _geocoding = false;
 
+  // 인라인 에러(웹 regError 대응): 폼 상단 배너 + 미입력 필수 필드 하이라이트.
+  String? _formError;
+  final Set<String> _invalid = {};
+
   bool get _isEdit => widget.editing != null;
+
+  // 검증 실패를 스낵바 대신 폼 상단 배너로 표시(웹 showRegError 대응).
+  void _err(String msg) {
+    if (!mounted) return;
+    setState(() => _formError = msg);
+  }
 
   // 주소 → 좌표 (Cloud Function). 실패 시 지도 피커로 폴백 안내.
   Future<void> _geocode() async {
@@ -86,7 +96,14 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
         }
       }
     });
-    _snack(r != null ? t('f_addr_found') : t('f_addr_notfound'));
+    if (r != null) {
+      _snack(t('f_addr_found'));
+    } else {
+      // 지오코딩 실패 → 하드 블록 대신 지도 피커로 폴백 유도(웹과 동일 방향).
+      Track.event('registration_geocode_fail');
+      _snack(t('f_addr_notfound'));
+      await _pickLocation();
+    }
   }
 
   // 웹 reg-target-chip data-val: 값은 한글 고정(필터·기존데이터 호환), 라벨만 한/영.
@@ -131,6 +148,8 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
           if (mounted && v) setState(() => _isAdminUser = true);
         })
         .catchError((_) {});
+    // 측정 파리티(웹 registration_open): 등록 폼 도달 = 퍼널 진입 신호
+    Track.event('registration_open', {'mode': _isEdit ? 'edit' : 'create'});
   }
 
   @override
@@ -185,37 +204,45 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
   }
 
   Future<void> _submit() async {
+    // 재검증 전에 이전 에러 상태 초기화(웹 clearRegError 대응)
+    setState(() {
+      _formError = null;
+      _invalid.clear();
+    });
     final name = _name.text.trim();
     final target = _targetValue();
     final address = _address.text.trim();
     if (name.isEmpty || target.isEmpty || address.isEmpty) {
-      _snack(t('cf_req'));
-      return;
+      setState(() {
+        _invalid.addAll([
+          if (name.isEmpty) 'name',
+          if (target.isEmpty) 'target',
+          if (address.isEmpty) 'address',
+        ]);
+      });
+      return _err(t('cf_req'));
     }
-    if (_lat == null || _lng == null) {
-      _snack(t('f_pick_loc'));
-      return;
-    }
+    if (_lat == null || _lng == null) return _err(t('f_pick_loc'));
     // 길이 가드(웹과 동일 · permission-denied 예방)
-    if (name.length > 60) return _snack(t('cf_name_max'));
-    if (target.length > 80) return _snack(t('cf_target_max'));
-    if (address.length > 200) return _snack(t('cf_addr_max'));
+    if (name.length > 60) return _err(t('cf_name_max'));
+    if (target.length > 80) return _err(t('cf_target_max'));
+    if (address.length > 200) return _err(t('cf_addr_max'));
 
     final price = _price.text.trim();
-    if (price.length > 100) return _snack(t('cf_price_max'));
+    if (price.length > 100) return _err(t('cf_price_max'));
 
     // insta 핸들(선택)
     var insta = _insta.text.trim();
     if (insta.isNotEmpty) {
       final s = Sanitize.instaHandle(insta);
-      if (s.isEmpty) return _snack(t('cf_insta_invalid'));
+      if (s.isEmpty) return _err(t('cf_insta_invalid'));
       insta = s;
     }
     // 가입/문의 링크(선택)
     var link = _link.text.trim();
     if (link.isNotEmpty) {
       final s = Sanitize.url(link);
-      if (s.isEmpty) return _snack(t('f_link_invalid'));
+      if (s.isEmpty) return _err(t('f_link_invalid'));
       link = s;
     }
     // 릴스/게시물(선택)
@@ -225,7 +252,7 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
       final ln = c.text.trim();
       if (ln.isEmpty) continue;
       final s = Sanitize.instaPostUrl(ln);
-      if (s.isEmpty) return _snack(t('f_reel_invalid'));
+      if (s.isEmpty) return _err(t('f_reel_invalid'));
       reels.add(s);
     }
 
@@ -262,7 +289,7 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
       Navigator.pop(context, true);
     } catch (e) {
       setState(() => _saving = false);
-      _snack('$e');
+      _err('$e');
     }
   }
 
@@ -279,7 +306,15 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SheetTitle(_isEdit ? t('cf_edit_title') : t('cf_title')),
-            _group(t('cf_name'), _input(_name, t('cf_name_hint'))),
+            if (_formError != null) _errorBanner(_formError!),
+            _group(
+              t('cf_name'),
+              _input(
+                _name,
+                t('cf_name_hint'),
+                invalid: _invalid.contains('name'),
+              ),
+            ),
             _group(
               t('cf_target'),
               Column(
@@ -298,19 +333,52 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
                   _input(_targetNote, t('cf_target_note')),
                 ],
               ),
+              invalid: _invalid.contains('target'),
             ),
-            _group(t('cf_addr'), _addressRow()),
             _group(
-              t('cf_sched'),
-              ScheduleEditor(blocks: _blocks, onChanged: () => setState(() {})),
+              t('cf_addr'),
+              _addressRow(invalid: _invalid.contains('address')),
             ),
-            _group(t('cf_price'), _input(_price, t('cf_price_hint'))),
-            _group(t('cf_insta'), _input(_insta, t('cf_insta_hint'))),
-            _group(
-              t('f_reel_label'),
-              ReelEditor(controllers: _reels, onChanged: () => setState(() {})),
+            // 선택 정보는 접기 섹션으로(체감 폼 길이 축소). 편집 시엔 펼쳐 시작.
+            Theme(
+              data: Theme.of(
+                context,
+              ).copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                initiallyExpanded: _isEdit,
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: EdgeInsets.zero,
+                expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
+                title: Text(
+                  t('cf_optional_summary'),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: NurungjiColors.brown,
+                    fontSize: 14,
+                  ),
+                ),
+                children: [
+                  const SizedBox(height: 8),
+                  _group(
+                    t('cf_sched'),
+                    ScheduleEditor(
+                      blocks: _blocks,
+                      onChanged: () => setState(() {}),
+                    ),
+                  ),
+                  _group(t('cf_price'), _input(_price, t('cf_price_hint'))),
+                  _group(t('cf_insta'), _input(_insta, t('cf_insta_hint'))),
+                  _group(
+                    t('f_reel_label'),
+                    ReelEditor(
+                      controllers: _reels,
+                      onChanged: () => setState(() {}),
+                    ),
+                  ),
+                  _group(t('cf_link'), _input(_link, t('f_contact_hint'))),
+                ],
+              ),
             ),
-            _group(t('cf_link'), _input(_link, t('f_contact_hint'))),
             if (_isAdminUser && _isEdit)
               _group(
                 t('cf_owner_email'),
@@ -336,7 +404,31 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
     );
   }
 
-  Widget _group(String label, Widget child) {
+  // 인라인 에러 배너(웹 .reg-error 대응)
+  Widget _errorBanner(String msg) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFDECEA),
+        border: const Border(
+          left: BorderSide(color: Color(0xFFD32F2F), width: 3),
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        msg,
+        style: const TextStyle(
+          color: Color(0xFFB71C1C),
+          fontSize: 13,
+          height: 1.45,
+        ),
+      ),
+    );
+  }
+
+  Widget _group(String label, Widget child, {bool invalid = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 18),
       child: Column(
@@ -344,9 +436,9 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
         children: [
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w700,
-              color: NurungjiColors.dark,
+              color: invalid ? const Color(0xFFD32F2F) : NurungjiColors.dark,
             ),
           ),
           const SizedBox(height: 8),
@@ -356,14 +448,17 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
     );
   }
 
-  Widget _input(TextEditingController c, String hint) {
+  Widget _input(TextEditingController c, String hint, {bool invalid = false}) {
     return TextField(
       controller: c,
-      decoration: InputDecoration(hintText: hint),
+      decoration: InputDecoration(
+        hintText: hint,
+        errorText: invalid ? t('cf_field_required') : null,
+      ),
     );
   }
 
-  Widget _addressRow() {
+  Widget _addressRow({bool invalid = false}) {
     final picked = _lat != null && _lng != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -379,7 +474,10 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
               });
             }
           },
-          decoration: InputDecoration(hintText: t('cf_addr_hint')),
+          decoration: InputDecoration(
+            hintText: t('cf_addr_hint'),
+            errorText: invalid ? t('cf_field_required') : null,
+          ),
         ),
         const SizedBox(height: 8),
         Row(
