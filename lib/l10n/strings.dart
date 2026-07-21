@@ -261,6 +261,11 @@ const Map<String, Map<String, String>> kStrings = {
     'en': 'Invalid Instagram post/reel link',
   },
   'f_updated': {'ko': '수정됐어요!', 'en': 'Updated!'},
+  'cf_optional_summary': {
+    'ko': '추가 정보 입력 (선택)',
+    'en': 'Add more details (optional)',
+  },
+  'cf_field_required': {'ko': '필수', 'en': 'Required'},
   'f_reel_label': {'ko': '릴스/게시물 링크 (선택)', 'en': 'Reel/post link (optional)'},
   'f_reel_hint': {
     'ko': '예: https://www.instagram.com/reel/...',
