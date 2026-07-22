@@ -12,7 +12,10 @@ name: Capture Marketing Assets (emulator)
 #  · 최대 리스크는 x86_64 에뮬 SwiftShader에서 네이버맵 타일 미렌더(함정4).
 #    → 항상 "지도 렌더 스모크 게이트"를 가장 먼저 돌려 (near-)black이면 즉시 실패시킨다.
 #
-# 수동 실행 전용(workflow_dispatch). 첫 실행은 smoke_only=true 로 지도 렌더부터 검증하라.
+# 수동 실행(workflow_dispatch)이 기본. 워크플로가 아직 default 브랜치에 없어 API dispatch가
+# 안 되는 동안엔, claude/** 브랜치 push 로도 자동 실행된다(capture 파일 변경 시).
+# push 트리거는 입력값이 없으므로 안전 기본값(debug + smoke_only)으로 동작 → 시크릿 불필요.
+# 첫 실행은 smoke_only=true 로 지도 렌더부터 검증하라(함정4 조기 판정).
 
 on:
   workflow_dispatch:
@@ -35,6 +38,12 @@ on:
         description: "릴스 화면녹화(mp4)까지 캡처 (smoke_only=false 일 때만)"
         type: boolean
         default: true
+  push:
+    branches: ["claude/**"]
+    paths:
+      - ".github/workflows/capture-assets.yml"
+      - "scripts/capture/**"
+      - ".maestro/**"
 
 concurrency:
   group: capture-assets-${{ github.ref }}
@@ -44,6 +53,12 @@ jobs:
   capture:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    # push 트리거엔 inputs가 없으므로 안전 기본값으로 폴백(빈 문자열이면 default).
+    env:
+      BUILD_TYPE: ${{ github.event.inputs.build_type || 'debug' }}
+      SMOKE_ONLY: ${{ github.event.inputs.smoke_only || 'true' }}
+      CAP_LANG: ${{ github.event.inputs.capture_lang || 'ko' }}
+      INCLUDE_REELS: ${{ github.event.inputs.include_reels || 'false' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -63,7 +78,7 @@ jobs:
       # release: 업로드 키스토어를 시크릿에서 주입(디버그로 조용히 빌드되는 사고 방지).
       # (release-aab.yml 과 동일한 서명 경로 — build.gradle.kts 는 android/key.properties 참조)
       - name: 릴리즈 서명 준비 (build_type=release)
-        if: ${{ inputs.build_type == 'release' }}
+        if: ${{ env.BUILD_TYPE == 'release' }}
         env:
           KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           STORE_PW: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -89,7 +104,7 @@ jobs:
       - name: Build APK
         id: build
         run: |
-          if [ "${{ inputs.build_type }}" = "release" ]; then
+          if [ "${{ env.BUILD_TYPE }}" = "release" ]; then
             flutter build apk --release
             echo "apk=build/app/outputs/flutter-apk/app-release.apk" >> "$GITHUB_OUTPUT"
           else
@@ -102,7 +117,7 @@ jobs:
 
       # release 서명 검증(디버그 키로 새어나갔으면 실패) — 마케팅 자산 신뢰성 보장
       - name: 서명 인증서 확인 (release)
-        if: ${{ inputs.build_type == 'release' }}
+        if: ${{ env.BUILD_TYPE == 'release' }}
         run: |
           keytool -printcert -jarfile "${{ steps.build.outputs.apk }}" | tee cert.txt || true
           if grep -q "CN=Android Debug" cert.txt; then
@@ -140,9 +155,9 @@ jobs:
         env:
           APK_PATH: ${{ steps.build.outputs.apk }}
           ARTIFACTS_DIR: ${{ github.workspace }}/marketing-assets
-          SMOKE_ONLY: ${{ inputs.smoke_only }}
-          CAP_LANG: ${{ inputs.capture_lang }}
-          INCLUDE_REELS: ${{ inputs.include_reels }}
+          SMOKE_ONLY: ${{ env.SMOKE_ONLY }}
+          CAP_LANG: ${{ env.CAP_LANG }}
+          INCLUDE_REELS: ${{ env.INCLUDE_REELS }}
           # 로그인 필요 화면(도시락/프로필/닉네임) 옵션 — 테스트 계정 시크릿 있을 때만 동작.
           TEST_ACCOUNT_EMAIL: ${{ secrets.TEST_ACCOUNT_EMAIL }}
           TEST_ACCOUNT_PASSWORD: ${{ secrets.TEST_ACCOUNT_PASSWORD }}
