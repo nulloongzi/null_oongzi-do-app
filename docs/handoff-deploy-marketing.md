@@ -3,6 +3,21 @@
 > 이 문서는 테스트 인프라(Phase 1~3)를 마친 세션이, **배포 준비 + 마케팅 전략** 세션으로
 > 넘기기 위한 컨텍스트 요약이다. 새 세션은 이 파일부터 읽고 시작하면 된다.
 
+## 📌 진행 현황 (2026-07-22 업데이트)
+배포 준비 대부분 완료. **남은 건 Play 내부테스트 업로드 1건**.
+
+- ✅ **웹**: GitHub Pages 라이브 배포 완료 (등록 마찰 개선 반영, 커밋 `7283363`).
+- ✅ **앱 코드**: 팀 등록 마찰 4종 개선 + 측정 이벤트 파리티 + FB App ID 정정 전부 main 반영.
+- ✅ **서명 릴리스 빌드**: `release-aab.yml`(workflow_dispatch)로 **서명된 AAB** 빌드 가능해짐.
+  최신 정정본 AAB = [Actions 런 #3](https://github.com/nulloongzi/null_oongzi-do-app/actions/runs/29896465501) 아티팩트 (`2.0.0+6`).
+- ✅ **SDK 릴리스 등록 + 실기기 검증**(debug APK, `debug-fixed` 서명):
+  - 네이버맵: NCP Maps 앱에 패키지명 `com.nulloongzi.nulloongzido` 등록됨 (client id `t4mzao93mh` 일치) → 지도 정상.
+  - 카카오: Android 플랫폼에 키해시 3종 등록(디버그 `7+iGjU4…` / 앱서명 `SRKtuXxf…` / 업로드 `pw8B1jHS…`) → 공유 정상.
+  - 인스타 스토리: FB App ID를 **비즈니스 ID(잘못) → 실제 App ID `1632483851162862`로 정정** → 스토리 공유 정상.
+- ✅ **패키지명/서명키/versionCode**: Play 업로드 시도가 "서명 인증서" 단계까지 도달 → 패키지명 일치·versionCode 6>live 사실상 확인.
+- ⏳ **남은 1건**: 업로드 키 재설정 유예로 인해 **재업로드는 2026-07-22 22:22 KST 이후 가능**. 그때 런 #3 AAB를
+  내부테스트 트랙에 업로드 → Play 앱서명 키 경로 최종 확인.
+
 ## 제품 개요
 - **누룽지도** — 한국 배구 동호회 찾기 지도 앱. 지역/요일/대상 필터, 픽업 게임, 도시락(찜한 팀),
   밥이름 닉네임, 카카오 공유, KO/EN 다국어.
@@ -21,24 +36,22 @@
 - **이번 Flutter 앱(`null_oongzi-do-app`) = 웹뷰 → 네이티브 재작성.** 즉 신규 출시가 아니라
   기존 리스팅을 **업데이트로 교체**하는 시나리오.
 
-## 배포의 첫 갈림길 (가장 먼저 확인)
+## 배포의 첫 갈림길 (해결됨 — 기록용)
 **기존 웹뷰 앱과 같은 리스팅으로 무중단 업데이트하려면** 아래가 일치해야 한다:
-- **패키지명(applicationId):** 이 Flutter 앱은 `com.nulloongzi.nulloongzido`
-  (`android/app/build.gradle.kts` namespace/applicationId).
-  → 기존 Play Store 웹뷰 앱의 패키지명과 **동일한지 확인 필요.** 다르면 같은 리스팅 업데이트
-  불가(별도 신규 앱이 됨).
-- **업로드 서명 키:** 기존 앱과 같은 keystore(또는 Play App Signing 등록분)로 서명해야 함.
-- **versionCode:** 현재 `pubspec.yaml` = `1.0.0+5` (versionCode 5). 다음 업로드는 스토어의
-  현재 live versionCode보다 **커야** 함.
+- **패키지명(applicationId):** `com.nulloongzi.nulloongzido` (`android/app/build.gradle.kts`).
+  → ✅ Play 업로드가 서명 단계까지 도달 = 기존 리스팅과 패키지명 일치 확인됨.
+- **업로드 서명 키:** ✅ 레포 릴리스 keystore가 Play가 인식한 (재설정된) 업로드 키와 일치.
+  단 **업로드 키 재설정 유예**로 2026-07-22 22:22 KST 이후 재업로드 가능.
+- **versionCode:** 현재 `pubspec.yaml` = **`2.0.0+6`** (versionCode 6). ✅ 업로드 시 버전 에러 없었으므로 live보다 큼.
 
 ## 배포 전 기술 체크리스트 (앱)
-- [ ] 패키지명/서명/ versionCode 일치 (위)
-- [ ] 프로덕션 키: 네이버맵 Client ID(`lib/main.dart` `kNaverMapClientId`), 카카오 네이티브 앱키
-      — 콘솔에 릴리즈 서명 키해시/패키지명 등록됐는지
-- [ ] release 빌드 확인 (현 CI는 debug APK만 빌드 — `.github/workflows/build-apk.yml`)
+- [x] 패키지명/서명/versionCode 일치 (위 — Play 업로드 시도로 확인)
+- [x] 프로덕션 SDK 등록: 네이버맵(패키지명), 카카오(키해시 3종), FB(App ID 정정) — **실기기 debug APK로 3종 동작 검증 완료**
+- [x] release 빌드: `release-aab.yml`로 서명 AAB 빌드 (`.github/workflows/build-apk.yml`은 debug APK 사이드로드용)
+- [ ] **Play 내부테스트 업로드** (22:22 KST 이후) → 앱서명 키 경로 최종 확인 ← **유일한 잔여**
 - [ ] 스토어 리스팅 갱신: 네이티브 전환에 맞춰 스크린샷/설명 업데이트 여지
 - [ ] 개인정보처리방침: 웹 레포 `privacy.md` 존재 — 최신인지 확인
-- [ ] iOS도 낼지 결정(현재 android 중심; `ios/` 존재하나 App Store 이력 불명)
+- [ ] iOS도 낼지 결정(현재 android 중심; `ios/` 존재하나 App Store 이력 불명. FB Info.plist도 정정됨)
 
 ## 테스트/CI 상태 (방금 완료 — 안심하고 배포 가능한 근거)
 Phase 1~3 완료, 두 레포 main green. 코드 변경 시 자동 게이트가 회귀를 막음.
@@ -56,6 +69,8 @@ Phase 1~3 완료, 두 레포 main green. 코드 변경 시 자동 게이트가 �
   기존 웹(nulloongzido.com)과의 유입 연계.
 
 ## 참고 파일 경로
-- 앱: `lib/main.dart`(SDK 키/초기화) · `android/app/build.gradle.kts`(패키지·서명) ·
-  `.github/workflows/build-apk.yml`(APK 빌드) · `pubspec.yaml`(version)
+- 앱: `lib/main.dart`(네이버맵/카카오 SDK 키·초기화) · `lib/services/story_share.dart`(FB App ID `kFacebookAppId`) ·
+  `android/app/src/main/res/values/strings.xml`(`facebook_app_id`) · `ios/Runner/Info.plist`(FacebookAppID) ·
+  `android/app/build.gradle.kts`(패키지·서명, debug=`debug-fixed.keystore`) · `pubspec.yaml`(version `2.0.0+6`)
+- 릴리스: `.github/workflows/release-aab.yml`(서명 AAB, 수동) · `.github/workflows/build-apk.yml`(debug APK, 수동)
 - 웹: `privacy.md` · `docs/testing-methodology.md`(테스트 사다리 근거)
