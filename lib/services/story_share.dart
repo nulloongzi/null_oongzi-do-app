@@ -13,7 +13,7 @@ import 'share_service.dart';
 import 'station_service.dart';
 
 // strings.xml / Info.plist 의 FacebookAppID 와 동일해야 스티커 탭→딥링크가 동작.
-const String kFacebookAppId = '129937258232161';
+const String kFacebookAppId = '1632483851162862';
 
 /// 첫 공유 시 1회: '링크 스티커' 붙이는 법 안내(인스타는 외부앱 자동 링크를 막음).
 Future<void> _maybeShowCoach(BuildContext context) async {
