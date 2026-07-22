@@ -120,33 +120,49 @@ fi
 tap() { adb shell input tap "$1" "$2" >/dev/null 2>&1; }
 swp() { adb shell input swipe "$1" "$2" "$3" "$4" "${5:-500}" >/dev/null 2>&1; }
 back() { adb shell input keyevent 4 >/dev/null 2>&1; }
+
+# ANR 다이얼로그("Pixel Launcher isn't responding") 정리.
+# hide_error_dialogs 설정이 이 런처 ANR엔 안 먹혀서(라운드1 확인) 능동 dismiss:
+# 현재 포커스 창이 우리 앱이 아니면(=다이얼로그가 위에 있음) 'Wait' 버튼을 눌러 닫는다.
+# ⚠️ 'Wait' 좌표는 시스템 중앙 다이얼로그의 하단 버튼 추정(1080×2400).
+X_WAIT=300; Y_WAIT=1360
+dismiss_anr() {
+  local i foc
+  for i in 1 2 3 4; do
+    foc="$(adb shell dumpsys window 2>/dev/null | grep -m1 -i 'mCurrentFocus' || true)"
+    echo "$foc" | grep -q "$APP_ID" && return 0      # 우리 앱 포커스 = 다이얼로그 없음
+    [ -z "$foc" ] && return 0
+    adb shell input tap $X_WAIT $Y_WAIT >/dev/null 2>&1   # 'Wait' 눌러 ANR 닫기
+    adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 2>&1 || true
+    sleep 2
+  done
+}
 relaunch() { # relaunch [wait]
   adb shell am force-stop "$APP_ID" >/dev/null 2>&1 || true
   adb shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
-  sleep "${1:-30}"
+  sleep "${1:-30}"; dismiss_anr
 }
-cap() { demo_on; sleep 1; shot "$1"; log "  캡처: $1"; }
+cap() { dismiss_anr; demo_on; sleep 1; shot "$1"; log "  캡처: $1"; }
 
-# 좌표 프리셋(1080×2400 추정, ⚠️보정 대상)
-X_TAB_CLUBS=415;  Y_TAB=345         # 🏐 동호회 탭
-X_TAB_PICKUP=565
-X_LANG=915;       Y_TOPBAR=215      # 검색바 우측 'EN/한' 토글
-X_FILTER=1000                        # 검색바 우측 필터(tune) 아이콘
-X_MARKER=540;     Y_MARKER=1150      # 지도 중앙 마커(상세 트리거) 추정
+# 좌표 프리셋 — 라운드1 스샷(play_04, 급구 티커 있음)에서 측정. 1080×2400.
+Y_TOPBAR=211                          # 검색바 행
+X_LANG=864                            # 'EN/한' 토글
+X_FILTER=954                          # 필터(tune) 아이콘
+Y_TAB=414                             # 탭 pill 행(급구 티커로 아래로 밀림)
+X_TAB_CLUBS=427; X_TAB_PICKUP=675
+X_MARKER=540;    Y_MARKER=980         # 개별 마커 추정(상세 트리거)
 
-# EN 세트면 최초 1회 언어 토글
-[ "$CAP_LANG" = "en" ] && { tap $X_LANG $Y_TOPBAR; sleep 2; }
+# 앱은 gate에서 이미 실행 중 → 재기동 없이 ANR만 정리하고 그 상태로 내비(런처 ANR 재유발 회피).
+sleep 5; dismiss_anr
 
-# 1) 지도 (gate에서 이미 로드 → 재기동 짧게)
-relaunch 8
-[ "$CAP_LANG" = "en" ] && { tap $X_LANG $Y_TOPBAR; sleep 2; }
+# 1) 지도 (clean)
 cap "play_01_map_${CAP_LANG}"
 
 # 2) 픽업 목록
 tap $X_TAB_PICKUP $Y_TAB; sleep 5; cap "play_03_pickup_${CAP_LANG}"
 
 # 3) 동호회 복귀 → 필터 시트
-tap $X_TAB_CLUBS $Y_TAB; sleep 2
+tap $X_TAB_CLUBS $Y_TAB; sleep 3
 tap $X_FILTER $Y_TOPBAR; sleep 3; cap "play_02_filter_${CAP_LANG}"
 back; sleep 2
 
@@ -154,8 +170,7 @@ back; sleep 2
 tap $X_MARKER $Y_MARKER; sleep 4; cap "play_04_detail_${CAP_LANG}"
 back; sleep 2
 
-# (공유/도시락/프로필 화면은 좌표 확정 후 라운드2에서 추가)
-log "TEST_ACCOUNT_* 로그인 세트 및 공유 화면은 좌표 보정(라운드2) 후 추가 예정."
+log "TEST_ACCOUNT_* 로그인 세트 및 공유 화면은 좌표 확정 후 다음 라운드에 추가 예정."
 
 # ── 릴스: adb screenrecord + 좌표 제스처 ─────────────────────
 # 1080×2400 원본 녹화 → 릴스(1080×1920)는 편집서 크롭.
@@ -163,7 +178,7 @@ if [ "$INCLUDE_REELS" = "true" ]; then
   reel() { # reel <name> <gesture-fn> <secs>
     local name="$1" fn="$2" secs="${3:-18}" dev="/sdcard/${1}.mp4"
     log "🎬 릴스 녹화: $name"
-    relaunch 12; demo_on
+    relaunch 22; demo_on
     adb shell screenrecord --bit-rate 8000000 --time-limit "$secs" "$dev" &
     local rec=$!; sleep 1
     "$fn"

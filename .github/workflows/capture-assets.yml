@@ -152,10 +152,14 @@ jobs:
           arch: x86_64
           target: google_apis
           profile: pixel_6
+          # 리소스 증설 — 느린 SwiftShader에서 런처 ANR("isn't responding") 완화.
+          ram-size: 4096M
+          cores: 4
           disable-animations: true
           emulator-options: >-
             -no-window -no-snapshot -noaudio -no-boot-anim
             -gpu swiftshader_indirect -camera-back none -camera-front none
+            -memory 4096 -cores 4
           script: bash scripts/capture/run_capture.sh
         env:
           APK_PATH: ${{ steps.build.outputs.apk }}
