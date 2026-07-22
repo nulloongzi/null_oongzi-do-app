@@ -1,0 +1,28 @@
+# reel_1_findmap.yaml — 릴스 #1 "지도로 팀 찾기": 지도 열기 → 마커 탭 → 상세.
+# record.sh 가 screenrecord 로 감싸 mp4 녹화(스샷 없음). 동작은 천천히·부드럽게.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- runFlow:
+    when:
+      true: ${APPLANG == "en"}
+    file: ../_set_lang_en.yaml
+- extendedWaitUntil:
+    visible: "동호회"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 8000
+# 지도 살짝 패닝(생동감).
+- swipe: { start: "50%, 55%", end: "40%, 45%", duration: 900 }
+- waitForAnimationToEnd:
+    timeout: 3000
+# 마커 탭 → 상세(⚠️ 좌표 보정 대상).
+- tapOn:
+    point: "50%, 45%"
+- extendedWaitUntil:
+    visible: "공유하기"
+    timeout: 8000
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 3000

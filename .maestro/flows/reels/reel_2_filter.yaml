@@ -1,0 +1,26 @@
+# reel_2_filter.yaml — 릴스 #2 "필터": 필터 열기 → (칩 선택) → 적용 → 좁혀진 결과.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- runFlow:
+    when:
+      true: ${APPLANG == "en"}
+    file: ../_set_lang_en.yaml
+- extendedWaitUntil:
+    visible: "동호회"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 6000
+# 필터(tune) 아이콘 — 좌표(⚠️ 보정).
+- tapOn:
+    point: "93%, 13%"
+- extendedWaitUntil:
+    visible: "적용하기"
+    timeout: 8000
+# (선택) 알려진 칩 라벨로 보정: - tapOn: "목요일"
+- waitForAnimationToEnd:
+    timeout: 1500
+- tapOn: "적용하기"
+- waitForAnimationToEnd:
+    timeout: 5000

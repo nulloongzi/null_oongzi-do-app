@@ -1,0 +1,24 @@
+# reel_7_finale.yaml — 릴스 #7 "피날레": 지도 부드러운 패닝(네이티브 지도 강조).
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- runFlow:
+    when:
+      true: ${APPLANG == "en"}
+    file: ../_set_lang_en.yaml
+- extendedWaitUntil:
+    visible: "동호회"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 8000
+# 느리고 긴 패닝 여러 번 → 편집 시 크롭/속도조절.
+- swipe: { start: "70%, 55%", end: "30%, 50%", duration: 1400 }
+- waitForAnimationToEnd:
+    timeout: 1500
+- swipe: { start: "30%, 50%", end: "70%, 55%", duration: 1400 }
+- waitForAnimationToEnd:
+    timeout: 1500
+- swipe: { start: "50%, 65%", end: "50%, 40%", duration: 1400 }
+- waitForAnimationToEnd:
+    timeout: 2000

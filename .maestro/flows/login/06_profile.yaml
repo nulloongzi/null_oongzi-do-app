@@ -1,0 +1,28 @@
+# 06_profile.yaml — Play 스샷 #6: 밥이름 프로필 + 닉네임 변경. (로그인 필요)
+# 게스트가 🍚(프로필) 탭 → 로그인 게이트 → 로그인 → 프로필 → 닉네임 변경 UI.
+# 주의: 실제 닉네임 '변경 완료'는 prod 쓰기 → 저장 버튼은 누르지 않고 UI만 캡처.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- runFlow:
+    when:
+      true: ${APPLANG == "en"}
+    file: ../_set_lang_en.yaml
+- extendedWaitUntil:
+    visible: "동호회"
+    timeout: 30000
+# 프로필 FAB(🍚) → 게스트면 로그인 게이트.
+- tapOn: "🍚"
+- runFlow: ./_login_email.yaml
+- tapOn: "🍚"
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: "${OUT}/play_06_profile_${APPLANG}"
+# 닉네임 변경 화면(밥이름 생성 재미 요소) — 저장은 하지 않음.
+- tapOn:
+    text: "닉네임 변경|Change nickname"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: "${OUT}/play_06b_nickname_${APPLANG}"

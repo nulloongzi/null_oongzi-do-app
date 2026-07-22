@@ -1,0 +1,25 @@
+# 02_pickup.yaml — Play 스샷 #3: 픽업 목록(+상세). (게스트 열람)
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- runFlow:
+    when:
+      true: ${APPLANG == "en"}
+    file: ../_set_lang_en.yaml
+- extendedWaitUntil:
+    visible: "동호회"
+    timeout: 30000
+# 픽업 탭 전환(탭 pill 텍스트 "📍 픽업" → 부분 매치 "픽업").
+- tapOn: "픽업"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: "${OUT}/play_03_pickup_${APPLANG}"
+# 목록의 첫 픽업 카드 → 상세. 카드는 데이터 의존이라 좌표로(리스트 상단부).
+# ⚠️ 첫 실행 후 보정.
+- tapOn:
+    point: "50%, 55%"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: "${OUT}/play_03b_pickup_detail_${APPLANG}"
