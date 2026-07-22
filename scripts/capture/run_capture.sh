@@ -40,6 +40,13 @@ adb shell input keyevent 82 >/dev/null 2>&1 || true  # 잠금 해제(스와이�
 log "APK 설치: $APK"
 adb install -r -g "$APK" || adb install -r "$APK"
 
+# 시스템 에러/ANR 다이얼로그 억제 — 느린 SwiftShader 에뮬에서 "Pixel Launcher isn't
+# responding" 팝업이 스샷을 오염시키고, 앱 위를 덮어 좌표 탭/캡처를 방해한다.
+adb shell settings put global hide_error_dialogs 1 >/dev/null 2>&1 || true
+adb shell settings put secure anr_show_background 0 >/dev/null 2>&1 || true
+adb shell svc power stayon true >/dev/null 2>&1 || true
+adb shell settings put system screen_off_timeout 1800000 >/dev/null 2>&1 || true
+
 # ── 상태바 정리(프로 스샷): Android demo mode ────────────────
 demo_on() {
   adb shell settings put global sysui_demo_allowed 1 || true
@@ -65,17 +72,17 @@ fingerprint() {
   echo "===== CAPTURE FINGERPRINT ====="
   for f in "$SCREENS"/*.png; do
     [ -e "$f" ] || continue
+    local b m d
+    b="$(basename "$f" .png)"
     m="$(convert "$f" -colorspace Gray -format '%[fx:mean]' info: 2>/dev/null || echo NA)"
     d="$(identify -format '%wx%h' "$f" 2>/dev/null || echo '?')"
-    echo "FP $(basename "$f") mean=$m dim=$d"
-  done
-  local mapf="$SCREENS/play_01_map_${CAP_LANG}.png"
-  if [ -e "$mapf" ]; then
-    echo "THUMB_B64_BEGIN play_01_map_${CAP_LANG} png ~100px"
-    convert "$mapf" -resize 100x -strip png:- 2>/dev/null | base64 -w0
+    echo "FP $b mean=$m dim=$d"
+    # 각 스샷을 JPEG 썸네일(≈240px)로 로그에 남겨 좌표 보정/육안 검증(프록시가 아티팩트 차단해도).
+    echo "THUMB_JPG_BEGIN $b"
+    convert "$f" -resize 240x -quality 70 jpg:- 2>/dev/null | base64 -w0
     echo ""
-    echo "THUMB_B64_END"
-  fi
+    echo "THUMB_JPG_END $b"
+  done
   echo "===== END FINGERPRINT ====="
 }
 
@@ -105,53 +112,74 @@ if [ "$SMOKE_ONLY" = "true" ]; then
   exit 0
 fi
 
-# ── Maestro 설치(전체 캡처용) ────────────────────────────────
-log "Maestro 설치…"
-export MAESTRO_VERSION="1.39.0"
-curl -fsSL "https://get.maestro.mobile.dev" | bash
-export PATH="$PATH:$HOME/.maestro/bin"
-maestro --version || { echo "::error::Maestro 설치 실패"; exit 1; }
-
-# Maestro 플로우 공통 env (flows 에서 ${OUT}, ${APPLANG} 로 참조)
-MENV=(--env "OUT=$PWD/$SCREENS" --env "APPLANG=$CAP_LANG" --env "APP_ID=$APP_ID")
-
-run_flow() {  # run_flow <flow-file>
-  log "flow: $1"
-  maestro test "${MENV[@]}" "$FLOWS/$1" 2>&1 | tee -a "$LOGS/maestro.log" || {
-    echo "::warning::flow 실패(계속): $1"
-  }
+# ── 전체 캡처: 순수 adb 좌표 내비게이션 ──────────────────────
+# Maestro는 이 앱(네이티브 NaverMap + Flutter 오버레이)의 접근성 트리를 못 읽어
+# 텍스트 매칭이 전부 실패했다(로그: Assertion "동호회" is visible = false). 그래서
+# 좌표 탭(input tap/swipe) + screencap 으로 직접 시퀀싱한다(핸드오프 대안 경로).
+# ⚠️ 좌표는 1080×2400(pixel_6) 추정값 — 로그의 JPEG 썸네일로 라운드마다 보정한다.
+tap() { adb shell input tap "$1" "$2" >/dev/null 2>&1; }
+swp() { adb shell input swipe "$1" "$2" "$3" "$4" "${5:-500}" >/dev/null 2>&1; }
+back() { adb shell input keyevent 4 >/dev/null 2>&1; }
+relaunch() { # relaunch [wait]
+  adb shell am force-stop "$APP_ID" >/dev/null 2>&1 || true
+  adb shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+  sleep "${1:-30}"
 }
+cap() { demo_on; sleep 1; shot "$1"; log "  캡처: $1"; }
 
-# ── 스크린샷 세트(게스트 열람 가능 화면) ─────────────────────
-demo_on
-for f in \
-  flows/screens/00_map.yaml \
-  flows/screens/01_filter.yaml \
-  flows/screens/02_pickup.yaml \
-  flows/screens/03_club_detail.yaml \
-  flows/screens/04_share.yaml
-do run_flow "$f"; done
+# 좌표 프리셋(1080×2400 추정, ⚠️보정 대상)
+X_TAB_CLUBS=415;  Y_TAB=345         # 🏐 동호회 탭
+X_TAB_PICKUP=565
+X_LANG=915;       Y_TOPBAR=215      # 검색바 우측 'EN/한' 토글
+X_FILTER=1000                        # 검색바 우측 필터(tune) 아이콘
+X_MARKER=540;     Y_MARKER=1150      # 지도 중앙 마커(상세 트리거) 추정
 
-# ── 로그인 필요 화면(옵션): 도시락/프로필/닉네임 ─────────────
-if [ -n "${TEST_ACCOUNT_EMAIL:-}" ] && [ -n "${TEST_ACCOUNT_PASSWORD:-}" ]; then
-  log "테스트 계정 감지 → 로그인 필요 화면 캡처."
-  MENV+=(--env "EMAIL=$TEST_ACCOUNT_EMAIL" --env "PASSWORD=$TEST_ACCOUNT_PASSWORD")
-  for f in flows/login/05_lunchbox.yaml flows/login/06_profile.yaml; do run_flow "$f"; done
-else
-  log "TEST_ACCOUNT_* 시크릿 없음 → 로그인 필요 화면(도시락/프로필/닉네임) 스킵."
-fi
+# EN 세트면 최초 1회 언어 토글
+[ "$CAP_LANG" = "en" ] && { tap $X_LANG $Y_TOPBAR; sleep 2; }
 
-# ── 릴스 화면녹화(mp4) ───────────────────────────────────────
-# 참고: pixel_6 는 1080×2400 → 녹화 원본도 그 해상도. 릴스(1080×1920)는 편집에서 크롭.
+# 1) 지도 (gate에서 이미 로드 → 재기동 짧게)
+relaunch 8
+[ "$CAP_LANG" = "en" ] && { tap $X_LANG $Y_TOPBAR; sleep 2; }
+cap "play_01_map_${CAP_LANG}"
+
+# 2) 픽업 목록
+tap $X_TAB_PICKUP $Y_TAB; sleep 5; cap "play_03_pickup_${CAP_LANG}"
+
+# 3) 동호회 복귀 → 필터 시트
+tap $X_TAB_CLUBS $Y_TAB; sleep 2
+tap $X_FILTER $Y_TOPBAR; sleep 3; cap "play_02_filter_${CAP_LANG}"
+back; sleep 2
+
+# 4) 클럽 상세(마커 탭)
+tap $X_MARKER $Y_MARKER; sleep 4; cap "play_04_detail_${CAP_LANG}"
+back; sleep 2
+
+# (공유/도시락/프로필 화면은 좌표 확정 후 라운드2에서 추가)
+log "TEST_ACCOUNT_* 로그인 세트 및 공유 화면은 좌표 보정(라운드2) 후 추가 예정."
+
+# ── 릴스: adb screenrecord + 좌표 제스처 ─────────────────────
+# 1080×2400 원본 녹화 → 릴스(1080×1920)는 편집서 크롭.
 if [ "$INCLUDE_REELS" = "true" ]; then
-  demo_on
-  # record.sh <name> <maestro-flow> : screenrecord 로 감싸 플로우를 녹화.
-  "$HERE/record.sh" "reel_1_findmap" "$FLOWS/flows/reels/reel_1_findmap.yaml"
-  "$HERE/record.sh" "reel_2_filter"  "$FLOWS/flows/reels/reel_2_filter.yaml"
-  "$HERE/record.sh" "reel_3_pickup"  "$FLOWS/flows/reels/reel_3_pickup.yaml"
-  "$HERE/record.sh" "reel_7_finale"  "$FLOWS/flows/reels/reel_7_finale.yaml"
+  reel() { # reel <name> <gesture-fn> <secs>
+    local name="$1" fn="$2" secs="${3:-18}" dev="/sdcard/${1}.mp4"
+    log "🎬 릴스 녹화: $name"
+    relaunch 12; demo_on
+    adb shell screenrecord --bit-rate 8000000 --time-limit "$secs" "$dev" &
+    local rec=$!; sleep 1
+    "$fn"
+    adb shell pkill -INT screenrecord >/dev/null 2>&1 || true
+    sleep 2; wait "$rec" 2>/dev/null || true
+    adb pull "$dev" "$REELS/${name}.mp4" >/dev/null 2>&1 && log "  ↳ $REELS/${name}.mp4" || echo "::warning::mp4 회수 실패: $name"
+    adb shell rm -f "$dev" >/dev/null 2>&1 || true
+  }
+  g_findmap() { sleep 2; swp 800 1300 300 1100 1100; sleep 2; tap $X_MARKER $Y_MARKER; sleep 3; }
+  g_pickup()  { sleep 2; tap $X_TAB_PICKUP $Y_TAB; sleep 4; swp 540 1600 540 900 700; sleep 3; }
+  g_finale()  { sleep 2; swp 800 1400 300 1200 1300; sleep 1; swp 300 1200 800 1400 1300; sleep 1; swp 540 1600 540 1000 1300; sleep 2; }
+  reel "reel_1_findmap" g_findmap 16
+  reel "reel_3_pickup"  g_pickup  16
+  reel "reel_7_finale"  g_finale  16
 fi
 
 adb logcat -d > "$LOGS/logcat.txt" 2>/dev/null || true
 fingerprint
-log "완료. screens=$(ls -1 "$SCREENS" | wc -l)장, reels=$(ls -1 "$REELS" 2>/dev/null | wc -l)편."
+log "완료. screens=$(ls -1 "$SCREENS" 2>/dev/null | wc -l)장, reels=$(ls -1 "$REELS" 2>/dev/null | wc -l)편."
