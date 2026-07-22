@@ -109,14 +109,15 @@ jobs:
       - name: Build APK
         id: build
         run: |
+          # CAPTURE_MODE: 앱의 캡처 디렉터(?capture= 딥링크) 활성화 — 마케팅 캡처 빌드 전용.
           if [ "${{ env.BUILD_TYPE }}" = "release" ]; then
-            flutter build apk --release
+            flutter build apk --release --dart-define=CAPTURE_MODE=true
             echo "apk=build/app/outputs/flutter-apk/app-release.apk" >> "$GITHUB_OUTPUT"
           else
             # debug: 커밋된 debug-fixed.keystore 서명(비밀 아님). main.dart 가
             # debugShowCheckedModeBanner:false 라 DEBUG 리본은 없지만, 카카오 공유는
             # release 키해시가 필요하므로 debug 세트에선 공유 스샷 품질이 제한될 수 있음.
-            flutter build apk --debug
+            flutter build apk --debug --dart-define=CAPTURE_MODE=true
             echo "apk=build/app/outputs/flutter-apk/app-debug.apk" >> "$GITHUB_OUTPUT"
           fi
 

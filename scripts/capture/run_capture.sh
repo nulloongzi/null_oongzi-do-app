@@ -112,92 +112,71 @@ if [ "$SMOKE_ONLY" = "true" ]; then
   exit 0
 fi
 
-# ── 전체 캡처: 순수 adb 좌표 내비게이션 ──────────────────────
-# Maestro는 이 앱(네이티브 NaverMap + Flutter 오버레이)의 접근성 트리를 못 읽어
-# 텍스트 매칭이 전부 실패했다(로그: Assertion "동호회" is visible = false). 그래서
-# 좌표 탭(input tap/swipe) + screencap 으로 직접 시퀀싱한다(핸드오프 대안 경로).
-# ⚠️ 좌표는 1080×2400(pixel_6) 추정값 — 로그의 JPEG 썸네일로 라운드마다 보정한다.
-tap() { adb shell input tap "$1" "$2" >/dev/null 2>&1; }
+# ── 전체 캡처: 앱 캡처 디렉터(딥링크) 기반 결정적 내비게이션 ──
+# Maestro(접근성 트리 못 읽음)·좌표 탭(마커 위치 런마다 변동)의 브리틀함을 버리고,
+# 앱에 심은 캡처 디렉터를 딥링크로 구동한다: ?capture=<화면>&lang=ko 를 열면
+# 앱이 KO 강제 + 데이터 로드 후 해당 화면을 **결정적으로** 연다(CAPTURE_MODE 빌드).
+CAP_URL="https://nulloongzi.github.io"
 swp() { adb shell input swipe "$1" "$2" "$3" "$4" "${5:-500}" >/dev/null 2>&1; }
-back() { adb shell input keyevent 4 >/dev/null 2>&1; }
 
-# ANR 다이얼로그("Pixel Launcher isn't responding") 정리.
-# hide_error_dialogs 설정이 이 런처 ANR엔 안 먹혀서(라운드1 확인) 능동 dismiss:
-# 현재 포커스 창이 우리 앱이 아니면(=다이얼로그가 위에 있음) 'Wait' 버튼을 눌러 닫는다.
-# ⚠️ 'Wait' 좌표는 시스템 중앙 다이얼로그의 하단 버튼 추정(1080×2400).
-X_WAIT=300; Y_WAIT=1360
+# ANR("Pixel Launcher isn't responding") 능동 정리 — hide_error_dialogs가 런처 ANR엔
+# 안 먹혀서(검증됨), 포커스가 우리 앱이 아니면 중앙 다이얼로그 'Wait'(300,1360) 탭.
 dismiss_anr() {
   local i foc
   for i in 1 2 3 4; do
     foc="$(adb shell dumpsys window 2>/dev/null | grep -m1 -i 'mCurrentFocus' || true)"
-    echo "$foc" | grep -q "$APP_ID" && return 0      # 우리 앱 포커스 = 다이얼로그 없음
+    echo "$foc" | grep -q "$APP_ID" && return 0
     [ -z "$foc" ] && return 0
-    adb shell input tap $X_WAIT $Y_WAIT >/dev/null 2>&1   # 'Wait' 눌러 ANR 닫기
+    adb shell input tap 300 1360 >/dev/null 2>&1
     adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 2>&1 || true
     sleep 2
   done
 }
-relaunch() { # relaunch [wait]
+# 캡처 딥링크로 콜드 실행(앱이 KO 강제 + 화면 이동).
+open_cap() { # open_cap <cmd> [wait]
   adb shell am force-stop "$APP_ID" >/dev/null 2>&1 || true
-  adb shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
-  sleep "${1:-30}"; dismiss_anr
+  # URL은 디바이스 셸에서 single-quote — '&'가 백그라운드 연산자로 해석되지 않게.
+  adb shell "am start -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=$1&lang=$CAP_LANG'" >/dev/null 2>&1
+  sleep "${2:-30}"; dismiss_anr
 }
 cap() { dismiss_anr; demo_on; sleep 1; shot "$1"; log "  캡처: $1"; }
 
-# 좌표 프리셋 — 라운드2 스샷 실측. 1080×2400.
-Y_TOPBAR=211                          # 검색바 행
-X_LANG=864                            # 'EN/한' 토글
-X_FILTER=954                          # 필터(tune) 아이콘
-Y_TAB=420                             # 탭 pill 행(급구 티커로 아래로 밀림)
-X_TAB_CLUBS=430; X_TAB_PICKUP=765     # 라운드2: 675는 빗나가 상세가 열림 → 765로 보정
-X_MARKER=540;    Y_MARKER=980         # 개별 마커(상세 트리거) — 라운드2 검증됨
-X_SHARE=877;     Y_SHARE=2283         # 상세 시트 하단 '공유' 버튼
+# ── 스크린샷 세트(딥링크 결정적) ─────────────────────────────
+open_cap map 30;      cap "play_01_map_${CAP_LANG}"
+open_cap filter 30;   cap "play_02_filter_${CAP_LANG}"
+open_cap pickup 30;   cap "play_03_pickup_${CAP_LANG}"
+open_cap detail 33;   cap "play_04_detail_${CAP_LANG}"
+open_cap lunchbox 34; cap "play_05_lunchbox_${CAP_LANG}"
+open_cap profile 32;  cap "play_06_profile_${CAP_LANG}"
+open_cap share 34;    cap "play_07_share_${CAP_LANG}"
+open_cap story 34;    cap "play_08_story_${CAP_LANG}"
 
-# 앱은 gate에서 이미 실행 중 → 재기동 없이 ANR만 정리하고 그 상태로 내비(런처 ANR 재유발 회피).
-sleep 5; dismiss_anr
-
-# 언어: 에뮬 로케일이 en이라 앱이 영어로 뜬다. ko 세트면 토글 1회로 한국어 전환.
-if [ "$CAP_LANG" = "ko" ]; then tap $X_LANG $Y_TOPBAR; sleep 3; dismiss_anr; fi
-
-# 1) 지도 (clean)
-cap "play_01_map_${CAP_LANG}"
-
-# 2) 픽업 목록
-tap $X_TAB_PICKUP $Y_TAB; sleep 5; cap "play_03_pickup_${CAP_LANG}"
-
-# 3) 동호회 복귀 → 필터 시트
-tap $X_TAB_CLUBS $Y_TAB; sleep 3
-tap $X_FILTER $Y_TOPBAR; sleep 3; cap "play_02_filter_${CAP_LANG}"
-back; sleep 2
-
-# 4) 클럽 상세(마커 탭) → 5) 공유 메뉴
-tap $X_MARKER $Y_MARKER; sleep 4; cap "play_04_detail_${CAP_LANG}"
-tap $X_SHARE $Y_SHARE; sleep 3; cap "play_07_share_${CAP_LANG}"
-back; sleep 1; back; sleep 2
-
-log "TEST_ACCOUNT_* 로그인 세트(도시락/프로필)는 테스트 계정 시크릿 있을 때만 — 추후."
-
-# ── 릴스: adb screenrecord + 좌표 제스처 ─────────────────────
-# 1080×2400 원본 녹화 → 릴스(1080×1920)는 편집서 크롭.
+# ── 릴스: 지도 로드 후 녹화 시작 → 액션 딥링크로 모션 유발 ────
+# 1080×2400 원본 → 릴스(1080×1920)는 편집서 크롭.
 if [ "$INCLUDE_REELS" = "true" ]; then
-  reel() { # reel <name> <gesture-fn> <secs>
-    local name="$1" fn="$2" secs="${3:-18}" dev="/sdcard/${1}.mp4"
+  reel() { # reel <name> <action_cmd|""> <secs>
+    local name="$1" act="$2" secs="${3:-15}" dev="/sdcard/${1}.mp4"
     log "🎬 릴스 녹화: $name"
-    relaunch 22; demo_on
+    open_cap map 26; demo_on                       # 지도 로드 완료 후
     adb shell screenrecord --bit-rate 8000000 --time-limit "$secs" "$dev" &
     local rec=$!; sleep 1
-    "$fn"
-    adb shell pkill -INT screenrecord >/dev/null 2>&1 || true
+    if [ -n "$act" ]; then
+      # 실행 중 앱에 액션 딥링크 → 카메라 이동/시트 슬라이드가 화면에 녹화됨
+      adb shell "am start -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=$act&lang=$CAP_LANG'" >/dev/null 2>&1
+    else
+      # 피날레: 부드러운 지도 패닝
+      swp 800 1400 300 1200 1300; sleep 1
+      swp 300 1200 800 1400 1300; sleep 1
+      swp 540 1600 540 1000 1300
+    fi
+    sleep 2; adb shell pkill -INT screenrecord >/dev/null 2>&1 || true
     sleep 2; wait "$rec" 2>/dev/null || true
     adb pull "$dev" "$REELS/${name}.mp4" >/dev/null 2>&1 && log "  ↳ $REELS/${name}.mp4" || echo "::warning::mp4 회수 실패: $name"
     adb shell rm -f "$dev" >/dev/null 2>&1 || true
   }
-  g_findmap() { sleep 2; swp 800 1300 300 1100 1100; sleep 2; tap $X_MARKER $Y_MARKER; sleep 3; }
-  g_pickup()  { sleep 2; tap $X_TAB_PICKUP $Y_TAB; sleep 4; swp 540 1600 540 900 700; sleep 3; }
-  g_finale()  { sleep 2; swp 800 1400 300 1200 1300; sleep 1; swp 300 1200 800 1400 1300; sleep 1; swp 540 1600 540 1000 1300; sleep 2; }
-  reel "reel_1_findmap" g_findmap 16
-  reel "reel_3_pickup"  g_pickup  16
-  reel "reel_7_finale"  g_finale  16
+  reel "reel_1_findmap" detail 15    # 지도 → 마커로 카메라 비행 + 상세 오픈
+  reel "reel_2_filter"  filter 12    # 필터 시트 슬라이드업
+  reel "reel_7_finale"  ""      15   # 부드러운 지도 패닝
 fi
 
 adb logcat -d > "$LOGS/logcat.txt" 2>/dev/null || true
