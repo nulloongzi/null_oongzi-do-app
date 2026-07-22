@@ -58,6 +58,27 @@ trap demo_off EXIT
 # 프레임버퍼 캡처(네이티브 지도 포함). Flutter takeScreenshot 은 플랫폼뷰를 검게 잡음.
 shot() { adb exec-out screencap -p > "$SCREENS/$1.png"; }
 
+# 캡처 결과 지문: 아티팩트를 못 받는 환경(에이전트 프록시)에서도 로그로 검증하기 위해
+#  · 각 스샷의 평균 밝기+해상도(블랙/블랭크 조기 감지)
+#  · 지도 1장은 base64 썸네일(로그에서 육안 확인)
+fingerprint() {
+  echo "===== CAPTURE FINGERPRINT ====="
+  for f in "$SCREENS"/*.png; do
+    [ -e "$f" ] || continue
+    m="$(convert "$f" -colorspace Gray -format '%[fx:mean]' info: 2>/dev/null || echo NA)"
+    d="$(identify -format '%wx%h' "$f" 2>/dev/null || echo '?')"
+    echo "FP $(basename "$f") mean=$m dim=$d"
+  done
+  local mapf="$SCREENS/play_01_map_${CAP_LANG}.png"
+  if [ -e "$mapf" ]; then
+    echo "THUMB_B64_BEGIN play_01_map_${CAP_LANG} png ~100px"
+    convert "$mapf" -resize 100x -strip png:- 2>/dev/null | base64 -w0
+    echo ""
+    echo "THUMB_B64_END"
+  fi
+  echo "===== END FINGERPRINT ====="
+}
+
 # ── 스모크 게이트: 지도 렌더(함정4) ──────────────────────────
 # 앱을 깨끗이 띄우고 지도 타일이 뜰 때까지 대기 → 스샷 → (near-)black 판정.
 log "앱 실행 + 지도 렌더 대기…"
@@ -79,6 +100,7 @@ fi
 log "✅ 지도 렌더 확인(비-검정)."
 
 if [ "$SMOKE_ONLY" = "true" ]; then
+  fingerprint
   log "smoke_only=true → 지도 스모크만 하고 종료. 아티팩트에서 play_01_map 을 눈으로 확인하세요."
   exit 0
 fi
@@ -131,4 +153,5 @@ if [ "$INCLUDE_REELS" = "true" ]; then
 fi
 
 adb logcat -d > "$LOGS/logcat.txt" 2>/dev/null || true
+fingerprint
 log "완료. screens=$(ls -1 "$SCREENS" | wc -l)장, reels=$(ls -1 "$REELS" 2>/dev/null | wc -l)편."

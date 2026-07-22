@@ -53,12 +53,17 @@ jobs:
   capture:
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    # push 트리거엔 inputs가 없으므로 안전 기본값으로 폴백(빈 문자열이면 default).
+    # push 트리거엔 inputs가 없으므로: 안전 기본값(debug+smoke)으로 폴백하되,
+    # 커밋 메시지 마커로 이번 실행만 승격시킨다(워크플로가 default 브랜치에 없어
+    # API dispatch가 안 되는 상황의 우회 — 일반 push는 계속 스모크로 안전).
+    #   [cap-full]    → smoke 해제(전체 스샷/릴스 캡처)
+    #   [cap-reels]   → 릴스 화면녹화 포함
+    #   [cap-release] → release 서명 빌드(시크릿 필요)
     env:
-      BUILD_TYPE: ${{ github.event.inputs.build_type || 'debug' }}
-      SMOKE_ONLY: ${{ github.event.inputs.smoke_only || 'true' }}
+      BUILD_TYPE: ${{ github.event.inputs.build_type || (contains(github.event.head_commit.message, '[cap-release]') && 'release' || 'debug') }}
+      SMOKE_ONLY: ${{ github.event.inputs.smoke_only || (contains(github.event.head_commit.message, '[cap-full]') && 'false' || 'true') }}
       CAP_LANG: ${{ github.event.inputs.capture_lang || 'ko' }}
-      INCLUDE_REELS: ${{ github.event.inputs.include_reels || 'false' }}
+      INCLUDE_REELS: ${{ github.event.inputs.include_reels || (contains(github.event.head_commit.message, '[cap-reels]') && 'true' || 'false') }}
     steps:
       - uses: actions/checkout@v4
 
