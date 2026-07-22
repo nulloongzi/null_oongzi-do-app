@@ -144,16 +144,20 @@ relaunch() { # relaunch [wait]
 }
 cap() { dismiss_anr; demo_on; sleep 1; shot "$1"; log "  캡처: $1"; }
 
-# 좌표 프리셋 — 라운드1 스샷(play_04, 급구 티커 있음)에서 측정. 1080×2400.
+# 좌표 프리셋 — 라운드2 스샷 실측. 1080×2400.
 Y_TOPBAR=211                          # 검색바 행
 X_LANG=864                            # 'EN/한' 토글
 X_FILTER=954                          # 필터(tune) 아이콘
-Y_TAB=414                             # 탭 pill 행(급구 티커로 아래로 밀림)
-X_TAB_CLUBS=427; X_TAB_PICKUP=675
-X_MARKER=540;    Y_MARKER=980         # 개별 마커 추정(상세 트리거)
+Y_TAB=420                             # 탭 pill 행(급구 티커로 아래로 밀림)
+X_TAB_CLUBS=430; X_TAB_PICKUP=765     # 라운드2: 675는 빗나가 상세가 열림 → 765로 보정
+X_MARKER=540;    Y_MARKER=980         # 개별 마커(상세 트리거) — 라운드2 검증됨
+X_SHARE=877;     Y_SHARE=2283         # 상세 시트 하단 '공유' 버튼
 
 # 앱은 gate에서 이미 실행 중 → 재기동 없이 ANR만 정리하고 그 상태로 내비(런처 ANR 재유발 회피).
 sleep 5; dismiss_anr
+
+# 언어: 에뮬 로케일이 en이라 앱이 영어로 뜬다. ko 세트면 토글 1회로 한국어 전환.
+if [ "$CAP_LANG" = "ko" ]; then tap $X_LANG $Y_TOPBAR; sleep 3; dismiss_anr; fi
 
 # 1) 지도 (clean)
 cap "play_01_map_${CAP_LANG}"
@@ -166,11 +170,12 @@ tap $X_TAB_CLUBS $Y_TAB; sleep 3
 tap $X_FILTER $Y_TOPBAR; sleep 3; cap "play_02_filter_${CAP_LANG}"
 back; sleep 2
 
-# 4) 클럽 상세(마커 탭)
+# 4) 클럽 상세(마커 탭) → 5) 공유 메뉴
 tap $X_MARKER $Y_MARKER; sleep 4; cap "play_04_detail_${CAP_LANG}"
-back; sleep 2
+tap $X_SHARE $Y_SHARE; sleep 3; cap "play_07_share_${CAP_LANG}"
+back; sleep 1; back; sleep 2
 
-log "TEST_ACCOUNT_* 로그인 세트 및 공유 화면은 좌표 확정 후 다음 라운드에 추가 예정."
+log "TEST_ACCOUNT_* 로그인 세트(도시락/프로필)는 테스트 계정 시크릿 있을 때만 — 추후."
 
 # ── 릴스: adb screenrecord + 좌표 제스처 ─────────────────────
 # 1080×2400 원본 녹화 → 릴스(1080×1920)는 편집서 크롭.
