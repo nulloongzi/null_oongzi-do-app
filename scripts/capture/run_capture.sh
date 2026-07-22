@@ -70,10 +70,12 @@ shot() { adb exec-out screencap -p > "$SCREENS/$1.png"; }
 #  · 지도 1장은 base64 썸네일(로그에서 육안 확인)
 fingerprint() {
   echo "===== CAPTURE FINGERPRINT ====="
-  for f in "$SCREENS"/*.png; do
+  for f in "$SCREENS"/*.png ${STORE:+"$STORE"/*.png}; do
     [ -e "$f" ] || continue
     local b m d
     b="$(basename "$f" .png)"
+    # store/ 합성본은 이름 충돌 방지로 접두어
+    case "$f" in "$STORE"/*) b="store_$b";; esac
     m="$(convert "$f" -colorspace Gray -format '%[fx:mean]' info: 2>/dev/null || echo NA)"
     d="$(identify -format '%wx%h' "$f" 2>/dev/null || echo '?')"
     echo "FP $b mean=$m dim=$d"
@@ -151,6 +153,37 @@ open_cap lunchbox 34; cap "play_05_lunchbox_${CAP_LANG}"
 open_cap profile 32;  cap "play_06_profile_${CAP_LANG}"
 open_cap share 34;    cap "play_07_share_${CAP_LANG}"
 open_cap story 34;    cap "play_08_story_${CAP_LANG}"
+
+# ── 카피 오버레이 합성(업로드용 최종 이미지) ──────────────────
+# Play 마케팅 프레임: 크림 1080×1920 캔버스 + 상단 2줄 카피(나눔고딕Bold) +
+# 옐로 언더라인 + 앱 스샷(다크 테두리). 한글 폰트는 워크플로에서 설치(fonts-nanum).
+STORE="$ART/store"; mkdir -p "$STORE"
+KFONT="$(fc-list 2>/dev/null | grep -i nanum | grep -i bold | head -1 | cut -d: -f1 | xargs)"
+[ -z "$KFONT" ] && KFONT="/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf"
+compose_store() { # compose_store <basename> <line1> <line2>
+  local src="$SCREENS/$1.png" out="$STORE/$1.png" tmp="$STORE/.t_$1.png"
+  [ -e "$src" ] || { echo "::warning::합성 스킵(원본 없음): $1"; return; }
+  convert "$src" -resize x1440 -bordercolor '#3A2C26' -border 3 "$tmp" 2>/dev/null || return
+  convert -size 1080x1920 xc:'#FFF8E1' \
+    -fill '#FAC710' -draw 'roundrectangle 470,300 610,309 4,4' \
+    -font "$KFONT" -gravity north \
+    -fill '#8D6E63' -pointsize 44 -annotate +0+150 "$2" \
+    -fill '#4E342E' -pointsize 66 -annotate +0+215 "$3" \
+    "$tmp" -gravity south -geometry +0+80 -composite \
+    "$out" 2>/dev/null && log "  합성: store/$1.png" || echo "::warning::합성 실패: $1"
+  rm -f "$tmp"
+}
+if [ -e "$KFONT" ]; then
+  compose_store "play_01_map_${CAP_LANG}"      "전국 배구 동호회," "지도 한 눈에"
+  compose_store "play_02_filter_${CAP_LANG}"   "지역·요일·대상으로" "딱 맞는 팀"
+  compose_store "play_04_detail_${CAP_LANG}"   "일정·회비·위치 확인하고" "바로 연락"
+  compose_store "play_03_pickup_${CAP_LANG}"   "오늘 당장 뛸" "픽업 게임"
+  compose_store "play_05_lunchbox_${CAP_LANG}" "마음에 든 팀은" "‘도시락’에 찜"
+  compose_store "play_06_profile_${CAP_LANG}"  "나만의" "‘밥이름’ 닉네임"
+  compose_store "play_07_share_${CAP_LANG}"    "카톡·인스타로" "우리 팀 자랑"
+else
+  echo "::warning::한글 폰트(nanum) 미탐지 — 카피 합성 스킵($KFONT)"
+fi
 
 # ── 릴스: 지도 로드 후 녹화 시작 → 액션 딥링크로 모션 유발 ────
 # 1080×2400 원본 → 릴스(1080×1920)는 편집서 크롭.

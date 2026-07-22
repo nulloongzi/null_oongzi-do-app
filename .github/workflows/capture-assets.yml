@@ -132,8 +132,9 @@ jobs:
           fi
 
       # ── 이미지 도구(스모크 black 게이트용) ──────────────────────
-      - name: Install ImageMagick
-        run: sudo apt-get update && sudo apt-get install -y imagemagick
+      - name: Install ImageMagick + Korean font
+        # imagemagick: 블랙 게이트 + 카피 오버레이 합성 / fonts-nanum: 한글 캡션 렌더
+        run: sudo apt-get update && sudo apt-get install -y imagemagick fonts-nanum fontconfig
 
       # ── 안드 에뮬 가속(KVM) ─────────────────────────────────────
       - name: Enable KVM
