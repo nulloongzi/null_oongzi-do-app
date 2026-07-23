@@ -37,6 +37,7 @@ class _MarkerSpec {
   final bool red; // 빨강 핀(급구/스팟)
   final bool urgent;
   final bool verified;
+  final bool hasReel; // 릴스 있음 → 마커에 발견 신호(미세 링) 표시
   final bool clusterable; // 급구 클럽=false(항상 표시), 그 외=true
   final VoidCallback onTap;
   const _MarkerSpec({
@@ -46,6 +47,7 @@ class _MarkerSpec {
     required this.red,
     required this.urgent,
     required this.verified,
+    required this.hasReel,
     required this.clusterable,
     required this.onTap,
   });
@@ -284,9 +286,11 @@ class _MapScreenState extends State<MapScreen> {
     required bool red,
     required bool urgent,
     required bool verified,
+    required bool hasReel,
   }) async {
     final key =
-        '${red ? "r" : "y"}|${urgent ? "u" : "n"}|${verified ? "v" : ""}|$name';
+        '${red ? "r" : "y"}|${urgent ? "u" : "n"}|${verified ? "v" : ""}'
+        '|${hasReel ? "R" : ""}|$name';
     final hit = _labelIconCache[key];
     if (hit != null) return hit;
     await _ensurePrewarm();
@@ -364,12 +368,21 @@ class _MapScreenState extends State<MapScreen> {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Image.asset(
-                  red
-                      ? 'assets/markers/marker_red.png'
-                      : 'assets/markers/marker_yellow.png',
-                  width: 34,
-                  height: 44,
+                // 릴스 있는 팀: 핀 우상단에 미세한 인스타 그라데이션 링(발견 신호).
+                // 지도만 훑어도 '분위기를 보여주는 팀'을 알아보고 → 롱프레스로 피크.
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Image.asset(
+                      red
+                          ? 'assets/markers/marker_red.png'
+                          : 'assets/markers/marker_yellow.png',
+                      width: 34,
+                      height: 44,
+                    ),
+                    if (hasReel)
+                      Positioned(top: -3, right: -5, child: _reelBadge()),
+                  ],
                 ),
               ],
             ),
@@ -382,6 +395,32 @@ class _MapScreenState extends State<MapScreen> {
       return null;
     }
   }
+
+  // 릴스 발견 신호: 인스타 그라데이션 링 + 작은 재생 삼각형. 흰 테두리로 핀 위에서 분리.
+  Widget _reelBadge() => Container(
+    width: 16,
+    height: 16,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      gradient: const LinearGradient(
+        begin: Alignment.bottomLeft,
+        end: Alignment.topRight,
+        colors: [
+          Color(0xFFFEDA75),
+          Color(0xFFFA7E1E),
+          Color(0xFFD62976),
+          Color(0xFF962FBF),
+          Color(0xFF4F5BD5),
+        ],
+      ),
+      border: Border.all(color: Colors.white, width: 1.5),
+      boxShadow: const [
+        BoxShadow(color: Color(0x40000000), blurRadius: 2, offset: Offset(0, 1)),
+      ],
+    ),
+    child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 10),
+  );
 
   // 클러스터용 노란 원 아이콘 1회 생성
   Future<void> _ensureClusterIcon() async {
@@ -590,6 +629,7 @@ class _MapScreenState extends State<MapScreen> {
             red: urgent,
             urgent: urgent,
             verified: club.isVerified,
+            hasReel: club.instaReels.isNotEmpty,
             clusterable: !urgent, // 급구: 클러스터 제외(항상 표시)
             onTap: () => _focusAndShowClub(club),
           ),
@@ -606,6 +646,7 @@ class _MapScreenState extends State<MapScreen> {
             red: true,
             urgent: false,
             verified: false,
+            hasReel: spot.instaReels.isNotEmpty,
             clusterable: true,
             onTap: () => _focusAndShowSpot(spot),
           ),
@@ -622,6 +663,7 @@ class _MapScreenState extends State<MapScreen> {
                 red: s.red,
                 urgent: s.urgent,
                 verified: s.verified,
+                hasReel: s.hasReel,
               ),
             ),
           )
@@ -691,6 +733,7 @@ class _MapScreenState extends State<MapScreen> {
                 red: s.red,
                 urgent: s.urgent,
                 verified: s.verified,
+                hasReel: s.hasReel,
               ),
             ),
           )
