@@ -22,6 +22,10 @@ class SocialAuthService {
   static const _naverClientSecret = '';
   static const _naverClientName = '누룽지도';
 
+  // 네이버 자격증명이 채워졌는지(미설정이면 로그인 버튼 숨김).
+  static bool get naverConfigured =>
+      _naverClientId.isNotEmpty && _naverClientSecret.isNotEmpty;
+
   static Future<void> rememberProvider(String p) async {
     final sp = await SharedPreferences.getInstance();
     await sp.setString(_lastProviderKey, p);

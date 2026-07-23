@@ -249,24 +249,25 @@ class _LoginScreenState extends State<LoginScreen> {
                     'kakao',
                   ),
                 ),
-                _socialButton(
-                  label: t('login_naver'),
-                  bg: const Color(0xFF03C75A),
-                  fg: Colors.white,
-                  leading: const Text(
-                    'N',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
+                if (SocialAuthService.naverConfigured)
+                  _socialButton(
+                    label: t('login_naver'),
+                    bg: const Color(0xFF03C75A),
+                    fg: Colors.white,
+                    leading: const Text(
+                      'N',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                      ),
+                    ),
+                    method: 'naver',
+                    onTap: () => _socialSignIn(
+                      SocialAuthService().signInWithNaver,
+                      'naver',
                     ),
                   ),
-                  method: 'naver',
-                  onTap: () => _socialSignIn(
-                    SocialAuthService().signInWithNaver,
-                    'naver',
-                  ),
-                ),
                 const SizedBox(height: 22),
                 TextField(
                   controller: _email,
