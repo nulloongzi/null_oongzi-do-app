@@ -5,6 +5,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../services/analytics.dart';
 import '../services/i18n.dart';
 import '../services/profile_service.dart';
+import '../services/social_auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -18,6 +19,15 @@ class _LoginScreenState extends State<LoginScreen> {
   final _pw = TextEditingController();
   bool _busy = false;
   String? _error;
+  String? _lastProvider; // 지난 로그인 수단(칩 표시용)
+
+  @override
+  void initState() {
+    super.initState();
+    SocialAuthService.lastProvider().then((p) {
+      if (mounted) setState(() => _lastProvider = p);
+    });
+  }
 
   // Firebase '웹 클라이언트 ID'(google-services.json oauth_client type=3).
   // Android에서 Firebase용 idToken을 받으려면 serverClientId로 이 값을 넘겨야 함.
@@ -42,10 +52,31 @@ class _LoginScreenState extends State<LoginScreen> {
         accessToken: auth.accessToken,
       );
       await FirebaseAuth.instance.signInWithCredential(credential);
+      await SocialAuthService.rememberProvider('google');
       Track.event('login', {'method': 'google'});
       await _afterLogin();
     } catch (e) {
       setState(() => _error = t('login_google_fail'));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  // 카카오/네이버 공통 래퍼: 로딩·에러·성공 후 처리.
+  Future<void> _socialSignIn(
+    Future<void> Function() run,
+    String method,
+  ) async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await run();
+      Track.event('login', {'method': method});
+      await _afterLogin();
+    } catch (_) {
+      setState(() => _error = t('login_err'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -93,6 +124,62 @@ class _LoginScreenState extends State<LoginScreen> {
     if (mounted && Navigator.of(context).canPop()) {
       Navigator.of(context).pop(true);
     }
+  }
+
+  // 소셜 로그인 버튼(카카오/네이버). method가 지난 수단이면 "지난번에 사용" 칩 표시.
+  Widget _socialButton({
+    required String label,
+    required Color bg,
+    required Color fg,
+    required Widget leading,
+    required String method,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: _busy ? null : onTap,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: bg,
+            foregroundColor: fg,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              leading,
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              if (_lastProvider == method) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    t('login_last_used'),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -149,6 +236,35 @@ class _LoginScreenState extends State<LoginScreen> {
                       foregroundColor: const Color(0xFF4E342E),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
+                  ),
+                ),
+                _socialButton(
+                  label: t('login_kakao'),
+                  bg: const Color(0xFFFEE500),
+                  fg: const Color(0xFF191600),
+                  leading: const Text('💬', style: TextStyle(fontSize: 17)),
+                  method: 'kakao',
+                  onTap: () => _socialSignIn(
+                    SocialAuthService().signInWithKakao,
+                    'kakao',
+                  ),
+                ),
+                _socialButton(
+                  label: t('login_naver'),
+                  bg: const Color(0xFF03C75A),
+                  fg: Colors.white,
+                  leading: const Text(
+                    'N',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                    ),
+                  ),
+                  method: 'naver',
+                  onTap: () => _socialSignIn(
+                    SocialAuthService().signInWithNaver,
+                    'naver',
                   ),
                 ),
                 const SizedBox(height: 22),

@@ -55,6 +55,8 @@ dependencies:
   path_provider: ^2.1.4         # 스토리 카드 임시 PNG 저장
   share_plus: ^10.1.1           # OS 공유시트 (다른 앱/DM)
   kakao_flutter_sdk_share: ^1.9.5  # 카카오톡 리치카드 공유(웹 Kakao.Share 대응)
+  kakao_flutter_sdk_user: ^1.9.5   # 카카오 로그인(네이티브 access_token → CF)
+  flutter_naver_login: ^1.8.0      # 네이버 로그인(네이티브 access_token → CF)
   qr_flutter: ^4.1.0            # 스토리 카드 QR
   app_links: ^6.3.0             # 딥링크 (?club=/?spot=)
   firebase_storage: ^12.3.0     # 인증 사진 업로드

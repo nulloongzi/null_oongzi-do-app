@@ -104,6 +104,19 @@
                     android:host="kakaolink" />
             </intent-filter>
         </activity>
+        <!-- 카카오 로그인 리다이렉트(카카오톡 앱/계정 로그인 복귀): kakao{네이티브앱키}://oauth -->
+        <activity
+            android:name="com.kakao.sdk.flutter.AuthCodeCustomTabsActivity"
+            android:exported="true">
+            <intent-filter android:label="flutter_web_auth">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="kakao24e0161dd5945250b37e5ec7fbdf8363"
+                    android:host="oauth" />
+            </intent-filter>
+        </activity>
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
