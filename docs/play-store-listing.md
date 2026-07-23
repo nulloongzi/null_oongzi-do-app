@@ -1,8 +1,11 @@
 # Play 스토어 등록 세트 (누룽지도 v2.0.0)
 
 Play Console → 앱 → **기본 스토어 등록정보**에 그대로 붙여넣는 자산 모음.
-자산 원본 스샷: CI 아티팩트 `nulloongzido-marketing-assets`(run #8, release 서명, 1080×2400, KO).
-디자인 규격: `docs/design-system.md`(크림 `#FFF8E1` / 옐로 `#FAC710` / 다크 `#4E342E` / Pretendard).
+- **업로드용 최종 스샷(카피 오버레이 합성본)**: CI 아티팩트 `nulloongzido-marketing-assets`의
+  **`store/` 폴더**(release 서명, 1080×1920, 크림 캔버스+한글 카피). → **그대로 Play 업로드**.
+- 카피 없는 순수 앱 스샷 원본(1080×2400)이 필요하면 같은 아티팩트의 `screens/` 폴더.
+- 디자인 규격: `docs/design-system.md`(크림 `#FFF8E1` / 옐로 `#FAC710` / 다크 `#4E342E`).
+- 카피 오버레이는 `scripts/capture/run_capture.sh`의 `compose_store()`가 자동 생성(나눔고딕Bold).
 
 ---
 
