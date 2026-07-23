@@ -494,6 +494,11 @@ class _MapScreenState extends State<MapScreen> {
     await Future<void>.delayed(const Duration(milliseconds: 800));
     if (!mounted) return;
 
+    // 잔존 시트/다이얼로그(이전 캡처의 상세·공유 등) 정리 → 매 캡처를 깨끗한 지도에서 시작.
+    Navigator.of(context).popUntil((r) => r.isFirst);
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    if (!mounted) return;
+
     // 예쁜 상세용 클럽 선택: 급구(빨간 배지) → 검증됨 → 첫 클럽.
     Club? pick() {
       if (_clubs.isEmpty) return null;

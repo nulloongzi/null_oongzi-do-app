@@ -137,9 +137,9 @@ dismiss_anr() {
 }
 # 캡처 딥링크로 콜드 실행(앱이 KO 강제 + 화면 이동).
 open_cap() { # open_cap <cmd> [wait]
-  adb shell am force-stop "$APP_ID" >/dev/null 2>&1 || true
+  # -S: 시작 전 강제 종료(콜드 스타트 보장 → 잔존 UI 누적 방지).
   # URL은 디바이스 셸에서 single-quote — '&'가 백그라운드 연산자로 해석되지 않게.
-  adb shell "am start -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=$1&lang=$CAP_LANG'" >/dev/null 2>&1
+  adb shell "am start -S -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=$1&lang=$CAP_LANG'" >/dev/null 2>&1
   sleep "${2:-30}"; dismiss_anr
 }
 cap() { dismiss_anr; demo_on; sleep 1; shot "$1"; log "  캡처: $1"; }
