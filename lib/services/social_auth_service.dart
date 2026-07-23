@@ -18,7 +18,7 @@ class SocialAuthService {
 
   // 네이버 모바일 SDK 자격증명(네이버 개발자센터). 모바일 SDK는 secret을 기기에서 사용(APK 내장).
   // CF의 NAVER_CLIENT_ID/SECRET과 동일 앱. (git 밖으로 빼려면 String.fromEnvironment + --dart-define로 전환 가능)
-  static const _naverClientId = '41TDNsngcV0J7W6lCtDj';
+  static const _naverClientId = '41TDNsngcV0J7W6ICtDj';
   static const _naverClientSecret = 'ZtYHQu0zZT';
   static const _naverClientName = '누룽지도';
 
