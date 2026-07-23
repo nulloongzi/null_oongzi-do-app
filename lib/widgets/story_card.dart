@@ -243,8 +243,26 @@ class StoryCardPainter extends CustomPainter {
     final total = tile + tgap + wm.width;
     final hsx = (w - total) / 2, hty = 118.0;
     _sh2(canvas, Rect.fromLTWH(hsx, hty, tile, tile), 18, 14, 6, 0.16);
-    _rr2(canvas, hsx, hty, tile, tile, 18, Paint()..color = _yellow);
-    _volley(canvas, hsx + tile / 2, hty + tile / 2, 20, Colors.white);
+    if (logo != null) {
+      _rr2(canvas, hsx, hty, tile, tile, 18, Paint()..color = Colors.white);
+      canvas.save();
+      canvas.clipRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(hsx, hty, tile, tile),
+          const Radius.circular(18),
+        ),
+      );
+      canvas.drawImageRect(
+        logo!,
+        Rect.fromLTWH(0, 0, logo!.width.toDouble(), logo!.height.toDouble()),
+        Rect.fromLTWH(hsx, hty, tile, tile),
+        Paint(),
+      );
+      canvas.restore();
+    } else {
+      _rr2(canvas, hsx, hty, tile, tile, 18, Paint()..color = _yellow);
+      _volley(canvas, hsx + tile / 2, hty + tile / 2, 20, Colors.white);
+    }
     wm.paint(canvas, Offset(hsx + tile + tgap, hty + tile / 2 - wm.height / 2));
 
     // ===== 히어로: 에디토리얼 일러스트 지도 =====
