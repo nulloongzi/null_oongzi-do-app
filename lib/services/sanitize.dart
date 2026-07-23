@@ -27,6 +27,17 @@ class Sanitize {
     return out.length > 50 ? out.substring(out.length - 50) : out;
   }
 
+  /// 릴스 URL → shortcode(/reel/<CODE>/). insta_reel_covers 맵 조회 키(웹/Cloud Function과 동일 규칙).
+  /// 저장 URL은 instaPostUrl로 정규화되어 username 세그먼트가 없다. 무효면 null.
+  static String? reelCode(String? v) {
+    if (v == null) return null;
+    final m = RegExp(
+      r'^https://(?:www\.)?instagram\.com/(?:reel|reels|p|tv)/([A-Za-z0-9_-]+)',
+      caseSensitive: false,
+    ).firstMatch(v.trim());
+    return m?.group(1);
+  }
+
   /// 공개 인스타 게시물/릴스 permalink만 → 정규 permalink 반환, 무효면 ''.
   static String instaPostUrl(String? v) {
     if (v == null) return '';

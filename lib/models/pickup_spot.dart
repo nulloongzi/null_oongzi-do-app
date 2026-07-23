@@ -1,5 +1,6 @@
 // pickup_spot.dart — Firestore `pickup_games` 문서 모델 (웹앱과 동일 스키마)
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/sanitize.dart';
 
 double? _toD(dynamic v) => v == null ? null : (v as num).toDouble();
 
@@ -16,6 +17,19 @@ List<String> _reels(Map d) {
   final single = d['insta_reel'] as String?;
   if (single != null && single.trim().isNotEmpty) return [single];
   return const [];
+}
+
+// insta_reel_covers: {shortcode: coverUrl} — Cloud Function이 oEmbed로 캐싱.
+Map<String, String> _covers(Map d) {
+  final raw = d['insta_reel_covers'];
+  if (raw is Map) {
+    final out = <String, String>{};
+    raw.forEach((k, v) {
+      if (k is String && v is String && v.isNotEmpty) out[k] = v;
+    });
+    return out;
+  }
+  return const {};
 }
 
 class PickupSpot {
@@ -39,7 +53,14 @@ class PickupSpot {
   final String? notes;
   final String? instaReel;
   final List<String> instaReels; // 멀티 릴스(없으면 [instaReel])
+  final Map<String, String> instaReelCovers; // shortcode→커버URL(발견 카드용)
   final DateTime? expireAt; // 유효기간(B): 지나면 자동 숨김 + Firestore TTL. null=상시
+
+  // 릴스 URL의 정지 커버(있으면). shortcode로 조회. 없으면 null → 제네릭 카드.
+  String? coverFor(String url) {
+    final code = Sanitize.reelCode(url);
+    return code == null ? null : instaReelCovers[code];
+  }
 
   PickupSpot({
     required this.id,
@@ -62,6 +83,7 @@ class PickupSpot {
     this.notes,
     this.instaReel,
     this.instaReels = const [],
+    this.instaReelCovers = const {},
     this.expireAt,
   });
 
@@ -89,6 +111,7 @@ class PickupSpot {
       notes: d['notes'] as String?,
       instaReel: d['insta_reel'] as String?,
       instaReels: _reels(d),
+      instaReelCovers: _covers(d),
       expireAt: (d['expire_at'] as Timestamp?)?.toDate(),
     );
   }

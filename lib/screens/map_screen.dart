@@ -26,7 +26,7 @@ import 'profile_screen.dart';
 import '../widgets/bounce_tap.dart';
 import '../widgets/filter_sheet.dart';
 import '../widgets/glass_surface.dart';
-import '../widgets/insta_embed.dart';
+import '../widgets/reel_poster.dart';
 import '../widgets/pickup_list_panel.dart';
 
 // 마커 1건 스펙(클럽/스팟 공통) — 아이콘 병렬 빌드 후 마커를 한 번에 생성하기 위한 중간 표현.
@@ -570,6 +570,7 @@ class _MapScreenState extends State<MapScreen> {
 
     String? title;
     String? reel;
+    String? cover; // 릴스 정지 커버(있으면 포스터로)
     bool urgent = false;
     double best = double.infinity;
     if (_tab == 'clubs') {
@@ -580,6 +581,7 @@ class _MapScreenState extends State<MapScreen> {
           best = d;
           title = club.name;
           reel = club.instaReels.isNotEmpty ? club.instaReels.first : null;
+          cover = reel == null ? null : club.coverFor(reel);
           urgent = club.isUrgent && (club.urgentMsg?.isNotEmpty ?? false);
         }
       }
@@ -591,6 +593,7 @@ class _MapScreenState extends State<MapScreen> {
           best = d;
           title = spot.title;
           reel = spot.instaReels.isNotEmpty ? spot.instaReels.first : null;
+          cover = reel == null ? null : spot.coverFor(reel);
           urgent = false;
         }
       }
@@ -602,7 +605,12 @@ class _MapScreenState extends State<MapScreen> {
     }
     Track.event('reel_peek', {'tab': _tab});
     setState(
-      () => _reelPeek = _ReelPeek(title: title!, reel: reel!, urgent: urgent),
+      () => _reelPeek = _ReelPeek(
+        title: title!,
+        reel: reel!,
+        cover: cover,
+        urgent: urgent,
+      ),
     );
   }
 
@@ -1341,10 +1349,12 @@ class _UrgentTickerState extends State<_UrgentTicker> {
 class _ReelPeek {
   final String title;
   final String reel;
+  final String? cover; // 정지 커버(없으면 제네릭 카드)
   final bool urgent;
   const _ReelPeek({
     required this.title,
     required this.reel,
+    this.cover,
     required this.urgent,
   });
 }
@@ -1455,11 +1465,11 @@ class _ReelPeekOverlayState extends State<_ReelPeekOverlay>
                 ],
               ),
             ),
-            // 릴스 임베드(탭하면 인라인/인스타 재생)
+            // 커버 포스터(빠른 감 잡기) → 탭하면 인라인/인스타 재생. 커버 없으면 제네릭 카드.
             Flexible(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(12, 0, 12, 2),
-                child: InstaEmbed(url: d.reel),
+                child: ReelPoster(url: d.reel, coverUrl: d.cover),
               ),
             ),
             // 닫기/재생 힌트
