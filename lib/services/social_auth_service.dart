@@ -16,10 +16,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 class SocialAuthService {
   static const _lastProviderKey = 'last_login_provider';
 
-  // 네이버 모바일 SDK 자격증명(네이버 개발자센터). 모바일 SDK는 secret을 기기에서 사용.
-  // TODO: 발급 후 채우기. CF의 NAVER_CLIENT_ID/SECRET과 동일 앱이어야 함.
-  static const _naverClientId = '';
-  static const _naverClientSecret = '';
+  // 네이버 모바일 SDK 자격증명(네이버 개발자센터). 모바일 SDK는 secret을 기기에서 사용(APK 내장).
+  // CF의 NAVER_CLIENT_ID/SECRET과 동일 앱. (git 밖으로 빼려면 String.fromEnvironment + --dart-define로 전환 가능)
+  static const _naverClientId = '41TDNsngcV0J7W6lCtDj';
+  static const _naverClientSecret = 'ZtYHQu0zZT';
   static const _naverClientName = '누룽지도';
 
   // 네이버 자격증명이 채워졌는지(미설정이면 로그인 버튼 숨김).
