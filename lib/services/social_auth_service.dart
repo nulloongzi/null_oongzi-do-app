@@ -16,6 +16,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 class SocialAuthService {
   static const _lastProviderKey = 'last_login_provider';
 
+  // 네이버 모바일 SDK 자격증명(네이버 개발자센터). 모바일 SDK는 secret을 기기에서 사용.
+  // TODO: 발급 후 채우기. CF의 NAVER_CLIENT_ID/SECRET과 동일 앱이어야 함.
+  static const _naverClientId = '';
+  static const _naverClientSecret = '';
+  static const _naverClientName = '누룽지도';
+
   static Future<void> rememberProvider(String p) async {
     final sp = await SharedPreferences.getInstance();
     await sp.setString(_lastProviderKey, p);
@@ -58,6 +64,14 @@ class SocialAuthService {
   // 네이버 → access_token → CF.
   // NOTE: flutter_naver_login API는 버전에 따라 이름이 다를 수 있음(pub get 후 확인).
   Future<void> signInWithNaver() async {
+    if (_naverClientId.isEmpty || _naverClientSecret.isEmpty) {
+      throw Exception('네이버 클라이언트 미설정');
+    }
+    await FlutterNaverLogin.initSdk(
+      clientId: _naverClientId,
+      clientName: _naverClientName,
+      clientSecret: _naverClientSecret,
+    );
     final result = await FlutterNaverLogin.logIn();
     if (result.status != NaverLoginStatus.loggedIn) {
       throw Exception('네이버 로그인 취소/실패');
