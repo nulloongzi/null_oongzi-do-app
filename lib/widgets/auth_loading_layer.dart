@@ -151,17 +151,17 @@ class _AuthLoadingLayerState extends State<AuthLoadingLayer>
             ],
           ),
           Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                widget.desc ?? t('auth_signing_in_desc'),
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 12,
-                  height: 1.45,
-                  color: Color(0xFF8D6E63),
-                ),
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              widget.desc ?? t('auth_signing_in_desc'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12,
+                height: 1.45,
+                color: Color(0xFF8D6E63),
               ),
             ),
+          ),
           if (_slow) ...[
             const SizedBox(height: 10),
             Text(

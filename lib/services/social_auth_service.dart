@@ -12,6 +12,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_naver_login/flutter_naver_login.dart';
+// v2.1.x는 결과 타입을 메인 라이브러리에서 export하지 않는다 — 개별 import 필요
+import 'package:flutter_naver_login/interface/types/naver_login_status.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -94,17 +96,18 @@ class SocialAuthService {
     }
   }
 
-  /// 네이버 로그인. 취소/실패 status는 SocialAuthCancelled 또는 예외로 구분.
+  /// 네이버 로그인. SDK는 취소를 별도 상태 없이 error + 'user_cancel' 메시지로 전달한다.
   Future<void> loginWithNaver() async {
-    final NaverLoginResult res = await FlutterNaverLogin.logIn();
-    if (res.status == NaverLoginStatus.cancelledByUser) {
-      throw SocialAuthCancelled();
-    }
+    final res = await FlutterNaverLogin.logIn();
     if (res.status != NaverLoginStatus.loggedIn) {
-      throw Exception(res.errorMessage);
+      final msg = (res.errorMessage ?? '').toLowerCase();
+      if (msg.contains('cancel')) throw SocialAuthCancelled();
+      throw Exception(res.errorMessage ?? 'naver login failed');
     }
-    final token = await FlutterNaverLogin.getCurrentAccessToken();
-    await _signInWithCustomToken('naverCustomToken', token.accessToken);
+    final access =
+        res.accessToken?.accessToken ??
+        (await FlutterNaverLogin.getCurrentAccessToken()).accessToken;
+    await _signInWithCustomToken('naverCustomToken', access);
     await rememberProvider('naver');
   }
 

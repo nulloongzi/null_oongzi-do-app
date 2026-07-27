@@ -50,7 +50,10 @@ void main() {
     });
 
     test('판별 불가(익명 등)는 빈 문자열 → 스탬프 미표시', () {
-      expect(SocialAuthService.detectProvider(uid: 'anon1', providerIds: []), '');
+      expect(
+        SocialAuthService.detectProvider(uid: 'anon1', providerIds: []),
+        '',
+      );
     });
   });
 }
