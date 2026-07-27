@@ -9,8 +9,10 @@ import '../services/data_repository.dart';
 import '../services/i18n.dart';
 import '../services/lunchbox_service.dart';
 import '../services/profile_service.dart';
+import '../services/social_auth_service.dart';
 import '../theme.dart';
 import '../widgets/bounce_tap.dart';
+import '../widgets/provider_stamp.dart';
 import 'share_image_screen.dart';
 
 /// 내 정보 팝업: 웹 프로필 오버레이 대응 — 화면 중앙 카드 모달(딤 blur + 스프링 등장).
@@ -222,6 +224,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       await GoogleSignIn().signOut();
     } catch (_) {}
+    await SocialAuthService.signOutProviders(); // 카카오/네이버 세션도 정리
     await FirebaseAuth.instance.signOut();
     if (mounted) Navigator.pop(context); // 게스트로 지도 복귀
   }
@@ -411,17 +414,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
           ),
-          // 누룽지 워터마크(밥 종류) — 좌상단 옅게(웹 .pc-rice-type)
+          // 좌상단 워터마크: 로그인 수단 스탬프(이스터에그) + 밥 종류(웹 .pc-provider-mark/.pc-rice-type)
           Positioned(
             top: 0,
             left: 0,
-            child: Text(
-              p.nickname,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: Color(0x4D5D4037),
-              ),
+            child: Row(
+              children: [
+                ProviderStamp(
+                  provider: SocialAuthService.detectProviderOf(
+                    FirebaseAuth.instance.currentUser,
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  p.nickname,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0x4D5D4037),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

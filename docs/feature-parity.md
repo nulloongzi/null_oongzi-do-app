@@ -125,6 +125,14 @@
 - ✅ 완료(웹, `claude/keen-cannon-93mnA`): W1 멀티 릴스(폼 textarea·insta_reels 저장·상세 더보기) · W2 라벨 롱프레스 릴스 피크(릴스 없는 팀은 무시 — 앱은 스낵바) · W3 릴스 지연 로딩(포스터→탭재생) · W4 remove_bookmark 추적 · W5 라벨 등장 페이드 · W6 필터시트 키워드
 - 🏁 결론: 패리티 백로그 소진. 잔여는 A3(카카오 콘솔 대기)와 A12(구조적 제외)뿐.
 
+### 진행 현황 (2026-07-27)
+- ✅ 완료(앱): 카카오/네이버 소셜 로그인 포팅 (웹 #41 대응)
+  - 카카오: `kakao_flutter_sdk_user` 톡 앱 우선 → 계정 폴백 → CF `kakaoCustomToken({accessToken})` → 커스텀 토큰. 웹과 동일 계정(`kakao:{id}`)으로 이어짐.
+  - 네이버: `flutter_naver_login` 구조 완성. ⚠️ **client secret 필요** — `android/.../strings.xml`의 `naver_client_secret` + iOS `Info.plist`의 `NidClientSecret`을 채우고 네이버 콘솔에 Android 패키지명/iOS 번들ID 등록 후 `social_auth_service.dart`의 `kNaverLoginConfigured=true`. 그 전까지 버튼 숨김.
+  - 카카오 콘솔: 로그인 활성화 + 동의항목 설정 필요(공유용 키·패키지 등록은 완료 상태).
+  - 로그인 진행 안내: 제공자별 반투명 테마 레이어(카카오=번개·네이버=물결·구글=안개·이메일=습기, `auth_loading_layer.dart`) + 12초 지연 시 닫기 탈출구.
+  - 네임카드 스탬프 이스터에그: 좌상단 밥이름 옆 로그인 수단 스탬프(`provider_stamp.dart`) — 웹과 동일 판별 규칙(uid 접두사 → providerData).
+
 ### 검증 필요(동작 미확정)
 - 앱: 언어 전환 시 열려 있는 상세 패널 즉시 재렌더 여부
 - 앱: 밥이름 생성 시 중복 재시도 유무

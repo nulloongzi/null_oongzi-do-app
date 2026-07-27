@@ -15,6 +15,24 @@ const Map<String, Map<String, String>> kStrings = {
     'en': 'Your neighborhood volleyball',
   },
   'login_google': {'ko': '구글로 로그인', 'en': 'Sign in with Google'},
+  'login_kakao': {'ko': '카카오로 로그인', 'en': 'Sign in with Kakao'},
+  'login_naver': {'ko': '네이버로 로그인', 'en': 'Sign in with Naver'},
+  'login_last_used': {'ko': '지난번에 사용', 'en': 'Last used'},
+  'login_cancelled': {'ko': '로그인이 취소되었어요.', 'en': 'Login was cancelled.'},
+  'login_kakao_fail': {'ko': '카카오 로그인 실패', 'en': 'Kakao sign-in failed'},
+  'login_naver_fail': {'ko': '네이버 로그인 실패', 'en': 'Naver sign-in failed'},
+
+  // 로그인 진행 안내 레이어 (widgets/auth_loading_layer.dart)
+  'auth_signing_in': {'ko': '로그인 중이에요', 'en': 'Signing you in…'},
+  'auth_signing_in_desc': {
+    'ko': '계정을 확인하고 있어요. 잠시만 기다려 주세요 🍚',
+    'en': 'Verifying your account. This only takes a moment 🍚',
+  },
+  'auth_slow_hint': {
+    'ko': '조금 오래 걸리고 있어요. 네트워크 상태를 확인해 주세요.',
+    'en': 'This is taking longer than usual. Please check your connection.',
+  },
+  'auth_close': {'ko': '닫기', 'en': 'Close'},
   'email': {'ko': '이메일', 'en': 'Email'},
   'password': {'ko': '비밀번호 (6자 이상)', 'en': 'Password (6+ chars)'},
   'sign_in': {'ko': '로그인', 'en': 'Sign in'},

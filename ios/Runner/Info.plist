@@ -60,6 +60,20 @@
 				<string>fb1632483851162862</string>
 			</array>
 		</dict>
+		<!-- 카카오 로그인 복귀 스킴 (kakao_flutter_sdk_user): kakao{네이티브앱키} -->
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>kakao24e0161dd5945250b37e5ec7fbdf8363</string>
+			</array>
+		</dict>
+		<!-- 네이버 로그인 복귀 스킴 (flutter_naver_login NidUrlScheme과 동일하게) -->
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>nulloongzinaverlogin</string>
+			</array>
+		</dict>
 	</array>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
@@ -70,7 +84,26 @@
 		<string>fbapi</string>
 		<string>fbauth2</string>
 		<string>fbshareextension</string>
+		<!-- 카카오 로그인: 카카오톡 앱 호출 -->
+		<string>kakaokompassauth</string>
+		<string>kakaolink</string>
+		<!-- 네이버 로그인: 네이버 앱 호출 -->
+		<string>naversearchapp</string>
+		<string>naversearchthirdlogin</string>
 	</array>
+
+	<!-- ── 네이버 로그인 (flutter_naver_login 2.1+) ──
+	     ⚠️ NidClientSecret을 developers.naver.com 값으로 채우고, iOS 번들 ID를 네이버
+	     콘솔에 등록한 뒤 lib/services/social_auth_service.dart 의 kNaverLoginConfigured 를
+	     true 로 바꾸세요. secret이 비어 있으면 네이버 버튼이 앱에서 숨겨집니다. -->
+	<key>NidUrlScheme</key>
+	<string>nulloongzinaverlogin</string>
+	<key>NidClientID</key>
+	<string>41TDNsngcV0J7W6ICtDj</string>
+	<key>NidClientSecret</key>
+	<string></string>
+	<key>NidAppName</key>
+	<string>누룽지도</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>스토리 카드를 인스타그램에 공유할 때 사용합니다.</string>
 </dict>
