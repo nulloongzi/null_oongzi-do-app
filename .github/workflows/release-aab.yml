@@ -78,16 +78,29 @@ jobs:
       - name: flutter pub get
         run: flutter pub get
 
+      # 네이버 로그인: 시크릿을 gradle이 리소스로 주입하고 버튼도 켠다(build-apk.yml과 동일 규칙).
+      # 이게 없으면 스토어에 네이버 버튼이 빠진 앱이 나간다.
+      - name: 네이버 시크릿 확인
+        env:
+          NAVER_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+        run: |
+          if [ -z "$NAVER_SECRET" ]; then
+            echo "::error::NAVER_CLIENT_SECRET 시크릿이 없습니다. 이대로 빌드하면 네이버 로그인 버튼이 빠진 릴리즈가 나갑니다. Settings→Secrets and variables→Actions 에 등록하세요."
+            exit 1
+          fi
+
       - name: Build signed AAB
         env:
           BUILD_NAME: ${{ github.event.inputs.build_name }}
           BUILD_NUMBER: ${{ github.event.inputs.build_number }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
         run: |
           ARGS=""
           [ -n "$BUILD_NAME" ]   && ARGS="$ARGS --build-name=$BUILD_NAME"
           [ -n "$BUILD_NUMBER" ] && ARGS="$ARGS --build-number=$BUILD_NUMBER"
           echo "flutter build appbundle --release$ARGS"
-          flutter build appbundle --release $ARGS
+          flutter build appbundle --release $ARGS \
+            --dart-define=NAVER_LOGIN_ENABLED=true
 
       # 릴리즈 키로 서명됐는지 확인 — 디버그 키(CN=Android Debug)면 실패시킨다.
       - name: 서명 인증서 확인
