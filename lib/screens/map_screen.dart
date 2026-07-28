@@ -16,6 +16,9 @@ import '../services/club_filter.dart';
 import '../services/deep_link_service.dart';
 import '../services/profile_service.dart';
 import '../services/i18n.dart';
+import '../services/share_service.dart';
+import '../services/story_share.dart';
+import '../services/lunchbox_service.dart';
 import '../theme.dart';
 import 'detail_sheet.dart';
 import 'login_screen.dart';
@@ -28,6 +31,8 @@ import '../widgets/filter_sheet.dart';
 import '../widgets/glass_surface.dart';
 import '../widgets/insta_embed.dart';
 import '../widgets/pickup_list_panel.dart';
+import '../widgets/share_menu.dart';
+import '../widgets/story_card.dart';
 
 // 마커 1건 스펙(클럽/스팟 공통) — 아이콘 병렬 빌드 후 마커를 한 번에 생성하기 위한 중간 표현.
 class _MarkerSpec {
@@ -57,6 +62,10 @@ class MapScreen extends StatefulWidget {
   @override
   State<MapScreen> createState() => _MapScreenState();
 }
+
+/// 마케팅 자산 자동 캡처 빌드 플래그(`--dart-define=CAPTURE_MODE=true`).
+/// 켜져 있을 때만 `?capture=` 딥링크가 화면을 결정적으로 이동한다(일반 릴리즈엔 무영향).
+const bool kCaptureMode = bool.fromEnvironment('CAPTURE_MODE');
 
 class _MapScreenState extends State<MapScreen> {
   NaverMapController? _controller;
@@ -164,6 +173,10 @@ class _MapScreenState extends State<MapScreen> {
   // 딥링크(?club=/?spot=) → 탭 전환 + 상세 오픈. 메모리에 없으면 단건 조회.
   Future<void> _handleDeepLink(DeepLink d) async {
     if (!mounted) return;
+    if (d.kind == 'capture') {
+      if (kCaptureMode) _runCapture(d.id, d.lang);
+      return;
+    }
     Track.event(
       'deep_link_open',
       d.kind == 'club' ? {'club_id': d.id} : {'spot_id': d.id},
@@ -467,6 +480,86 @@ class _MapScreenState extends State<MapScreen> {
       isAdmin: _isAdmin,
       onChanged: _load,
     );
+  }
+
+  /// 캡처 디렉터(kCaptureMode 전용). CI가 `?capture=<cmd>&lang=ko` 딥링크로 각 화면을
+  /// **결정적으로** 연다 — 좌표/마커 위치에 비의존. 화면당 1회 콜드 실행을 가정.
+  Future<void> _runCapture(String cmd, String? lang) async {
+    if (lang == 'ko' || lang == 'en') appLang.value = lang!;
+    // 데이터 로드 대기(최대 ~21s) + 타일/마커 안정 여유
+    for (var i = 0; i < 70 && _clubs.isEmpty && mounted; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+    }
+    if (!mounted) return;
+    await Future<void>.delayed(const Duration(milliseconds: 800));
+    if (!mounted) return;
+
+    // 잔존 시트/다이얼로그(이전 캡처의 상세·공유 등) 정리 → 매 캡처를 깨끗한 지도에서 시작.
+    Navigator.of(context).popUntil((r) => r.isFirst);
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    if (!mounted) return;
+
+    // 예쁜 상세용 클럽 선택: 급구(빨간 배지) → 검증됨 → 첫 클럽.
+    Club? pick() {
+      if (_clubs.isEmpty) return null;
+      for (final c in _clubs) {
+        if (c.isUrgent && (c.urgentMsg?.isNotEmpty ?? false)) return c;
+      }
+      for (final c in _clubs) {
+        if (c.isVerified) return c;
+      }
+      return _clubs.first;
+    }
+
+    switch (cmd) {
+      case 'map':
+        break; // 지도만(언어만 적용)
+      case 'filter':
+        await _openFilter();
+        break;
+      case 'pickup':
+        setState(() => _tab = 'pickup');
+        _refreshMarkers();
+        break;
+      case 'detail':
+        final c = pick();
+        if (c != null) await _focusAndShowClub(c);
+        break;
+      case 'share':
+        final c = pick();
+        if (c != null) {
+          await _focusAndShowClub(c);
+          await Future<void>.delayed(const Duration(milliseconds: 900));
+          if (mounted) {
+            showShareMenu(
+              context,
+              url: ShareService.clubUrl(c.id),
+              shareTitle: c.name,
+              onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
+            );
+          }
+        }
+        break;
+      case 'story':
+        final c = pick();
+        if (c != null) await shareStoryCard(context, StoryCardData.fromClub(c));
+        break;
+      case 'lunchbox':
+        // 로그인 게이트 우회(익명) + 데모 찜 1건 시드 → 빈 화면 방지.
+        try {
+          final uid = await _repo.ensureUid();
+          final c = pick();
+          if (c != null) await LunchboxService().addBookmark(uid, c.id);
+        } catch (_) {}
+        if (mounted) showLunchboxSheet(context);
+        break;
+      case 'profile':
+        try {
+          await _repo.ensureUid();
+        } catch (_) {}
+        if (mounted) showProfileSheet(context);
+        break;
+    }
   }
 
   Future<void> _focusAndShowSpot(PickupSpot spot) async {

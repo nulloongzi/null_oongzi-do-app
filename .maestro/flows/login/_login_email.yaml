@@ -1,0 +1,24 @@
+# _login_email.yaml — 게스트 게이트로 열린 로그인 화면에서 이메일 로그인.
+# 상위 플로우가 도시락/프로필 탭으로 로그인 화면을 띄운 뒤 runFlow 로 호출.
+# env: EMAIL, PASSWORD (테스트 계정 — prod에 쓰기 유발 주의: 열람만 캡처).
+appId: ${APP_ID}
+---
+- extendedWaitUntil:
+    visible:
+      text: "로그인|Sign in"
+    timeout: 12000
+- tapOn:
+    text: "이메일|Email"
+- inputText: ${EMAIL}
+- hideKeyboard
+- tapOn:
+    text: "비밀번호|Password"
+- inputText: ${PASSWORD}
+- hideKeyboard
+- tapOn:
+    text: "^로그인$|^Sign in$"
+# 로그인 성공 = 로그인 화면 사라짐(지도로 복귀).
+- extendedWaitUntil:
+    notVisible:
+      text: "^로그인$|^Sign in$"
+    timeout: 20000

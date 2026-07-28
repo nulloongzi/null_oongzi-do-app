@@ -1,0 +1,26 @@
+# reel_3_pickup.yaml — 릴스 #3 "픽업 게임": 픽업 목록 → 항목 → 상세.
+# 참가(join)는 쓰기 → 녹화는 목록·상세 열람까지(prod 오염 방지).
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- runFlow:
+    when:
+      true: ${APPLANG == "en"}
+    file: ../_set_lang_en.yaml
+- extendedWaitUntil:
+    visible: "동호회"
+    timeout: 30000
+- tapOn: "픽업"
+- waitForAnimationToEnd:
+    timeout: 5000
+# 목록 살짝 스크롤(생동감).
+- swipe: { start: "50%, 70%", end: "50%, 55%", duration: 700 }
+- waitForAnimationToEnd:
+    timeout: 2000
+# 첫 픽업 카드 → 상세(⚠️ 좌표 보정).
+- tapOn:
+    point: "50%, 55%"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 4000

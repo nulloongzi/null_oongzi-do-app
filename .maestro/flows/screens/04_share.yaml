@@ -1,0 +1,29 @@
+# 04_share.yaml — Play 스샷 #7: 공유 메뉴(카카오/인스타 스토리 카드). (게스트 열람)
+# 클럽 상세 → 공유하기 → 공유 메뉴(스토리/카톡/링크복사) 시트.
+# 카카오/인스타 실제 전송은 릴리즈 키해시 필요(함정3) — 스샷은 메뉴 노출까지.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- runFlow:
+    when:
+      true: ${APPLANG == "en"}
+    file: ../_set_lang_en.yaml
+- extendedWaitUntil:
+    visible: "동호회"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 8000
+- tapOn:
+    point: "50%, 45%"   # 마커 → 상세(⚠️ 03과 동일, 첫 실행 후 보정)
+- extendedWaitUntil:
+    visible: "공유하기"
+    timeout: 8000
+- tapOn: "공유하기"
+- extendedWaitUntil:
+    visible: "인스타 스토리"   # 공유 메뉴의 스토리 항목
+    timeout: 6000
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: "${OUT}/play_07_share_${APPLANG}"

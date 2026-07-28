@@ -4,13 +4,19 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 
 class DeepLink {
-  final String kind; // 'club' | 'spot'
-  final String id;
-  const DeepLink(this.kind, this.id);
+  final String kind; // 'club' | 'spot' | 'capture'
+  final String id; //   club/spot id, 또는 capture 명령(map/filter/…)
+  final String? lang; // capture 시 강제 언어(ko/en)
+  const DeepLink(this.kind, this.id, {this.lang});
 }
 
-/// URI 쿼리에서 club/spot id 추출. 둘 다 없으면 null.
+/// URI 쿼리에서 club/spot id 또는 capture 명령 추출. 없으면 null.
+/// ?capture=<cmd>&lang=ko 는 마케팅 자산 자동 캡처 전용(앱은 kCaptureMode 빌드에서만 반응).
 DeepLink? parseDeepLink(Uri uri) {
+  final cap = uri.queryParameters['capture'];
+  if (cap != null && cap.trim().isNotEmpty) {
+    return DeepLink('capture', cap.trim(), lang: uri.queryParameters['lang']);
+  }
   final club = uri.queryParameters['club'];
   if (club != null && club.trim().isNotEmpty) {
     return DeepLink('club', club.trim());

@@ -1,0 +1,11 @@
+# _set_lang_en.yaml — LANG=en 일 때만 상위 플로우가 runFlow(when)로 호출.
+# 앱 기본은 KO(검색바 우측 토글이 'EN' 표기) → 'EN' 탭 시 EN 전환. 이미 EN이면 무시.
+appId: ${APP_ID}
+---
+- tapOn:
+    text: "EN"
+    optional: true
+- extendedWaitUntil:
+    visible: "한"
+    timeout: 3000
+    optional: true
