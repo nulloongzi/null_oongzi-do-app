@@ -10,8 +10,14 @@ allprojects {
     repositories {
         google()
         mavenCentral()
-        // 네이버 지도 SDK
-        maven { url = uri("https://repository.map.naver.com/archive/maven") }
+        // 네이버 지도 SDK — com.naver.* 아티팩트만 여기서 찾는다.
+        // content 필터가 없으면 Gradle이 io.flutter 같은 무관한 그룹까지 이 저장소에
+        // 물어보다가, 저장소가 느리거나 막히면 연결 타임아웃으로 빌드 전체가 실패한다.
+        // (실제로 CI에서 io.flutter:*_debug 해석이 여기서 타임아웃 나며 빌드가 깨졌다)
+        maven {
+            url = uri("https://repository.map.naver.com/archive/maven")
+            content { includeGroupByRegex("com\\.naver.*") }
+        }
     }
 }
 
