@@ -18,6 +18,9 @@ INCLUDE_REELS="${INCLUDE_REELS:-true}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FLOWS="$(cd "$HERE/../../.maestro" && pwd)"
 SCREENS="$ART/screens"
+# 카피 합성본 디렉터리는 전체 캡처 경로(아래)에서만 만들어진다. 스모크 경로는 그 전에
+# fingerprint()를 호출하므로, 미정의 상태로 참조되면 set -u 에 걸려 죽는다 → 빈 값으로 선언.
+STORE="${STORE:-}"
 REELS="$ART/reels"
 LOGS="$ART/logs"
 mkdir -p "$SCREENS" "$REELS" "$LOGS"
