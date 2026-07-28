@@ -29,6 +29,26 @@ Nulloongzi-do is now a native app! 🏐
 Update now for a lighter, faster experience!
 ```
 
+### 출시 노트 (What's new · v2.1.0 · 500자) — 소셜 로그인
+**KO**
+```
+카카오·네이버 로그인이 추가됐어요 🏐
+• 카카오·네이버로 몇 초 만에 시작
+• 웹에서 쓰던 계정 그대로 이어집니다
+• 로그인하는 동안 지도가 그대로 — 뭐가 진행 중인지 보여요
+• 네임카드에 작은 이스터에그 하나 🍚
+번거로운 가입 없이, 하던 대로 이어가세요!
+```
+**EN**
+```
+Kakao & Naver sign-in are here 🏐
+• Start in seconds with Kakao or Naver
+• Your account carries over from the web
+• The map stays visible while you sign in — you can see what's happening
+• A little easter egg on your name card 🍚
+No lengthy sign-up. Just pick up where you left off!
+```
+
 ### 간단 설명 (Short · 80자)
 - **KO** `전국 배구 동호회를 지도 한 눈에. 픽업 게임·도시락·필터로 내 팀 찾기 🏐`
 - **EN** `Volleyball clubs across Korea on one map — pickup games, filters & more 🏐`
@@ -59,10 +79,14 @@ Update now for a lighter, faster experience!
 ■ 간편 공유
 카카오톡·인스타 스토리 카드로 우리 팀을 친구에게 한 번에.
 
+■ 간편 로그인
+카카오·네이버·구글로 몇 초 만에. 웹에서 쓰던 계정 그대로 이어집니다.
+로그인 없이도 지도 보기·검색·픽업 등록은 그대로 가능해요.
+
 이제 네이티브 앱으로 지도는 더 부드럽고, 실행은 더 빠릅니다.
 한국어·영어 지원. 지금 시작해보세요! 🏐
 
-문의: (지원 이메일)
+문의: paulyoo999@gmail.com
 ```
 **EN** (요약 — 필요시 전체 확장)
 ```
@@ -76,9 +100,38 @@ Nulloongzi-do shows volleyball clubs across Korea on a single map — from teams
 ■ Lunchbox — save your favorite teams for later.
 ■ Rice-name nicknames — a fun, friendly identity.
 ■ Easy sharing — send your team via KakaoTalk or an Instagram story card.
+■ Quick sign-in — Kakao, Naver or Google in seconds; your web account carries over.
+   Browsing, search and pickup posting still work without an account.
 
 Now native: smoother maps, faster launch. Korean & English supported.
+
+Contact: paulyoo999@gmail.com
 ```
+
+## A-2. Play 스크린샷 캡션 (8장)
+
+규격: 1080×1920 · 배경 `#FFF8E1` 크림 · 캡션 Pretendard 800, `#4E342E` ·
+포인트 옐로 `#FAC710`은 강조 한 단어에만. 캡션은 상단 여백에 2줄 이내,
+기기 프레임은 하단 70%. (`docs/design-system.md` §서식 준수)
+
+순서는 그대로 Play 업로드 순서. **1~3번이 목록에서 미리 보이므로 가장 중요**하다.
+
+| # | 화면 | 캡션 (KO) | 캡션 (EN) |
+|---|---|---|---|
+| 1 | 지도 + 마커 여럿 | **우리 동네 배구**<br>지도 한 눈에 | **Volleyball near you**<br>all on one map |
+| 2 | 필터 시트 (지역·요일 선택) | **지역·요일·대상**<br>조건만 딱 골라서 | **Area, day, level**<br>filter to your fit |
+| 3 | 클럽 상세 바텀시트 | **회비·일정·연락처**<br>한 번에 확인 | **Fees, schedule, contact**<br>all in one place |
+| 4 | 픽업 목록/상세 | **오늘 당장 한 게임**<br>픽업으로 | **Play today**<br>join a pickup game |
+| 5 | 도시락(찜) 그리드 | **맘에 든 팀은**<br>도시락에 찜 | **Save your favorites**<br>in the Lunchbox |
+| 6 | 프로필 네임카드 | **당신의 밥이름은?**<br>현미밥? 주먹밥? | **What's your rice-name?**<br>Brown rice? Riceball? |
+| 7 | 로그인 화면 | **카카오·네이버로**<br>몇 초면 시작 | **Kakao or Naver**<br>start in seconds |
+| 8 | 공유 스토리 카드 | **우리 팀 자랑**<br>스토리로 한 번에 | **Show off your team**<br>share to Stories |
+
+작성 원칙(재촬영·번역 시 유지):
+- 1줄 8자 내외, 2줄까지. 폰에서 썸네일로 줄었을 때 읽히는 크기여야 한다.
+- 기능 이름(도시락·밥이름)은 **의미가 드러나는 짧은 설명과 붙여서** 쓴다 — 처음 보는 사람에겐 낯선 단어라서.
+- 없는 기능을 암시하지 않는다(예: "실시간 매칭" ✗ — 실제로는 목록·필터).
+- 로그인 캡션(7번)은 "가입 없이도 둘러볼 수 있다"는 점과 상충하지 않게, 강요가 아닌 선택지로 읽히게.
 
 ## B. 릴스/숏폼 시리즈 (기능당 1편)
 
