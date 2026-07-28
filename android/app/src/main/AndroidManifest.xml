@@ -8,8 +8,12 @@
     
         <package android:name="com.instagram.android" />
 
-        <!-- 카카오톡 공유(SEND 인텐트 타깃) 설치 감지 -->
+        <!-- 카카오톡 공유(SEND 인텐트 타깃) + 카카오 로그인(톡으로 로그인) 설치 감지 -->
         <package android:name="com.kakao.talk" />
+
+        <!-- 네이버 로그인: 네이버 앱으로 로그인 가능 여부 조회 (Android 11+ 필수).
+             없으면 앱이 설치돼 있어도 감지 못 해 웹뷰 로그인으로만 동작한다. -->
+        <package android:name="com.nhn.android.search" />
 
         <!-- appinio_social_share: 페이스북/인스타 설치 감지·콘텐츠 전달용 -->
         <provider android:authorities="com.facebook.katana.provider.PlatformProvider" />
@@ -67,6 +71,24 @@
         <meta-data
             android:name="com.facebook.sdk.AdvertiserIDCollectionEnabled"
             android:value="false" />
+
+        <!-- 네이버 로그인 SDK (flutter_naver_login). 값은 strings.xml에서 관리. -->
+        <meta-data android:name="com.naver.sdk.clientId" android:value="@string/naver_client_id" />
+        <meta-data android:name="com.naver.sdk.clientSecret" android:value="@string/naver_client_secret" />
+        <meta-data android:name="com.naver.sdk.clientName" android:value="@string/naver_client_name" />
+
+        <!-- 카카오 로그인 리다이렉트 수신 (kakao_flutter_sdk_user).
+             kakaotalk 미설치 시 커스텀탭 계정 로그인 → kakao{키}://oauth 로 복귀. -->
+        <activity
+            android:name="com.kakao.sdk.flutter.AuthCodeCustomTabsActivity"
+            android:exported="true">
+            <intent-filter android:label="flutter_web_auth">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="kakao24e0161dd5945250b37e5ec7fbdf8363" android:host="oauth" />
+            </intent-filter>
+        </activity>
 
         <activity
             android:name=".MainActivity"

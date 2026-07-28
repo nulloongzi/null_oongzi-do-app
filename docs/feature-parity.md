@@ -125,6 +125,19 @@
 - ✅ 완료(웹, `claude/keen-cannon-93mnA`): W1 멀티 릴스(폼 textarea·insta_reels 저장·상세 더보기) · W2 라벨 롱프레스 릴스 피크(릴스 없는 팀은 무시 — 앱은 스낵바) · W3 릴스 지연 로딩(포스터→탭재생) · W4 remove_bookmark 추적 · W5 라벨 등장 페이드 · W6 필터시트 키워드
 - 🏁 결론: 패리티 백로그 소진. 잔여는 A3(카카오 콘솔 대기)와 A12(구조적 제외)뿐.
 
+### 진행 현황 (2026-07-27)
+- ✅ 완료(앱): 카카오/네이버 소셜 로그인 포팅 (웹 #41 대응)
+  - 카카오: `kakao_flutter_sdk_user` 톡 앱 우선 → 계정 폴백 → CF `kakaoCustomToken({accessToken})` → 커스텀 토큰. 웹과 동일 계정(`kakao:{id}`)으로 이어짐.
+  - 네이버: `flutter_naver_login` 구조 완성. **client secret은 커밋 금지**(이 저장소는 공개) — 빌드 시점 주입 구조를 쓴다:
+    - 로컬: `cp android/secrets.properties.example android/secrets.properties` 후 `naverClientSecret=` 채우기 (iOS는 `ios/Flutter/Secrets.xcconfig`). 둘 다 gitignore.
+    - CI: 리포지토리 시크릿 `NAVER_CLIENT_SECRET` → gradle이 `resValue`로 주입, 버튼 노출도 자동 결정(`build-apk.yml`).
+    - 버튼 노출: `--dart-define=NAVER_LOGIN_ENABLED=true` 인 빌드에서만(`kNaverLoginConfigured`). 미주입 빌드는 버튼 숨김 + 정상 빌드.
+    - 콘솔: developers.naver.com > API 설정 > 로그인 오픈 API 서비스 환경에 Android(패키지 `com.nulloongzi.nulloongzido`) / iOS(URL Scheme `nulloongzinaverlogin`, 번들 ID 동일) 추가 필요.
+  - ⚠️ 네이버 SDK 구조상 secret이 앱 바이너리에는 포함된다(네이버 정책). 저장소 노출만 막는 조치임.
+  - 카카오 콘솔: 로그인 활성화 + 동의항목 설정 필요(공유용 키·패키지 등록은 완료 상태).
+  - 로그인 진행 안내: 제공자별 반투명 테마 레이어(카카오=번개·네이버=물결·구글=안개·이메일=습기, `auth_loading_layer.dart`) + 12초 지연 시 닫기 탈출구.
+  - 네임카드 스탬프 이스터에그: 좌상단 밥이름 옆 로그인 수단 스탬프(`provider_stamp.dart`) — 웹과 동일 판별 규칙(uid 접두사 → providerData).
+
 ### 검증 필요(동작 미확정)
 - 앱: 언어 전환 시 열려 있는 상세 패널 즉시 재렌더 여부
 - 앱: 밥이름 생성 시 중복 재시도 유무

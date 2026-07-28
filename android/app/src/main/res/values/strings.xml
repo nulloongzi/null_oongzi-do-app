@@ -8,4 +8,11 @@
     <!-- Facebook 앱 설정 > 고급 > 클라이언트 토큰 값으로 교체.
          번들된 Facebook SDK 17이 시작 시 요구하므로 비어 있으면 안 된다(placeholder 유지). -->
     <string name="facebook_client_token">4c273c5306f9e84dde2c03ea2f747a83</string>
+
+    <!-- 네이버 로그인. Client ID는 공개값이라 커밋하지만, Client Secret은 여기 두지 않는다
+         (공개 저장소). secret은 build.gradle.kts가 android/secrets.properties 또는
+         NAVER_CLIENT_SECRET 환경변수에서 읽어 resValue로 주입한다 → @string/naver_client_secret.
+         설정 방법: android/secrets.properties.example 참고. -->
+    <string name="naver_client_id">41TDNsngcV0J7W6ICtDj</string>
+    <string name="naver_client_name">누룽지도</string>
 </resources>

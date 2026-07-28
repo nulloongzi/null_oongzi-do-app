@@ -36,9 +36,15 @@ jobs:
       - name: flutter pub get
         run: flutter pub get
 
-      # 디버그 서명으로 빌드 → 별도 키스토어 없이 폰에 설치 가능
+      # 디버그 서명으로 빌드 → 별도 키스토어 없이 폰에 설치 가능.
+      # 네이버 로그인: 리포지토리 시크릿 NAVER_CLIENT_SECRET 이 있으면 gradle이 리소스로
+      # 주입하고 버튼도 켠다. 없으면 빈 값 + 버튼 숨김으로 빌드만 정상 통과.
       - name: Build debug APK
-        run: flutter build apk --debug
+        env:
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+        run: |
+          flutter build apk --debug \
+            --dart-define=NAVER_LOGIN_ENABLED=${{ secrets.NAVER_CLIENT_SECRET != '' }}
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
