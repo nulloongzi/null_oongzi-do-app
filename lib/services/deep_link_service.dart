@@ -11,7 +11,7 @@ class DeepLink {
 }
 
 /// URI 쿼리에서 club/spot id 또는 capture 명령 추출. 없으면 null.
-/// ?capture=<cmd>&lang=ko 는 마케팅 자산 자동 캡처 전용(앱은 kCaptureMode 빌드에서만 반응).
+/// `?capture=<cmd>&lang=ko` 는 마케팅 자산 자동 캡처 전용(앱은 kCaptureMode 빌드에서만 반응).
 DeepLink? parseDeepLink(Uri uri) {
   final cap = uri.queryParameters['capture'];
   if (cap != null && cap.trim().isNotEmpty) {
