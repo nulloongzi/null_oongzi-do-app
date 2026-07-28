@@ -26,6 +26,7 @@ import 'pickup_form_screen.dart';
 import 'club_form_screen.dart';
 import 'lunchbox_screen.dart';
 import 'profile_screen.dart';
+import 'share_image_screen.dart';
 import '../widgets/bounce_tap.dart';
 import '../widgets/filter_sheet.dart';
 import '../widgets/glass_surface.dart';
@@ -518,8 +519,18 @@ class _MapScreenState extends State<MapScreen> {
         await _openFilter();
         break;
       case 'pickup':
-        setState(() => _tab = 'pickup');
+        // 목록 뷰로 — 지도만 찍으면 '픽업'인지 스토어에서 알아볼 수 없다.
+        setState(() {
+          _tab = 'pickup';
+          _pickupListView = true;
+        });
         _refreshMarkers();
+        break;
+      case 'login':
+        await Navigator.push(
+          context,
+          MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+        );
         break;
       case 'detail':
         final c = pick();
@@ -541,8 +552,16 @@ class _MapScreenState extends State<MapScreen> {
         }
         break;
       case 'story':
-        final c = pick();
-        if (c != null) await shareStoryCard(context, StoryCardData.fromClub(c));
+        // shareStoryCard()는 '링크 스티커' 1회 안내 다이얼로그부터 띄운다 — 스토어용으로는
+        // 안내문이 아니라 카드 자체가 보여야 하므로 공유 이미지 미리보기 화면을 연다.
+        try {
+          await _repo.ensureUid();
+        } catch (_) {}
+        if (!mounted) return;
+        await Navigator.push(
+          context,
+          MaterialPageRoute<void>(builder: (_) => const ShareImageScreen()),
+        );
         break;
       case 'lunchbox':
         // 로그인 게이트 우회(익명) + 데모 찜 1건 시드 → 빈 화면 방지.

@@ -153,7 +153,7 @@ smoke 실행으로 함정4(지도 렌더)를 판정하고, 성공하면 좌표�
 - `map_screen._runCapture()`: KO 강제(`appLang`) + 데이터 로드 대기 후 화면을 **결정적으로** 오픈.
   상세용 클럽은 급구→검증→첫 순으로 선택(예쁜 컷, 매번 동일). 도시락/프로필은 익명 로그인
   우회 + 데모 찜 1건 시드로 빈 화면 방지. 일반 릴리즈엔 무영향(플래그 off).
-- 지원 cmd: `map/filter/pickup/detail/share/story/lunchbox/profile`.
+- 지원 cmd: `map/filter/pickup/detail/share/story/lunchbox/profile/login`.
 
 **CI(`run_capture.sh`):** `am start -a VIEW -d 'https://nulloongzi.github.io/?capture=<cmd>&lang=ko'`
 (디바이스 셸 single-quote로 `&` 보호)로 8화면 캡처. 릴스는 지도 로드 후 녹화 시작→액션
@@ -164,7 +164,43 @@ smoke 실행으로 함정4(지도 렌더)를 판정하고, 성공하면 좌표�
 한국어·ANR無·매번 동일**. FP mean이 화면별로 모두 다름(=결정적 내비 성공). 릴스 3편.
 
 > 아래 "6런 검증 결과 / 좌표표"는 디렉터 도입 전(좌표 탭) 기록 — 히스토리로 남김.
-> 좌표는 더 이상 안 쓴다(딥링크가 대체). ANR dismiss(300,1360)만 유지.
+> 좌표는 더 이상 안 쓴다(딥링크가 대체).
+
+### ⚠️ 함정 5: 남겨둔 ANR 탭이 스샷을 망가뜨린다 (run #12에서 발각)
+
+"좌표는 더 이상 안 쓴다, **ANR dismiss(300,1360)만 유지**" — 그 하나가 문제였다.
+
+`dismiss_anr()` 의 옛 판정은 **"포커스 줄에 앱 이름이 안 보이면 ANR로 간주하고 탭"** 이었다.
+멀티 디스플레이 에뮬에서 `dumpsys window | grep -m1 mCurrentFocus` 가 먼저 걸리는 가상
+디스플레이의 `mCurrentFocus=null` 을 집는 바람에, **앱이 멀쩡히 떠 있는데도 매 캡처마다
+화면 한복판(300,1360)을 눌렀다.** `cap()` 이 스샷 직전에 이걸 부르므로 피해가 확정적이다.
+
+run #12 결과 8장 중 5장이 이 탭 때문에 엉뚱한 화면이었다:
+
+| 스샷 | 탭이 누른 것 | 실제로 찍힌 화면 |
+|---|---|---|
+| 01 지도 | 지도 마커 | 클럽 상세 시트 |
+| 05 도시락 | 찜 목록의 클럽 카드 | 클럽 상세 시트 |
+| 06 프로필 | 네임카드의 로그아웃 버튼 | **"로그아웃 하시겠습니까?" 확인창** |
+| 07 공유 | 공유 메뉴 스크림 | 클럽 상세 시트 |
+| 02·04 | 빈 영역 | (우연히) 정상 |
+
+**FP mean만 보고 "화면별로 값이 다르니 결정적 내비 성공"이라고 판정한 게 run #7의 오류다.**
+값이 다른 것과 의도한 화면인 것은 다르다. 썸네일을 실제로 열어봐야 한다.
+
+**수정:** ANR 다이얼로그가 실제로 떠 있다는 **양성 증거**(`Application Not Responding` /
+`Application Error` / `isn't responding`)가 있을 때만 탭한다. 증거가 없으면 아무것도 누르지
+않는다. 없는 것을 근거로 행동하지 말 것 — 그게 이 버그의 형태였다.
+
+### 화면 세트 (현재 9장)
+`map / filter / pickup / detail / lunchbox / profile / share / story / login`
+
+- `pickup` 은 목록 패널(`_pickupListView = true`)로 연다. 지도만 찍으면 스토어에서
+  "픽업"인지 알아볼 수 없다.
+- `story` 는 `shareStoryCard()` 를 부르지 않는다 — 그건 '링크 스티커' **안내 다이얼로그**부터
+  띄워서 안내문이 찍힌다. 공유 이미지 미리보기(`ShareImageScreen`)를 연다.
+- `login` 은 `LoginScreen` 을 push. 캡처 빌드에 `--dart-define=NAVER_LOGIN_ENABLED=true` 를
+  주므로 카카오·네이버 버튼이 **스토어에 나가는 릴리즈 AAB와 동일하게** 보인다.
 
 ## 실행 검증 결과 (CI 6런, 2026-07-22) — 파이프라인 실동작 확인
 GitHub Actions에서 6번 돌려 **에뮬레이터 실기동 캡처를 실제로 검증**했다(로그 base64 썸네일로 육안 확인).

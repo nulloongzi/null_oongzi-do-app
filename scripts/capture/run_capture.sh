@@ -127,12 +127,18 @@ swp() { adb shell input swipe "$1" "$2" "$3" "$4" "${5:-500}" >/dev/null 2>&1; }
 
 # ANR("Pixel Launcher isn't responding") 능동 정리 — hide_error_dialogs가 런처 ANR엔
 # 안 먹혀서(검증됨), 포커스가 우리 앱이 아니면 중앙 다이얼로그 'Wait'(300,1360) 탭.
+#
+# 탭은 **ANR 다이얼로그가 실제로 떠 있을 때만** 한다. 예전 판은 "포커스 줄에 앱 이름이
+# 안 보이면 탭"이었는데, 멀티 디스플레이 에뮬에서 `grep -m1` 이 먼저 걸리는 가상
+# 디스플레이의 `mCurrentFocus=null` 을 집어 매 캡처마다 화면 한복판을 눌렀다.
+# 그 탭이 마커·리스트·버튼을 눌러 지도→상세, 프로필→로그아웃 확인창 식으로
+# 스크린샷을 통째로 망가뜨렸다(run #12에서 8장 중 5장). 증거 없으면 손대지 않는다.
 dismiss_anr() {
-  local i foc
+  local i anr
   for i in 1 2 3 4; do
-    foc="$(adb shell dumpsys window 2>/dev/null | grep -m1 -i 'mCurrentFocus' || true)"
-    echo "$foc" | grep -q "$APP_ID" && return 0
-    [ -z "$foc" ] && return 0
+    anr="$(adb shell dumpsys window 2>/dev/null \
+      | grep -iE "Application Not Responding|Application Error|isn'?t responding" || true)"
+    [ -z "$anr" ] && return 0
     adb shell input tap 300 1360 >/dev/null 2>&1
     adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 2>&1 || true
     sleep 2
@@ -155,7 +161,8 @@ open_cap detail 33;   cap "play_04_detail_${CAP_LANG}"
 open_cap lunchbox 34; cap "play_05_lunchbox_${CAP_LANG}"
 open_cap profile 32;  cap "play_06_profile_${CAP_LANG}"
 open_cap share 34;    cap "play_07_share_${CAP_LANG}"
-open_cap story 34;    cap "play_08_story_${CAP_LANG}"
+open_cap story 36;    cap "play_08_story_${CAP_LANG}"
+open_cap login 32;    cap "play_09_login_${CAP_LANG}"
 
 # ── 카피 오버레이 합성(업로드용 최종 이미지) ──────────────────
 # Play 마케팅 프레임: 크림 1080×1920 캔버스 + 상단 2줄 카피(나눔고딕Bold) +
@@ -184,6 +191,8 @@ if [ -e "$KFONT" ]; then
   compose_store "play_05_lunchbox_${CAP_LANG}" "마음에 든 팀은" "‘도시락’에 찜"
   compose_store "play_06_profile_${CAP_LANG}"  "나만의" "‘밥이름’ 닉네임"
   compose_store "play_07_share_${CAP_LANG}"    "카톡·인스타로" "우리 팀 자랑"
+  compose_store "play_08_story_${CAP_LANG}"    "내 카드 한 장으로" "스토리에 자랑"
+  compose_store "play_09_login_${CAP_LANG}"    "카카오·네이버로" "몇 초면 시작"
 else
   echo "::warning::한글 폰트(nanum) 미탐지 — 카피 합성 스킵($KFONT)"
 fi

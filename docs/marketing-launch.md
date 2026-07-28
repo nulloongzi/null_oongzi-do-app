@@ -116,16 +116,25 @@ Contact: paulyoo999@gmail.com
 
 순서는 그대로 Play 업로드 순서. **1~3번이 목록에서 미리 보이므로 가장 중요**하다.
 
-| # | 화면 | 캡션 (KO) | 캡션 (EN) |
-|---|---|---|---|
-| 1 | 지도 + 마커 여럿 | **우리 동네 배구**<br>지도 한 눈에 | **Volleyball near you**<br>all on one map |
-| 2 | 필터 시트 (지역·요일 선택) | **지역·요일·대상**<br>조건만 딱 골라서 | **Area, day, level**<br>filter to your fit |
-| 3 | 클럽 상세 바텀시트 | **회비·일정·연락처**<br>한 번에 확인 | **Fees, schedule, contact**<br>all in one place |
-| 4 | 픽업 목록/상세 | **오늘 당장 한 게임**<br>픽업으로 | **Play today**<br>join a pickup game |
-| 5 | 도시락(찜) 그리드 | **맘에 든 팀은**<br>도시락에 찜 | **Save your favorites**<br>in the Lunchbox |
-| 6 | 프로필 네임카드 | **당신의 밥이름은?**<br>현미밥? 주먹밥? | **What's your rice-name?**<br>Brown rice? Riceball? |
-| 7 | 로그인 화면 | **카카오·네이버로**<br>몇 초면 시작 | **Kakao or Naver**<br>start in seconds |
-| 8 | 공유 스토리 카드 | **우리 팀 자랑**<br>스토리로 한 번에 | **Show off your team**<br>share to Stories |
+캡션은 **`scripts/capture/run_capture.sh` 의 `compose_store` 인자에 박혀 있고**, CI가 이미
+합성해서 내보낸다(`marketing-assets/store/*.png`). 아래 표의 KO 문구를 바꾸려면 표가 아니라
+그 스크립트를 고쳐야 한다 — 표만 고치면 실제 이미지는 그대로다.
+
+| # | 파일(store/) | 화면 | 캡션 (KO · 실제 합성값) | 캡션 (EN) |
+|---|---|---|---|---|
+| 1 | `play_01_map_ko` | 지도 + 마커 여럿 | **전국 배구 동호회,**<br>지도 한 눈에 | **Volleyball near you**<br>all on one map |
+| 2 | `play_02_filter_ko` | 필터 시트 (지역·요일 선택) | **지역·요일·대상으로**<br>딱 맞는 팀 | **Area, day, level**<br>filter to your fit |
+| 3 | `play_03_pickup_ko` | 픽업 목록 패널 | **오늘 당장 뛸**<br>픽업 게임 | **Play today**<br>join a pickup game |
+| 4 | `play_04_detail_ko` | 클럽 상세 바텀시트 | **일정·회비·위치 확인하고**<br>바로 연락 | **Fees, schedule, contact**<br>all in one place |
+| 5 | `play_05_lunchbox_ko` | 도시락(찜) 그리드 | **마음에 든 팀은**<br>'도시락'에 찜 | **Save your favorites**<br>in the Lunchbox |
+| 6 | `play_06_profile_ko` | 프로필 네임카드 | **나만의**<br>'밥이름' 닉네임 | **What's your rice-name?**<br>Brown rice? Riceball? |
+| 7 | `play_07_share_ko` | 공유 메뉴 | **카톡·인스타로**<br>우리 팀 자랑 | **Show off your team**<br>share to Stories |
+| 8 | `play_08_story_ko` | 공유 이미지 미리보기 | **내 카드 한 장으로**<br>스토리에 자랑 | **One card**<br>straight to Stories |
+| 9 | `play_09_login_ko` | 로그인 화면 | **카카오·네이버로**<br>몇 초면 시작 | **Kakao or Naver**<br>start in seconds |
+
+Play 휴대전화 스크린샷은 **최대 8장**이라 9장 중 하나는 뺀다. 목록 썸네일에 1~3번만
+보이므로 앞 세 장(지도·필터·픽업)은 고정하고, 8·9번 중 무엇을 넣을지는 그때의 소구점으로
+고른다(소셜 로그인을 알리는 릴리즈면 9번을 남긴다).
 
 작성 원칙(재촬영·번역 시 유지):
 - 1줄 8자 내외, 2줄까지. 폰에서 썸네일로 줄었을 때 읽히는 크기여야 한다.
