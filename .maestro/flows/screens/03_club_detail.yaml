@@ -1,0 +1,26 @@
+# 03_club_detail.yaml — Play 스샷 #4: 클럽 상세 바텀시트. (게스트 열람)
+# 네이티브 지도 마커를 좌표로 탭 → 상세 시트. ⚠️ 좌표는 데이터/카메라 의존 →
+# 첫 실행 스샷 보고 마커 위치로 보정(핸드오프: Maestro 좌표 브리틀 주의).
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- runFlow:
+    when:
+      true: ${APPLANG == "en"}
+    file: ../_set_lang_en.yaml
+- extendedWaitUntil:
+    visible: "동호회"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 8000
+# 화면 중앙부 마커 추정 지점 탭(상세 시트 트리거).
+- tapOn:
+    point: "50%, 45%"
+- extendedWaitUntil:
+    visible: "공유하기"   # 상세 시트의 공유 버튼(📤 공유하기) 등장 = 시트 열림
+    timeout: 8000
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: "${OUT}/play_04_club_detail_${APPLANG}"

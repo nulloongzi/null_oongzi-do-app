@@ -1,0 +1,22 @@
+# 00_map.yaml — Play 스샷 #1: 마커 뜬 지도. (게스트 열람)
+# 지도는 네이티브 SurfaceView지만 Maestro takeScreenshot 은 내부적으로 adb screencap
+# 을 써서 네이티브 레이어까지 담는다(함정1 대응).
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- runFlow:
+    when:
+      true: ${APPLANG == "en"}
+    file: ../_set_lang_en.yaml
+# 상단 UI(탭)가 뜨면 셸 준비 완료.
+- extendedWaitUntil:
+    visible: "동호회"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 8000
+# 네이버맵 타일/마커가 실제로 그려질 시간(에뮬 SwiftShader는 느림).
+- swipe: { start: "50%, 55%", end: "50%, 50%", duration: 300 } # 살짝 흔들어 타일 강제 렌더
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: "${OUT}/play_01_map_${APPLANG}"

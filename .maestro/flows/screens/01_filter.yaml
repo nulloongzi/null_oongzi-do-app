@@ -1,0 +1,27 @@
+# 01_filter.yaml — Play 스샷 #2: 필터 시트. (게스트 열람)
+# 필터 아이콘(Icons.tune)은 텍스트 없는 아이콘 전용 → 좌표 탭.
+# ⚠️ 좌표는 pixel_6(1080×2400) 근사 — 첫 실행 스샷 보고 보정.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- runFlow:
+    when:
+      true: ${APPLANG == "en"}
+    file: ../_set_lang_en.yaml
+- extendedWaitUntil:
+    visible: "동호회"
+    timeout: 30000
+# 검색바 우측 끝의 필터(tune) 아이콘. 텍스트 앵커가 없어 좌표로.
+- tapOn:
+    point: "93%, 13%"
+- extendedWaitUntil:
+    visible: "적용하기"
+    timeout: 8000
+- takeScreenshot: "${OUT}/play_02_filter_${APPLANG}"
+# (선택) 실제 적용 결과 스샷: 필터 칩 하나 선택 후 적용 → 좁혀진 지도.
+# 칩 라벨은 데이터 의존 → 첫 실행 후 알려진 라벨로 아래 주석 해제/보정.
+# - tapOn: "목요일"
+# - tapOn: "적용하기"
+# - waitForAnimationToEnd: { timeout: 5000 }
+# - takeScreenshot: "${OUT}/play_02b_filtered_${APPLANG}"

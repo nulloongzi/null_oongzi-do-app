@@ -102,7 +102,124 @@ adb shell am broadcast -a com.android.systemui.demo -e command notifications -e 
 - 좌표 브ittle → Maestro 텍스트/id 매칭 권장.
 - prod 데이터 오염 주의: **읽기 전용 화면만** 조작(등록/찜 저장 같은 write는 테스트 계정으로).
 
+## 구현 상태 (이 세션) — 파이프라인 착수 완료, CI 실행/보정 대기
+파이프라인 골격을 만들었다. **아직 실제 러너에서 돌려보지 않았다** — 다음 세션의 첫 일은
+smoke 실행으로 함정4(지도 렌더)를 판정하고, 성공하면 좌표를 보정하는 것.
+
+### 추가된 파일
+- `.github/workflows/capture-assets.yml` — 수동 실행(workflow_dispatch) 워크플로.
+  입력: `build_type`(release|debug), `smoke_only`(기본 true), `capture_lang`(ko|en),
+  `include_reels`. release=업로드 키(시크릿 `ANDROID_KEYSTORE_*`)로 서명(카카오 키해시 OK,
+  함정2), debug=커밋된 `debug-fixed.keystore`(시크릿 불필요, 지도 렌더 검증용으로 충분).
+  에뮬: api-34 · x86_64 · google_apis · pixel_6(=1080×2400, Play 규격) ·
+  `-gpu swiftshader_indirect`(함정4 완화). Firebase 에뮬 없음 → **prod Firestore**(실제 마커).
+- `scripts/capture/run_capture.sh` — 러너에서: 부팅 대기 → APK 설치 → demo mode 상태바 →
+  **지도 렌더 스모크 게이트**(`adb exec-out screencap` + ImageMagick 평균밝기<0.03 이면 실패) →
+  smoke_only면 종료, 아니면 Maestro 설치 후 스샷/릴스 캡처 → 아티팩트로 회수.
+- `scripts/capture/record.sh` — 한 Maestro 플로우를 `adb shell screenrecord`로 감싸 mp4 녹화
+  (SIGINT로 정상 flush). 네이티브 지도 레이어 포함(함정1).
+- `.maestro/` — 캡처 플로우:
+  - `flows/screens/` (게스트 열람, 기본 실행): `00_map`→play_01, `01_filter`→play_02,
+    `02_pickup`→play_03(+상세), `03_club_detail`→play_04, `04_share`→play_07.
+  - `flows/login/` (로그인 필요, **시크릿 `TEST_ACCOUNT_EMAIL/PASSWORD` 있을 때만**):
+    `05_lunchbox`→play_05, `06_profile`→play_06(+닉네임). `_login_email.yaml` 이메일 로그인 서브플로우.
+  - `flows/reels/` (`include_reels=true`): `reel_1_findmap`·`reel_2_filter`·`reel_3_pickup`·`reel_7_finale`.
+  - 산출물 규격대로 파일명(`play_01_map_ko.png`, `reel_1_findmap.mp4`), 아티팩트
+    `nulloongzido-marketing-assets`, retention 30일.
+
+### 실행 순서 (다음 세션)
+1. **Actions → "Capture Marketing Assets (emulator)" → Run**: `build_type=debug`, `smoke_only=true`.
+   → 아티팩트 `screens/play_01_map_ko.png` 를 눈으로 확인. **검정이면 함정4** — job 로그의
+   평균밝기 값 + `logs/logcat_smoke.txt` 확인, `-gpu`/이미지/대기 조정. 안 되면 실기기 폴백.
+2. 지도 OK면 `build_type=release`, `smoke_only=false` 로 재실행 → 스샷/릴스 세트 확보.
+3. **좌표 보정**: 아이콘 전용(필터 tune)·네이티브 마커·픽업 카드 탭은 `point:` 근사값이다
+   (pixel_6 1080×2400 기준, 각 flow에 `⚠️ 보정` 주석). 첫 스샷을 보고 정확한 좌표/알려진
+   칩 라벨로 교체. 텍스트 앵커(동호회/픽업/EN/적용하기/공유하기/🍱/🍚)는 그대로 견고.
+4. 로그인 세트가 필요하면 레포 Secrets에 `TEST_ACCOUNT_EMAIL/PASSWORD`(전용 테스트 계정) 등록.
+5. (선택) `capture_lang=en` 로 EN 세트.
+
+### 알려진 한계 / 주의
+- **미검증**: 워크플로/스크립트/플로우는 문법·구조만 확인. 에뮬 지도 렌더와 좌표는 실행 후 확정.
+- prod 쓰기 방지: 열람 화면만 조작. 픽업 '참가'·닉네임 '저장'은 누르지 않음. 로그인 세트는
+  전용 테스트 계정 사용.
+- 릴스 원본은 디바이스 해상도(1080×2400)로 녹화 → 릴스(1080×1920)는 **편집에서 크롭**.
+
+## ✅ 최종 해결 — 앱 "캡처 디렉터"(딥링크)로 완전 자동화 (CI 7런째 성공)
+좌표 탭·마커 운·언어 브리틀함을 **앱 코드로 근본 해결**. 이제 **push 한 번에 8화면 KO
+스샷 + 릴스 3편이 결정적으로** 나온다(수동 개입 0).
+
+**앱(`kCaptureMode` = `--dart-define=CAPTURE_MODE=true` 빌드 전용):**
+- `deep_link_service.dart`: `?capture=<cmd>&lang=ko` 파싱.
+- `map_screen._runCapture()`: KO 강제(`appLang`) + 데이터 로드 대기 후 화면을 **결정적으로** 오픈.
+  상세용 클럽은 급구→검증→첫 순으로 선택(예쁜 컷, 매번 동일). 도시락/프로필은 익명 로그인
+  우회 + 데모 찜 1건 시드로 빈 화면 방지. 일반 릴리즈엔 무영향(플래그 off).
+- 지원 cmd: `map/filter/pickup/detail/share/story/lunchbox/profile`.
+
+**CI(`run_capture.sh`):** `am start -a VIEW -d 'https://nulloongzi.github.io/?capture=<cmd>&lang=ko'`
+(디바이스 셸 single-quote로 `&` 보호)로 8화면 캡처. 릴스는 지도 로드 후 녹화 시작→액션
+딥링크로 카메라비행/시트슬라이드 모션 유발.
+
+**검증된 산출(run #7, debug):** play_01 지도 / 02 필터 / 03 픽업탭 / 04 상세(피터팬) /
+05 도시락(찜 시드) / 06 밥이름 프로필(오곡밥-gnp) / 07 공유메뉴 / 08 인스타스토리 — **전부
+한국어·ANR無·매번 동일**. FP mean이 화면별로 모두 다름(=결정적 내비 성공). 릴스 3편.
+
+> 아래 "6런 검증 결과 / 좌표표"는 디렉터 도입 전(좌표 탭) 기록 — 히스토리로 남김.
+> 좌표는 더 이상 안 쓴다(딥링크가 대체). ANR dismiss(300,1360)만 유지.
+
+## 실행 검증 결과 (CI 6런, 2026-07-22) — 파이프라인 실동작 확인
+GitHub Actions에서 6번 돌려 **에뮬레이터 실기동 캡처를 실제로 검증**했다(로그 base64 썸네일로 육안 확인).
+함정4·ANR·드라이버 이슈를 모두 해결하고 마케팅 자산을 뽑는 파이프라인이 **동작함**.
+
+### 해결한 3대 이슈
+1. **함정4(지도 렌더)** — SwiftShader에서 네이버맵이 실제로 뜬다(평균밝기 0.87, 서울 전역
+   마커·클러스터·급구 티커까지). 스모크 게이트 통과.
+2. **Maestro 폐기** — Maestro가 이 앱(네이티브 NaverMap+Flutter)의 **접근성 트리를 못 읽어**
+   모든 텍스트 매칭 실패(`Assertion "동호회" is visible = false`). → **순수 adb 좌표 탭**
+   (`input tap/swipe` + `screencap`/`screenrecord`)으로 전환. `.maestro/`는 참고용으로 남김.
+3. **런처 ANR** — "Pixel Launcher isn't responding" 팝업이 화면을 덮고 탭 포커스를 훔침.
+   `hide_error_dialogs`는 이 런처 ANR엔 무효 → `dismiss_anr()`(포커스가 앱이 아니면 'Wait'
+   버튼 탭 + CLOSE_SYSTEM_DIALOGS)로 능동 제거. **해결됨**.
+
+### 안정적으로 나오는 것 (매 런)
+- **play_01 지도** — 깨끗(ANR無), 실데이터, release 서명. **히어로 스샷**.
+- **play_02 필터 시트** — 지역/요일/대상 칩. 필터 아이콘(954,211)이 안정적 → 매번 성공.
+  (참고: 필터 시트는 앱 언어와 무관하게 **항상 한국어** — strings.dart 설계: 등록/필터 폼은
+  개설자 대상이라 KO 고정.)
+- **릴스 3편**(reel_1_findmap/3_pickup/7_finale) mp4. 8~10MB.
+- 릴리스 서명 빌드(시크릿 유효, step6/9 success).
+
+### 아직 브리틀 (좌표/데이터 의존 — 다음 세션 보정)
+- **픽업 탭 전환** — 탭 pill은 고정 UI인데 좌표(765,420)가 근소하게 빗나감. 실측 재보정 필요.
+- **마커→상세** — 마커 위치가 **런마다 카메라/데이터에 따라 달라** 고정좌표(540,980)가
+  맞을 때(라운드2: 실제 클럽 상세 '시흥 픽업게임' 캡처 성공)와 빗나갈 때가 있음. 근본적 브리틀.
+  → 대안: 앱에 "첫 마커로 카메라 이동/상세 열기" 딥링크나 테스트 훅을 두면 결정적.
+- **공유 메뉴(play_07)** — 상세가 열려야 도달 → 상세 브리틀에 종속.
+- **언어**: 에뮬 로케일이 en이라 지도/탭 chrome이 영어. 인앱 토글(864,211) 탭이 빗나감.
+  → 더 견고: **에뮬 AVD 로케일을 ko-KR로** 설정하거나 토글 좌표 재실측.
+
+### 확정/측정 좌표 (1080×2400, pixel_6, 급구 티커 있을 때)
+| 요소 | 좌표 | 상태 |
+|---|---|---|
+| 검색바 행 y | 211 | ✅ |
+| 필터(tune) 아이콘 | 954,211 | ✅ 안정 |
+| 언어 토글 '한' | ~846,211 | ⚠️ 재실측 |
+| 탭 행 y | ~420 | ✅ |
+| 동호회 탭 x / 픽업 탭 x | 430 / 765 | ⚠️ 픽업 재보정 |
+| 마커(상세) | 540,980 | ⚠️ 데이터 의존 |
+| 상세 '공유' 버튼 | 877,2283 | (상세 열리면) |
+| ANR 'Wait' | 300,1360 | ✅ 동작 |
+
+### 워크플로 실행 방법(확정)
+- 워크플로가 default 브랜치에 없어 API `workflow_dispatch`는 404. → `claude/**` **push**로 실행.
+  일반 push는 debug+smoke(안전). 커밋 메시지 마커로 승격: `[cap-full]`(전체) `[cap-reels]`(릴스)
+  `[cap-release]`(서명). 예: 마커 3개 넣고 push → release 전체 세트.
+- 결과 검증: 아티팩트 호스트(blob)가 에이전트 프록시에 막히면, 스크립트 `fingerprint()`가
+  **각 스샷 평균밝기 + JPEG 썸네일을 CI 로그에 base64로** 출력하므로 로그만으로 육안 검증 가능.
+- ⚠️ 에뮬 boot는 간헐 실패(`Timeout waiting for emulator to boot`) — 재실행하면 됨.
+  에뮬 리소스를 과하게(-cores 4 on 4-vCPU) 주면 부팅 불안정 → 기본값 근처 유지.
+
 ## 참고 경로
+- 캡처 워크플로/스크립트/플로우: `.github/workflows/capture-assets.yml`, `scripts/capture/`, `.maestro/`
 - 마케팅 카피·릴스 스토리보드: `docs/marketing-launch.md` (A절 카피 / B절 릴스7편 / D절 체크리스트)
 - 디자인 규격: `docs/design-system.md`
 - 에뮬 워크플로 템플릿: `.github/workflows/e2e.yml`
@@ -113,4 +230,6 @@ adb shell am broadcast -a com.android.systemui.demo -e command notifications -e 
 - 앱 코드: main에 등록 마찰 개선 + 측정 파리티 + FB App ID 정정 반영 완료(`2.0.0+6`).
 - 정정 서명 AAB 빌드 완료(Actions Release AAB 런 #3). Play 업로드는 업로드 키 유예로 대기 중.
 - 실기기 debug APK로 지도·카카오·인스타 스토리 3종 동작 검증 완료(단 DEBUG 리본).
-- **이 캡처 파이프라인은 아직 미착수** — 이 문서가 그 시작점.
+- **캡처 파이프라인 실동작 검증 완료** — CI 6런으로 함정4·ANR·Maestro 이슈 해결, 지도/필터
+  스샷 + 릴스 3편을 release 서명으로 안정 생산 확인. 상세는 "실행 검증 결과" 섹션 참조.
+  잔여: 픽업/마커/공유 좌표 브리틀, 언어(에뮬 로케일), 로그인 세트(테스트 계정 시크릿).

@@ -1,0 +1,188 @@
+name: Capture Marketing Assets (emulator)
+
+# CI 에뮬레이터에서 앱을 실제 부팅해 Play 스토어 스크린샷(1080×2400) + 릴스용
+# 화면녹화(mp4)를 자동으로 뽑아 아티팩트로 올린다.
+# 설계·함정·산출물 규격: docs/handoff-ci-screenshot-capture.md
+#
+# 핵심 결정(핸드오프 반영):
+#  · 지도(flutter_naver_map)는 네이티브 SurfaceView → Flutter 스크린샷은 검게 잡힘.
+#    반드시 프레임버퍼 캡처(`adb exec-out screencap` / `adb shell screenrecord`)로 뜬다.
+#  · DEBUG 리본/미서명 회피 위해 기본 release 서명 APK(카카오 키해시 등록된 업로드 키).
+#  · Firebase 에뮬레이터 안 씀 → prod Firestore로 띄워 실제 클럽 마커가 보이게 한다.
+#  · 최대 리스크는 x86_64 에뮬 SwiftShader에서 네이버맵 타일 미렌더(함정4).
+#    → 항상 "지도 렌더 스모크 게이트"를 가장 먼저 돌려 (near-)black이면 즉시 실패시킨다.
+#
+# 수동 실행(workflow_dispatch)이 기본. 워크플로가 아직 default 브랜치에 없어 API dispatch가
+# 안 되는 동안엔, claude/** 브랜치 push 로도 자동 실행된다(capture 파일 변경 시).
+# push 트리거는 입력값이 없으므로 안전 기본값(debug + smoke_only)으로 동작 → 시크릿 불필요.
+# 첫 실행은 smoke_only=true 로 지도 렌더부터 검증하라(함정4 조기 판정).
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: "APK 빌드 타입 (release=업로드키 서명/카카오OK, debug=커밋된 debug 키/시크릿 불필요)"
+        type: choice
+        options: ["release", "debug"]
+        default: "release"
+      smoke_only:
+        description: "지도 렌더 스모크만(스샷 1장) 후 종료 — 첫 실행 권장(함정4 조기 판정)"
+        type: boolean
+        default: true
+      capture_lang:
+        description: "캡처 언어 (앱 내 KO/EN 수동 토글). ko | en"
+        type: choice
+        options: ["ko", "en"]
+        default: "ko"
+      include_reels:
+        description: "릴스 화면녹화(mp4)까지 캡처 (smoke_only=false 일 때만)"
+        type: boolean
+        default: true
+  push:
+    branches: ["claude/**"]
+    paths:
+      - ".github/workflows/capture-assets.yml"
+      - "scripts/capture/**"
+      - ".maestro/**"
+
+concurrency:
+  group: capture-assets-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # push 트리거엔 inputs가 없으므로: 안전 기본값(debug+smoke)으로 폴백하되,
+    # 커밋 메시지 마커로 이번 실행만 승격시킨다(워크플로가 default 브랜치에 없어
+    # API dispatch가 안 되는 상황의 우회 — 일반 push는 계속 스모크로 안전).
+    #   [cap-full]    → smoke 해제(전체 스샷/릴스 캡처)
+    #   [cap-reels]   → 릴스 화면녹화 포함
+    #   [cap-release] → release 서명 빌드(시크릿 필요)
+    env:
+      BUILD_TYPE: ${{ github.event.inputs.build_type || (contains(github.event.head_commit.message, '[cap-release]') && 'release' || 'debug') }}
+      SMOKE_ONLY: ${{ github.event.inputs.smoke_only || (contains(github.event.head_commit.message, '[cap-full]') && 'false' || 'true') }}
+      CAP_LANG: ${{ github.event.inputs.capture_lang || 'ko' }}
+      INCLUDE_REELS: ${{ github.event.inputs.include_reels || (contains(github.event.head_commit.message, '[cap-reels]') && 'true' || 'false') }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── APK 빌드 ────────────────────────────────────────────────
+      # AGP 8.11 / Gradle 8.14 → JDK 17
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - run: flutter --version
+
+      # release: 업로드 키스토어를 시크릿에서 주입(디버그로 조용히 빌드되는 사고 방지).
+      # (release-aab.yml 과 동일한 서명 경로 — build.gradle.kts 는 android/key.properties 참조)
+      - name: 릴리즈 서명 준비 (build_type=release)
+        if: ${{ env.BUILD_TYPE == 'release' }}
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PW: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PW: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KS_B64" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 시크릿이 없습니다. release 서명이 불가합니다."
+            echo "::error::시크릿을 등록하거나, build_type=debug 로 다시 실행하세요(커밋된 debug 키 사용)."
+            exit 1
+          fi
+          echo "$KS_B64" | base64 -d > android/upload-keystore.jks
+          {
+            echo "storeFile=upload-keystore.jks"
+            echo "storePassword=$STORE_PW"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PW"
+          } > android/key.properties
+
+      - name: flutter pub get
+        run: flutter pub get
+
+      - name: Build APK
+        id: build
+        run: |
+          # CAPTURE_MODE: 앱의 캡처 디렉터(?capture= 딥링크) 활성화 — 마케팅 캡처 빌드 전용.
+          if [ "${{ env.BUILD_TYPE }}" = "release" ]; then
+            flutter build apk --release --dart-define=CAPTURE_MODE=true
+            echo "apk=build/app/outputs/flutter-apk/app-release.apk" >> "$GITHUB_OUTPUT"
+          else
+            # debug: 커밋된 debug-fixed.keystore 서명(비밀 아님). main.dart 가
+            # debugShowCheckedModeBanner:false 라 DEBUG 리본은 없지만, 카카오 공유는
+            # release 키해시가 필요하므로 debug 세트에선 공유 스샷 품질이 제한될 수 있음.
+            flutter build apk --debug --dart-define=CAPTURE_MODE=true
+            echo "apk=build/app/outputs/flutter-apk/app-debug.apk" >> "$GITHUB_OUTPUT"
+          fi
+
+      # release 서명 검증(디버그 키로 새어나갔으면 실패) — 마케팅 자산 신뢰성 보장
+      - name: 서명 인증서 확인 (release)
+        if: ${{ env.BUILD_TYPE == 'release' }}
+        run: |
+          keytool -printcert -jarfile "${{ steps.build.outputs.apk }}" | tee cert.txt || true
+          if grep -q "CN=Android Debug" cert.txt; then
+            echo "::error::APK가 디버그 키로 서명됨 — release 키 주입 실패. 시크릿/alias 확인."
+            exit 1
+          fi
+
+      # ── 이미지 도구(스모크 black 게이트용) ──────────────────────
+      - name: Install ImageMagick + Korean font
+        # imagemagick: 블랙 게이트 + 카피 오버레이 합성 / fonts-nanum: 한글 캡션 렌더
+        run: sudo apt-get update && sudo apt-get install -y imagemagick fonts-nanum fontconfig
+
+      # ── 안드 에뮬 가속(KVM) ─────────────────────────────────────
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # ── 에뮬레이터 부팅 + 캡처 ──────────────────────────────────
+      # pixel_6 프로필 = 1080×2400 → Play 스샷 규격과 일치.
+      # google_apis 이미지 + swiftshader_indirect(함정4 완화).
+      - name: Capture on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          # 리소스는 기본값 유지 — 4코어 러너에서 -cores 4는 호스트를 굶겨 부팅 타임아웃
+          # 유발(라운드3 실패). ANR은 스크립트의 dismiss_anr()가 처리하므로 증설 불필요.
+          ram-size: 3072M
+          disable-animations: true
+          emulator-options: >-
+            -no-window -no-snapshot -noaudio -no-boot-anim
+            -gpu swiftshader_indirect -camera-back none -camera-front none
+          script: bash scripts/capture/run_capture.sh
+        env:
+          APK_PATH: ${{ steps.build.outputs.apk }}
+          ARTIFACTS_DIR: ${{ github.workspace }}/marketing-assets
+          SMOKE_ONLY: ${{ env.SMOKE_ONLY }}
+          CAP_LANG: ${{ env.CAP_LANG }}
+          INCLUDE_REELS: ${{ env.INCLUDE_REELS }}
+          # 로그인 필요 화면(도시락/프로필/닉네임) 옵션 — 테스트 계정 시크릿 있을 때만 동작.
+          TEST_ACCOUNT_EMAIL: ${{ secrets.TEST_ACCOUNT_EMAIL }}
+          TEST_ACCOUNT_PASSWORD: ${{ secrets.TEST_ACCOUNT_PASSWORD }}
+
+      # ── 산출물 업로드 ───────────────────────────────────────────
+      - name: Upload marketing assets
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nulloongzido-marketing-assets
+          path: marketing-assets/**
+          if-no-files-found: warn
+          retention-days: 30
+
+      # 디스크의 서명 흔적 제거(아티팩트엔 미포함)
+      - name: Cleanup secrets on disk
+        if: always()
+        run: rm -f android/key.properties android/upload-keystore.jks

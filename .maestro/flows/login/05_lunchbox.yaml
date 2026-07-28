@@ -1,0 +1,22 @@
+# 05_lunchbox.yaml — Play 스샷 #5: 도시락(찜 목록). (로그인 필요)
+# 게스트가 🍱 탭 → 로그인 게이트 → 이메일 로그인 → 다시 🍱 → 도시락.
+# env: EMAIL, PASSWORD 필요(없으면 run_capture 가 이 플로우를 건너뜀).
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- runFlow:
+    when:
+      true: ${APPLANG == "en"}
+    file: ../_set_lang_en.yaml
+- extendedWaitUntil:
+    visible: "동호회"
+    timeout: 30000
+# 도시락 FAB(🍱) → 게스트면 로그인 게이트.
+- tapOn: "🍱"
+- runFlow: ./_login_email.yaml
+# 로그인 후 다시 도시락 열기.
+- tapOn: "🍱"
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: "${OUT}/play_05_lunchbox_${APPLANG}"

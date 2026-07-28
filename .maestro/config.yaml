@@ -1,0 +1,16 @@
+# .maestro/config.yaml — Maestro 워크스페이스 설정.
+# 마케팅 자산 캡처 플로우 모음. CI 오케스트레이션: scripts/capture/run_capture.sh
+# 설계·산출물 규격: docs/handoff-ci-screenshot-capture.md
+#
+# 실행 env(플로우가 ${...} 로 참조):
+#   OUT   — 스크린샷 출력 절대경로 (screens dir)
+#   LANG  — ko | en  (en 이면 각 플로우 시작에서 EN 토글)
+#   APP_ID — com.nulloongzi.nulloongzido
+#
+# ⚠️ 좌표(point) 탭은 pixel_6(1080×2400) 기준 근사값 — 아이콘 전용/네이티브 마커라
+#    텍스트 앵커가 없는 곳에만 사용한다. 첫 성공 실행 후 실제 스샷을 보고 보정할 것.
+
+flows:
+  - "flows/screens/*.yaml"
+
+# 로그인 필요 플로우는 태그로 분리(테스트 계정 시크릿 있을 때만).
