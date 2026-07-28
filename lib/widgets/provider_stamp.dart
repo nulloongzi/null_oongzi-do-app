@@ -24,7 +24,7 @@ class ProviderStamp extends StatelessWidget {
     final Widget? mark = switch (provider) {
       'kakao' => CustomPaint(painter: _KakaoTalkBubblePainter(_kakaoColor)),
       'naver' => CustomPaint(painter: _NaverWingedHatPainter(_naverColor)),
-      'google' => const _SerifG(color: _googleColor),
+      'google' => CustomPaint(painter: _SerifGPainter(_googleColor)),
       'rice' => CustomPaint(painter: _RiceBowlPainter(_riceColor)),
       _ => null,
     };
@@ -36,30 +36,50 @@ class ProviderStamp extends StatelessWidget {
   }
 }
 
-// 구글: 옛 로고(1998~2015, Catull 세리프 + 입체 그림자) 오마주
-class _SerifG extends StatelessWidget {
-  const _SerifG({required this.color});
+// 구글: 옛 로고(1998~2015, Catull 세리프 + 입체 그림자) 오마주.
+// 폰트(Georgia/serif)에 의존하면 기기에 따라 두부(tofu)가 될 수 있어 직접 그린다
+// — 나머지 스탬프와 동일하게 벡터라 어느 기기에서나 같은 모양이 나온다. (24 viewBox)
+class _SerifGPainter extends CustomPainter {
+  _SerifGPainter(this.color);
   final Color color;
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text(
-        'G',
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w700,
-          fontFamily: 'Georgia',
-          fontFamilyFallback: const ['Times New Roman', 'serif'],
-          color: color,
-          height: 1,
-          shadows: const [
-            Shadow(offset: Offset(1, 1), color: Color(0x484E342E)),
-          ],
-        ),
-      ),
-    );
+  void paint(Canvas canvas, Size size) {
+    final s = size.width / 24;
+    canvas.scale(s, s);
+
+    void drawG(Color c, double dx, double dy) {
+      canvas.save();
+      canvas.translate(dx, dy);
+      final paint = Paint()
+        ..color = c
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3.1
+        ..strokeCap = StrokeCap.butt;
+      // 본체: 오른쪽에 입이 트인 C자 (–25° 에서 시계반대방향으로 300°)
+      canvas.drawArc(
+        Rect.fromCircle(center: const Offset(12, 12), radius: 7.2),
+        -0.44,
+        -5.24,
+        false,
+        paint,
+      );
+      final fill = Paint()..color = c;
+      // 가로 스퍼(G의 턱) + 안쪽으로 꺾이는 짧은 세로획
+      canvas.drawRect(const Rect.fromLTRB(12.4, 10.7, 19.9, 13.3), fill);
+      canvas.drawRect(const Rect.fromLTRB(17.4, 10.7, 19.9, 16.2), fill);
+      // 세리프: 위·아래 획 끝의 가로 마감
+      canvas.drawRect(const Rect.fromLTRB(9.6, 3.3, 16.4, 5.6), fill);
+      canvas.drawRect(const Rect.fromLTRB(10.4, 18.6, 17.2, 20.9), fill);
+      canvas.restore();
+    }
+
+    drawG(const Color(0x484E342E), 1, 1); // 옛 로고의 입체 그림자
+    drawG(color, 0, 0);
   }
+
+  @override
+  bool shouldRepaint(_SerifGPainter old) => old.color != color;
 }
 
 // 카카오: 초기 카카오톡 앱 아이콘 오마주 — 말풍선 + TALK 각인 (웹 SVG 포팅, 24 viewBox 기준)
