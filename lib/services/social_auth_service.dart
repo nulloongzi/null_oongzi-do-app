@@ -17,9 +17,14 @@ import 'package:flutter_naver_login/interface/types/naver_login_status.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
 import 'package:shared_preferences/shared_preferences.dart';
 
-// 네이버 로그인 활성화 스위치. strings.xml/Info.plist에 client secret을 채운 뒤 true로.
-// (웹 social-auth.js의 hideUnconfigured 대응 — 미설정 제공자 버튼 숨김)
-const bool kNaverLoginConfigured = false;
+// 네이버 로그인 활성화 스위치 (웹 social-auth.js의 hideUnconfigured 대응 — 미설정 버튼 숨김).
+//
+// 네이버 SDK는 client secret을 앱 설정에 요구하는데, 이 저장소는 공개라 secret을 커밋하지
+// 않는다. 따라서 secret이 주입된 빌드에서만 버튼이 보이도록 빌드 플래그로 제어한다:
+//   flutter build apk --dart-define=NAVER_LOGIN_ENABLED=true
+// (CI는 리포지토리 시크릿 NAVER_CLIENT_SECRET 유무로 자동 결정 — build-apk.yml)
+// secret 주입은 android/secrets.properties · ios/Flutter/Secrets.xcconfig 참고.
+const bool kNaverLoginConfigured = bool.fromEnvironment('NAVER_LOGIN_ENABLED');
 
 /// 사용자가 제공자 화면에서 취소한 경우 — 에러 문구 없이 조용히 복귀한다.
 class SocialAuthCancelled implements Exception {}

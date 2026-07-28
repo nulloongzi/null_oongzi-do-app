@@ -93,15 +93,15 @@
 	</array>
 
 	<!-- ── 네이버 로그인 (flutter_naver_login 2.1+) ──
-	     ⚠️ NidClientSecret을 developers.naver.com 값으로 채우고, iOS 번들 ID를 네이버
-	     콘솔에 등록한 뒤 lib/services/social_auth_service.dart 의 kNaverLoginConfigured 를
-	     true 로 바꾸세요. secret이 비어 있으면 네이버 버튼이 앱에서 숨겨집니다. -->
+	     Client Secret은 공개 저장소에 두지 않는다 — ios/Flutter/Secrets.xcconfig(gitignore)의
+	     NAVER_CLIENT_SECRET 을 빌드 시점에 치환한다. 설정법은 Secrets.xcconfig.example 참고.
+	     값이 비면 네이버 로그인 버튼이 숨겨진 빌드가 나온다(빌드는 정상). -->
 	<key>NidUrlScheme</key>
 	<string>nulloongzinaverlogin</string>
 	<key>NidClientID</key>
 	<string>41TDNsngcV0J7W6ICtDj</string>
 	<key>NidClientSecret</key>
-	<string></string>
+	<string>$(NAVER_CLIENT_SECRET)</string>
 	<key>NidAppName</key>
 	<string>누룽지도</string>
 	<key>NSPhotoLibraryUsageDescription</key>
