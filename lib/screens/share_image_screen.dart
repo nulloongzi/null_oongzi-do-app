@@ -120,6 +120,7 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
     );
     return MyCardData(
       nickname: p?.fullNickname ?? '',
+      riceType: p?.nickname ?? '',
       bgColor: p?.bgColor ?? NurungjiColors.light,
       joined: p?.createdAt == null
           ? null

@@ -26,6 +26,7 @@ class MyCardSlot {
 
 class MyCardData {
   final String nickname; // 밥이름 전체 "백미밥-a3z"
+  final String riceType; // 밥 종류 "백미밥" — 앱 네임카드 좌상단 워터마크와 동일
   final Color bgColor; // 밥 종류 색(프로필)
   final String? joined; // "가입 2026.7.1"
   final String? mainTeam; // 대표팀(첫 찜팀)
@@ -39,6 +40,7 @@ class MyCardData {
     required this.nickname,
     required this.bgColor,
     required this.url,
+    this.riceType = '',
     this.joined,
     this.mainTeam,
     this.mainTeamCustom = false,
@@ -282,9 +284,19 @@ class MyCardPainter extends CustomPainter {
     // 밥 색이 어떤 값이든 글씨가 읽히도록 카드 안쪽을 살짝 밝힌다.
     _rr(canvas, x, y, cw, hgt, 28, Paint()..color = const Color(0x1AFFFFFF));
 
+    // 좌상단 밥 종류 워터마크 — 앱 네임카드(.pc-rice-type)와 같은 자리·같은 톤.
+    if (data.riceType.isNotEmpty) {
+      _tp(
+        data.riceType,
+        _st(28, FontWeight.w700, const Color(0x4D5D4037)),
+      ).paint(canvas, Offset(x + 30, y + 26));
+    }
+
     var cy = y + _heroPad;
 
-    // 엠블럼: 흰 원 + 밥그릇 라인아트(클럽 카드의 핀+배구공과 같은 문법)
+    // 엠블럼: 흰 원 + 브랜드 로고(클럽 카드의 핀+배구공과 같은 문법).
+    // 단순화 밥그릇 벡터는 밥·그릇 사이 틈 때문에 이 크기에선 햄버거처럼 보였다
+    // (24px 스탬프용으로 그린 패스라 그렇다) → 로고 비트맵을 쓰고, 없을 때만 벡터.
     final es = compact ? _emblem * 0.72 : _emblem;
     final ecx = _w / 2;
     _sh2(
@@ -300,7 +312,17 @@ class MyCardPainter extends CustomPainter {
       es / 2,
       Paint()..color = Colors.white,
     );
-    _riceBowl(canvas, ecx - es * 0.3, cy + es * 0.2, es * 0.6, _yellow);
+    if (logo != null) {
+      final ls = es * 0.68;
+      canvas.drawImageRect(
+        logo!,
+        Rect.fromLTWH(0, 0, logo!.width.toDouble(), logo!.height.toDouble()),
+        Rect.fromLTWH(ecx - ls / 2, cy + (es - ls) / 2, ls, ls),
+        Paint(),
+      );
+    } else {
+      _riceBowl(canvas, ecx - es * 0.3, cy + es * 0.2, es * 0.6, _yellow);
+    }
     cy += es + 26;
 
     final nameTp = _nameTp(compact);
