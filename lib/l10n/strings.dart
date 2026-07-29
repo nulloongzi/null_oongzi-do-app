@@ -225,6 +225,14 @@ const Map<String, Map<String, String>> kStrings = {
   'logout_confirm': {'ko': '로그아웃 하시겠습니까?', 'en': 'Log out?'},
   'share_mode_feed': {'ko': '피드형 (식단표 포함)', 'en': 'Feed (with schedule)'},
   'share_mode_story': {'ko': '스토리형', 'en': 'Story'},
+  // 공유 카드(my_card.dart)는 Canvas에 직접 그려서 이모지가 tofu(□)로 뜬다.
+  // 카드 안에 들어가는 문구는 이모지 없는 별도 키를 쓴다.
+  'mycard_lunchbox': {'ko': '도시락', 'en': 'Lunchbox'},
+  'mycard_empty_slot': {'ko': '비어 있음', 'en': 'Empty'},
+  'mycard_cta': {
+    'ko': '내 밥이름 만들러 가기',
+    'en': 'Get your own rice-name',
+  },
   'lb_no_sched': {'ko': '찜한 팀의 일정이 없어요', 'en': 'No schedule for saved teams'},
   'share_kakao': {'ko': '💬 카카오톡', 'en': '💬 KakaoTalk'},
   'kakao_view_btn': {'ko': '지도에서 보기', 'en': 'View on map'},

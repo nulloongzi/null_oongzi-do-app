@@ -554,8 +554,20 @@ class _MapScreenState extends State<MapScreen> {
       case 'story':
         // shareStoryCard()는 '링크 스티커' 1회 안내 다이얼로그부터 띄운다 — 스토어용으로는
         // 안내문이 아니라 카드 자체가 보여야 하므로 공유 이미지 미리보기 화면을 연다.
+        // 도시락이 비면 카드가 휑하므로 일정 있는 팀 3개까지 시드(캡처 빌드 전용).
         try {
-          await _repo.ensureUid();
+          final uid = await _repo.ensureUid();
+          final lb = LunchboxService();
+          var seeded = 0;
+          for (final c in _clubs) {
+            if (seeded >= 3) break;
+            final hasSched =
+                (c.schedule ?? '').isNotEmpty ||
+                (c.scheduleRaw?.isNotEmpty ?? false);
+            if (!hasSched) continue;
+            await lb.addBookmark(uid, c.id);
+            seeded++;
+          }
         } catch (_) {}
         if (!mounted) return;
         await Navigator.push(

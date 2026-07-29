@@ -1,9 +1,9 @@
-// share_image_screen.dart — 내 네임카드+도시락+식단표를 이미지로 캡처해 공유. 웹 generateShareImage 포팅.
-// RepaintBoundary → toImage(pixelRatio) → PNG → share_plus.
+// share_image_screen.dart — 내 네임카드+도시락+식단표를 이미지로 공유.
+// 렌더는 widgets/my_card.dart(1080×1920 Canvas)가 담당 — 클럽 스토리 카드와 같은 미감.
+// 이 화면은 데이터를 모아 MyCardData 로 만들고, 미리보기와 공유 버튼만 제공한다.
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/club.dart';
@@ -13,8 +13,11 @@ import '../services/i18n.dart';
 import '../services/lunchbox_service.dart';
 import '../services/profile_service.dart';
 import '../services/schedule_parse.dart';
+import '../services/share_service.dart';
 import '../theme.dart';
-import '../widgets/diet_grid.dart';
+import '../widgets/diet_grid.dart' show DietTeam;
+import '../widgets/my_card.dart';
+import '../widgets/story_card.dart' show loadBrandLogo;
 
 class ShareImageScreen extends StatefulWidget {
   const ShareImageScreen({super.key});
@@ -24,7 +27,6 @@ class ShareImageScreen extends StatefulWidget {
 }
 
 class _ShareImageScreenState extends State<ShareImageScreen> {
-  final _repaintKey = GlobalKey();
   final _repo = DataRepository();
   final _lb = LunchboxService();
   Profile? _profile;
@@ -33,19 +35,15 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
   bool _loading = true;
   bool _sharing = false;
   bool _feedMode = true; // 포장 형태: 피드형(식단표 포함)↔스토리형(웹 sh_pick_shape)
-
-  static const _slotBorder = [
-    Color(0xFFFBC02D),
-    Color(0xFFF57C00),
-    Color(0xFF689F38),
-    Color(0xFFD84315),
-    Color(0xFF8E24AA),
-  ];
+  ui.Image? _logo; // 미리보기용 브랜드 로고(한 번만 로드 — 토글마다 다시 읽지 않게)
 
   @override
   void initState() {
     super.initState();
     _load();
+    loadBrandLogo().then((img) {
+      if (mounted) setState(() => _logo = img);
+    });
   }
 
   Future<void> _load() async {
@@ -74,7 +72,8 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
     if (d == null) return null;
     if (d.customTeams.containsKey(id)) {
       final m = d.customTeams[id];
-      final name = (m is Map ? m['name'] : null) as String? ?? '커스텀 팀';
+      final name =
+          (m is Map ? m['name'] : null) as String? ?? t('lb_custom_team');
       final sched = (m is Map ? m['schedule'] : null) as String?;
       return (name: name, isCustom: true, events: eventsFromText(sched));
     }
@@ -88,17 +87,57 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
     return null;
   }
 
+  /// 화면 상태 → 카드 렌더 데이터. 미리보기와 공유가 같은 값을 쓴다.
+  MyCardData _cardData() {
+    final p = _profile;
+    final d = _data;
+    final slots = <MyCardSlot>[];
+    final diet = <DietTeam>[];
+    for (var i = 0; i < 5; i++) {
+      final id = d?.bookmarks[i];
+      final r = id == null ? null : _resolve(id);
+      if (id == null) {
+        slots.add(const MyCardSlot());
+        continue;
+      }
+      if (r == null) {
+        slots.add(MyCardSlot(name: t('deleted_team')));
+        continue;
+      }
+      slots.add(MyCardSlot(name: r.name, isCustom: r.isCustom));
+      diet.add(
+        DietTeam(
+          name: r.name,
+          isCustom: r.isCustom,
+          slotIdx: i,
+          events: r.events,
+        ),
+      );
+    }
+    final first = slots.firstWhere(
+      (s) => s.name != null,
+      orElse: () => const MyCardSlot(),
+    );
+    return MyCardData(
+      nickname: p?.fullNickname ?? '',
+      bgColor: p?.bgColor ?? NurungjiColors.light,
+      joined: p?.createdAt == null
+          ? null
+          : '${t('joined')} ${p!.createdAt!.year}.${p.createdAt!.month}.${p.createdAt!.day}',
+      mainTeam: first.name,
+      mainTeamCustom: first.isCustom,
+      slots: slots,
+      diet: diet,
+      url: ShareService.siteBase,
+      feed: _feedMode,
+    );
+  }
+
   Future<void> _share() async {
     setState(() => _sharing = true);
     try {
-      final boundary =
-          _repaintKey.currentContext?.findRenderObject()
-              as RenderRepaintBoundary?;
-      if (boundary == null) return;
-      final image = await boundary.toImage(pixelRatio: 3.0);
-      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-      if (bytes == null) return;
-      final png = bytes.buffer.asUint8List();
+      final png = await renderMyCardPng(_cardData());
+      if (png == null) throw Exception('render failed');
       final dir = await getTemporaryDirectory();
       final file = File(
         '${dir.path}/nurungji_card_${DateTime.now().millisecondsSinceEpoch}.png',
@@ -125,11 +164,9 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
           : Column(
               children: [
                 Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: Center(
-                      child: RepaintBoundary(key: _repaintKey, child: _card()),
-                    ),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Center(child: _preview()),
                   ),
                 ),
                 // 포장 형태 선택(웹 sh_pick_shape): 피드형=식단표 포함 / 스토리형=카드+도시락
@@ -176,147 +213,18 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
     );
   }
 
-  Widget _card() {
-    final p = _profile;
-    final dietTeams = _dietTeams();
-    return Container(
-      width: 340,
-      padding: const EdgeInsets.all(18),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFFFF7E3), Color(0xFFFFE9B8)],
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (p != null) _profileCard(p),
-          const SizedBox(height: 14),
-          _lunchbox(),
-          if (_feedMode && dietTeams.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: DietGrid(teams: dietTeams),
-            ),
-          ],
-          const SizedBox(height: 14),
-          Center(
-            child: Text(
-              '🍚 ${t('brand')}',
-              style: const TextStyle(
-                fontWeight: FontWeight.w900,
-                color: NurungjiColors.brown,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _profileCard(Profile p) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: p.bgColor,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('🍚', style: TextStyle(fontSize: 36)),
-          const SizedBox(height: 6),
-          Text(
-            p.fullNickname,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              color: NurungjiColors.dark,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _lunchbox() {
-    final d = _data;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            t('lunchbox_title'),
-            style: const TextStyle(
-              fontWeight: FontWeight.w800,
-              color: NurungjiColors.dark,
-            ),
-          ),
-          const SizedBox(height: 8),
-          for (var i = 0; i < 5; i++) _slot(i, d),
-        ],
-      ),
-    );
-  }
-
-  Widget _slot(int i, LunchboxData? d) {
-    final id = d?.bookmarks[i];
-    final r = id == null ? null : _resolve(id);
-    final filled = id != null;
-    final label = !filled
-        ? '—'
-        : (r == null
-              ? t('deleted_team')
-              : (r.isCustom ? '🍙 ${r.name}' : r.name));
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFFDF5),
-        borderRadius: BorderRadius.circular(10),
-        border: Border(left: BorderSide(color: _slotBorder[i], width: 4)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontWeight: filled ? FontWeight.w700 : FontWeight.w400,
-          color: filled ? NurungjiColors.dark : NurungjiColors.brown,
+  /// 미리보기 — 내보내는 것과 같은 painter를 축소해 그린다(WYSIWYG).
+  /// 로고가 아직 안 왔으면 노란 타일 폴백으로 그려진다(레이아웃은 동일).
+  Widget _preview() {
+    return AspectRatio(
+      aspectRatio: 1080 / 1920,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: CustomPaint(
+          painter: MyCardPainter(_cardData(), logo: _logo),
+          size: Size.infinite,
         ),
       ),
     );
-  }
-
-  List<DietTeam> _dietTeams() {
-    final out = <DietTeam>[];
-    final d = _data;
-    if (d == null) return out;
-    for (var i = 0; i < 5; i++) {
-      final id = d.bookmarks[i];
-      if (id == null) continue;
-      final r = _resolve(id);
-      if (r == null) continue;
-      out.add(
-        DietTeam(
-          name: r.name,
-          isCustom: r.isCustom,
-          slotIdx: i,
-          events: r.events,
-        ),
-      );
-    }
-    return out;
   }
 }
