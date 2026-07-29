@@ -229,10 +229,7 @@ const Map<String, Map<String, String>> kStrings = {
   // 카드 안에 들어가는 문구는 이모지 없는 별도 키를 쓴다.
   'mycard_lunchbox': {'ko': '도시락', 'en': 'Lunchbox'},
   'mycard_empty_slot': {'ko': '비어 있음', 'en': 'Empty'},
-  'mycard_cta': {
-    'ko': '내 밥이름 만들러 가기',
-    'en': 'Get your own rice-name',
-  },
+  'mycard_cta': {'ko': '내 밥이름 만들러 가기', 'en': 'Get your own rice-name'},
   'lb_no_sched': {'ko': '찜한 팀의 일정이 없어요', 'en': 'No schedule for saved teams'},
   'share_kakao': {'ko': '💬 카카오톡', 'en': '💬 KakaoTalk'},
   'kakao_view_btn': {'ko': '지도에서 보기', 'en': 'View on map'},

@@ -46,7 +46,6 @@ class MyCardData {
     this.diet = const [],
     this.feed = false,
   });
-
 }
 
 /// 1080×1920 PNG 바이트로 렌더(공유용). 번들 Pretendard라 한글 tofu 없음.
@@ -169,10 +168,7 @@ class MyCardPainter extends CustomPainter {
 
   // ── 배경 / 헤더 (클럽 스토리 카드와 동일) ───────────────────────
   void _background(Canvas canvas) {
-    canvas.drawRect(
-      const Rect.fromLTWH(0, 0, _w, _h),
-      Paint()..color = _cream,
-    );
+    canvas.drawRect(const Rect.fromLTWH(0, 0, _w, _h), Paint()..color = _cream);
     canvas.drawRect(
       const Rect.fromLTWH(0, 0, _w, _h),
       Paint()
@@ -326,10 +322,7 @@ class MyCardPainter extends CustomPainter {
     final cnt = _tp('$filled / 5', _st(30, FontWeight.w600, _sub));
     cnt.paint(
       canvas,
-      Offset(
-        ix + iw - cnt.width,
-        y + _lbPad + (_lbHeader - cnt.height) / 2,
-      ),
+      Offset(ix + iw - cnt.width, y + _lbPad + (_lbHeader - cnt.height) / 2),
     );
     return y + _lbPad + _lbHeader + 18;
   }

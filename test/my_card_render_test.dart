@@ -22,7 +22,9 @@ Future<ui.Image> _render(MyCardData data) async {
 Future<int> _rgb(ui.Image img, int x, int y) async {
   final bd = (await img.toByteData(format: ui.ImageByteFormat.rawRgba))!;
   final i = (y * _w + x) * 4;
-  return (bd.getUint8(i) << 16) | (bd.getUint8(i + 1) << 8) | bd.getUint8(i + 2);
+  return (bd.getUint8(i) << 16) |
+      (bd.getUint8(i + 1) << 8) |
+      bd.getUint8(i + 2);
 }
 
 const _cream = 0xFBF3E2;
