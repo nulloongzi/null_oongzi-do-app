@@ -48,6 +48,25 @@ class MyCardData {
   });
 }
 
+/// 세로 배치 계산 결과. 블록이 푸터(QR)를 침범하지 않는지 좌표로 검증하기 위해
+/// 그리기와 분리했다.
+class MyCardLayout {
+  final double heroY, heroH, lbY, lbH, dietY, dietH, rowH, rowGap;
+  const MyCardLayout({
+    required this.heroY,
+    required this.heroH,
+    required this.lbY,
+    required this.lbH,
+    required this.dietY,
+    required this.dietH,
+    required this.rowH,
+    required this.rowGap,
+  });
+
+  /// 마지막 블록의 아래끝. 이 값이 footY를 넘으면 QR/CTA를 덮는다.
+  double get bottom => dietH > 0 ? dietY + dietH : lbY + lbH;
+}
+
 /// 1080×1920 PNG 바이트로 렌더(공유용). 번들 Pretendard라 한글 tofu 없음.
 Future<Uint8List?> renderMyCardPng(MyCardData data) async {
   final logo = await loadBrandLogo();
@@ -115,6 +134,58 @@ class MyCardPainter extends CustomPainter {
     return tp;
   }
 
+  // ── 세로 배치 ──────────────────────────────────────────────────
+  // 그리기와 분리해 순수 계산으로 둔다. 이 카드가 깨지는 방식은 "블록 합이 푸터를
+  // 밀어낸다" 하나인데, 픽셀로 확인하려니 QR 모듈 위에 프로브가 떨어져 헛짚었다.
+  // 침범 여부는 좌표로 따지는 게 맞다 → 테스트가 layout()을 직접 검증한다.
+  static const footY = 1670.0 - 210.0; // 클럽 카드와 동일한 푸터 위치
+  static const _zoneTop = 252.0;
+  static const _gap = 34.0;
+
+  MyCardLayout layout() {
+    final zoneH = (footY - 46) - _zoneTop;
+    final heroH = _heroHeight(compact: data.feed);
+    final avail = zoneH - heroH - _gap;
+
+    if (data.feed) {
+      // 피드형: 도시락은 팀 칩으로 압축하고 남는 자리를 전부 식단표에 준다.
+      // (칸을 5줄로 늘어놓으면 5개 다 찼을 때 식단표가 푸터를 밀어낸다.)
+      final lbH = _chipsHeight(_chipLayout().rows);
+      final dietH = (avail - _gap - lbH).clamp(200.0, 420.0);
+      final stackH = heroH + _gap + lbH + _gap + dietH;
+      final y = (_zoneTop + math.max(0.0, (zoneH - stackH) / 2))
+          .roundToDouble();
+      return MyCardLayout(
+        heroY: y,
+        heroH: heroH,
+        lbY: y + heroH + _gap,
+        lbH: lbH,
+        dietY: y + heroH + _gap + lbH + _gap,
+        dietH: dietH,
+        rowH: 0,
+        rowGap: 0,
+      );
+    }
+    // 스토리형: 5칸을 그대로 — 도시락통이 주인공이다.
+    final n = data.slots.isEmpty ? 1 : data.slots.length;
+    const rowGap = 14.0;
+    final chrome = _lbChrome + (n - 1) * rowGap;
+    final rowH = ((avail - chrome) / n).clamp(56.0, 112.0);
+    final lbH = chrome + n * rowH;
+    final stackH = heroH + _gap + lbH;
+    final y = (_zoneTop + math.max(0.0, (zoneH - stackH) / 2)).roundToDouble();
+    return MyCardLayout(
+      heroY: y,
+      heroH: heroH,
+      lbY: y + heroH + _gap,
+      lbH: lbH,
+      dietY: 0,
+      dietH: 0,
+      rowH: rowH,
+      rowGap: rowGap,
+    );
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     // 미리보기(작은 위젯)와 내보내기(1080×1920)가 같은 좌표계를 쓰도록 스케일.
@@ -126,43 +197,14 @@ class MyCardPainter extends CustomPainter {
     _background(canvas);
     _brandHeader(canvas);
 
-    // ── 세로 배치: 히어로 + 도시락 (+ 식단표) 을 푸터 위 영역에 담는다 ──
-    const footY = 1670.0 - 210.0; // 클럽 카드와 동일한 푸터 위치
-    const zoneTop = 252.0;
-    final zoneBot = footY - 46;
-    final zoneH = zoneBot - zoneTop;
-    const gap = 34.0;
-
-    final heroH = _heroHeight(compact: data.feed);
-    final avail = zoneH - heroH - gap;
-
+    final l = layout();
+    _hero(canvas, l.heroY, l.heroH);
     if (data.feed) {
-      // 피드형: 도시락은 팀 칩으로 압축하고 남는 자리를 전부 식단표에 준다.
-      // (칸을 5줄로 늘어놓으면 5개 다 찼을 때 식단표가 푸터를 밀어낸다.)
-      final chips = _chipLayout();
-      final lbH = _chipsHeight(chips.rows);
-      final dietH = (avail - gap - lbH).clamp(200.0, 420.0);
-      final stackH = heroH + gap + lbH + gap + dietH;
-      var y = (zoneTop + math.max(0.0, (zoneH - stackH) / 2)).roundToDouble();
-      _hero(canvas, y, heroH);
-      y += heroH + gap;
-      _lunchboxChips(canvas, y, lbH, chips);
-      y += lbH + gap;
-      _diet(canvas, y, dietH);
+      _lunchboxChips(canvas, l.lbY, l.lbH, _chipLayout());
+      _diet(canvas, l.dietY, l.dietH);
     } else {
-      // 스토리형: 5칸을 그대로 — 도시락통이 주인공이다.
-      final n = data.slots.isEmpty ? 1 : data.slots.length;
-      const rowGap = 14.0;
-      final chrome = _lbChrome + (n - 1) * rowGap;
-      final rowH = ((avail - chrome) / n).clamp(56.0, 112.0);
-      final lbH = chrome + n * rowH;
-      final stackH = heroH + gap + lbH;
-      var y = (zoneTop + math.max(0.0, (zoneH - stackH) / 2)).roundToDouble();
-      _hero(canvas, y, heroH);
-      y += heroH + gap;
-      _lunchboxRows(canvas, y, lbH, rowH, rowGap);
+      _lunchboxRows(canvas, l.lbY, l.lbH, l.rowH, l.rowGap);
     }
-
     _footer(canvas, footY);
   }
 

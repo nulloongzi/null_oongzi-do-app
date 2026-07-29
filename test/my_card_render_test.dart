@@ -75,16 +75,16 @@ void main() {
     }
   });
 
-  test('푸터 QR 흰 판을 위 블록이 덮지 않는다 (찜 0~5개, 두 모드 모두)', () async {
-    // QR 흰 판 = (68,1458)~(282,1672). (76,1490)은 판 안쪽·QR 모듈 바깥의 여백.
+  test('블록이 푸터(QR/CTA)를 침범하지 않는다 (찜 0~5개, 두 모드 모두)', () async {
     for (final feed in [true, false]) {
       for (var filled = 0; filled <= 5; filled++) {
-        final img = await _render(_data(feed: feed, filled: filled));
+        final l = MyCardPainter(_data(feed: feed, filled: filled)).layout();
         expect(
-          await _rgb(img, 76, 1490),
-          0xFFFFFF,
-          reason: 'feed=$feed filled=$filled: 블록이 푸터까지 내려왔다',
+          l.bottom,
+          lessThanOrEqualTo(MyCardPainter.footY),
+          reason: 'feed=$feed filled=$filled: 마지막 블록이 푸터까지 내려왔다',
         );
+        expect(l.heroY, greaterThanOrEqualTo(252.0), reason: '헤더를 침범');
       }
     }
   });
@@ -105,10 +105,13 @@ void main() {
 
   test('밥이름이 아주 길어도(2줄 말줄임) 레이아웃이 버틴다', () async {
     for (final feed in [true, false]) {
-      final img = await _render(
-        _data(feed: feed, filled: 5, nickname: '아주아주긴밥이름' * 6),
+      final data = _data(feed: feed, filled: 5, nickname: '아주아주긴밥이름' * 6);
+      expect(
+        MyCardPainter(data).layout().bottom,
+        lessThanOrEqualTo(MyCardPainter.footY),
+        reason: 'feed=$feed',
       );
-      expect(await _rgb(img, 76, 1490), 0xFFFFFF);
+      expect((await _render(data)).width, 1080);
     }
   });
 }
