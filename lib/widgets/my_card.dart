@@ -1,11 +1,20 @@
-// my_card.dart — 내 네임카드 공유 이미지 (1080×1920). 클럽 스토리 카드(story_card.dart)와
+// my_card.dart — 내 네임카드 공유 이미지. 클럽 스토리 카드(story_card.dart)와
 // 같은 미감·같은 기법으로 그린다: dart:ui Canvas 직접 렌더 → 결정적, 위젯 트리 불필요.
 //
 // 왜 CustomPainter인가: 이전 판은 340px 위젯 카드를 RepaintBoundary로 3배 확대해 떴다.
 // 기기 폰트·텍스트 스케일에 따라 결과가 흔들리고, 클럽 카드와 미감이 따로 놀았다.
 // 공유되는 이미지 두 종류가 서로 다른 브랜드처럼 보이면 안 된다.
 //
-// 공유 토큰(story_card.dart와 동일): 크림 배경 + 웜 비네트, 라운드 28 카드,
+// 두 규격:
+//  · 스토리형 1080×1920 (9:16) — 네임카드 + 도시락통
+//  · 피드형  1080×1350 (4:5)  — 네임카드(가로) + [도시락통 | 시간표]
+//    인스타 피드의 제 규격이 4:5다. 9:16으로 내면 피드에서 잘린다.
+//
+// 도시락통은 보온도시락 스택 은유로 그린다 — 맨 아래 밥(1칸), 그 위 국(1칸),
+// 맨 위 반찬(한 줄 3칸). 5칸이 도시락 슬롯 수와 정확히 맞고, 칸 색이 시간표
+// 블록 색과 같아서 도시락통이 곧 시간표의 범례가 된다.
+//
+// 공유 토큰(story_card.dart와 동일): 크림 배경 + 웜 비네트, 라운드 카드,
 // 소프트 섀도 _sh2, 라인아트 아이콘, 하단 QR + CTA 푸터, Pretendard.
 import 'dart:math' as math;
 import 'dart:typed_data';
@@ -31,10 +40,10 @@ class MyCardData {
   final String? joined; // "가입 2026.7.1"
   final String? mainTeam; // 대표팀(첫 찜팀)
   final bool mainTeamCustom;
-  final List<MyCardSlot> slots; // 5칸
-  final List<DietTeam> diet; // 식단표용
+  final List<MyCardSlot> slots; // 5칸: 0=밥 1=국 2~4=반찬
+  final List<DietTeam> diet; // 시간표용
   final String url; // QR 목적지
-  final bool feed; // true=피드형(식단표 포함) / false=스토리형
+  final bool feed; // true=피드형(4:5, 시간표 포함) / false=스토리형(9:16)
 
   const MyCardData({
     required this.nickname,
@@ -50,33 +59,35 @@ class MyCardData {
   });
 }
 
-/// 세로 배치 계산 결과. 블록이 푸터(QR)를 침범하지 않는지 좌표로 검증하기 위해
+/// 배치 계산 결과. 블록이 푸터(QR)를 침범하지 않는지 좌표로 검증하기 위해
 /// 그리기와 분리했다.
 class MyCardLayout {
-  final double heroY, heroH, lbY, lbH, dietY, dietH, rowH, rowGap;
+  final Rect hero;
+  final Rect box; // 도시락통
+  final Rect diet; // 시간표 (스토리형은 Rect.zero)
   const MyCardLayout({
-    required this.heroY,
-    required this.heroH,
-    required this.lbY,
-    required this.lbH,
-    required this.dietY,
-    required this.dietH,
-    required this.rowH,
-    required this.rowGap,
+    required this.hero,
+    required this.box,
+    required this.diet,
   });
 
-  /// 마지막 블록의 아래끝. 이 값이 footY를 넘으면 QR/CTA를 덮는다.
-  double get bottom => dietH > 0 ? dietY + dietH : lbY + lbH;
+  /// 마지막 블록의 아래끝. 이 값이 footTop을 넘으면 QR/CTA를 덮는다.
+  double get bottom => math.max(
+    hero.bottom,
+    math.max(box.bottom, diet == Rect.zero ? 0.0 : diet.bottom),
+  );
 }
 
-/// 1080×1920 PNG 바이트로 렌더(공유용). 번들 Pretendard라 한글 tofu 없음.
+/// 공유용 PNG 바이트로 렌더. 규격은 data.feed 에 따라 4:5 / 9:16.
+/// 번들 Pretendard라 한글 tofu 없음.
 Future<Uint8List?> renderMyCardPng(MyCardData data) async {
   final logo = await loadBrandLogo();
+  final painter = MyCardPainter(data, logo: logo);
+  final size = painter.canvasSize;
   final recorder = ui.PictureRecorder();
-  final canvas = Canvas(recorder);
-  MyCardPainter(data, logo: logo).paint(canvas, const Size(1080, 1920));
+  painter.paint(Canvas(recorder), size);
   final pic = recorder.endRecording();
-  final img = await pic.toImage(1080, 1920);
+  final img = await pic.toImage(size.width.round(), size.height.round());
   final bytes = await img.toByteData(format: ui.ImageByteFormat.png);
   return bytes?.buffer.asUint8List();
 }
@@ -86,7 +97,7 @@ class MyCardPainter extends CustomPainter {
   final ui.Image? logo;
   MyCardPainter(this.data, {this.logo});
 
-  static const _w = 1080.0, _h = 1920.0, _pad = 80.0;
+  static const _w = 1080.0, _pad = 80.0;
   static const _ink = Color(0xFF3D2C22);
   static const _sub = Color(0xFFA99A8C);
   static const _dark = Color(0xFF4E342E);
@@ -94,6 +105,7 @@ class MyCardPainter extends CustomPainter {
   static const _yellow = Color(0xFFFAC710);
   static const _cream = Color(0xFFFBF3E2);
   static const _cardBg = Color(0xFFFFFDF8);
+  static const _hair = Color(0x228D6E63); // 도시락통 윤곽
 
   // 도시락 5칸 색 — 앱 도시락/식단표와 동일해야 "같은 칸"으로 읽힌다.
   static const _slotRail = [
@@ -110,6 +122,18 @@ class MyCardPainter extends CustomPainter {
     Color(0xFFFBE9E7),
     Color(0xFFF3E5F5),
   ];
+
+  Size get canvasSize => Size(_w, data.feed ? 1350.0 : 1920.0);
+  double get _h => canvasSize.height;
+
+  // 헤더/푸터 위치는 규격별로. 스토리형은 클럽 카드와 동일 좌표를 유지한다.
+  double get _headerY => data.feed ? 72.0 : 118.0;
+  double get _footH => data.feed ? 176.0 : 210.0;
+  double get footTop => data.feed ? 1074.0 : 1460.0;
+  double get _zoneTop => data.feed ? 176.0 : 252.0;
+  double get _qrSize => data.feed ? 158.0 : 190.0;
+
+  static const _gap = 30.0;
 
   TextStyle _st(double size, FontWeight w, Color c) => TextStyle(
     fontFamily: 'Pretendard',
@@ -136,88 +160,70 @@ class MyCardPainter extends CustomPainter {
     return tp;
   }
 
-  // ── 세로 배치 ──────────────────────────────────────────────────
-  // 그리기와 분리해 순수 계산으로 둔다. 이 카드가 깨지는 방식은 "블록 합이 푸터를
-  // 밀어낸다" 하나인데, 픽셀로 확인하려니 QR 모듈 위에 프로브가 떨어져 헛짚었다.
-  // 침범 여부는 좌표로 따지는 게 맞다 → 테스트가 layout()을 직접 검증한다.
-  static const footY = 1670.0 - 210.0; // 클럽 카드와 동일한 푸터 위치
-  static const _zoneTop = 252.0;
-  static const _gap = 34.0;
-
+  // ── 배치 ───────────────────────────────────────────────────────
   MyCardLayout layout() {
-    final zoneH = (footY - 46) - _zoneTop;
-    final heroH = _heroHeight(compact: data.feed);
-    final avail = zoneH - heroH - _gap;
+    final zoneBot = footTop - (data.feed ? 34.0 : 46.0);
+    final zoneH = zoneBot - _zoneTop;
+    const cw = _w - _pad * 2;
 
     if (data.feed) {
-      // 피드형: 도시락은 팀 칩으로 압축하고 남는 자리를 전부 식단표에 준다.
-      // (칸을 5줄로 늘어놓으면 5개 다 찼을 때 식단표가 푸터를 밀어낸다.)
-      final lbH = _chipsHeight(_chipLayout().rows);
-      final dietH = (avail - _gap - lbH).clamp(200.0, 420.0);
-      final stackH = heroH + _gap + lbH + _gap + dietH;
-      final y = (_zoneTop + math.max(0.0, (zoneH - stackH) / 2))
-          .roundToDouble();
+      // 가로 히어로 + 아래 2열(도시락통 | 시간표). 4:5는 세로가 귀해서
+      // 히어로를 띠로 눕히고, 남는 높이를 통째로 2열에 준다.
+      final heroH = _heroFeedHeight();
+      final rowY = _zoneTop + heroH + _gap;
+      final rowH = zoneH - heroH - _gap;
+      const boxW = 400.0, colGap = 24.0;
       return MyCardLayout(
-        heroY: y,
-        heroH: heroH,
-        lbY: y + heroH + _gap,
-        lbH: lbH,
-        dietY: y + heroH + _gap + lbH + _gap,
-        dietH: dietH,
-        rowH: 0,
-        rowGap: 0,
+        hero: Rect.fromLTWH(_pad, _zoneTop, cw, heroH),
+        box: Rect.fromLTWH(_pad, rowY, boxW, rowH),
+        diet: Rect.fromLTWH(
+          _pad + boxW + colGap,
+          rowY,
+          cw - boxW - colGap,
+          rowH,
+        ),
       );
     }
-    // 스토리형: 5칸을 그대로 — 도시락통이 주인공이다.
-    final n = data.slots.isEmpty ? 1 : data.slots.length;
-    const rowGap = 14.0;
-    final chrome = _lbChrome + (n - 1) * rowGap;
-    final rowH = ((avail - chrome) / n).clamp(56.0, 112.0);
-    final lbH = chrome + n * rowH;
-    final stackH = heroH + _gap + lbH;
-    final y = (_zoneTop + math.max(0.0, (zoneH - stackH) / 2)).roundToDouble();
+
+    // 스토리형: 세로 히어로 + 도시락통(가운데, 시원하게).
+    final heroH = _heroStoryHeight();
+    final boxH = zoneH - heroH - _gap;
+    const boxW = 640.0;
     return MyCardLayout(
-      heroY: y,
-      heroH: heroH,
-      lbY: y + heroH + _gap,
-      lbH: lbH,
-      dietY: 0,
-      dietH: 0,
-      rowH: rowH,
-      rowGap: rowGap,
+      hero: Rect.fromLTWH(_pad, _zoneTop, cw, heroH),
+      box: Rect.fromLTWH((_w - boxW) / 2, _zoneTop + heroH + _gap, boxW, boxH),
+      diet: Rect.zero,
     );
   }
 
   @override
   void paint(Canvas canvas, Size size) {
-    // 미리보기(작은 위젯)와 내보내기(1080×1920)가 같은 좌표계를 쓰도록 스케일.
-    if (size.width != _w) {
-      final s = size.width / _w;
-      canvas.scale(s, s);
-    }
+    // 미리보기(작은 위젯)와 내보내기가 같은 좌표계를 쓰도록 스케일.
+    if (size.width != _w) canvas.scale(size.width / _w);
 
     _background(canvas);
     _brandHeader(canvas);
 
     final l = layout();
-    _hero(canvas, l.heroY, l.heroH);
     if (data.feed) {
-      _lunchboxChips(canvas, l.lbY, l.lbH, _chipLayout());
-      _diet(canvas, l.dietY, l.dietH);
+      _heroFeed(canvas, l.hero);
     } else {
-      _lunchboxRows(canvas, l.lbY, l.lbH, l.rowH, l.rowGap);
+      _heroStory(canvas, l.hero);
     }
-    _footer(canvas, footY);
+    _bento(canvas, l.box);
+    if (l.diet != Rect.zero) _timetable(canvas, l.diet);
+    _footer(canvas);
   }
 
   // ── 배경 / 헤더 (클럽 스토리 카드와 동일) ───────────────────────
   void _background(Canvas canvas) {
-    canvas.drawRect(const Rect.fromLTWH(0, 0, _w, _h), Paint()..color = _cream);
+    final all = Rect.fromLTWH(0, 0, _w, _h);
+    canvas.drawRect(all, Paint()..color = _cream);
     canvas.drawRect(
-      const Rect.fromLTWH(0, 0, _w, _h),
+      all,
       Paint()
         ..shader = ui.Gradient.radial(
-          const Offset(_w / 2, _h * 0.42),
+          Offset(_w / 2, _h * 0.42),
           _h * 0.7,
           const [Color(0x99FFFCF0), Color(0x80F0E2C4)],
           const [0.15, 1.0],
@@ -226,350 +232,380 @@ class MyCardPainter extends CustomPainter {
   }
 
   void _brandHeader(Canvas canvas) {
-    final wm = _tp(t('brand'), _st(50, FontWeight.w800, _ink));
-    const tile = 64.0, tgap = 18.0, hty = 118.0;
-    final total = tile + tgap + wm.width;
-    final hsx = (_w - total) / 2;
+    final fs = data.feed ? 42.0 : 50.0;
+    final tile = data.feed ? 54.0 : 64.0;
+    final wm = _tp(t('brand'), _st(fs, FontWeight.w800, _ink));
+    const tgap = 18.0;
+    final hsx = (_w - (tile + tgap + wm.width)) / 2;
+    final hty = _headerY;
     _sh2(canvas, Rect.fromLTWH(hsx, hty, tile, tile), 18, 14, 6, 0.16);
+    _rr(canvas, hsx, hty, tile, tile, 18, Paint()..color = Colors.white);
     if (logo != null) {
-      _rr(canvas, hsx, hty, tile, tile, 18, Paint()..color = Colors.white);
-      canvas.save();
-      canvas.clipRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(hsx, hty, tile, tile),
-          const Radius.circular(18),
-        ),
-      );
-      canvas.drawImageRect(
-        logo!,
-        Rect.fromLTWH(0, 0, logo!.width.toDouble(), logo!.height.toDouble()),
-        Rect.fromLTWH(hsx, hty, tile, tile),
-        Paint(),
-      );
-      canvas.restore();
+      _logoIn(canvas, Rect.fromLTWH(hsx, hty, tile, tile), 1.0, 18);
     } else {
-      _rr(canvas, hsx, hty, tile, tile, 18, Paint()..color = _yellow);
-      _riceBowl(canvas, hsx + 12, hty + 12, tile - 24, Colors.white);
+      _riceBowl(
+        canvas,
+        hsx + tile * 0.2,
+        hty + tile * 0.2,
+        tile * 0.6,
+        _yellow,
+      );
     }
     wm.paint(canvas, Offset(hsx + tile + tgap, hty + tile / 2 - wm.height / 2));
   }
 
-  // ── 히어로: 네임카드 ───────────────────────────────────────────
-  // 앱 프로필 카드(밥 색 배경 + 큰 밥이름 + 가입일 + 대표팀 뱃지)를 스토리 규격으로.
-  static const _heroPad = 56.0;
-  static const _emblem = 132.0;
-
-  double _heroHeight({required bool compact}) {
-    final nameTp = _nameTp(compact);
-    var hgt = _heroPad + (compact ? _emblem * 0.72 : _emblem) + 26;
-    hgt += nameTp.height;
-    if ((data.joined ?? '').isNotEmpty) hgt += 12 + (compact ? 28.0 : 32.0);
-    if ((data.mainTeam ?? '').isNotEmpty) hgt += 28 + (compact ? 64.0 : 72.0);
-    return hgt + _heroPad;
+  /// 로고 비트맵을 rect 안에 비율(scale)만큼 중앙 배치. clip은 radius>0일 때만.
+  void _logoIn(Canvas canvas, Rect rect, double scale, double radius) {
+    final s = math.min(rect.width, rect.height) * scale;
+    final dst = Rect.fromCenter(center: rect.center, width: s, height: s);
+    canvas.save();
+    if (radius > 0) {
+      canvas.clipRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius)));
+    }
+    canvas.drawImageRect(
+      logo!,
+      Rect.fromLTWH(0, 0, logo!.width.toDouble(), logo!.height.toDouble()),
+      dst,
+      Paint(),
+    );
+    canvas.restore();
   }
 
-  TextPainter _nameTp(bool compact) => _tp(
+  // ── 히어로: 네임카드 ───────────────────────────────────────────
+  // 앱 프로필 카드(밥 색 배경 + 큰 밥이름 + 가입일 + 대표팀 뱃지)를 공유 규격으로.
+  static const _heroPad = 52.0;
+
+  TextPainter _nameStoryTp() => _tp(
     data.nickname,
-    _st(compact ? 62 : 76, FontWeight.w800, _ink),
+    _st(76, FontWeight.w800, _ink),
     maxWidth: _w - _pad * 2 - _heroPad * 2,
     maxLines: 2,
     align: TextAlign.center,
   );
 
-  void _hero(Canvas canvas, double y, double hgt) {
-    final compact = data.feed;
-    const x = _pad, cw = _w - _pad * 2;
-    _sh2(canvas, Rect.fromLTWH(x, y, cw, hgt), 28, 40, 20, 0.15);
-    _rr(canvas, x, y, cw, hgt, 28, Paint()..color = data.bgColor);
-    // 밥 색이 어떤 값이든 글씨가 읽히도록 카드 안쪽을 살짝 밝힌다.
-    _rr(canvas, x, y, cw, hgt, 28, Paint()..color = const Color(0x1AFFFFFF));
+  double _heroStoryHeight() {
+    var hgt = _heroPad + 132 + 26 + _nameStoryTp().height;
+    if ((data.joined ?? '').isNotEmpty) hgt += 12 + 32;
+    if ((data.mainTeam ?? '').isNotEmpty) hgt += 26 + 72;
+    return hgt + _heroPad;
+  }
 
-    // 좌상단 밥 종류 워터마크 — 앱 네임카드(.pc-rice-type)와 같은 자리·같은 톤.
+  void _heroStory(Canvas canvas, Rect r) {
+    _heroShell(canvas, r);
+    var cy = r.top + _heroPad;
+    const es = 132.0;
+    _emblem(canvas, Offset(_w / 2, cy + es / 2), es);
+    cy += es + 26;
+
+    final nameTp = _nameStoryTp();
+    nameTp.paint(canvas, Offset(r.left + _heroPad, cy));
+    cy += nameTp.height;
+
+    if ((data.joined ?? '').isNotEmpty) {
+      cy += 12;
+      final jt = _tp(data.joined!, _st(30, FontWeight.w500, _brown));
+      jt.paint(canvas, Offset(_w / 2 - jt.width / 2, cy));
+      cy += 32;
+    }
+    if ((data.mainTeam ?? '').isNotEmpty) {
+      cy += 26;
+      _teamPill(canvas, Offset(_w / 2, cy), 72, 36, centered: true);
+    }
+  }
+
+  double _heroFeedHeight() => 200;
+
+  void _heroFeed(Canvas canvas, Rect r) {
+    _heroShell(canvas, r);
+    // 가로 띠: 엠블럼 왼쪽, 텍스트 오른쪽.
+    const es = 108.0;
+    final ecx = r.left + 40 + es / 2;
+    _emblem(canvas, Offset(ecx, r.center.dy), es);
+
+    final tx = ecx + es / 2 + 32;
+    final maxW = r.right - 40 - tx;
+    final nameTp = _tp(
+      data.nickname,
+      _st(54, FontWeight.w800, _ink),
+      maxWidth: maxW,
+    );
+    final hasJoin = (data.joined ?? '').isNotEmpty;
+    final hasTeam = (data.mainTeam ?? '').isNotEmpty;
+    var blockH = nameTp.height;
+    if (hasJoin) blockH += 6 + 28;
+    if (hasTeam) blockH += 14 + 56;
+    var cy = r.center.dy - blockH / 2;
+
+    nameTp.paint(canvas, Offset(tx, cy));
+    cy += nameTp.height;
+    if (hasJoin) {
+      cy += 6;
+      _tp(
+        data.joined!,
+        _st(26, FontWeight.w500, _brown),
+      ).paint(canvas, Offset(tx, cy));
+      cy += 28;
+    }
+    if (hasTeam) {
+      cy += 14;
+      _teamPill(canvas, Offset(tx, cy), 56, 30, centered: false, maxW: maxW);
+    }
+  }
+
+  void _heroShell(Canvas canvas, Rect r) {
+    _sh2(canvas, r, 28, 40, 20, 0.15);
+    _rr(
+      canvas,
+      r.left,
+      r.top,
+      r.width,
+      r.height,
+      28,
+      Paint()..color = data.bgColor,
+    );
+    // 밥 색이 어떤 값이든 글씨가 읽히도록 카드 안쪽을 살짝 밝힌다.
+    _rr(
+      canvas,
+      r.left,
+      r.top,
+      r.width,
+      r.height,
+      28,
+      Paint()..color = const Color(0x1AFFFFFF),
+    );
+    // 좌상단 밥 종류 워터마크 — 앱 네임카드(.pc-rice-type)와 같은 자리·톤.
     if (data.riceType.isNotEmpty) {
       _tp(
         data.riceType,
-        _st(28, FontWeight.w700, const Color(0x4D5D4037)),
-      ).paint(canvas, Offset(x + 30, y + 26));
+        _st(26, FontWeight.w700, const Color(0x4D5D4037)),
+      ).paint(canvas, Offset(r.left + 28, r.top + 24));
     }
+  }
 
-    var cy = y + _heroPad;
-
-    // 엠블럼: 흰 원 + 브랜드 로고(클럽 카드의 핀+배구공과 같은 문법).
-    // 단순화 밥그릇 벡터는 밥·그릇 사이 틈 때문에 이 크기에선 햄버거처럼 보였다
-    // (24px 스탬프용으로 그린 패스라 그렇다) → 로고 비트맵을 쓰고, 없을 때만 벡터.
-    final es = compact ? _emblem * 0.72 : _emblem;
-    final ecx = _w / 2;
+  /// 흰 원 + 브랜드 로고. 단순화 밥그릇 벡터는 24px 스탬프용 패스라 크게 키우면
+  /// 밥·그릇 사이 틈이 도드라져 햄버거처럼 보인다 → 로고 비트맵 우선.
+  void _emblem(Canvas canvas, Offset center, double es) {
     _sh2(
       canvas,
-      Rect.fromCircle(center: Offset(ecx, cy + es / 2), radius: es / 2),
+      Rect.fromCircle(center: center, radius: es / 2),
       es / 2,
       16,
       8,
       0.16,
     );
-    canvas.drawCircle(
-      Offset(ecx, cy + es / 2),
-      es / 2,
-      Paint()..color = Colors.white,
-    );
+    canvas.drawCircle(center, es / 2, Paint()..color = Colors.white);
     if (logo != null) {
-      final ls = es * 0.68;
-      canvas.drawImageRect(
-        logo!,
-        Rect.fromLTWH(0, 0, logo!.width.toDouble(), logo!.height.toDouble()),
-        Rect.fromLTWH(ecx - ls / 2, cy + (es - ls) / 2, ls, ls),
-        Paint(),
+      _logoIn(
+        canvas,
+        Rect.fromCenter(center: center, width: es, height: es),
+        0.68,
+        0,
       );
     } else {
-      _riceBowl(canvas, ecx - es * 0.3, cy + es * 0.2, es * 0.6, _yellow);
-    }
-    cy += es + 26;
-
-    final nameTp = _nameTp(compact);
-    nameTp.paint(canvas, Offset(x + _heroPad, cy));
-    cy += nameTp.height;
-
-    if ((data.joined ?? '').isNotEmpty) {
-      cy += 12;
-      final jt = _tp(
-        data.joined!,
-        _st(compact ? 26 : 30, FontWeight.w500, _brown),
-        maxWidth: cw - _heroPad * 2,
-        align: TextAlign.center,
-      );
-      jt.paint(canvas, Offset(ecx - jt.width / 2, cy));
-      cy += compact ? 28 : 32;
-    }
-
-    if ((data.mainTeam ?? '').isNotEmpty) {
-      cy += 28;
-      final ph = compact ? 64.0 : 72.0;
-      final tt = _tp(
-        data.mainTeam!,
-        _st(compact ? 32 : 36, FontWeight.w700, _ink),
-        maxWidth: cw - _heroPad * 2 - 110,
-      );
-      final pw = tt.width + 110;
-      final psx = ecx - pw / 2;
-      _rr(canvas, psx, cy, pw, ph, ph / 2, Paint()..color = Colors.white);
-      final icoS = ph * 0.5;
-      if (data.mainTeamCustom) {
-        _riceBall(canvas, psx + 30, cy + (ph - icoS) / 2, icoS, _brown);
-      } else {
-        _volley(canvas, psx + 30 + icoS / 2, cy + ph / 2, icoS / 2, _yellow);
-      }
-      tt.paint(
+      _riceBowl(
         canvas,
-        Offset(psx + 30 + icoS + 20, cy + ph / 2 - tt.height / 2),
+        center.dx - es * 0.3,
+        center.dy - es * 0.3,
+        es * 0.6,
+        _yellow,
       );
     }
   }
 
-  // ── 도시락 카드 ────────────────────────────────────────────────
-  static const _lbPad = 44.0;
-  static const _lbHeader = 56.0;
-  static const _lbChrome = _lbPad * 2 + _lbHeader + 18;
-
-  /// 카드 껍데기 + "도시락 n/5" 헤더. 본문 시작 y를 돌려준다.
-  double _lbShell(Canvas canvas, double y, double hgt) {
-    const x = _pad, cw = _w - _pad * 2;
-    _sh2(canvas, Rect.fromLTWH(x, y, cw, hgt), 28, 40, 20, 0.15);
-    _rr(canvas, x, y, cw, hgt, 28, Paint()..color = _cardBg);
-
-    final ix = x + _lbPad, iw = cw - _lbPad * 2;
-    final title = _tp(t('mycard_lunchbox'), _st(40, FontWeight.w800, _ink));
-    title.paint(
-      canvas,
-      Offset(ix, y + _lbPad + (_lbHeader - title.height) / 2),
-    );
-    final filled = data.slots.where((s) => s.name != null).length;
-    final cnt = _tp('$filled / 5', _st(30, FontWeight.w600, _sub));
-    cnt.paint(
-      canvas,
-      Offset(ix + iw - cnt.width, y + _lbPad + (_lbHeader - cnt.height) / 2),
-    );
-    return y + _lbPad + _lbHeader + 18;
-  }
-
-  /// 스토리형 도시락: 5칸을 세로로. 빈 칸도 보여야 "5칸 중 n개"가 읽힌다.
-  void _lunchboxRows(
+  /// 대표팀 알약. centered=true면 at을 중심으로, false면 왼쪽 기준.
+  void _teamPill(
     Canvas canvas,
-    double y,
-    double hgt,
-    double rowH,
-    double rowGap,
-  ) {
-    var cy = _lbShell(canvas, y, hgt);
-    const ix = _pad + _lbPad;
-    const iw = _w - _pad * 2 - _lbPad * 2;
-    for (var i = 0; i < data.slots.length; i++) {
-      _slotRow(canvas, ix, cy, iw, rowH, i, data.slots[i]);
-      cy += rowH + rowGap;
+    Offset at,
+    double ph,
+    double fs, {
+    required bool centered,
+    double maxW = double.infinity,
+  }) {
+    final icoS = ph * 0.5;
+    final tt = _tp(
+      data.mainTeam!,
+      _st(fs, FontWeight.w700, _ink),
+      maxWidth: maxW == double.infinity ? double.infinity : maxW - 110,
+    );
+    final pw = tt.width + 30 + icoS + 20 + 30;
+    final psx = centered ? at.dx - pw / 2 : at.dx;
+    final psy = at.dy;
+    _rr(canvas, psx, psy, pw, ph, ph / 2, Paint()..color = Colors.white);
+    if (data.mainTeamCustom) {
+      _riceBall(canvas, psx + 30, psy + (ph - icoS) / 2, icoS, _brown);
+    } else {
+      _volley(canvas, psx + 30 + icoS / 2, psy + ph / 2, icoS / 2, _yellow);
     }
-  }
-
-  // ── 피드형 도시락: 팀 칩(식단표에 자리를 양보) ──────────────────
-  static const _chipH = 60.0;
-  static const _chipGap = 12.0;
-
-  ({List<String> names, List<int> idx, List<double> w, List<int> row, int rows})
-  _chipLayout() {
-    const iw = _w - _pad * 2 - _lbPad * 2;
-    final names = <String>[], w = <double>[], row = <int>[], idx = <int>[];
-    var cx = 0.0, r = 0;
-    for (var i = 0; i < data.slots.length; i++) {
-      final s = data.slots[i];
-      if (s.name == null) continue;
-      final tp = _tp(s.name!, _st(30, FontWeight.w700, _dark));
-      final cw = tp.width + 34 + _chipH * 0.42 + 18 + 26;
-      if (cx + cw > iw && cx > 0) {
-        r++;
-        cx = 0;
-        if (r > 1) break; // 2줄까지만 — 넘치면 잘라낸다
-      }
-      names.add(s.name!);
-      idx.add(i);
-      w.add(cw);
-      row.add(r);
-      cx += cw + _chipGap;
-    }
-    return (
-      names: names,
-      idx: idx,
-      w: w,
-      row: row,
-      rows: names.isEmpty ? 1 : row.last + 1,
+    tt.paint(
+      canvas,
+      Offset(psx + 30 + icoS + 20, psy + ph / 2 - tt.height / 2),
     );
   }
 
-  double _chipsHeight(int rows) =>
-      _lbPad * 2 + _lbHeader + 18 + rows * _chipH + (rows - 1) * _chipGap;
-
-  void _lunchboxChips(
-    Canvas canvas,
-    double y,
-    double hgt,
-    ({
-      List<String> names,
-      List<int> idx,
-      List<double> w,
-      List<int> row,
-      int rows,
-    })
-    c,
-  ) {
-    final top = _lbShell(canvas, y, hgt);
-    const ix = _pad + _lbPad;
-    if (c.names.isEmpty) {
-      final e = _tp(t('no_saved_team'), _st(32, FontWeight.w500, _sub));
-      e.paint(canvas, Offset(ix, top + (_chipH - e.height) / 2));
-      return;
-    }
-    var cx = ix;
-    var curRow = 0;
-    for (var i = 0; i < c.names.length; i++) {
-      if (c.row[i] != curRow) {
-        curRow = c.row[i];
-        cx = ix;
-      }
-      final cy = top + curRow * (_chipH + _chipGap);
-      final slot = c.idx[i] % 5;
+  // ── 도시락통 (보온도시락 스택) ─────────────────────────────────
+  // 위→아래: 반찬(3칸) / 국(1칸) / 밥(1칸). 슬롯 0=밥 1=국 2~4=반찬.
+  // 칸 색은 시간표 블록 색과 같아서, 이 통이 곧 시간표의 범례가 된다.
+  void _bento(Canvas canvas, Rect r) {
+    _sh2(canvas, r, 30, 40, 20, 0.15);
+    _rr(canvas, r.left, r.top, r.width, r.height, 30, Paint()..color = _cardBg);
+    // 보온도시락 외피 느낌: 얇은 윤곽 + 좌우 잠금쇠.
+    _rr(
+      canvas,
+      r.left,
+      r.top,
+      r.width,
+      r.height,
+      30,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3
+        ..color = _hair,
+    );
+    for (final side in [r.left - 5, r.right - 9]) {
       _rr(
         canvas,
-        cx,
-        cy,
-        c.w[i],
-        _chipH,
-        _chipH / 2,
-        Paint()..color = _slotBg[slot],
+        side,
+        r.top + r.height * 0.42,
+        14,
+        54,
+        7,
+        Paint()..color = _hair,
       );
-      final icoS = _chipH * 0.42;
-      if (data.slots[c.idx[i]].isCustom) {
-        _riceBall(
-          canvas,
-          cx + 26,
-          cy + (_chipH - icoS) / 2,
-          icoS,
-          _slotRail[slot],
-        );
-      } else {
-        _volley(
-          canvas,
-          cx + 26 + icoS / 2,
-          cy + _chipH / 2,
-          icoS / 2,
-          _slotRail[slot],
-        );
-      }
-      final tp = _tp(c.names[i], _st(30, FontWeight.w700, _dark));
-      tp.paint(
-        canvas,
-        Offset(cx + 26 + icoS + 18, cy + _chipH / 2 - tp.height / 2),
-      );
-      cx += c.w[i] + _chipGap;
     }
+
+    const ip = 26.0;
+    final ix = r.left + ip, iw = r.width - ip * 2;
+    var cy = r.top + ip;
+
+    // 헤더: 도시락 n/5
+    final title = _tp(t('mycard_lunchbox'), _st(34, FontWeight.w800, _ink));
+    title.paint(canvas, Offset(ix, cy));
+    final filled = data.slots.where((s) => s.name != null).length;
+    final cnt = _tp('$filled / 5', _st(26, FontWeight.w600, _sub));
+    cnt.paint(canvas, Offset(ix + iw - cnt.width, cy + 6));
+    cy += 46;
+
+    // 남은 높이를 3단으로: 반찬 0.30 / 국 0.28 / 밥 0.42 (밥이 가장 크다)
+    const capH = 26.0, tierGap = 14.0;
+    final body = (r.bottom - ip) - cy - capH * 3 - tierGap * 2;
+    final hBanchan = body * 0.30, hGuk = body * 0.28, hBap = body * 0.42;
+
+    cy = _tier(canvas, ix, cy, iw, hBanchan, t('mycard_tier_sides'), [2, 3, 4]);
+    cy += tierGap;
+    cy = _tier(canvas, ix, cy, iw, hGuk, t('mycard_tier_soup'), [1]);
+    cy += tierGap;
+    _tier(canvas, ix, cy, iw, hBap, t('mycard_tier_rice'), [0]);
   }
 
-  void _slotRow(
+  /// 한 단(층)을 그린다. 캡션 + 칸들. 다음 y를 돌려준다.
+  double _tier(
     Canvas canvas,
     double x,
     double y,
     double w,
     double h,
-    int i,
-    MyCardSlot s,
+    String caption,
+    List<int> slots,
   ) {
-    final rail = _slotRail[i % 5];
+    _tp(
+      caption,
+      _st(22, FontWeight.w700, const Color(0x808D6E63)),
+    ).paint(canvas, Offset(x + 2, y));
+    final top = y + 26;
+    const cellGap = 10.0;
+    final cw = (w - cellGap * (slots.length - 1)) / slots.length;
+    for (var i = 0; i < slots.length; i++) {
+      _cell(
+        canvas,
+        Rect.fromLTWH(x + (cw + cellGap) * i, top, cw, h),
+        slots[i],
+        wide: slots.length == 1,
+      );
+    }
+    return top + h;
+  }
+
+  /// 도시락 칸 하나. 채워진 칸은 슬롯 색으로 칠하고 테두리를 두른다.
+  void _cell(Canvas canvas, Rect r, int slot, {required bool wide}) {
+    final s = slot < data.slots.length ? data.slots[slot] : const MyCardSlot();
     if (s.name == null) {
-      // 빈 칸: 색을 쓰지 않고 옅은 윤곽만 — 채워진 칸이 도드라지게.
       _rr(
         canvas,
-        x,
-        y,
-        w,
-        h,
-        18,
+        r.left,
+        r.top,
+        r.width,
+        r.height,
+        14,
+        Paint()..color = const Color(0x40FFFFFF),
+      );
+      _rr(
+        canvas,
+        r.left,
+        r.top,
+        r.width,
+        r.height,
+        14,
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2
-          ..color = const Color(0x1A8D6E63),
+          ..color = _hair,
       );
-      final tp = _tp(t('mycard_empty_slot'), _st(30, FontWeight.w500, _sub));
-      tp.paint(canvas, Offset(x + 34, y + h / 2 - tp.height / 2));
       return;
     }
-    _rr(canvas, x, y, w, h, 18, Paint()..color = _slotBg[i % 5]);
-    // 좌측 색 레일 — 식단표 블록과 같은 색이라 어느 칸의 일정인지 눈으로 이어진다.
-    canvas.save();
-    canvas.clipRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(x, y, w, h),
-        const Radius.circular(18),
-      ),
+    _rr(
+      canvas,
+      r.left,
+      r.top,
+      r.width,
+      r.height,
+      14,
+      Paint()..color = _slotBg[slot],
     );
-    canvas.drawRect(Rect.fromLTWH(x, y, 10, h), Paint()..color = rail);
-    canvas.restore();
-
-    final icoS = h * 0.42;
-    final tx = x + 34 + icoS + 18;
-    if (s.isCustom) {
-      _riceBall(canvas, x + 34, y + (h - icoS) / 2, icoS, rail);
-    } else {
-      _volley(canvas, x + 34 + icoS / 2, y + h / 2, icoS / 2, rail);
-    }
+    _rr(
+      canvas,
+      r.left,
+      r.top,
+      r.width,
+      r.height,
+      14,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5
+        ..color = _slotRail[slot],
+    );
+    final fs = wide ? 30.0 : 21.0;
     final tp = _tp(
       s.name!,
-      _st(36, FontWeight.w700, _dark),
-      maxWidth: w - (tx - x) - 34,
+      _st(fs, FontWeight.w700, _dark),
+      maxWidth: r.width - 20,
+      maxLines: wide ? 2 : 3,
+      align: TextAlign.center,
     );
-    tp.paint(canvas, Offset(tx, y + h / 2 - tp.height / 2));
+    tp.paint(
+      canvas,
+      Offset(r.left + (r.width - tp.width) / 2, r.center.dy - tp.height / 2),
+    );
+    // 커스텀 팀은 주먹밥 표식(이모지 대신 벡터).
+    if (s.isCustom && wide) {
+      _riceBall(canvas, r.left + 14, r.top + 12, 26, _slotRail[slot]);
+    }
   }
 
-  // ── 식단표(피드형) ─────────────────────────────────────────────
-  void _diet(Canvas canvas, double y, double hgt) {
-    const x = _pad, cw = _w - _pad * 2;
-    _sh2(canvas, Rect.fromLTWH(x, y, cw, hgt), 28, 40, 20, 0.15);
-    _rr(canvas, x, y, cw, hgt, 28, Paint()..color = _cardBg);
+  // ── 시간표 (피드형 우측) ───────────────────────────────────────
+  // 블록에 팀 이름을 쓰지 않는다 — 좁아서 읽히지도 않고, 색이 도시락 칸과
+  // 같으므로 왼쪽 도시락통이 범례 역할을 한다.
+  void _timetable(Canvas canvas, Rect r) {
+    _sh2(canvas, r, 30, 40, 20, 0.15);
+    _rr(canvas, r.left, r.top, r.width, r.height, 30, Paint()..color = _cardBg);
+
+    const ip = 22.0;
+    final ix = r.left + ip;
+    var cy = r.top + ip;
+    _tp(
+      t('mycard_timetable'),
+      _st(30, FontWeight.w800, _ink),
+    ).paint(canvas, Offset(ix, cy));
+    cy += 44;
 
     final all = <({SchedEvent e, DietTeam t})>[];
     for (final tm in data.diet) {
@@ -578,17 +614,23 @@ class MyCardPainter extends CustomPainter {
       }
     }
     if (all.isEmpty) {
-      final tp = _tp(t('lb_no_sched'), _st(32, FontWeight.w500, _sub));
+      final tp = _tp(
+        t('lb_no_sched'),
+        _st(24, FontWeight.w500, _sub),
+        maxWidth: r.width - ip * 2,
+        maxLines: 2,
+        align: TextAlign.center,
+      );
       tp.paint(
         canvas,
-        Offset(x + (cw - tp.width) / 2, y + hgt / 2 - tp.height / 2),
+        Offset(r.left + (r.width - tp.width) / 2, r.center.dy - tp.height / 2),
       );
       return;
     }
 
-    const pad = 30.0, timeW = 62.0, headH = 44.0;
-    final gx = x + pad + timeW, gy = y + pad + headH;
-    final gw = cw - pad * 2 - timeW, gh = hgt - pad * 2 - headH;
+    const timeW = 42.0, headH = 34.0;
+    final gx = ix + timeW, gy = cy + headH;
+    final gw = r.width - ip * 2 - timeW, gh = (r.bottom - ip) - gy;
     final colW = gw / scheduleDays.length;
 
     var minH = 24.0, maxH = 0.0;
@@ -603,31 +645,30 @@ class MyCardPainter extends CustomPainter {
 
     // 요일 헤더
     for (var d = 0; d < scheduleDays.length; d++) {
-      final tp = _tp(i18nDay(scheduleDays[d]), _st(26, FontWeight.w700, _ink));
+      final tp = _tp(i18nDay(scheduleDays[d]), _st(22, FontWeight.w700, _ink));
       tp.paint(
         canvas,
         Offset(
           gx + colW * d + (colW - tp.width) / 2,
-          y + pad + (headH - tp.height) / 2,
+          cy + (headH - tp.height) / 2,
         ),
       );
     }
-    // 시간 라벨 + 가로선
+
+    // 시간축: 24시간 숫자만, 촘촘하면 두 시간마다. 'PM 12/PM 1/…'을 매 시간
+    // 찍으니 축이 글자로 꽉 차 답답했다.
+    final every = rowH >= 40 ? 1 : 2;
     final hLine = Paint()
       ..color = const Color(0x14000000)
       ..strokeWidth = 1;
     for (var i = 0; i <= hours; i++) {
       final ly = gy + rowH * i;
       canvas.drawLine(Offset(gx, ly), Offset(gx + gw, ly), hLine);
-      if (i < hours) {
-        final tp = _tp(
-          getHourLabel(startH + i),
-          _st(20, FontWeight.w500, _sub),
-        );
-        tp.paint(canvas, Offset(gx - timeW + 8, ly + 4));
+      if (i < hours && (startH + i) % every == 0) {
+        final tp = _tp('${startH + i}', _st(20, FontWeight.w500, _sub));
+        tp.paint(canvas, Offset(gx - 8 - tp.width, ly + 3));
       }
     }
-    // 세로 요일선
     final vLine = Paint()
       ..color = const Color(0x11000000)
       ..strokeWidth = 1;
@@ -637,7 +678,6 @@ class MyCardPainter extends CustomPainter {
     }
 
     // 이벤트 블록 (겹치면 들여쓰기 — 앱 식단표와 동일 규칙)
-    // 표시 범위 밖으로 걸치는 블록이 카드 밖으로 새지 않게 그리드 영역을 클립.
     canvas.save();
     canvas.clipRect(Rect.fromLTWH(gx, gy, gw, gh));
     for (var d = 0; d < scheduleDays.length; d++) {
@@ -652,39 +692,23 @@ class MyCardPainter extends CustomPainter {
         }
         if (indent > 2) indent = 0;
         final slot = tm.slotIdx % 5;
-        final bx = gx + colW * d + 2 + indent * 7.0;
+        final bx = gx + colW * d + 2 + indent * 5.0;
         final by = gy + (e.start - startH) * rowH;
-        final bw = colW - 4 - indent * 7.0;
-        final bh = math.max(22.0, (e.end - e.start) * rowH - 3);
-        if (by + bh < gy || by > gy + gh) continue;
-        _rr(canvas, bx, by, bw, bh, 7, Paint()..color = _slotBg[slot]);
-        canvas.save();
-        canvas.clipRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromLTWH(bx, by, bw, bh),
-            const Radius.circular(7),
-          ),
-        );
+        final bw = colW - 4 - indent * 5.0;
+        final bh = math.max(14.0, (e.end - e.start) * rowH - 3);
+        _rr(canvas, bx, by, bw, bh, 6, Paint()..color = _slotBg[slot]);
         canvas.drawRect(
-          Rect.fromLTWH(bx, by, 5, bh),
+          Rect.fromLTWH(bx, by, 4, bh),
           Paint()..color = _slotRail[slot],
         );
-        final tp = _tp(
-          tm.name,
-          _st(19, FontWeight.w600, _dark),
-          maxWidth: bw - 12,
-          maxLines: math.max(1, (bh / 22).floor()),
-        );
-        tp.paint(canvas, Offset(bx + 9, by + 5));
-        canvas.restore();
       }
     }
     canvas.restore();
   }
 
   // ── 푸터: QR + CTA (클럽 스토리 카드와 동일 구조) ───────────────
-  void _footer(Canvas canvas, double footY) {
-    const footH = 210.0, qrSize = 190.0;
+  void _footer(Canvas canvas) {
+    final footY = footTop, footH = _footH, qrSize = _qrSize;
     const qrX = _pad;
     final qrY = footY + (footH - qrSize) / 2;
     _sh2(
@@ -706,26 +730,27 @@ class MyCardPainter extends CustomPainter {
     );
     _drawQr(canvas, data.url, qrX, qrY, qrSize);
 
-    const tx = qrX + qrSize + 50;
+    final tx = qrX + qrSize + 44;
+    final ctaFs = data.feed ? 38.0 : 42.0;
     _tp(
       'S C A N',
-      _st(24, FontWeight.w700, _sub),
-    ).paint(canvas, Offset(tx, footY + 30));
+      _st(22, FontWeight.w700, _sub),
+    ).paint(canvas, Offset(tx, footY + 26));
     final cta = _tp(
       t('mycard_cta'),
-      _st(42, FontWeight.w800, _ink),
+      _st(ctaFs, FontWeight.w800, _ink),
       maxWidth: _w - _pad - tx,
       maxLines: 2,
     );
-    cta.paint(canvas, Offset(tx, footY + 66));
+    cta.paint(canvas, Offset(tx, footY + 58));
     final urlStr = data.url
         .replaceFirst(RegExp(r'^https?://'), '')
         .replaceFirst(RegExp(r'/$'), '');
     _tp(
       urlStr,
-      _st(27, FontWeight.w500, _brown),
+      _st(25, FontWeight.w500, _brown),
       maxWidth: _w - _pad - tx,
-    ).paint(canvas, Offset(tx, footY + 66 + cta.height + 10));
+    ).paint(canvas, Offset(tx, footY + 58 + cta.height + 8));
   }
 
   // ── 프리미티브 (story_card.dart와 동일 규격) ────────────────────
@@ -763,7 +788,6 @@ class MyCardPainter extends CustomPainter {
     c.save();
     c.translate(x, y);
     c.scale(s / 24);
-    // 그리는 좌표를 위쪽으로 당겨 밥+그릇이 s 안에 꽉 차게.
     c.translate(0, -3.5);
     final paint = Paint()..color = col;
     final rice = Path()

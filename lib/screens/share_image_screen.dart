@@ -215,16 +215,15 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
   }
 
   /// 미리보기 — 내보내는 것과 같은 painter를 축소해 그린다(WYSIWYG).
+  /// 규격도 그대로 따라간다(피드형 4:5 / 스토리형 9:16).
   /// 로고가 아직 안 왔으면 노란 타일 폴백으로 그려진다(레이아웃은 동일).
   Widget _preview() {
+    final painter = MyCardPainter(_cardData(), logo: _logo);
     return AspectRatio(
-      aspectRatio: 1080 / 1920,
+      aspectRatio: painter.canvasSize.aspectRatio,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: CustomPaint(
-          painter: MyCardPainter(_cardData(), logo: _logo),
-          size: Size.infinite,
-        ),
+        child: CustomPaint(painter: painter, size: Size.infinite),
       ),
     );
   }
