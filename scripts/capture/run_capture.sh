@@ -82,9 +82,12 @@ fingerprint() {
     m="$(convert "$f" -colorspace Gray -format '%[fx:mean]' info: 2>/dev/null || echo NA)"
     d="$(identify -format '%wx%h' "$f" 2>/dev/null || echo '?')"
     echo "FP $b mean=$m dim=$d"
-    # 각 스샷을 JPEG 썸네일(≈240px)로 로그에 남겨 좌표 보정/육안 검증(프록시가 아티팩트 차단해도).
+    # 각 스샷을 JPEG 썸네일로 로그에 남겨 육안 검증(아티팩트 호스트는 조직 egress
+    # 정책에 막혀 다운로드가 안 된다 — 로그가 유일한 확인 경로다).
+    # 240px는 "화면이 맞나"까지만 판별됐다. 카드 디자인·글자 가독성처럼 품질을 보려면
+    # 부족해서 기본값을 올렸다. 필요하면 FP_THUMB_W 로 조절.
     echo "THUMB_JPG_BEGIN $b"
-    convert "$f" -resize 240x -quality 70 jpg:- 2>/dev/null | base64 -w0
+    convert "$f" -resize "${FP_THUMB_W:-560}x" -quality 72 jpg:- 2>/dev/null | base64 -w0
     echo ""
     echo "THUMB_JPG_END $b"
   done
