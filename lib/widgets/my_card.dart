@@ -595,12 +595,15 @@ class MyCardPainter extends CustomPainter {
         ..strokeWidth = 2.5
         ..color = _slotRail[slot],
     );
-    // 반찬 칸은 좁아서 긴 팀 이름이 3줄로 쪼개졌다 → 들어갈 때까지 글자를 줄인다.
+    // 두 줄로 못 박고 글자를 줄인다. 좁은 반찬 칸에서 긴 팀 이름이 3줄로
+    // 쪼개지면 세로로 길쭉해져 읽기 어려웠다 — 줄 수를 고정하고 크기를 양보한다.
     final tp = _fit(
       s.name!,
       maxWidth: r.width - 20,
-      maxLines: wide ? 2 : 3,
-      sizes: wide ? const [30.0, 26.0, 23.0] : const [21.0, 19.0, 17.0, 15.0],
+      maxLines: 2,
+      sizes: wide
+          ? const [30.0, 26.0, 23.0, 20.0]
+          : const [21.0, 19.0, 17.0, 15.0, 13.0],
     );
     tp.paint(
       canvas,
