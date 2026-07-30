@@ -59,6 +59,13 @@
 ## 메타 지렛대: 에이전트 로컬 루프
 - **환경 setup 스크립트에 Flutter SDK(+Dart) 설치**를 넣어(세션마다 지속), 에이전트가 `flutter analyze && flutter test`를 **초 단위로 self-verify** → "10분 컴파일-only CI" 루프 대체. 웹은 `npm ci` 한 줄. **이게 "자동 디버깅 결과 끌어올리기"의 최대 레버.**
 - (에뮬레이터/통합은 안드 에뮬이 무거워 로컬보단 CI 잡으로. analyze+유닛+골든은 에뮬 없이 헤드리스로 돈다.)
+- **골든 갱신은 CI에서**: `.github/workflows/update-goldens.yml` (Actions → Update Goldens,
+  또는 커밋 메시지 `[goldens]` 마커로 `claude/**` push). `flutter test --update-goldens` 를
+  돌려 바뀐 PNG를 브랜치에 커밋한다. 이유 두 가지 —
+  ① 골든은 **검사하는 환경의 렌더링이 정답**이다. 로컬에서 갱신하면 폰트 래스터라이즈 차이로
+  로컬 통과·CI 실패가 난다. ② Flutter SDK가 없는 환경(에이전트 컨테이너)에서도 갱신이 된다.
+  `--update-goldens` 는 회귀도 그대로 정답으로 덮으니 **PNG diff를 눈으로 보고** 머지할 것.
+  그래서 main 에서는 실행을 막아두고 브랜치+PR 검토를 전제로 한다.
 
 ---
 

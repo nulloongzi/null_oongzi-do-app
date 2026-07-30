@@ -141,28 +141,42 @@ class DietGrid extends StatelessWidget {
     final dayEvents = all.where((x) => x.e.day == day).toList()
       ..sort((a, b) => a.e.start.compareTo(b.e.start));
 
+    // 겹치는 일정은 칸을 레인으로 쪼개 나란히 놓는다(assignLanes). 예전엔 6px씩
+    // 들여쓰고 겹쳐 그려서 나중 블록이 앞 블록을 덮었고, 3개를 넘으면
+    // 들여쓰기가 0으로 돌아가 앞의 것들을 완전히 가렸다.
+    final lanes = assignLanes([for (final x in dayEvents) x.e]);
+
     return Container(
       decoration: const BoxDecoration(
         border: Border(left: BorderSide(color: Color(0x11000000))),
       ),
-      child: Stack(
-        children: [
-          // 가로 시간선
-          Column(
-            children: [
-              for (int i = 0; i < totalHours; i++)
-                Container(
-                  height: rowH,
-                  decoration: const BoxDecoration(
-                    border: Border(top: BorderSide(color: Color(0x0D000000))),
+      child: LayoutBuilder(
+        builder: (context, c) => Stack(
+          children: [
+            // 가로 시간선
+            Column(
+              children: [
+                for (int i = 0; i < totalHours; i++)
+                  Container(
+                    height: rowH,
+                    decoration: const BoxDecoration(
+                      border: Border(top: BorderSide(color: Color(0x0D000000))),
+                    ),
                   ),
-                ),
-            ],
-          ),
-          // 이벤트 블록
-          for (var i = 0; i < dayEvents.length; i++)
-            _eventBlock(dayEvents, i, displayStart, rowH),
-        ],
+              ],
+            ),
+            // 이벤트 블록
+            for (var i = 0; i < dayEvents.length; i++)
+              _eventBlock(
+                dayEvents,
+                i,
+                displayStart,
+                rowH,
+                lanes[i],
+                c.maxWidth,
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -172,27 +186,23 @@ class DietGrid extends StatelessWidget {
     int i,
     int displayStart,
     double rowH,
+    ({int lane, int lanes}) pos,
+    double colW,
   ) {
     final evt = dayEvents[i].e;
     final team = dayEvents[i].t;
-    // 겹침 들여쓰기 (웹과 동일)
-    var indent = 0;
-    for (var j = 0; j < i; j++) {
-      final p = dayEvents[j].e;
-      if (evt.start < p.end && evt.end > p.start) indent++;
-    }
-    if (indent > 2) indent = 0;
 
     final top = (evt.start - displayStart) * rowH;
     final height = ((evt.end - evt.start) * rowH - 2)
         .clamp(18.0, 9999.0)
         .toDouble();
     final slot = team.slotIdx % 5;
+    final laneW = (colW - 2) / pos.lanes;
 
     return Positioned(
       top: top,
-      left: 1 + indent * 6.0,
-      right: 1,
+      left: 1 + laneW * pos.lane,
+      width: laneW - (pos.lanes > 1 ? 1 : 0),
       height: height,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
