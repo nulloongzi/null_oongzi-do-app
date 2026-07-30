@@ -11,6 +11,10 @@ name: Update Goldens
 # 회귀도 통과시킬 수 있으므로 커밋된 PNG를 **반드시 눈으로 확인**하고 머지할 것.
 # 그래서 main 에서는 못 돌린다 — 브랜치에서 돌려 PR diff로 검토한다.
 #
+# 봇 커밋은 CI를 자동으로 돌리지 못한다(GITHUB_TOKEN 푸시의 루프 방지 규칙).
+# 그래서 이 잡이 커밋 전에 ci.yml 과 같은 게이트(analyze/format/test)를 직접 돌려
+# 초록을 보장한다 — 안 그러면 검증 안 된 커밋이 브랜치에 남는다.
+#
 # 실행 방법 2가지:
 #  · Actions → Update Goldens → Run workflow (워크플로가 default 브랜치에 있을 때만
 #    목록에 뜬다 — GitHub 제약)
@@ -73,6 +77,16 @@ jobs:
 
       - name: flutter test --update-goldens
         run: flutter test --update-goldens "$GOLDEN_TARGET"
+
+      # 이 잡이 스스로 게이트를 통과해야 한다. GITHUB_TOKEN 으로 만든 푸시는
+      # 무한 루프 방지 규칙 때문에 CI 워크플로를 자동으로 돌리지 않는다(첫 실행에서
+      # 봇 커밋의 CI가 승인 대기로 남아 검증이 비었다). 그래서 ci.yml 과 같은
+      # 게이트를 여기서 한 번 더 돌려, 커밋되는 트리가 초록임을 이 잡이 보장한다.
+      - name: 갱신본으로 게이트 재검증 (ci.yml 과 동일)
+        run: |
+          flutter analyze --fatal-infos
+          dart format --output=none --set-exit-if-changed .
+          flutter test
 
       - name: 변경된 골든 확인
         id: diff
