@@ -160,6 +160,28 @@ class MyCardPainter extends CustomPainter {
     return tp;
   }
 
+  /// 주어진 폭·줄수에 들어가는 가장 큰 글자 크기로 레이아웃. 다 안 되면 마지막(가장 작은) 것.
+  TextPainter _fit(
+    String text, {
+    required double maxWidth,
+    required int maxLines,
+    required List<double> sizes,
+  }) {
+    TextPainter? last;
+    for (final s in sizes) {
+      final tp = _tp(
+        text,
+        _st(s, FontWeight.w700, _dark),
+        maxWidth: maxWidth,
+        maxLines: maxLines,
+        align: TextAlign.center,
+      );
+      if (!tp.didExceedMaxLines) return tp;
+      last = tp;
+    }
+    return last!;
+  }
+
   // ── 배치 ───────────────────────────────────────────────────────
   MyCardLayout layout() {
     final zoneBot = footTop - (data.feed ? 34.0 : 46.0);
@@ -573,13 +595,12 @@ class MyCardPainter extends CustomPainter {
         ..strokeWidth = 2.5
         ..color = _slotRail[slot],
     );
-    final fs = wide ? 30.0 : 21.0;
-    final tp = _tp(
+    // 반찬 칸은 좁아서 긴 팀 이름이 3줄로 쪼개졌다 → 들어갈 때까지 글자를 줄인다.
+    final tp = _fit(
       s.name!,
-      _st(fs, FontWeight.w700, _dark),
       maxWidth: r.width - 20,
       maxLines: wide ? 2 : 3,
-      align: TextAlign.center,
+      sizes: wide ? const [30.0, 26.0, 23.0] : const [21.0, 19.0, 17.0, 15.0],
     );
     tp.paint(
       canvas,
@@ -677,33 +698,84 @@ class MyCardPainter extends CustomPainter {
       canvas.drawLine(Offset(lx, gy), Offset(lx, gy + gh), vLine);
     }
 
-    // 이벤트 블록 (겹치면 들여쓰기 — 앱 식단표와 동일 규칙)
+    // 이벤트 블록: 겹치면 칸을 레인으로 나눠 나란히. 앱 식단표에서 가져온
+    // '5px 들여쓰기'는 나중 블록이 앞 블록을 덮어버려서(4개 이상 겹치면
+    // indent가 0으로 리셋돼 완전히 가림) 이 카드에선 쓸 수 없다 —
+    // 블록에 팀 이름이 없으니 5px 띠 하나가 유일한 단서였다.
     canvas.save();
     canvas.clipRect(Rect.fromLTWH(gx, gy, gw, gh));
     for (var d = 0; d < scheduleDays.length; d++) {
       final day = scheduleDays[d];
       final evs = all.where((v) => v.e.day == day).toList()
         ..sort((a, b) => a.e.start.compareTo(b.e.start));
+      final lanes = laneAssign([for (final v in evs) v.e]);
       for (var i = 0; i < evs.length; i++) {
         final e = evs[i].e, tm = evs[i].t;
-        var indent = 0;
-        for (var j = 0; j < i; j++) {
-          if (e.start < evs[j].e.end && e.end > evs[j].e.start) indent++;
-        }
-        if (indent > 2) indent = 0;
         final slot = tm.slotIdx % 5;
-        final bx = gx + colW * d + 2 + indent * 5.0;
+        final lw = (colW - 4) / lanes[i].lanes;
+        final bx = gx + colW * d + 2 + lw * lanes[i].lane;
         final by = gy + (e.start - startH) * rowH;
-        final bw = colW - 4 - indent * 5.0;
+        final bw = lw - (lanes[i].lanes > 1 ? 2 : 0);
         final bh = math.max(14.0, (e.end - e.start) * rowH - 3);
-        _rr(canvas, bx, by, bw, bh, 6, Paint()..color = _slotBg[slot]);
+        // 색을 진하게: 옅은 배경 + 얇은 띠는 작게 보면 선처럼 읽혔다.
+        _rr(
+          canvas,
+          bx,
+          by,
+          bw,
+          bh,
+          6,
+          Paint()..color = Color.lerp(_slotBg[slot], _slotRail[slot], 0.45)!,
+        );
         canvas.drawRect(
-          Rect.fromLTWH(bx, by, 4, bh),
+          Rect.fromLTWH(bx, by, math.min(4.0, bw), bh),
           Paint()..color = _slotRail[slot],
         );
       }
     }
     canvas.restore();
+  }
+
+  /// 같은 요일의 이벤트(시작시각 오름차순)를 겹침 레인으로 배정한다.
+  /// 겹치는 것끼리 한 묶음(클러스터)으로 보고, 그 안에서 빈 레인을 재활용한다.
+  /// 반환값의 lanes 는 그 이벤트가 속한 클러스터의 총 레인 수 → 칸을 그만큼 쪼갠다.
+  static List<({int lane, int lanes})> laneAssign(List<SchedEvent> sorted) {
+    final n = sorted.length;
+    final lane = List<int>.filled(n, 0);
+    final count = List<int>.filled(n, 1);
+    var i = 0;
+    while (i < n) {
+      // 클러스터 끝 찾기: 앞선 것들의 최대 end 보다 늦게 시작하면 새 클러스터.
+      var end = sorted[i].end;
+      var j = i + 1;
+      while (j < n && sorted[j].start < end) {
+        if (sorted[j].end > end) end = sorted[j].end;
+        j++;
+      }
+      // 레인 배정: 이미 끝난 레인은 다시 쓴다(겹치지 않으면 같은 레인).
+      final laneEnd = <double>[];
+      for (var k = i; k < j; k++) {
+        var placed = -1;
+        for (var l = 0; l < laneEnd.length; l++) {
+          if (sorted[k].start >= laneEnd[l]) {
+            placed = l;
+            break;
+          }
+        }
+        if (placed < 0) {
+          laneEnd.add(sorted[k].end);
+          placed = laneEnd.length - 1;
+        } else {
+          laneEnd[placed] = sorted[k].end;
+        }
+        lane[k] = placed;
+      }
+      for (var k = i; k < j; k++) {
+        count[k] = laneEnd.length;
+      }
+      i = j;
+    }
+    return [for (var k = 0; k < n; k++) (lane: lane[k], lanes: count[k])];
   }
 
   // ── 푸터: QR + CTA (클럽 스토리 카드와 동일 구조) ───────────────

@@ -96,6 +96,60 @@ void main() {
     expect(l.box.center.dx, closeTo(540, 0.5));
   });
 
+  group('시간표 겹침 레인', () {
+    // 겹치는 팀이 서로를 덮으면 안 된다. 예전 '5px 들여쓰기'는 나중 블록이
+    // 앞 블록을 가렸고, 4개 이상 겹치면 indent가 0으로 리셋돼 완전히 가렸다.
+    List<({int lane, int lanes})> assign(List<SchedEvent> e) =>
+        MyCardPainter.laneAssign(e);
+
+    test('안 겹치면 한 레인을 재활용한다', () {
+      final r = assign(const [
+        SchedEvent('월', 10, 12),
+        SchedEvent('월', 14, 16),
+      ]);
+      expect(r.map((x) => x.lane), [0, 0]);
+      expect(r.map((x) => x.lanes), [1, 1]);
+    });
+
+    test('둘이 겹치면 칸을 반으로 나눠 나란히', () {
+      final r = assign(const [
+        SchedEvent('월', 19, 22),
+        SchedEvent('월', 20, 22.5),
+      ]);
+      expect(r.map((x) => x.lane), [0, 1]);
+      expect(r.map((x) => x.lanes), [2, 2]);
+    });
+
+    test('넷이 겹쳐도 아무도 가려지지 않는다 (레인 4개)', () {
+      final r = assign(const [
+        SchedEvent('월', 19, 22),
+        SchedEvent('월', 19.5, 22),
+        SchedEvent('월', 20, 22),
+        SchedEvent('월', 20.5, 22),
+      ]);
+      expect(r.map((x) => x.lane), [0, 1, 2, 3]);
+      expect(r.every((x) => x.lanes == 4), isTrue);
+    });
+
+    test('맞물린 사슬은 한 클러스터로 묶여 폭이 같다', () {
+      // A(10~12) ↔ B(11~14) 겹침, B ↔ C(13~15) 겹침, A ↔ C는 안 겹침.
+      // 한 클러스터로 묶여야 폭이 일정하고, C는 A가 비운 레인을 물려받는다.
+      final r = assign(const [
+        SchedEvent('월', 10, 12),
+        SchedEvent('월', 11, 14),
+        SchedEvent('월', 13, 15),
+      ]);
+      expect(r.map((x) => x.lanes), [2, 2, 2]);
+      expect(r[0].lane, 0);
+      expect(r[1].lane, 1);
+      expect(r[2].lane, 0);
+    });
+
+    test('빈 목록도 안 죽는다', () {
+      expect(assign(const []), isEmpty);
+    });
+  });
+
   test('찜 0개 / 일정 0개여도 죽지 않는다', () async {
     for (final feed in [true, false]) {
       final img = await _render(
