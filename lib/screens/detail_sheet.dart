@@ -218,6 +218,74 @@ class _ExpandReveal extends StatelessWidget {
   }
 }
 
+/// 시딩 항목(공개 인스타 정보로 모은 크루) 출처 고지 + 수정/삭제 요청 통로.
+/// 수신처는 Play Console 연락처와 동일한 지원 메일.
+class _CuratedNote extends StatelessWidget {
+  static const _email = 'paulyoo999@gmail.com';
+  final PickupSpot spot;
+  const _CuratedNote({required this.spot});
+
+  Future<void> _request() async {
+    final body = StringBuffer()
+      ..writeln(t('pk_takedown_body'))
+      ..writeln()
+      ..writeln('- ${spot.title}')
+      ..writeln('- id: ${spot.id}');
+    if (spot.insta != null && spot.insta!.isNotEmpty) {
+      body.writeln('- @${spot.insta}');
+    }
+    final uri = Uri(
+      scheme: 'mailto',
+      path: _email,
+      query: Uri(
+        queryParameters: {
+          'subject': t('pk_takedown_subject'),
+          'body': body.toString(),
+        },
+      ).query,
+    );
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(top: 14),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    decoration: BoxDecoration(
+      color: NurungjiColors.chipBg,
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          t('pk_curated_note'),
+          style: const TextStyle(
+            fontSize: 12.5,
+            height: 1.5,
+            color: NurungjiColors.brown,
+          ),
+        ),
+        const SizedBox(height: 6),
+        GestureDetector(
+          onTap: _request,
+          child: Text(
+            t('pk_curated_takedown'),
+            style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF1565C0),
+              decoration: TextDecoration.underline,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 // 릴스 섹션: 첫 릴스는 항상 표시(피로감↓), 2개 이상이면 '더 보기' 드롭다운으로 나머지.
 class _ReelsSection extends StatefulWidget {
   final List<String> reels;
@@ -971,6 +1039,9 @@ void showSpotDetail(
       ),
       // 추가 안내(notes) — 웹 픽업 상세 메모 행 (폼 저장값 표시 누락 보완)
       if (s.notes != null && s.notes!.isNotEmpty) _infoRow('📝', s.notes!),
+      // 시딩 항목: 크루 본인이 올린 게 아니라 owner_uid가 관리자다.
+      // 이 고지+요청 링크가 유일한 옵트아웃 경로라 반드시 노출한다.
+      if (s.source == 'curated') _CuratedNote(spot: s),
       // 펼쳐야 보이는 영역: 릴스 + 소유자 수정/삭제
       _ExpandReveal(
         child: Column(
