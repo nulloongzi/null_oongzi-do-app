@@ -65,6 +65,8 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
   String _sport = '6s';
   String _level = 'any';
   String _region = ''; // 지역 칩. '' = 미지정(다시 눌러 해제 가능)
+  bool _curated = false; // 관리자 '대신 등록' — source='curated'
+  bool _isAdmin = false; // 관리자만 위 토글을 본다
   String _expire = '1m'; // 유효기간(B): weekend/1m/3m/always. 기본 1개월
   bool _beginnerFriendly = false;
   bool _englishOk = false;
@@ -166,6 +168,7 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
       _contact.text = e.contactLink ?? '';
       _insta.text = e.insta ?? '';
       _region = e.region ?? '';
+      _curated = e.source == 'curated';
       for (final r in e.instaReels) {
         _reels.add(TextEditingController(text: r)); // 멀티 릴스: 행마다 하나
       }
@@ -181,6 +184,10 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
     }
     if (_blocks.isEmpty) _blocks.add(ScheduleBlock());
     if (_reels.isEmpty) _reels.add(TextEditingController()); // 최소 1행 노출
+    // 관리자 여부 — '대신 등록' 토글 노출 판단. 실패하면 그냥 안 보인다(안전한 기본값).
+    _repo.isAdmin().then((v) {
+      if (mounted && v != _isAdmin) setState(() => _isAdmin = v);
+    }, onError: (_) {});
   }
 
   @override
@@ -284,6 +291,9 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
       'coordinates': (_lat != null && _lng != null)
           ? {'lat': _lat, 'lng': _lng}
           : null,
+      // source는 관리자만 건드린다. 일반 사용자가 남의 curated 항목을 수정할 때
+      // 이 키를 보내면 표시가 지워져 삭제요청 통로가 사라지므로, 아예 넣지 않는다.
+      if (_isAdmin) 'source': _curated ? 'curated' : '',
       'schedule': ScheduleBlock.toText(_blocks),
       'schedule_raw': ScheduleBlock.toRaw(_blocks),
       'schedule_text': _scheduleMemo.text.trim(),
@@ -390,6 +400,30 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
             _group(t('pf_fee'), _input(_fee, t('pf_fee_hint'))),
             _group(t('pf_contact'), _input(_contact, t('f_contact_hint'))),
             _group(t('pf_insta'), _input(_insta, t('pf_insta_hint'))),
+            // 관리자 전용: 공개 정보로 남의 크루를 대신 올릴 때만.
+            if (_isAdmin)
+              _group(
+                t('pf_curated'),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _toggle(
+                      t('pf_curated_chip'),
+                      _curated,
+                      (v) => setState(() => _curated = v),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      t('pf_curated_hint'),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        height: 1.5,
+                        color: NurungjiColors.brown,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             _group(
               t('f_reel_label'),
               ReelEditor(controllers: _reels, onChanged: () => setState(() {})),

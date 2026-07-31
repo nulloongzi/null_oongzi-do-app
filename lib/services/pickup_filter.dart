@@ -22,10 +22,27 @@ bool pickupRegionMatch(PickupSpot s, String region) {
   return regionMatchesAddress(addr, region);
 }
 
+const pickupLevelOptions = ['beginner', 'intermediate', 'advanced'];
+
+/// 레벨 매칭. 외국인에게 크루를 소개할 때 "나 초보인데 가도 되나"가 핵심 질문이라
+/// 지역 다음으로 중요한 필터다.
+///
+/// 가치필터 #1(랭킹·별점 금지)과 충돌하지 않는다 — 크루의 우열이 아니라 "나랑 맞나"
+/// (적합·소속) 정보다. PHILOSOPHY 후기 원칙이 허용하는 성격 태그 쪽.
+///
+/// 'any'(레벨무관) 크루는 어떤 레벨 필터에도 걸린다 — 누구나 환영이라는 뜻이므로
+/// 초보가 '입문'으로 걸러도 후보에서 빠지면 안 된다.
+bool pickupLevelMatch(PickupSpot s, String level) {
+  if (level.isEmpty) return true;
+  final l = s.level ?? 'any';
+  return l == 'any' || l == level;
+}
+
 /// 목록 필터. 지도 마커와 리스트가 같은 결과를 보게 하려고 한 곳에 모은다.
 List<PickupSpot> filterPickupSpots(
   List<PickupSpot> spots, {
   String region = '',
+  String level = '',
   bool englishOnly = false,
   String keyword = '',
 }) {
@@ -33,6 +50,7 @@ List<PickupSpot> filterPickupSpots(
   return spots.where((s) {
     if (englishOnly && !s.englishOk) return false;
     if (!pickupRegionMatch(s, region)) return false;
+    if (!pickupLevelMatch(s, level)) return false;
     if (kw.isEmpty) return true;
     final hay =
         '${s.title} ${s.venueName ?? ''} ${s.address ?? ''} ${s.insta ?? ''}'

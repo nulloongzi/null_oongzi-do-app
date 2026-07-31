@@ -14,9 +14,14 @@ class ShareService {
 
   /// 필터가 걸린 픽업 목록 링크. 앱이 아니라 **웹**으로 보낸다 —
   /// DM 받은 외국인은 앱을 설치하지 않고 브라우저로 열기 때문.
-  static String pickupListUrl({String region = '', bool englishOnly = false}) {
+  static String pickupListUrl({
+    String region = '',
+    String level = '',
+    bool englishOnly = false,
+  }) {
     final q = <String>['tab=pickup'];
     if (region.isNotEmpty) q.add('region=${Uri.encodeComponent(region)}');
+    if (level.isNotEmpty) q.add('level=${Uri.encodeComponent(level)}');
     if (englishOnly) q.add('english=1');
     return '$siteBase?${q.join('&')}';
   }

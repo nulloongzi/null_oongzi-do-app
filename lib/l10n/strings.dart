@@ -51,6 +51,8 @@ const Map<String, Map<String, String>> kStrings = {
   'list_view': {'ko': '목록', 'en': 'List'},
   'pk_empty': {'ko': '주변에 등록된 픽업이 없어요', 'en': 'No pickups registered yet'},
   'pk_region_all': {'ko': '지역 전체', 'en': 'All regions'},
+  'pk_level_all': {'ko': '레벨 전체', 'en': 'All levels'},
+  'filter_level': {'ko': '레벨', 'en': 'Level'},
   'pk_curated_note': {
     'ko': '공개된 인스타 정보를 보고 누룽지가 모아둔 크루예요. 직접 등록한 팀이 아니에요.',
     'en':
@@ -368,6 +370,17 @@ const Map<String, Map<String, String>> kStrings = {
   'pf_contact': {
     'ko': '단톡/Meetup 링크 (들어가는 문)',
     'en': 'Group chat / Meetup link',
+  },
+  'pf_curated': {'ko': '대신 등록 (관리자)', 'en': 'Add on behalf (admin)'},
+  'pf_curated_chip': {
+    'ko': '🔎 공개 정보로 대신 등록',
+    'en': '🔎 Added from public info',
+  },
+  'pf_curated_hint': {
+    'ko':
+        '켜면 상세에 "공개 인스타 정보로 모은 크루" 안내와 수정/삭제 요청 링크가 표시됩니다. 남의 크루를 대신 올릴 때만 켜세요.',
+    'en':
+        'Shows a "collected from public Instagram info" notice plus an edit/removal request link. Only for crews you add on their behalf.',
   },
   'pf_insta': {'ko': '인스타 아이디 (선택)', 'en': 'Instagram handle (optional)'},
   'pf_insta_hint': {

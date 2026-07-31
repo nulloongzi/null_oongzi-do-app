@@ -13,6 +13,8 @@ PickupSpot spot({
   String? address,
   String? venueName,
   String? insta,
+  String? level,
+  String? source,
   bool englishOk = false,
   double? lat,
   double? lng,
@@ -23,6 +25,8 @@ PickupSpot spot({
   address: address,
   venueName: venueName,
   insta: insta,
+  level: level,
+  source: source,
   englishOk: englishOk,
   lat: lat,
   lng: lng,
@@ -90,6 +94,26 @@ void main() {
         pickupRegionMatch(spot(region: '경기', address: '서울 강남구'), '서울'),
         isFalse,
       );
+    });
+  });
+
+  group('pickupLevelMatch', () {
+    test('레벨 미지정이면 전부 통과', () {
+      expect(pickupLevelMatch(spot(level: 'advanced'), ''), isTrue);
+    });
+
+    test('같은 레벨만 매칭', () {
+      expect(pickupLevelMatch(spot(level: 'beginner'), 'beginner'), isTrue);
+      expect(pickupLevelMatch(spot(level: 'advanced'), 'beginner'), isFalse);
+    });
+
+    test("'레벨무관' 크루는 어떤 레벨 필터에도 걸린다 (누구나 환영이므로 후보에서 빠지면 안 됨)", () {
+      expect(pickupLevelMatch(spot(level: 'any'), 'beginner'), isTrue);
+      expect(pickupLevelMatch(spot(level: 'any'), 'advanced'), isTrue);
+    });
+
+    test('level 필드가 없으면 any 로 취급', () {
+      expect(pickupLevelMatch(spot(), 'beginner'), isTrue);
     });
   });
 
@@ -165,6 +189,43 @@ void main() {
       expect(r, contains('d'));
     });
 
+    test('레벨 필터 — any 크루는 남고 다른 레벨은 빠진다', () {
+      final lv = [
+        spot(id: 'beg', level: 'beginner'),
+        spot(id: 'adv', level: 'advanced'),
+        spot(id: 'any', level: 'any'),
+        spot(id: 'none'),
+      ];
+      expect(filterPickupSpots(lv, level: 'beginner').map((s) => s.id), [
+        'beg',
+        'any',
+        'none',
+      ]);
+      expect(filterPickupSpots(lv, level: 'advanced').map((s) => s.id), [
+        'adv',
+        'any',
+        'none',
+      ]);
+    });
+
+    test('지역+레벨+English 조합', () {
+      final mix = [
+        spot(id: 'a', region: '서울', level: 'beginner', englishOk: true),
+        spot(id: 'b', region: '서울', level: 'advanced', englishOk: true),
+        spot(id: 'c', region: '경기', level: 'beginner', englishOk: true),
+        spot(id: 'd', region: '서울', level: 'beginner'),
+      ];
+      expect(
+        filterPickupSpots(
+          mix,
+          region: '서울',
+          level: 'beginner',
+          englishOnly: true,
+        ).map((s) => s.id),
+        ['a'],
+      );
+    });
+
     test('빈 목록에도 터지지 않는다', () {
       expect(filterPickupSpots([], region: '서울'), isEmpty);
     });
@@ -175,6 +236,7 @@ void main() {
       final s = spot();
       expect(s.insta, isNull);
       expect(s.region, isNull);
+      expect(s.source, isNull);
       expect(s.lat, isNull);
       expect(s.lng, isNull);
     });

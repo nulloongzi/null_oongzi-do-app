@@ -81,6 +81,7 @@ class _MapScreenState extends State<MapScreen> {
   ClubFilter _filter = const ClubFilter(); // 동호회 필터/검색
   bool _pkEnglishOnly = false; // 픽업: English OK만
   String _pkRegion = ''; // 픽업: 지역 칩. '' = 전체
+  String _pkLevel = ''; // 픽업: 레벨. '' = 전체
   bool _pickupListView = false; // 픽업: 지도/목록 토글
   bool _isAdmin = false; // 관리자(픽업 모더레이션 삭제)
   final _search = TextEditingController(); // 상단 검색바 (동호회=필터키워드 / 픽업=목록검색)
@@ -127,6 +128,7 @@ class _MapScreenState extends State<MapScreen> {
   List<PickupSpot> _visibleSpots() => filterPickupSpots(
     _spots,
     region: _pkRegion,
+    level: _pkLevel,
     englishOnly: _pkEnglishOnly,
     keyword: _search.text,
   );
@@ -1268,6 +1270,7 @@ class _MapScreenState extends State<MapScreen> {
             () => setState(() => _pickupListView = true),
           ),
           _regionMenu(),
+          _levelMenu(),
           // 현재 필터 목록을 링크 하나로 — 외국인 DM 대응의 핵심 동선.
           BounceTap(
             onTap: _sharePickupList,
@@ -1354,14 +1357,57 @@ class _MapScreenState extends State<MapScreen> {
     ),
   );
 
+  // 레벨 선택 — 외국인에게 "나 초보인데 가도 되나"가 핵심 질문이라 지역 다음으로 중요.
+  Widget _levelMenu() {
+    String label(String l) => l.isEmpty ? t('pk_level_all') : t('lv_$l');
+    return PopupMenuButton<String>(
+      tooltip: t('filter_level'),
+      onSelected: (v) {
+        setState(() => _pkLevel = v);
+        _refreshMarkers();
+      },
+      itemBuilder: (_) => [
+        PopupMenuItem(value: '', child: Text(t('pk_level_all'))),
+        ...pickupLevelOptions.map(
+          (l) => PopupMenuItem(value: l, child: Text(t('lv_$l'))),
+        ),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label(_pkLevel),
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: _pkLevel.isEmpty
+                    ? NurungjiColors.brown
+                    : NurungjiColors.teal,
+              ),
+            ),
+            const Icon(
+              Icons.arrow_drop_down,
+              size: 18,
+              color: NurungjiColors.brown,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _sharePickupList() async {
     final url = ShareService.pickupListUrl(
       region: _pkRegion,
+      level: _pkLevel,
       englishOnly: _pkEnglishOnly,
     );
     Track.event('share', {
       'type': 'pickup_list',
       'region': _pkRegion,
+      'level': _pkLevel,
       'english': _pkEnglishOnly,
     });
     await ShareService.osShare(url);
