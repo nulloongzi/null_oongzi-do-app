@@ -2,6 +2,7 @@
 // 지역(주소 startsWith, 충청/전라/경상 묶음) · 요일(schedule 포함, '매일') · 대상(부분일치,
 // 특수필터 없으면 '무관' 포함) · 키워드(name/address 포함).
 import '../models/club.dart';
+import 'region_match.dart';
 
 class ClubFilter {
   final Set<String> regions;
@@ -16,7 +17,7 @@ class ClubFilter {
     this.keyword = '',
   });
 
-  static const regionOptions = ['서울', '경기', '인천', '강원', '충청', '전라', '경상', '제주'];
+  static const regionOptions = regionOptionsAll;
   static const dayOptions = ['월', '화', '수', '목', '금', '토', '일'];
   static const targetOptions = [
     '성인',
@@ -48,31 +49,8 @@ class ClubFilter {
     final addr = c.address ?? '';
 
     if (regions.isNotEmpty) {
-      var ok = false;
-      for (final r in regions) {
-        if (r == '충청' &&
-            (addr.startsWith('충남') ||
-                addr.startsWith('충북') ||
-                addr.startsWith('대전') ||
-                addr.startsWith('세종'))) {
-          ok = true;
-        } else if (r == '전라' &&
-            (addr.startsWith('전남') ||
-                addr.startsWith('전북') ||
-                addr.startsWith('광주'))) {
-          ok = true;
-        } else if (r == '경상' &&
-            (addr.startsWith('경남') ||
-                addr.startsWith('경북') ||
-                addr.startsWith('대구') ||
-                addr.startsWith('부산') ||
-                addr.startsWith('울산'))) {
-          ok = true;
-        } else if (addr.startsWith(r)) {
-          ok = true;
-        }
-      }
-      if (!ok) return false;
+      // 광역 묶음(충청/전라/경상) 전개는 region_match.dart 에 공통화 — 픽업 필터와 규칙 공유.
+      if (!regions.any((r) => regionMatchesAddress(addr, r))) return false;
     }
 
     if (days.isNotEmpty) {

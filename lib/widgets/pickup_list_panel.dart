@@ -8,7 +8,13 @@ import '../theme.dart';
 class PickupListPanel extends StatelessWidget {
   final List<PickupSpot> spots; // englishOnly 등 이미 필터된 목록
   final void Function(PickupSpot) onTap;
-  const PickupListPanel({super.key, required this.spots, required this.onTap});
+  final void Function(PickupSpot)? onInstaTap; // 인스타 핸들 탭(상세 열지 않고 바로 이동)
+  const PickupListPanel({
+    super.key,
+    required this.spots,
+    required this.onTap,
+    this.onInstaTap,
+  });
 
   String _sport(String? s) => s == '6s'
       ? t('sport_6s')
@@ -148,6 +154,34 @@ class PickupListPanel extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 13,
                       color: NurungjiColors.brown,
+                    ),
+                  ),
+                )
+              // 장소가 유동적인 크루: 체육관 대신 지역만 보여준다.
+              else if (s.region != null && s.region!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    '📍 ${i18nRegion(s.region!)}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: NurungjiColors.brown,
+                    ),
+                  ),
+                ),
+              // 인스타 핸들 — 외국인에게 건네는 주 연락처라 목록에서 바로 보이게 한다.
+              if (s.insta != null && s.insta!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: GestureDetector(
+                    onTap: () => onInstaTap?.call(s),
+                    child: Text(
+                      '📷 @${s.insta}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1565C0),
+                      ),
                     ),
                   ),
                 ),

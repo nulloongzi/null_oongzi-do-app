@@ -12,6 +12,15 @@ class ShareService {
   static String spotUrl(String id) =>
       '$siteBase?spot=${Uri.encodeComponent(id)}';
 
+  /// 필터가 걸린 픽업 목록 링크. 앱이 아니라 **웹**으로 보낸다 —
+  /// DM 받은 외국인은 앱을 설치하지 않고 브라우저로 열기 때문.
+  static String pickupListUrl({String region = '', bool englishOnly = false}) {
+    final q = <String>['tab=pickup'];
+    if (region.isNotEmpty) q.add('region=${Uri.encodeComponent(region)}');
+    if (englishOnly) q.add('english=1');
+    return '$siteBase?${q.join('&')}';
+  }
+
   /// 클립보드 복사 (IG 링크스티커 붙여넣기·일반 링크공유 공용).
   static Future<void> copy(String text) async {
     await Clipboard.setData(ClipboardData(text: text));

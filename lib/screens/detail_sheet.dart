@@ -867,10 +867,16 @@ void showSpotDetail(
   Future<void> Function()? onChanged,
 }) {
   Track.event('view_pickup', {'id': s.id});
+  // 장소가 유동적인 크루는 체육관·주소가 비어 있다 → 지역 칩으로 대체 표시.
   final where = [
     s.venueName,
     s.address,
   ].where((e) => e != null && e.isNotEmpty).join(' · ');
+  final whereLabel = where.isNotEmpty
+      ? where
+      : ((s.region != null && s.region!.isNotEmpty)
+            ? i18nRegion(s.region!)
+            : '');
   // 수정/삭제: 소유자 OR 관리자(모더레이션). Firestore 규칙도 동일 조건.
   final canModify =
       (currentUid != null && s.ownerUid != null && s.ownerUid == currentUid) ||
@@ -928,12 +934,30 @@ void showSpotDetail(
       // 일정 메모(비정기): 구조화 일정이 있어 요약에 안 쓰였을 때 별도 행(웹 동일)
       if ((s.schedule ?? '').isNotEmpty && (s.scheduleText ?? '').isNotEmpty)
         _infoRow('🗓', s.scheduleText!),
-      if (where.isNotEmpty) _addressRow(context, where, s.address ?? where),
+      // 주소가 있으면 복사/길찾기가 붙은 주소 행, 지역만 있으면 단순 정보 행.
+      if (where.isNotEmpty)
+        _addressRow(context, where, s.address ?? where)
+      else if (whereLabel.isNotEmpty)
+        _infoRow('📍', whereLabel),
       if (s.feeInfo != null && s.feeInfo!.isNotEmpty)
         _infoRow('💰', i18nPrice(s.feeInfo)),
+      // 인스타 핸들 — 단톡 링크가 없는 크루의 실질적인 "들어가는 문"
+      if (s.insta != null && s.insta!.isNotEmpty)
+        _primaryBtn('📷 @${s.insta}', () {
+          Track.event('pickup_contact', {
+            'id': s.id,
+            'type': 'insta',
+            'sport': s.sport,
+          });
+          _open('https://instagram.com/${s.insta}');
+        }),
       if (s.contactLink != null && s.contactLink!.isNotEmpty)
         _primaryBtn(t('chat_join'), () {
-          Track.event('pickup_contact', {'id': s.id, 'sport': s.sport});
+          Track.event('pickup_contact', {
+            'id': s.id,
+            'type': 'link',
+            'sport': s.sport,
+          });
           _open(s.contactLink);
         }),
       _primaryBtn(

@@ -1,5 +1,5 @@
 // pickup_form_screen.dart — 픽업 스팟 등록/수정 폼. 웹 pickup-host.js 포팅.
-// 누구나 등록(무로그인=익명 인증). 좌표는 지도 피커로 직접 선택(지오코딩 불필요).
+// 누구나 등록(무로그인=익명 인증). 좌표는 선택 — 없으면 지도 마커 없이 목록에만 뜬다.
 import 'package:flutter/material.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import '../models/pickup_spot.dart';
@@ -8,6 +8,7 @@ import '../services/data_repository.dart';
 import '../services/analytics.dart';
 import '../services/geocoding_service.dart';
 import '../services/i18n.dart';
+import '../services/region_match.dart';
 import '../services/sanitize.dart';
 import '../theme.dart';
 import '../widgets/app_sheet.dart';
@@ -56,12 +57,14 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
   final _thisWeek = TextEditingController();
   final _fee = TextEditingController();
   final _contact = TextEditingController();
+  final _insta = TextEditingController(); // 인스타 핸들(@ 없이)
   final _notes = TextEditingController();
   final List<TextEditingController> _reels = []; // 릴스 다중 입력(행마다 1개)
 
   // 칩 선택
   String _sport = '6s';
   String _level = 'any';
+  String _region = ''; // 지역 칩. '' = 미지정(다시 눌러 해제 가능)
   String _expire = '1m'; // 유효기간(B): weekend/1m/3m/always. 기본 1개월
   bool _beginnerFriendly = false;
   bool _englishOk = false;
@@ -112,6 +115,8 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
     (label: t('lv_advanced'), value: 'advanced'),
     (label: t('lv_any'), value: 'any'),
   ];
+  List<ChipOption> get _regionOptions =>
+      regionOptionsAll.map((r) => (label: i18nRegion(r), value: r)).toList();
   List<ChipOption> get _expireOptions => [
     (label: t('pk_exp_weekend'), value: 'weekend'),
     (label: t('pk_exp_1m'), value: '1m'),
@@ -159,6 +164,8 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
       _thisWeek.text = e.thisWeek ?? '';
       _fee.text = e.feeInfo ?? '';
       _contact.text = e.contactLink ?? '';
+      _insta.text = e.insta ?? '';
+      _region = e.region ?? '';
       for (final r in e.instaReels) {
         _reels.add(TextEditingController(text: r)); // 멀티 릴스: 행마다 하나
       }
@@ -186,6 +193,7 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
       _thisWeek,
       _fee,
       _contact,
+      _insta,
       _notes,
     ]) {
       c.dispose();
@@ -220,12 +228,10 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
   Future<void> _submit() async {
     final title = _title.text.trim();
     final address = _address.text.trim();
-    if (title.isEmpty || address.isEmpty) {
+    // 주소·좌표는 선택 — 장소가 유동적인 크루(인스타로만 굴러가는 모임)를 막지 않는다.
+    // 좌표 없이 등록하면 지도 마커 없이 목록에만 뜬다.
+    if (title.isEmpty) {
       _snack(t('pf_req'));
-      return;
-    }
-    if (_lat == null || _lng == null) {
-      _snack(t('f_pick_loc'));
       return;
     }
 
@@ -253,6 +259,17 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
       reels.add(s);
     }
 
+    // 인스타 핸들(선택): 외국인에게 건네는 주 연락처. 동호회 등록과 동일 검증 재사용.
+    var insta = _insta.text.trim();
+    if (insta.isNotEmpty) {
+      final s = Sanitize.instaHandle(insta);
+      if (s.isEmpty) {
+        _snack(t('cf_insta_invalid'));
+        return;
+      }
+      insta = s;
+    }
+
     final fields = <String, dynamic>{
       'title': title,
       'sport': _sport,
@@ -261,7 +278,12 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
       'english_ok': _englishOk,
       'venue_name': _venue.text.trim(),
       'address': address,
-      'coordinates': {'lat': _lat, 'lng': _lng},
+      'region': _region,
+      'insta': insta,
+      // 좌표 없으면 null — 룰이 null을 허용하고, 마커 빌더가 null을 건너뛴다.
+      'coordinates': (_lat != null && _lng != null)
+          ? {'lat': _lat, 'lng': _lng}
+          : null,
       'schedule': ScheduleBlock.toText(_blocks),
       'schedule_raw': ScheduleBlock.toRaw(_blocks),
       'schedule_text': _scheduleMemo.text.trim(),
@@ -345,6 +367,16 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
               ),
             ),
             _group(t('pf_venue'), _input(_venue, t('pf_venue_hint'))),
+            // 지역 칩: 좌표 없는 크루의 필터 기준. 같은 칩을 다시 누르면 해제(미지정).
+            _group(
+              t('pf_region'),
+              SingleChoiceChips(
+                options: _regionOptions,
+                selected: _region,
+                onChanged: (v) =>
+                    setState(() => _region = (_region == v) ? '' : v),
+              ),
+            ),
             _group(t('pf_addr'), _addressRow()),
             _group(
               t('pf_sched'),
@@ -357,6 +389,7 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
             _group(t('pf_thisweek'), _input(_thisWeek, t('pf_thisweek_hint'))),
             _group(t('pf_fee'), _input(_fee, t('pf_fee_hint'))),
             _group(t('pf_contact'), _input(_contact, t('f_contact_hint'))),
+            _group(t('pf_insta'), _input(_insta, t('pf_insta_hint'))),
             _group(
               t('f_reel_label'),
               ReelEditor(controllers: _reels, onChanged: () => setState(() {})),

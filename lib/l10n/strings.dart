@@ -50,6 +50,12 @@ const Map<String, Map<String, String>> kStrings = {
   'map_view': {'ko': '지도', 'en': 'Map'},
   'list_view': {'ko': '목록', 'en': 'List'},
   'pk_empty': {'ko': '주변에 등록된 픽업이 없어요', 'en': 'No pickups registered yet'},
+  'pk_region_all': {'ko': '지역 전체', 'en': 'All regions'},
+  'pk_list_share': {'ko': '목록 공유', 'en': 'Share list'},
+  'pk_no_map_hint': {
+    'ko': '장소가 유동적인 크루 {n}곳은 지도에 없어요 — 목록에서 확인하세요',
+    'en': "{n} crew(s) without a fixed venue aren't on the map — see the list",
+  },
 
   // 칩 라벨
   'sport_6s': {'ko': '6인제', 'en': '6s'},
@@ -316,7 +322,11 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'pf_venue': {'ko': '체육관/장소 이름', 'en': 'Gym / venue name'},
   'pf_venue_hint': {'ko': '예: 잠실학생체육관', 'en': 'e.g. Jamsil Student Gym'},
-  'pf_addr': {'ko': '주소 (필수)', 'en': 'Address (required)'},
+  'pf_region': {'ko': '지역', 'en': 'Region'},
+  'pf_addr': {
+    'ko': '주소 (선택 · 없으면 목록에만 표시)',
+    'en': 'Address (optional — list only if blank)',
+  },
   'pf_addr_hint': {
     'ko': '예: 서울 송파구 올림픽로 25',
     'en': 'e.g. 25 Olympic-ro, Songpa-gu',
@@ -341,6 +351,11 @@ const Map<String, Map<String, String>> kStrings = {
     'ko': '단톡/Meetup 링크 (들어가는 문)',
     'en': 'Group chat / Meetup link',
   },
+  'pf_insta': {'ko': '인스타 아이디 (선택)', 'en': 'Instagram handle (optional)'},
+  'pf_insta_hint': {
+    'ko': '예: nulloongzi (@ 없이)',
+    'en': 'e.g. nulloongzi (without @)',
+  },
   'pf_notes': {'ko': '추가 안내 (선택)', 'en': 'Extra notes (optional)'},
   'pf_notes_hint': {
     'ko': '예: 실내화 필수 · 네트 6인제 높이',
@@ -354,7 +369,7 @@ const Map<String, Map<String, String>> kStrings = {
   'pk_exp_1m': {'ko': '1개월', 'en': '1 month'},
   'pk_exp_3m': {'ko': '3개월', 'en': '3 months'},
   'pk_exp_always': {'ko': '상시', 'en': 'Always'},
-  'pf_req': {'ko': '게임 이름과 주소는 필수예요', 'en': 'Name and address are required'},
+  'pf_req': {'ko': '게임 이름은 필수예요', 'en': 'A name is required'},
   'pf_created': {'ko': '픽업이 등록됐어요!', 'en': 'Pickup posted!'},
   // 동호회 폼
   'cf_title': {'ko': '동호회 등록', 'en': 'Register a club'},

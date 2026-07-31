@@ -29,6 +29,26 @@ Nulloongzi-do is now a native app! 🏐
 Update now for a lighter, faster experience!
 ```
 
+### 출시 노트 (What's new · v2.2.0 · 500자) — 픽업 크루 소개
+**KO**
+```
+픽업 크루를 더 쉽게 찾고, 더 쉽게 알려줄 수 있어요 🏐
+• 지역으로 픽업 골라보기 (서울·경기·…)
+• 크루 인스타 아이디를 목록에서 바로 확인
+• 체육관이 정해지지 않은 크루도 이제 올릴 수 있어요
+• 지금 보는 목록을 링크 하나로 친구에게 공유
+• "Seoul + English OK" 목록을 그대로 보내보세요
+```
+**EN**
+```
+Finding and sharing pickup crews just got easier 🏐
+• Filter pickup by region (Seoul, Gyeonggi, …)
+• See each crew's Instagram right in the list
+• Crews without a fixed gym can now be listed
+• Share the list you're looking at with one link
+• Send a "Seoul + English OK" list as-is
+```
+
 ### 출시 노트 (What's new · v2.1.0 · 500자) — 소셜 로그인
 **KO**
 ```
