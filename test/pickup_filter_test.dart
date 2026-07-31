@@ -97,6 +97,17 @@ void main() {
     });
   });
 
+  group('pickupLevelOptions', () {
+    test('4단계 — USAV B/BB/A/AA·Open 을 접은 값 집합', () {
+      expect(pickupLevelOptions, [
+        'beginner',
+        'intermediate',
+        'advanced',
+        'elite',
+      ]);
+    });
+  });
+
   group('pickupLevelMatch', () {
     test('레벨 미지정이면 전부 통과', () {
       expect(pickupLevelMatch(spot(level: 'advanced'), ''), isTrue);
@@ -114,6 +125,12 @@ void main() {
 
     test('level 필드가 없으면 any 로 취급', () {
       expect(pickupLevelMatch(spot(), 'beginner'), isTrue);
+    });
+
+    test('elite 도 다른 등급과 동일 규칙', () {
+      expect(pickupLevelMatch(spot(level: 'elite'), 'elite'), isTrue);
+      expect(pickupLevelMatch(spot(level: 'elite'), 'beginner'), isFalse);
+      expect(pickupLevelMatch(spot(level: 'any'), 'elite'), isTrue);
     });
   });
 

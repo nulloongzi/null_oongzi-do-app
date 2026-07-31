@@ -19,13 +19,7 @@ class PickupListPanel extends StatelessWidget {
   String _sport(String? s) => s == '6s'
       ? t('sport_6s')
       : (s == '9s' ? t('sport_9s') : t('sport_mixed'));
-  String _level(String? l) => l == 'beginner'
-      ? t('lv_beginner')
-      : l == 'intermediate'
-      ? t('lv_intermediate')
-      : l == 'advanced'
-      ? t('lv_advanced')
-      : t('lv_any');
+  String _level(String? l) => pickupLevelLabel(l);
 
   @override
   Widget build(BuildContext context) {

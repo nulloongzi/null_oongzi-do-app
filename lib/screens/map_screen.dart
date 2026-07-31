@@ -1368,8 +1368,25 @@ class _MapScreenState extends State<MapScreen> {
       },
       itemBuilder: (_) => [
         PopupMenuItem(value: '', child: Text(t('pk_level_all'))),
+        // 필터에도 설명을 붙인다 — 목록을 보는 사람(특히 외국인)이 기준을 알아야 고른다.
         ...pickupLevelOptions.map(
-          (l) => PopupMenuItem(value: l, child: Text(t('lv_$l'))),
+          (l) => PopupMenuItem(
+            value: l,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(t('lv_$l')),
+                Text(
+                  pickupLevelDesc(l),
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: NurungjiColors.brown,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ],
       child: Padding(

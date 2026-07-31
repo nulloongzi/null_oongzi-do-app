@@ -8,6 +8,7 @@ import '../services/data_repository.dart';
 import '../services/analytics.dart';
 import '../services/geocoding_service.dart';
 import '../services/i18n.dart';
+import '../services/pickup_filter.dart';
 import '../services/region_match.dart';
 import '../services/sanitize.dart';
 import '../theme.dart';
@@ -112,9 +113,7 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
     (label: t('sport_mixed'), value: 'mixed'),
   ];
   List<ChipOption> get _levelOptions => [
-    (label: t('lv_beginner'), value: 'beginner'),
-    (label: t('lv_intermediate'), value: 'intermediate'),
-    (label: t('lv_advanced'), value: 'advanced'),
+    for (final l in pickupLevelOptions) (label: t('lv_$l'), value: l),
     (label: t('lv_any'), value: 'any'),
   ];
   List<ChipOption> get _regionOptions =>
@@ -356,6 +355,27 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
                     options: _levelOptions,
                     selected: _level,
                     onChanged: (v) => setState(() => _level = v),
+                  ),
+                  // 고른 레벨의 한 줄 설명 + 자가 선택 가이드.
+                  // 미국 오픈짐들이 공통으로 붙이는 장치 — 이게 있어야 레벨이 실제로 맞는다.
+                  const SizedBox(height: 6),
+                  Text(
+                    pickupLevelDesc(_level),
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      height: 1.5,
+                      color: NurungjiColors.chipFg,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    t('pk_level_hint'),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      height: 1.5,
+                      color: NurungjiColors.brown,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Wrap(

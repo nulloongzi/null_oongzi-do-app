@@ -132,6 +132,19 @@ const Map<String, String> _regionEn = {
 /// 지역명 표시 변환(서울→Seoul). 값은 KO 유지, 표시만.
 String i18nRegion(String ko) => isKo ? ko : (_regionEn[ko] ?? ko);
 
+/// 픽업 레벨 라벨. 값→키 매핑을 한 곳에 모아 새 레벨(elite 등)이 어느 화면에서
+/// 빠지는 일을 막는다. 모르는 값은 '누구나 환영'으로 폴백.
+String pickupLevelLabel(String? level) {
+  const known = {'beginner', 'intermediate', 'advanced', 'elite'};
+  return known.contains(level) ? t('lv_$level') : t('lv_any');
+}
+
+/// 픽업 레벨 한 줄 설명 (등록 폼·필터에 노출).
+String pickupLevelDesc(String? level) {
+  const known = {'beginner', 'intermediate', 'advanced', 'elite'};
+  return known.contains(level) ? t('lv_${level}_desc') : t('lv_any_desc');
+}
+
 /// 스케줄 문자열의 요일만 표시 변환("토 19:00"→"Sat 19:00"). KO면 원문.
 String i18nSchedule(String? s) {
   if (s == null || s.isEmpty || isKo) return s ?? '';

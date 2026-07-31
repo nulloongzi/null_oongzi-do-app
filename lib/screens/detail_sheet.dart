@@ -33,13 +33,7 @@ const _titleStyle = TextStyle(
 
 String _sportLabel(String? s) =>
     s == '6s' ? t('sport_6s') : (s == '9s' ? t('sport_9s') : t('sport_mixed'));
-String _levelLabel(String? l) => l == 'beginner'
-    ? t('lv_beginner')
-    : l == 'intermediate'
-    ? t('lv_intermediate')
-    : l == 'advanced'
-    ? t('lv_advanced')
-    : t('lv_any');
+String _levelLabel(String? l) => pickupLevelLabel(l);
 
 Future<void> _open(String? url) async {
   if (url == null || url.trim().isEmpty) return;
