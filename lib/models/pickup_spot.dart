@@ -28,6 +28,12 @@ class PickupSpot {
   final bool englishOk;
   final String? venueName;
   final String? address;
+  final String? region; // 지역 칩(서울/경기/…). 좌표 없는 크루의 필터 기준
+  final String? insta; // 인스타 핸들(@ 없이) — 크루의 주 연락처
+  /// 'curated' = 공개 인스타 정보로 시딩된 항목(크루 본인 등록 아님).
+  /// 상세에서 출처를 밝히고 삭제요청 통로를 띄우는 근거.
+  final String? source;
+  // 좌표는 선택 — 장소가 유동적인 크루는 좌표 없이 목록에만 뜬다(마커 없음).
   final double? lat;
   final double? lng;
   final String? schedule;
@@ -51,6 +57,9 @@ class PickupSpot {
     this.englishOk = false,
     this.venueName,
     this.address,
+    this.region,
+    this.insta,
+    this.source,
     this.lat,
     this.lng,
     this.schedule,
@@ -78,6 +87,9 @@ class PickupSpot {
       englishOk: (d['english_ok'] ?? false) as bool,
       venueName: d['venue_name'] as String?,
       address: d['address'] as String?,
+      region: d['region'] as String?,
+      insta: d['insta'] as String?,
+      source: d['source'] as String?,
       lat: _toD(coord?['lat']),
       lng: _toD(coord?['lng']),
       schedule: d['schedule'] as String?,

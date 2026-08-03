@@ -33,13 +33,7 @@ const _titleStyle = TextStyle(
 
 String _sportLabel(String? s) =>
     s == '6s' ? t('sport_6s') : (s == '9s' ? t('sport_9s') : t('sport_mixed'));
-String _levelLabel(String? l) => l == 'beginner'
-    ? t('lv_beginner')
-    : l == 'intermediate'
-    ? t('lv_intermediate')
-    : l == 'advanced'
-    ? t('lv_advanced')
-    : t('lv_any');
+String _levelLabel(String? l) => pickupLevelLabel(l);
 
 Future<void> _open(String? url) async {
   if (url == null || url.trim().isEmpty) return;
@@ -216,6 +210,74 @@ class _ExpandReveal extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 시딩 항목(공개 인스타 정보로 모은 크루) 출처 고지 + 수정/삭제 요청 통로.
+/// 수신처는 Play Console 연락처와 동일한 지원 메일.
+class _CuratedNote extends StatelessWidget {
+  static const _email = 'paulyoo999@gmail.com';
+  final PickupSpot spot;
+  const _CuratedNote({required this.spot});
+
+  Future<void> _request() async {
+    final body = StringBuffer()
+      ..writeln(t('pk_takedown_body'))
+      ..writeln()
+      ..writeln('- ${spot.title}')
+      ..writeln('- id: ${spot.id}');
+    if (spot.insta != null && spot.insta!.isNotEmpty) {
+      body.writeln('- @${spot.insta}');
+    }
+    final uri = Uri(
+      scheme: 'mailto',
+      path: _email,
+      query: Uri(
+        queryParameters: {
+          'subject': t('pk_takedown_subject'),
+          'body': body.toString(),
+        },
+      ).query,
+    );
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(top: 14),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    decoration: BoxDecoration(
+      color: NurungjiColors.chipBg,
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          t('pk_curated_note'),
+          style: const TextStyle(
+            fontSize: 12.5,
+            height: 1.5,
+            color: NurungjiColors.brown,
+          ),
+        ),
+        const SizedBox(height: 6),
+        GestureDetector(
+          onTap: _request,
+          child: Text(
+            t('pk_curated_takedown'),
+            style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF1565C0),
+              decoration: TextDecoration.underline,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 // 릴스 섹션: 첫 릴스는 항상 표시(피로감↓), 2개 이상이면 '더 보기' 드롭다운으로 나머지.
@@ -867,10 +929,16 @@ void showSpotDetail(
   Future<void> Function()? onChanged,
 }) {
   Track.event('view_pickup', {'id': s.id});
+  // 장소가 유동적인 크루는 체육관·주소가 비어 있다 → 지역 칩으로 대체 표시.
   final where = [
     s.venueName,
     s.address,
   ].where((e) => e != null && e.isNotEmpty).join(' · ');
+  final whereLabel = where.isNotEmpty
+      ? where
+      : ((s.region != null && s.region!.isNotEmpty)
+            ? i18nRegion(s.region!)
+            : '');
   // 수정/삭제: 소유자 OR 관리자(모더레이션). Firestore 규칙도 동일 조건.
   final canModify =
       (currentUid != null && s.ownerUid != null && s.ownerUid == currentUid) ||
@@ -928,12 +996,30 @@ void showSpotDetail(
       // 일정 메모(비정기): 구조화 일정이 있어 요약에 안 쓰였을 때 별도 행(웹 동일)
       if ((s.schedule ?? '').isNotEmpty && (s.scheduleText ?? '').isNotEmpty)
         _infoRow('🗓', s.scheduleText!),
-      if (where.isNotEmpty) _addressRow(context, where, s.address ?? where),
+      // 주소가 있으면 복사/길찾기가 붙은 주소 행, 지역만 있으면 단순 정보 행.
+      if (where.isNotEmpty)
+        _addressRow(context, where, s.address ?? where)
+      else if (whereLabel.isNotEmpty)
+        _infoRow('📍', whereLabel),
       if (s.feeInfo != null && s.feeInfo!.isNotEmpty)
         _infoRow('💰', i18nPrice(s.feeInfo)),
+      // 인스타 핸들 — 단톡 링크가 없는 크루의 실질적인 "들어가는 문"
+      if (s.insta != null && s.insta!.isNotEmpty)
+        _primaryBtn('📷 @${s.insta}', () {
+          Track.event('pickup_contact', {
+            'id': s.id,
+            'type': 'insta',
+            'sport': s.sport,
+          });
+          _open('https://instagram.com/${s.insta}');
+        }),
       if (s.contactLink != null && s.contactLink!.isNotEmpty)
         _primaryBtn(t('chat_join'), () {
-          Track.event('pickup_contact', {'id': s.id, 'sport': s.sport});
+          Track.event('pickup_contact', {
+            'id': s.id,
+            'type': 'link',
+            'sport': s.sport,
+          });
           _open(s.contactLink);
         }),
       _primaryBtn(
@@ -947,6 +1033,9 @@ void showSpotDetail(
       ),
       // 추가 안내(notes) — 웹 픽업 상세 메모 행 (폼 저장값 표시 누락 보완)
       if (s.notes != null && s.notes!.isNotEmpty) _infoRow('📝', s.notes!),
+      // 시딩 항목: 크루 본인이 올린 게 아니라 owner_uid가 관리자다.
+      // 이 고지+요청 링크가 유일한 옵트아웃 경로라 반드시 노출한다.
+      if (s.source == 'curated') _CuratedNote(spot: s),
       // 펼쳐야 보이는 영역: 릴스 + 소유자 수정/삭제
       _ExpandReveal(
         child: Column(

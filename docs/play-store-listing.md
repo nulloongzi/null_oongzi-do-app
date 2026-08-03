@@ -125,10 +125,10 @@ Play는 **최소 2장, 최대 8장**. 아래 **7장 순서**(첫 3장이 목록 
 ### 연락처·정책 (Play Console → 매장 등록정보 & 앱 콘텐츠)
 - **연락처 이메일**: `paulyoo999@gmail.com`
   - 전체 설명 본문엔 이메일 미노출(위 §1 주의) — 이 필드에만 입력.
-- **개인정보처리방침 URL**: `https://nulloongzi.github.io/null_oongzi-do/privacy.md`
-  - 배포 확인됨(`null_oongzi-do` 레포 루트 `privacy.md`, GitHub Pages).
-  - ⚠️ `.md`는 front matter가 없어 Pages가 **마크다운 원문**으로 서빙(브라우저에 소스 표시).
-    Play 심사는 통과하나 가독성↑ 원하면 `privacy.html`(렌더본) 추가 후 그 URL 사용 권장.
+- **개인정보처리방침 URL**: `https://nulloongzi.github.io/null_oongzi-do/privacy.html`
+  - `null_oongzi-do` 레포 루트 `privacy.html`(시행일 2026-07-28), GitHub Pages 배포.
+  - 소셜 로그인 수집 항목(구글/카카오/네이버 식별자)과 Firebase 처리위탁 반영본.
+  - 빈 템플릿이던 `privacy.md`는 제거됨(커밋 `2362796`) — 옛 `.md` URL은 쓰지 말 것.
 
 > 스샷/피처그래픽은 언제든 **push 한 번**(`[cap-release] [cap-full] [cap-reels]`)으로 최신 버전 자동 갱신.
 > 피처 그래픽 소스: `assets/store/feature-graphic.html`(Chrome `--screenshot` 1024×500 렌더).

@@ -78,14 +78,7 @@ class StoryCardData {
           ? 'sport_6s'
           : (s.sport == '9s' ? 'sport_9s' : 'sport_mixed'),
     );
-    final levelL = t(
-      const {
-            'beginner': 'lv_beginner',
-            'intermediate': 'lv_intermediate',
-            'advanced': 'lv_advanced',
-          }[s.level] ??
-          'lv_any',
-    );
+    final levelL = pickupLevelLabel(s.level);
     final tags = <StoryTag>[
       StoryTag(sportL, const Color(0xFFFAC710), const Color(0xFF4E342E)),
       StoryTag(levelL, const Color(0xFFF0ECE2), const Color(0xFF6D6258)),

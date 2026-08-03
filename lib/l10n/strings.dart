@@ -50,15 +50,70 @@ const Map<String, Map<String, String>> kStrings = {
   'map_view': {'ko': '지도', 'en': 'Map'},
   'list_view': {'ko': '목록', 'en': 'List'},
   'pk_empty': {'ko': '주변에 등록된 픽업이 없어요', 'en': 'No pickups registered yet'},
+  'pk_region_all': {'ko': '지역 전체', 'en': 'All regions'},
+  'pk_level_all': {'ko': '레벨 전체', 'en': 'All levels'},
+  'filter_level': {'ko': '레벨', 'en': 'Level'},
+  'pk_curated_note': {
+    'ko': '공개된 인스타 정보를 보고 누룽지가 모아둔 크루예요. 직접 등록한 팀이 아니에요.',
+    'en':
+        'Collected by Nulloongzi from public Instagram info — not submitted by the crew itself.',
+  },
+  'pk_curated_takedown': {
+    'ko': '우리 팀이에요 · 수정/삭제 요청',
+    'en': 'This is us · request edit/removal',
+  },
+  'pk_takedown_subject': {
+    'ko': '[누룽지도] 픽업 크루 수정/삭제 요청',
+    'en': '[Nulloongzi-do] Pickup crew edit/removal request',
+  },
+  'pk_takedown_body': {
+    'ko': '아래 크루에 대해 수정 또는 삭제를 요청합니다. (확인 후 바로 처리해 드릴게요)',
+    'en':
+        'I request an edit or removal for the crew below. (We will action it as soon as we verify.)',
+  },
+  'pk_list_share': {'ko': '목록 공유', 'en': 'Share list'},
+  'pk_no_map_hint': {
+    'ko': '장소가 유동적인 크루 {n}곳은 지도에 없어요 — 목록에서 확인하세요',
+    'en': "{n} crew(s) without a fixed venue aren't on the map — see the list",
+  },
 
   // 칩 라벨
   'sport_6s': {'ko': '6인제', 'en': '6s'},
   'sport_9s': {'ko': '9인제', 'en': '9s'},
   'sport_mixed': {'ko': '혼성·자유', 'en': 'Mixed'},
-  'lv_beginner': {'ko': '입문', 'en': 'Beginner'},
-  'lv_intermediate': {'ko': '중급', 'en': 'Intermediate'},
-  'lv_advanced': {'ko': '고급', 'en': 'Advanced'},
-  'lv_any': {'ko': '레벨무관', 'en': 'Any level'},
+  // 레벨 라벨: KO는 한국식, EN은 USAV 성인부 문자 등급(B/BB/A/AA·Open).
+  // 저장값은 동일 — 외국인은 문자 등급을 알고 한국인은 모르기 때문에 라벨만 갈랐다.
+  'lv_beginner': {'ko': '입문', 'en': 'B · Beginner'},
+  'lv_intermediate': {'ko': '중급', 'en': 'BB · Intermediate'},
+  'lv_advanced': {'ko': '상급', 'en': 'A · Competitive'},
+  'lv_elite': {'ko': '선출·대학팀급', 'en': 'AA/Open · Collegiate+'},
+  'lv_any': {'ko': '누구나 환영', 'en': 'All welcome'},
+
+  // 각 레벨 한 줄 설명 — 등록 폼·필터 양쪽에 노출한다.
+  'lv_beginner_desc': {
+    'ko': '배구 처음 · 기본기 배우는 중',
+    'en': 'New to volleyball, learning the basics',
+  },
+  'lv_intermediate_desc': {
+    'ko': '규칙·로테이션 이해 · 패스/셋/스파이크 어느 정도',
+    'en': 'Know rules & rotations; pass/set/hit fairly consistently',
+  },
+  'lv_advanced_desc': {
+    'ko': '경험 많고 기본기 탄탄 · 팀 공수 전술 이해',
+    'en': 'Experienced, solid skills, knows team offense/defense',
+  },
+  'lv_elite_desc': {
+    'ko': '선수 출신 또는 대학팀급',
+    'en': 'Collegiate-level ability or equivalent',
+  },
+  'lv_any_desc': {'ko': '실력 상관없이 누구나', 'en': 'Anyone, any level'},
+
+  // 자가 선택 가이드 — 미국 오픈짐들이 공통으로 붙이는 문구. 레벨 제도를 굴러가게 하는 장치다.
+  'pk_level_hint': {
+    'ko': '애매하면 낮은 쪽을 골라주세요. 남과 비교하지 말고 설명 기준으로요.',
+    'en':
+        'When in doubt, pick the lower level. Judge by the description, not by other players.',
+  },
   'beginner_ok': {'ko': '🌱 초보환영', 'en': '🌱 Beginners'},
   'english_ok': {'ko': '🌐 English OK', 'en': '🌐 English OK'},
 
@@ -316,7 +371,11 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'pf_venue': {'ko': '체육관/장소 이름', 'en': 'Gym / venue name'},
   'pf_venue_hint': {'ko': '예: 잠실학생체육관', 'en': 'e.g. Jamsil Student Gym'},
-  'pf_addr': {'ko': '주소 (필수)', 'en': 'Address (required)'},
+  'pf_region': {'ko': '지역', 'en': 'Region'},
+  'pf_addr': {
+    'ko': '주소 (선택 · 없으면 목록에만 표시)',
+    'en': 'Address (optional — list only if blank)',
+  },
   'pf_addr_hint': {
     'ko': '예: 서울 송파구 올림픽로 25',
     'en': 'e.g. 25 Olympic-ro, Songpa-gu',
@@ -341,6 +400,22 @@ const Map<String, Map<String, String>> kStrings = {
     'ko': '단톡/Meetup 링크 (들어가는 문)',
     'en': 'Group chat / Meetup link',
   },
+  'pf_curated': {'ko': '대신 등록 (관리자)', 'en': 'Add on behalf (admin)'},
+  'pf_curated_chip': {
+    'ko': '🔎 공개 정보로 대신 등록',
+    'en': '🔎 Added from public info',
+  },
+  'pf_curated_hint': {
+    'ko':
+        '켜면 상세에 "공개 인스타 정보로 모은 크루" 안내와 수정/삭제 요청 링크가 표시됩니다. 남의 크루를 대신 올릴 때만 켜세요.',
+    'en':
+        'Shows a "collected from public Instagram info" notice plus an edit/removal request link. Only for crews you add on their behalf.',
+  },
+  'pf_insta': {'ko': '인스타 아이디 (선택)', 'en': 'Instagram handle (optional)'},
+  'pf_insta_hint': {
+    'ko': '예: nulloongzi (@ 없이)',
+    'en': 'e.g. nulloongzi (without @)',
+  },
   'pf_notes': {'ko': '추가 안내 (선택)', 'en': 'Extra notes (optional)'},
   'pf_notes_hint': {
     'ko': '예: 실내화 필수 · 네트 6인제 높이',
@@ -354,7 +429,7 @@ const Map<String, Map<String, String>> kStrings = {
   'pk_exp_1m': {'ko': '1개월', 'en': '1 month'},
   'pk_exp_3m': {'ko': '3개월', 'en': '3 months'},
   'pk_exp_always': {'ko': '상시', 'en': 'Always'},
-  'pf_req': {'ko': '게임 이름과 주소는 필수예요', 'en': 'Name and address are required'},
+  'pf_req': {'ko': '게임 이름은 필수예요', 'en': 'A name is required'},
   'pf_created': {'ko': '픽업이 등록됐어요!', 'en': 'Pickup posted!'},
   // 동호회 폼
   'cf_title': {'ko': '동호회 등록', 'en': 'Register a club'},

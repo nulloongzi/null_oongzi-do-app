@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemNavigator;
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/club.dart';
 import '../models/pickup_spot.dart';
 import '../services/analytics.dart';
@@ -16,6 +17,8 @@ import '../services/club_filter.dart';
 import '../services/deep_link_service.dart';
 import '../services/profile_service.dart';
 import '../services/i18n.dart';
+import '../services/pickup_filter.dart';
+import '../services/region_match.dart';
 import '../services/share_service.dart';
 import '../services/story_share.dart';
 import '../services/lunchbox_service.dart';
@@ -77,6 +80,8 @@ class _MapScreenState extends State<MapScreen> {
   String? _error;
   ClubFilter _filter = const ClubFilter(); // 동호회 필터/검색
   bool _pkEnglishOnly = false; // 픽업: English OK만
+  String _pkRegion = ''; // 픽업: 지역 칩. '' = 전체
+  String _pkLevel = ''; // 픽업: 레벨. '' = 전체
   bool _pickupListView = false; // 픽업: 지도/목록 토글
   bool _isAdmin = false; // 관리자(픽업 모더레이션 삭제)
   final _search = TextEditingController(); // 상단 검색바 (동호회=필터키워드 / 픽업=목록검색)
@@ -118,17 +123,19 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  // 픽업: English-OK + 검색어(제목/장소/주소) 필터.
-  List<PickupSpot> _visibleSpots() {
-    final kw = _search.text.trim().toLowerCase();
-    return _spots.where((s) {
-      if (_pkEnglishOnly && !s.englishOk) return false;
-      if (kw.isEmpty) return true;
-      final hay = '${s.title} ${s.venueName ?? ''} ${s.address ?? ''}'
-          .toLowerCase();
-      return hay.contains(kw);
-    }).toList();
-  }
+  // 픽업: 지역 + English-OK + 검색어(제목/장소/주소/인스타) 필터.
+  // 순수 로직은 pickup_filter.dart — 웹 js/pickup-filter.js 와 같은 규칙이라 공유 링크가 재현된다.
+  List<PickupSpot> _visibleSpots() => filterPickupSpots(
+    _spots,
+    region: _pkRegion,
+    level: _pkLevel,
+    englishOnly: _pkEnglishOnly,
+    keyword: _search.text,
+  );
+
+  /// 현재 필터에서 좌표가 없어 지도에 못 뜨는 크루 수(목록에는 있음).
+  int get _spotsOffMap =>
+      _visibleSpots().where((s) => s.lat == null || s.lng == null).length;
 
   // 📍 내 위치로 이동(추적 follow). 권한 거부 시 무시.
   Future<void> _moveToMe() async {
@@ -972,6 +979,14 @@ class _MapScreenState extends State<MapScreen> {
                   right: 0,
                   child: Center(child: _pickupToggle()),
                 ),
+              // 지도 뷰에서 좌표 없는 크루는 마커가 없다 → 목록으로 유도(없으면 존재를 모른다).
+              if (_tab == 'pickup' && !_pickupListView && _spotsOffMap > 0)
+                Positioned(
+                  top: 210,
+                  left: 24,
+                  right: 24,
+                  child: Center(child: _offMapHint(_spotsOffMap)),
+                ),
               // 동호회/픽업 탭 — 위 컨텍스트바가 있으면 122, 없으면 70.
               Positioned(
                 top: (_tab == 'pickup' || (_tab == 'clubs' && _hasUrgent))
@@ -999,6 +1014,7 @@ class _MapScreenState extends State<MapScreen> {
                         isAdmin: _isAdmin,
                         onChanged: _load,
                       ),
+                      onInstaTap: _openSpotInsta,
                     ),
                   ),
                 ),
@@ -1253,9 +1269,165 @@ class _MapScreenState extends State<MapScreen> {
             _pickupListView,
             () => setState(() => _pickupListView = true),
           ),
+          _regionMenu(),
+          _levelMenu(),
+          // 현재 필터 목록을 링크 하나로 — 외국인 DM 대응의 핵심 동선.
+          BounceTap(
+            onTap: _sharePickupList,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              child: Icon(
+                Icons.ios_share,
+                size: 18,
+                color: NurungjiColors.brown,
+              ),
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  // 지역 선택 — 칩 8개를 상단 바에 다 못 넣어 팝업 메뉴로.
+  Widget _regionMenu() {
+    return PopupMenuButton<String>(
+      tooltip: t('filter_region'),
+      onSelected: (v) {
+        setState(() => _pkRegion = v);
+        _refreshMarkers();
+      },
+      itemBuilder: (_) => [
+        PopupMenuItem(value: '', child: Text(t('pk_region_all'))),
+        ...regionOptionsAll.map(
+          (r) => PopupMenuItem(value: r, child: Text(i18nRegion(r))),
+        ),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              _pkRegion.isEmpty ? t('pk_region_all') : i18nRegion(_pkRegion),
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: _pkRegion.isEmpty
+                    ? NurungjiColors.brown
+                    : NurungjiColors.teal,
+              ),
+            ),
+            Icon(Icons.arrow_drop_down, size: 18, color: NurungjiColors.brown),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 목록에서 인스타 핸들 탭 → 상세를 거치지 않고 바로 인스타로.
+  Future<void> _openSpotInsta(PickupSpot s) async {
+    final handle = s.insta;
+    if (handle == null || handle.isEmpty) return;
+    Track.event('pickup_contact', {
+      'id': s.id,
+      'type': 'insta',
+      'sport': s.sport,
+    });
+    final u = Uri.parse('https://instagram.com/$handle');
+    if (await canLaunchUrl(u)) {
+      await launchUrl(u, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  // 좌표 없는 크루 안내 — 탭하면 목록 뷰로 전환.
+  Widget _offMapHint(int n) => BounceTap(
+    onTap: () => setState(() => _pickupListView = true),
+    child: GlassSurface(
+      radius: BorderRadius.circular(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Text(
+        t('pk_no_map_hint').replaceAll('{n}', '$n'),
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w700,
+          color: NurungjiColors.brown,
+        ),
+      ),
+    ),
+  );
+
+  // 레벨 선택 — 외국인에게 "나 초보인데 가도 되나"가 핵심 질문이라 지역 다음으로 중요.
+  Widget _levelMenu() {
+    String label(String l) => l.isEmpty ? t('pk_level_all') : t('lv_$l');
+    return PopupMenuButton<String>(
+      tooltip: t('filter_level'),
+      onSelected: (v) {
+        setState(() => _pkLevel = v);
+        _refreshMarkers();
+      },
+      itemBuilder: (_) => [
+        PopupMenuItem(value: '', child: Text(t('pk_level_all'))),
+        // 필터에도 설명을 붙인다 — 목록을 보는 사람(특히 외국인)이 기준을 알아야 고른다.
+        ...pickupLevelOptions.map(
+          (l) => PopupMenuItem(
+            value: l,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(t('lv_$l')),
+                Text(
+                  pickupLevelDesc(l),
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: NurungjiColors.brown,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label(_pkLevel),
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: _pkLevel.isEmpty
+                    ? NurungjiColors.brown
+                    : NurungjiColors.teal,
+              ),
+            ),
+            const Icon(
+              Icons.arrow_drop_down,
+              size: 18,
+              color: NurungjiColors.brown,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _sharePickupList() async {
+    final url = ShareService.pickupListUrl(
+      region: _pkRegion,
+      level: _pkLevel,
+      englishOnly: _pkEnglishOnly,
+    );
+    Track.event('share', {
+      'type': 'pickup_list',
+      'region': _pkRegion,
+      'level': _pkLevel,
+      'english': _pkEnglishOnly,
+    });
+    await ShareService.osShare(url);
   }
 
   Widget _seg(String label, bool on, VoidCallback onTap) {
