@@ -82,7 +82,10 @@ class _MapScreenState extends State<MapScreen> {
   bool _pkEnglishOnly = false; // 픽업: English OK만
   String _pkRegion = ''; // 픽업: 지역 칩. '' = 전체
   String _pkLevel = ''; // 픽업: 레벨. '' = 전체
-  bool _pickupListView = false; // 픽업: 지도/목록 토글
+  // 픽업: 지도/목록 토글. **기본은 목록** — 장소가 유동적인 크루는 좌표가 없어
+  // 지도에 마커가 안 뜬다. 지도를 기본으로 두면 그런 크루가 첫 화면에서
+  // 존재하지 않는 것처럼 보인다(안내 배너로만 알 수 있음).
+  bool _pickupListView = true;
   bool _isAdmin = false; // 관리자(픽업 모더레이션 삭제)
   final _search = TextEditingController(); // 상단 검색바 (동호회=필터키워드 / 픽업=목록검색)
   final _deepLinks = DeepLinkService();
