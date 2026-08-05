@@ -5,7 +5,7 @@ import 'package:share_plus/share_plus.dart';
 
 class ShareService {
   // 웹앱(GitHub Pages)을 공유 랜딩으로 사용 → 딥링크(?club=/?spot=) 그대로 호환.
-  static const siteBase = 'https://nulloongzi.github.io/null_oongzi-do/';
+  static const siteBase = 'https://do.nulloongzi.com/';
 
   static String clubUrl(String id) =>
       '$siteBase?club=${Uri.encodeComponent(id)}';
