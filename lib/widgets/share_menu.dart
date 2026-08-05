@@ -72,7 +72,7 @@ void showShareMenu(
                         title: shareTitle,
                         description: t('login_subtitle'),
                         imageUrl: Uri.parse(
-                          'https://nulloongzi.github.io/null_oongzi-do/logo.png',
+                          'https://do.nulloongzi.com/logo.png',
                         ),
                         link: kakao.Link(webUrl: u, mobileWebUrl: u),
                       ),

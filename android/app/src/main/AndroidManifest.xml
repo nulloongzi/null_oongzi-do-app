@@ -107,15 +107,15 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
             <!-- App Links: 공유 링크(?club=/?spot=)로 앱 열기.
-                 autoVerify 동작엔 https://nulloongzi.github.io/.well-known/assetlinks.json 필요
-                 (미배포 시 링크는 브라우저=웹앱으로 안전하게 폴백). -->
+                 autoVerify 검증은 https://do.nulloongzi.com/.well-known/assetlinks.json —
+                 커스텀 도메인 루트 = 웹 레포 루트라 배포 가능해짐 (웹 레포에 커밋됨).
+                 (검증 실패 시 링크는 브라우저=웹앱으로 안전하게 폴백). -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https"
-                      android:host="nulloongzi.github.io"
-                      android:pathPrefix="/null_oongzi-do" />
+                      android:host="do.nulloongzi.com" />
             </intent-filter>
             <!-- 카카오톡 공유 후 앱 복귀(커스텀 스킴 kakao{네이티브앱키}) -->
             <intent-filter>
