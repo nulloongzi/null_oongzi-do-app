@@ -104,4 +104,63 @@ void main() {
       expect(first.days, ['월', '수']);
     });
   });
+
+  group('assignLanes (시간표 겹침 레인)', () {
+    // 겹치는 일정이 서로를 덮으면 안 된다. 예전 '6px 들여쓰기'는 나중 블록이
+    // 앞 블록을 가렸고, 3개를 넘으면 들여쓰기가 0으로 돌아가 완전히 가렸다.
+    test('안 겹치면 한 레인을 재활용한다', () {
+      final r = assignLanes(const [
+        SchedEvent('월', 10, 12),
+        SchedEvent('월', 14, 16),
+      ]);
+      expect(r.map((x) => x.lane), [0, 0]);
+      expect(r.map((x) => x.lanes), [1, 1]);
+    });
+
+    test('둘이 겹치면 칸을 반으로 나눠 나란히', () {
+      final r = assignLanes(const [
+        SchedEvent('월', 19, 22),
+        SchedEvent('월', 20, 22.5),
+      ]);
+      expect(r.map((x) => x.lane), [0, 1]);
+      expect(r.map((x) => x.lanes), [2, 2]);
+    });
+
+    test('넷이 겹쳐도 아무도 가려지지 않는다 (레인 4개)', () {
+      final r = assignLanes(const [
+        SchedEvent('월', 19, 22),
+        SchedEvent('월', 19.5, 22),
+        SchedEvent('월', 20, 22),
+        SchedEvent('월', 20.5, 22),
+      ]);
+      expect(r.map((x) => x.lane), [0, 1, 2, 3]);
+      expect(r.every((x) => x.lanes == 4), isTrue);
+    });
+
+    test('맞물린 사슬은 한 클러스터로 묶여 폭이 같다', () {
+      // A(10~12) ↔ B(11~14) 겹침, B ↔ C(13~15) 겹침, A ↔ C는 안 겹침.
+      // 한 클러스터로 묶여 폭이 일정하고, C는 A가 비운 레인을 물려받는다.
+      final r = assignLanes(const [
+        SchedEvent('월', 10, 12),
+        SchedEvent('월', 11, 14),
+        SchedEvent('월', 13, 15),
+      ]);
+      expect(r.map((x) => x.lanes), [2, 2, 2]);
+      expect(r[0].lane, 0);
+      expect(r[1].lane, 1);
+      expect(r[2].lane, 0);
+    });
+
+    test('경계가 딱 붙으면(끝=시작) 겹치지 않는다', () {
+      final r = assignLanes(const [
+        SchedEvent('월', 10, 12),
+        SchedEvent('월', 12, 14),
+      ]);
+      expect(r.map((x) => x.lanes), [1, 1]);
+    });
+
+    test('빈 목록도 안 죽는다', () {
+      expect(assignLanes(const []), isEmpty);
+    });
+  });
 }

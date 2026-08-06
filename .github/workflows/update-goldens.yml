@@ -1,0 +1,132 @@
+name: Update Goldens
+
+# 골든 스냅샷(test/goldens/*.png)을 CI에서 다시 뽑아 브랜치에 커밋한다.
+#
+# 왜 CI인가:
+#  1) 골든은 CI 환경 렌더링이 정답이다. 로컬에서 갱신하면 폰트 래스터라이즈 차이로
+#     로컬은 통과하고 CI는 깨질 수 있다. 만드는 쪽과 검사하는 쪽을 같게 둔다.
+#  2) Flutter SDK가 없는 환경(에이전트 컨테이너 등)에서도 골든을 갱신할 수 있다.
+#
+# 주의: --update-goldens 는 달라진 것을 묻지 않고 그대로 정답으로 덮어쓴다.
+# 회귀도 통과시킬 수 있으므로 커밋된 PNG를 **반드시 눈으로 확인**하고 머지할 것.
+# 그래서 main 에서는 못 돌린다 — 브랜치에서 돌려 PR diff로 검토한다.
+#
+# 봇 커밋은 CI를 자동으로 돌리지 못한다(GITHUB_TOKEN 푸시의 루프 방지 규칙).
+# 그래서 이 잡이 커밋 전에 ci.yml 과 같은 게이트(analyze/format/test)를 직접 돌려
+# 초록을 보장한다 — 안 그러면 검증 안 된 커밋이 브랜치에 남는다.
+#
+# 실행 방법 2가지:
+#  · Actions → Update Goldens → Run workflow (워크플로가 default 브랜치에 있을 때만
+#    목록에 뜬다 — GitHub 제약)
+#  · 그 전에는 커밋 메시지에 [goldens] 마커를 넣어 claude/** 브랜치에 push
+#    (capture-assets.yml 과 같은 우회. 봇 커밋엔 마커가 없어 재실행 루프는 안 생긴다)
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "갱신할 테스트 경로 (예: test/diet_grid_golden_test.dart, 비우면 test 전체)"
+        type: string
+        default: "test"
+      commit:
+        description: "변경된 골든을 브랜치에 커밋·푸시 (끄면 아티팩트만)"
+        type: boolean
+        default: true
+  push:
+    branches: ["claude/**"]
+
+concurrency:
+  group: update-goldens-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    name: Regenerate golden snapshots
+    # push 로는 [goldens] 마커가 있을 때만. 일반 push 마다 돌면 안 된다.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.head_commit.message, '[goldens]')
+    runs-on: ubuntu-latest
+    env:
+      GOLDEN_TARGET: ${{ inputs.target || 'test' }}
+      GOLDEN_COMMIT: >-
+        ${{ github.event_name != 'workflow_dispatch' && 'true' || inputs.commit }}
+    steps:
+      # 골든을 main에 직접 덮는 건 검토 없이 정답을 바꾸는 일이다.
+      - name: 기본 브랜치에서는 실행 거부
+        if: ${{ github.ref_name == 'main' }}
+        run: |
+          echo "::error::main 에서는 골든을 갱신하지 않는다 — 작업 브랜치에서 돌리고 PR diff로 검토할 것."
+          exit 1
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - run: flutter --version
+
+      - name: Install deps
+        run: flutter pub get
+
+      - name: flutter test --update-goldens
+        run: flutter test --update-goldens "$GOLDEN_TARGET"
+
+      # 이 잡이 스스로 게이트를 통과해야 한다. GITHUB_TOKEN 으로 만든 푸시는
+      # 무한 루프 방지 규칙 때문에 CI 워크플로를 자동으로 돌리지 않는다(첫 실행에서
+      # 봇 커밋의 CI가 승인 대기로 남아 검증이 비었다). 그래서 ci.yml 과 같은
+      # 게이트를 여기서 한 번 더 돌려, 커밋되는 트리가 초록임을 이 잡이 보장한다.
+      - name: 갱신본으로 게이트 재검증 (ci.yml 과 동일)
+        run: |
+          flutter analyze --fatal-infos
+          dart format --output=none --set-exit-if-changed .
+          flutter test
+
+      - name: 변경된 골든 확인
+        id: diff
+        run: |
+          git add -A test/goldens
+          if git diff --cached --quiet -- test/goldens; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "골든 변경 없음 — 현재 스냅샷이 코드와 일치한다." | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "### 갱신된 골든" >> "$GITHUB_STEP_SUMMARY"
+            git diff --cached --stat -- test/goldens | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # 커밋이 1차 전달 경로. 아티팩트는 브라우저로 바로 열어보는 보조 경로다
+      # (조직 egress 정책이 아티팩트 호스트를 막는 환경도 있다).
+      - name: 갱신본 아티팩트 업로드
+        if: ${{ steps.diff.outputs.changed == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: updated-goldens
+          path: test/goldens/**
+          retention-days: 14
+
+      - name: 커밋 & 푸시
+        if: ${{ steps.diff.outputs.changed == 'true' && env.GOLDEN_COMMIT == 'true' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "test(goldens): CI에서 골든 스냅샷 갱신 ($GOLDEN_TARGET)" \
+                     -m "flutter test --update-goldens 결과. 렌더가 의도대로 바뀐 것인지 PNG diff를 눈으로 확인하고 머지할 것 — --update-goldens 는 회귀도 그대로 정답으로 덮어쓴다." \
+                     -m "워크플로: update-goldens.yml (run ${{ github.run_id }})"
+          for i in 1 2 3 4; do
+            git push origin "HEAD:${{ github.ref_name }}" && exit 0
+            echo "push 실패 — 재시도 $i"
+            sleep $((2 ** i))
+          done
+          echo "::error::골든 푸시 실패(재시도 4회)."
+          exit 1
+
+      - name: 커밋 안 함(안내)
+        if: ${{ steps.diff.outputs.changed == 'true' && env.GOLDEN_COMMIT != 'true' }}
+        run: echo "::notice::골든이 달라졌지만 commit=false 라 푸시하지 않았다. updated-goldens 아티팩트를 확인할 것."

@@ -1,5 +1,7 @@
 // DietGrid 골든 테스트 (Tier 3) — 픽셀 스냅샷으로 시각 회귀 방지.
-// 갱신: flutter test --update-goldens test/diet_grid_golden_test.dart
+// 갱신: Actions → Update Goldens 워크플로 (또는 로컬에서
+//       flutter test --update-goldens test/diet_grid_golden_test.dart)
+// CI에서 갱신하는 쪽을 권한다 — 검사하는 환경과 만드는 환경이 같아야 한다.
 // (flutter_test 기본 Ahem 폰트 → 플랫폼 무관 결정적 렌더링)
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,7 +32,7 @@ void main() {
         isCustom: false,
         slotIdx: 1,
         events: const [
-          SchedEvent('월', 20, 22.5), // 월요일 겹침 → 들여쓰기
+          SchedEvent('월', 20, 22.5), // 월요일 겹침 → 레인 분할(칸을 반으로)
           SchedEvent('수', 19.5, 21.5),
         ],
       ),

@@ -110,14 +110,17 @@ jobs:
         id: build
         run: |
           # CAPTURE_MODE: 앱의 캡처 디렉터(?capture= 딥링크) 활성화 — 마케팅 캡처 빌드 전용.
+          # NAVER_LOGIN_ENABLED: 로그인 화면 스샷에 네이버 버튼이 나오게 — 스토어에 나가는
+          # 릴리즈 AAB(release-aab.yml)도 켜져 있으므로 실제 앱과 일치한다. 시크릿이 없으면
+          # 버튼을 눌렀을 때만 실패하고, 캡처는 누르지 않으므로 안전하다.
           if [ "${{ env.BUILD_TYPE }}" = "release" ]; then
-            flutter build apk --release --dart-define=CAPTURE_MODE=true
+            flutter build apk --release --dart-define=CAPTURE_MODE=true --dart-define=NAVER_LOGIN_ENABLED=true
             echo "apk=build/app/outputs/flutter-apk/app-release.apk" >> "$GITHUB_OUTPUT"
           else
             # debug: 커밋된 debug-fixed.keystore 서명(비밀 아님). main.dart 가
             # debugShowCheckedModeBanner:false 라 DEBUG 리본은 없지만, 카카오 공유는
             # release 키해시가 필요하므로 debug 세트에선 공유 스샷 품질이 제한될 수 있음.
-            flutter build apk --debug --dart-define=CAPTURE_MODE=true
+            flutter build apk --debug --dart-define=CAPTURE_MODE=true --dart-define=NAVER_LOGIN_ENABLED=true
             echo "apk=build/app/outputs/flutter-apk/app-debug.apk" >> "$GITHUB_OUTPUT"
           fi
 

@@ -156,7 +156,7 @@ class StoryCardData {
 Future<Uint8List?> renderStoryCardPng(StoryCardData data) async {
   // Pretendard는 pubspec fonts로 번들 → 앱 시작 시 등록되어 즉시 사용 가능
   // (google_fonts의 런타임 페치/pendingFonts 불필요).
-  final logo = await _loadLogo();
+  final logo = await loadBrandLogo();
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder);
   StoryCardPainter(data, logo: logo).paint(canvas, const Size(1080, 1920));
@@ -166,7 +166,8 @@ Future<Uint8List?> renderStoryCardPng(StoryCardData data) async {
   return bytes?.buffer.asUint8List();
 }
 
-Future<ui.Image?> _loadLogo() async {
+/// 브랜드 로고 비트맵. 클럽 스토리 카드·내 카드가 같은 로고 타일을 쓴다.
+Future<ui.Image?> loadBrandLogo() async {
   try {
     final bd = await rootBundle.load('assets/nulloongzido logo_without bg.png');
     final codec = await ui.instantiateImageCodec(bd.buffer.asUint8List());
