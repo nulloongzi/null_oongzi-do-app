@@ -207,17 +207,33 @@ fi
 if [ "$INCLUDE_REELS" = "true" ]; then
   RAW="$REELS/raw"; mkdir -p "$RAW"
   REEL_LANGS="${CAP_LANGS:-$CAP_LANG}"   # 워크플로가 "ko en" 지정. 기본은 캡처 언어 1개.
-  film() { # film <feat> <lang> <action_cmd|__pan__> <secs>
-    local feat="$1" flang="$2" act="$3" secs="${4:-9}"
+  # screenrecord 는 SwiftShader 에뮬에서 1080×2400@8Mbps 를 인코딩하다 조기 종료한다
+  # (run #22: 요청 8~9s 인데 raw 가 3.2~8.2s 로 들쭉날쭉). 해상도/비트레이트를 낮춰
+  # 인코더 부하를 줄이고, 길이가 모자라면 1회 재시도한다. 720×1600 이어도 후반합성이
+  # 높이 1360 으로 스케일하므로 최종 품질 손실은 없다.
+  REC_OPTS=(--size 720x1600 --bit-rate 4000000)
+  vdur() { ffprobe -v error -show_entries format=duration -of csv=p=0 "$1" 2>/dev/null | cut -d. -f1; }
+
+  shoot() { # shoot <feat> <lang> <act|__pan__> <secs> <mode:motion|settled>
+    local feat="$1" flang="$2" act="$3" secs="$4" mode="$5"
     local dev="/sdcard/raw_${feat}_${flang}.mp4"
-    log "🎬 raw 녹화: ${feat}_${flang}"
+    adb shell rm -f "$dev" >/dev/null 2>&1 || true
     # 대상 언어로 지도 콜드 안착(-S) + 로드 대기(Firebase/타일).
     adb shell "am start -S -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=map&lang=$flang'" >/dev/null 2>&1
-    sleep 22; dismiss_anr; demo_on
-    adb shell screenrecord --bit-rate 8000000 --time-limit "$secs" "$dev" &
+    sleep 22; dismiss_anr
+    if [ "$mode" = settled ]; then
+      # 재시도 경로: 기능 화면을 **먼저** 열어 안착시킨 뒤 녹화 → 클립 전체가 그 화면.
+      [ "$act" != "__pan__" ] && adb shell "am start -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=$act&lang=$flang'" >/dev/null 2>&1
+      sleep 7; dismiss_anr
+    fi
+    demo_on
+    adb shell screenrecord "${REC_OPTS[@]}" --time-limit "$secs" "$dev" &
     local rec=$!; sleep 1
     if [ "$act" = "__pan__" ]; then
       swp 800 1500 300 1200 1200; sleep 1; swp 300 1200 800 1600 1200; sleep 1; swp 540 1700 540 1100 1200
+    elif [ "$mode" = settled ]; then
+      # 이미 열린 화면에 은은한 스크롤 모션만 준다.
+      sleep 1; swp 540 1700 540 1150 1100; sleep 1; swp 540 1150 540 1650 1100
     else
       # 녹화 중 액션 딥링크 → 시트 슬라이드업/카메라 비행이 화면에 잡힘.
       adb shell "am start -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=$act&lang=$flang'" >/dev/null 2>&1
@@ -225,8 +241,24 @@ if [ "$INCLUDE_REELS" = "true" ]; then
     sleep "$secs"
     adb shell pkill -INT screenrecord >/dev/null 2>&1 || true
     sleep 2; wait "$rec" 2>/dev/null || true
-    adb pull "$dev" "$RAW/${feat}_${flang}.mp4" >/dev/null 2>&1 && log "  ↳ raw/${feat}_${flang}.mp4" || echo "::warning::mp4 회수 실패: ${feat}_${flang}"
+    adb pull "$dev" "$RAW/${feat}_${flang}.mp4" >/dev/null 2>&1 || true
     adb shell rm -f "$dev" >/dev/null 2>&1 || true
+  }
+
+  film() { # film <feat> <lang> <action_cmd|__pan__> <secs>
+    local feat="$1" flang="$2" act="$3" secs="${4:-9}"
+    local out="$RAW/${feat}_${flang}.mp4" d
+    log "🎬 raw 녹화: ${feat}_${flang}"
+    shoot "$feat" "$flang" "$act" "$secs" motion
+    d="$(vdur "$out")"; d="${d:-0}"
+    # 인코더 조기 종료 판정: 요청의 절반도 못 채웠으면 안착 모드로 1회 재시도.
+    if [ "$d" -lt $(( secs / 2 )) ]; then
+      echo "::warning::녹화 짧음(${d}s < ${secs}s) — 안착 모드로 재시도: ${feat}_${flang}"
+      shoot "$feat" "$flang" "$act" "$secs" settled
+      d="$(vdur "$out")"; d="${d:-0}"
+    fi
+    if [ "$d" -gt 0 ]; then log "  ↳ raw/${feat}_${flang}.mp4 (${d}s)"
+    else echo "::warning::mp4 회수 실패: ${feat}_${flang}"; fi
   }
   for L in $REEL_LANGS; do
     film map      "$L" __pan__  9   # 지도 패닝(전국 동호회 마커)

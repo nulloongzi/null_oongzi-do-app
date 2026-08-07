@@ -132,8 +132,13 @@ video_montage() { # video_montage <mp4> <label>
   local dim; dim="$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x "$mp4" 2>/dev/null)"
   echo "VID $label dur=${d}s dim=$dim"
   local td; td="$(mktemp -d)"
-  # 6프레임 균등 추출 → 3×2 몬타주 → 폭 720 → base64
-  ffmpeg -y -loglevel error -i "$mp4" -vf "select='not(mod(n\,15))',scale=360:-1" -frames:v 6 "$td/f_%02d.png" 2>/dev/null
+  # 6프레임을 **전체 길이에 균등** 추출 → 3×2 몬타주 → 폭 720 → base64.
+  # (예전 판은 select=not(mod(n,15)) 로 앞 2.5초만 떠서, 뒤에 나오는 화면 전환이
+  #  통째로 안 보였다 — 지도만 찍힌 걸로 오판하게 만든 원인.)
+  local dur fps
+  dur="$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$mp4" 2>/dev/null)"
+  fps="$(awk -v d="${dur:-6}" 'BEGIN{ if(d<=0) d=6; printf "%.4f", 6.0/d }')"
+  ffmpeg -y -loglevel error -i "$mp4" -vf "fps=${fps},scale=360:-1" -frames:v 6 "$td/f_%02d.png" 2>/dev/null
   if ls "$td"/f_*.png >/dev/null 2>&1; then
     montage "$td"/f_*.png -tile 3x2 -geometry +4+4 -background "$CREAM" "$td/m.png" 2>/dev/null
     echo "MONTAGE_BEGIN $label"
