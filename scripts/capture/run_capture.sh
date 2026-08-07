@@ -200,34 +200,45 @@ else
   echo "::warning::한글 폰트(nanum) 미탐지 — 카피 합성 스킵($KFONT)"
 fi
 
-# ── 릴스: 지도 로드 후 녹화 시작 → 액션 딥링크로 모션 유발 ────
-# 1080×2400 원본 → 릴스(1080×1920)는 편집서 크롭.
+# ── 릴스 원본(raw): 기능별 모션 클립을 언어별로 녹화 ──────────
+# 후반합성기(compose_videos.sh)가 이 raw 를 크림 9:16 브랜디드 릴스로 만든다.
+# 산출: reels/raw/<feat>_<lang>.mp4 (앱 1080×2400 화면녹화, 무음).
+# 각 클립: 대상 언어로 지도에 콜드 안착 → 녹화 시작 → 기능 딥링크로 모션(시트/카메라) 유발.
 if [ "$INCLUDE_REELS" = "true" ]; then
-  reel() { # reel <name> <action_cmd|""> <secs>
-    local name="$1" act="$2" secs="${3:-15}" dev="/sdcard/${1}.mp4"
-    log "🎬 릴스 녹화: $name"
-    open_cap map 26; demo_on                       # 지도 로드 완료 후
+  RAW="$REELS/raw"; mkdir -p "$RAW"
+  REEL_LANGS="${CAP_LANGS:-$CAP_LANG}"   # 워크플로가 "ko en" 지정. 기본은 캡처 언어 1개.
+  film() { # film <feat> <lang> <action_cmd|__pan__> <secs>
+    local feat="$1" flang="$2" act="$3" secs="${4:-9}"
+    local dev="/sdcard/raw_${feat}_${flang}.mp4"
+    log "🎬 raw 녹화: ${feat}_${flang}"
+    # 대상 언어로 지도 콜드 안착(-S) + 로드 대기(Firebase/타일).
+    adb shell "am start -S -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=map&lang=$flang'" >/dev/null 2>&1
+    sleep 22; dismiss_anr; demo_on
     adb shell screenrecord --bit-rate 8000000 --time-limit "$secs" "$dev" &
     local rec=$!; sleep 1
-    if [ -n "$act" ]; then
-      # 실행 중 앱에 액션 딥링크 → 카메라 이동/시트 슬라이드가 화면에 녹화됨
-      adb shell "am start -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=$act&lang=$CAP_LANG'" >/dev/null 2>&1
+    if [ "$act" = "__pan__" ]; then
+      swp 800 1500 300 1200 1200; sleep 1; swp 300 1200 800 1600 1200; sleep 1; swp 540 1700 540 1100 1200
     else
-      # 피날레: 부드러운 지도 패닝
-      swp 800 1400 300 1200 1300; sleep 1
-      swp 300 1200 800 1400 1300; sleep 1
-      swp 540 1600 540 1000 1300
+      # 녹화 중 액션 딥링크 → 시트 슬라이드업/카메라 비행이 화면에 잡힘.
+      adb shell "am start -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=$act&lang=$flang'" >/dev/null 2>&1
     fi
-    sleep 2; adb shell pkill -INT screenrecord >/dev/null 2>&1 || true
+    sleep "$secs"
+    adb shell pkill -INT screenrecord >/dev/null 2>&1 || true
     sleep 2; wait "$rec" 2>/dev/null || true
-    adb pull "$dev" "$REELS/${name}.mp4" >/dev/null 2>&1 && log "  ↳ $REELS/${name}.mp4" || echo "::warning::mp4 회수 실패: $name"
+    adb pull "$dev" "$RAW/${feat}_${flang}.mp4" >/dev/null 2>&1 && log "  ↳ raw/${feat}_${flang}.mp4" || echo "::warning::mp4 회수 실패: ${feat}_${flang}"
     adb shell rm -f "$dev" >/dev/null 2>&1 || true
   }
-  reel "reel_1_findmap" detail 15    # 지도 → 마커로 카메라 비행 + 상세 오픈
-  reel "reel_2_filter"  filter 12    # 필터 시트 슬라이드업
-  reel "reel_7_finale"  ""      15   # 부드러운 지도 패닝
+  for L in $REEL_LANGS; do
+    film map      "$L" __pan__  9   # 지도 패닝(전국 동호회 마커)
+    film filter   "$L" filter   8   # 필터 시트 슬라이드업
+    film pickup   "$L" pickup   8   # 픽업 목록
+    film detail   "$L" detail   9   # 마커 카메라 비행 + 상세 시트
+    film lunchbox "$L" lunchbox 8   # 도시락 찜
+    film share    "$L" share    9   # 공유 카드
+    film profile  "$L" profile  8   # 밥이름 프로필
+  done
 fi
 
 adb logcat -d > "$LOGS/logcat.txt" 2>/dev/null || true
 fingerprint
-log "완료. screens=$(ls -1 "$SCREENS" 2>/dev/null | wc -l)장, reels=$(ls -1 "$REELS" 2>/dev/null | wc -l)편."
+log "완료. screens=$(ls -1 "$SCREENS" 2>/dev/null | wc -l)장, raw=$(ls -1 "$REELS/raw" 2>/dev/null | wc -l)편(후반합성은 compose_videos.sh)."

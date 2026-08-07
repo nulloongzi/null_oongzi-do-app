@@ -63,6 +63,8 @@ jobs:
       BUILD_TYPE: ${{ github.event.inputs.build_type || (contains(github.event.head_commit.message, '[cap-release]') && 'release' || 'debug') }}
       SMOKE_ONLY: ${{ github.event.inputs.smoke_only || (contains(github.event.head_commit.message, '[cap-full]') && 'false' || 'true') }}
       CAP_LANG: ${{ github.event.inputs.capture_lang || 'ko' }}
+      # 릴스 원본은 언어별로 캡처(후반합성이 한/영 자막을 각각 입힘). 스샷은 CAP_LANG(ko) 유지.
+      CAP_LANGS: "ko en"
       INCLUDE_REELS: ${{ github.event.inputs.include_reels || (contains(github.event.head_commit.message, '[cap-reels]') && 'true' || 'false') }}
     steps:
       - uses: actions/checkout@v4
@@ -135,9 +137,10 @@ jobs:
           fi
 
       # ── 이미지 도구(스모크 black 게이트용) ──────────────────────
-      - name: Install ImageMagick + Korean font
-        # imagemagick: 블랙 게이트 + 카피 오버레이 합성 / fonts-nanum: 한글 캡션 렌더
-        run: sudo apt-get update && sudo apt-get install -y imagemagick fonts-nanum fontconfig
+      - name: Install ImageMagick + ffmpeg + Korean font
+        # imagemagick: 블랙 게이트 + 카피 오버레이 합성 / ffmpeg: 영상 후반합성
+        # fonts-nanum: 한글 캡션 렌더
+        run: sudo apt-get update && sudo apt-get install -y imagemagick ffmpeg fonts-nanum fontconfig
 
       # ── 안드 에뮬 가속(KVM) ─────────────────────────────────────
       - name: Enable KVM
@@ -171,9 +174,20 @@ jobs:
           SMOKE_ONLY: ${{ env.SMOKE_ONLY }}
           CAP_LANG: ${{ env.CAP_LANG }}
           INCLUDE_REELS: ${{ env.INCLUDE_REELS }}
+          CAP_LANGS: ${{ env.CAP_LANGS }}
           # 로그인 필요 화면(도시락/프로필/닉네임) 옵션 — 테스트 계정 시크릿 있을 때만 동작.
           TEST_ACCOUNT_EMAIL: ${{ secrets.TEST_ACCOUNT_EMAIL }}
           TEST_ACCOUNT_PASSWORD: ${{ secrets.TEST_ACCOUNT_PASSWORD }}
+
+      # ── 영상 후반합성(에뮬 밖, 러너 호스트) ─────────────────────
+      # 에뮬이 뽑은 reels/raw/<feat>_<lang>.mp4 → 크림 9:16 브랜디드 홍보 릴스 +
+      # 앱 소개 영상(한/영). ffmpeg/ImageMagick 은 위에서 설치됨.
+      - name: Compose marketing videos
+        if: ${{ env.SMOKE_ONLY == 'false' && env.INCLUDE_REELS == 'true' }}
+        env:
+          ARTIFACTS_DIR: ${{ github.workspace }}/marketing-assets
+          CAP_LANGS: ${{ env.CAP_LANGS }}
+        run: bash scripts/capture/compose_videos.sh
 
       # ── 산출물 업로드 ───────────────────────────────────────────
       - name: Upload marketing assets
