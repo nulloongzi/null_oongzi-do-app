@@ -222,9 +222,11 @@ if [ "$INCLUDE_REELS" = "true" ]; then
     adb shell "am start -S -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=map&lang=$flang'" >/dev/null 2>&1
     sleep 22; dismiss_anr
     if [ "$mode" = settled ]; then
-      # 재시도 경로: 기능 화면을 **먼저** 열어 안착시킨 뒤 녹화 → 클립 전체가 그 화면.
+      # 기능 화면을 **먼저** 열어 안착시킨 뒤 녹화 → 클립 전체가 그 화면.
+      # (run #23 교훈: 녹화 중 딥링크로 전환을 담으려 했더니 에뮬에서 전환에 5~7초가
+      #  걸려 8초 클립의 대부분이 지도였고, 필터는 시트가 아예 안 잡혔다.)
       [ "$act" != "__pan__" ] && adb shell "am start -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=$act&lang=$flang'" >/dev/null 2>&1
-      sleep 7; dismiss_anr
+      sleep 10; dismiss_anr
     fi
     demo_on
     adb shell screenrecord "${REC_OPTS[@]}" --time-limit "$secs" "$dev" &
@@ -232,8 +234,9 @@ if [ "$INCLUDE_REELS" = "true" ]; then
     if [ "$act" = "__pan__" ]; then
       swp 800 1500 300 1200 1200; sleep 1; swp 300 1200 800 1600 1200; sleep 1; swp 540 1700 540 1100 1200
     elif [ "$mode" = settled ]; then
-      # 이미 열린 화면에 은은한 스크롤 모션만 준다.
-      sleep 1; swp 540 1700 540 1150 1100; sleep 1; swp 540 1150 540 1650 1100
+      # 이미 열린 화면에 은은한 스크롤 모션. **위로만** 스와이프한다 —
+      # 아래로 끌면 바텀시트(상세/공유/필터)가 닫혀 화면이 날아간다.
+      sleep 1; swp 540 1600 540 1250 1000; sleep 2; swp 540 1600 540 1300 1000
     else
       # 녹화 중 액션 딥링크 → 시트 슬라이드업/카메라 비행이 화면에 잡힘.
       adb shell "am start -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=$act&lang=$flang'" >/dev/null 2>&1
@@ -245,16 +248,19 @@ if [ "$INCLUDE_REELS" = "true" ]; then
     adb shell rm -f "$dev" >/dev/null 2>&1 || true
   }
 
+  # 기본은 settled(기능 화면 안착 후 녹화) — 클립 전체가 그 기능을 보여준다.
+  # 지도만 __pan__ 으로 패닝 모션을 담는다.
   film() { # film <feat> <lang> <action_cmd|__pan__> <secs>
     local feat="$1" flang="$2" act="$3" secs="${4:-9}"
-    local out="$RAW/${feat}_${flang}.mp4" d
-    log "🎬 raw 녹화: ${feat}_${flang}"
-    shoot "$feat" "$flang" "$act" "$secs" motion
+    local out="$RAW/${feat}_${flang}.mp4" d mode=settled
+    [ "$act" = "__pan__" ] && mode=motion
+    log "🎬 raw 녹화: ${feat}_${flang} (${mode})"
+    shoot "$feat" "$flang" "$act" "$secs" "$mode"
     d="$(vdur "$out")"; d="${d:-0}"
-    # 인코더 조기 종료 판정: 요청의 절반도 못 채웠으면 안착 모드로 1회 재시도.
+    # 인코더 조기 종료 판정: 요청의 절반도 못 채웠으면 1회 재시도.
     if [ "$d" -lt $(( secs / 2 )) ]; then
-      echo "::warning::녹화 짧음(${d}s < ${secs}s) — 안착 모드로 재시도: ${feat}_${flang}"
-      shoot "$feat" "$flang" "$act" "$secs" settled
+      echo "::warning::녹화 짧음(${d}s < ${secs}s) — 재시도: ${feat}_${flang}"
+      shoot "$feat" "$flang" "$act" "$secs" "$mode"
       d="$(vdur "$out")"; d="${d:-0}"
     fi
     if [ "$d" -gt 0 ]; then log "  ↳ raw/${feat}_${flang}.mp4 (${d}s)"
