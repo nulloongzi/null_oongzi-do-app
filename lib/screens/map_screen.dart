@@ -619,9 +619,7 @@ class _MapScreenState extends State<MapScreen> {
 
   /// 캡처 흐름 공용: n초 대기(위젯이 사라졌으면 중단).
   Future<bool> _hold(double sec) async {
-    await Future<void>.delayed(
-      Duration(milliseconds: (sec * 1000).round()),
-    );
+    await Future<void>.delayed(Duration(milliseconds: (sec * 1000).round()));
     return mounted;
   }
 
@@ -638,11 +636,7 @@ class _MapScreenState extends State<MapScreen> {
     if (!mounted) return;
 
     // 필터 시트를 '이미 선택된' 상태로 띄운다 — 좌표 탭 없이 칩 선택이 보인다.
-    const preset = ClubFilter(
-      regions: {'서울'},
-      days: {'화'},
-      targets: {'성인'},
-    );
+    const preset = ClubFilter(regions: {'서울'}, days: {'화'}, targets: {'성인'});
     final sheet = showFilterSheet(context, preset);
     await _hold(5); // 지역·요일·대상 칩을 읽을 시간
     if (!mounted) return;
@@ -693,7 +687,8 @@ class _MapScreenState extends State<MapScreen> {
         if (seeded >= 4) break;
         if (x.id == c.id) continue;
         final hasSched =
-            (x.schedule ?? '').isNotEmpty || (x.scheduleRaw?.isNotEmpty ?? false);
+            (x.schedule ?? '').isNotEmpty ||
+            (x.scheduleRaw?.isNotEmpty ?? false);
         if (!hasSched) continue;
         await lb.addBookmark(uid, x.id);
         seeded++;
