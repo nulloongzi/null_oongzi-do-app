@@ -206,75 +206,104 @@ fi
 # 각 클립: 대상 언어로 지도에 콜드 안착 → 녹화 시작 → 기능 딥링크로 모션(시트/카메라) 유발.
 if [ "$INCLUDE_REELS" = "true" ]; then
   RAW="$REELS/raw"; mkdir -p "$RAW"
-  REEL_LANGS="${CAP_LANGS:-$CAP_LANG}"   # 워크플로가 "ko en" 지정. 기본은 캡처 언어 1개.
-  # screenrecord 는 SwiftShader 에뮬에서 1080×2400@8Mbps 를 인코딩하다 조기 종료한다
-  # (run #22: 요청 8~9s 인데 raw 가 3.2~8.2s 로 들쭉날쭉). 해상도/비트레이트를 낮춰
-  # 인코더 부하를 줄이고, 길이가 모자라면 1회 재시도한다. 720×1600 이어도 후반합성이
-  # 높이 1360 으로 스케일하므로 최종 품질 손실은 없다.
-  REC_OPTS=(--size 720x1600 --bit-rate 4000000)
   vdur() { ffprobe -v error -show_entries format=duration -of csv=p=0 "$1" 2>/dev/null | cut -d. -f1; }
 
-  shoot() { # shoot <feat> <lang> <act|__pan__> <secs> <mode:motion|settled>
-    local feat="$1" flang="$2" act="$3" secs="$4" mode="$5"
-    local dev="/sdcard/raw_${feat}_${flang}.mp4"
+  # 흐름 검증 몬타주: 아티팩트 다운로드가 프록시에 막히므로, 각 흐름 영상의
+  # 프레임을 전체 구간에 균등 추출해 base64 로 로그에 남긴다(육안 확인 경로).
+  # 흐름은 길어 6장으론 전환을 놓친다 → 12장(4×3).
+  flow_montage() { # flow_montage <mp4> <label>
+    local mp4="$1" label="$2" dur fps td
+    [ -s "$mp4" ] || { echo "MONTAGE_MISSING $label"; return; }
+    dur="$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$mp4" 2>/dev/null)"
+    echo "VID $label dur=${dur%%.*}s dim=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x "$mp4" 2>/dev/null)"
+    fps="$(awk -v d="${dur:-30}" 'BEGIN{ if(d<=0) d=30; printf "%.4f", 12.0/d }')"
+    td="$(mktemp -d)"
+    ffmpeg -y -loglevel error -i "$mp4" -vf "fps=${fps},scale=270:-1" -frames:v 12 "$td/f_%02d.png" 2>/dev/null
+    if ls "$td"/f_*.png >/dev/null 2>&1; then
+      montage "$td"/f_*.png -tile 4x3 -geometry +3+3 -background '#FFF8E1' "$td/m.png" 2>/dev/null
+      echo "MONTAGE_BEGIN $label"
+      convert "$td/m.png" -resize 1100x -quality 72 jpg:- 2>/dev/null | base64 -w0
+      echo ""
+      echo "MONTAGE_END $label"
+    fi
+    rm -rf "$td"
+  }
+  # ── 흐름(flow) 녹화: 여러 기능을 한 테이크로 ─────────────────
+  # 앱 안의 캡처 디렉터(flow_*)가 연속 전환을 수행하므로, 여기선 딥링크 한 번 쏘고
+  # 흐름이 끝날 때까지 통으로 녹화한다(중간 개입 없음 = 손떨림 없는 데모).
+  # 산출은 9:16(1080×1920) 크롭본 — 자막·TTS는 편집에서 얹는다.
+  FLOWS_DIR="$REELS/flows"; mkdir -p "$FLOWS_DIR"
+  # 흐름은 길어(35~45s) 인코더 부하가 크다. 화질(크롭 후 1080폭)을 살리되 조기 종료를
+  # 피하도록 원본 1080×2400 @5Mbps 로 녹화한다.
+  FLOW_REC=(--size 1080x2400 --bit-rate 5000000)
+  # 9:16 크롭: 위 390px(상태바·검색바)을 덜어내고 아래 상세시트 버튼까지 살린다.
+  # (1080×2400 → y=390..2310) 편집에서 다시 자르지 않아도 릴스 규격.
+  FLOW_CROP="crop=1080:1920:0:390"
+
+  flow() { # flow <name> <capture_cmd> <secs>
+    local name="$1" cmd="$2" secs="$3"
+    local dev="/sdcard/flow_${name}.mp4"
+    local rawout="$RAW/flow_${name}_${CAP_LANG}.mp4"
+    local out="$FLOWS_DIR/${name}_${CAP_LANG}.mp4" d
+    log "🎬 흐름 녹화: ${name} (${secs}s)"
     adb shell rm -f "$dev" >/dev/null 2>&1 || true
-    # 대상 언어로 지도 콜드 안착(-S) + 로드 대기(Firebase/타일).
-    adb shell "am start -S -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=map&lang=$flang'" >/dev/null 2>&1
-    sleep 22; dismiss_anr
-    if [ "$mode" = settled ]; then
-      # 기능 화면을 **먼저** 열어 안착시킨 뒤 녹화 → 클립 전체가 그 화면.
-      # (run #23 교훈: 녹화 중 딥링크로 전환을 담으려 했더니 에뮬에서 전환에 5~7초가
-      #  걸려 8초 클립의 대부분이 지도였고, 필터는 시트가 아예 안 잡혔다.)
-      [ "$act" != "__pan__" ] && adb shell "am start -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=$act&lang=$flang'" >/dev/null 2>&1
-      sleep 10; dismiss_anr
-    fi
-    demo_on
-    adb shell screenrecord "${REC_OPTS[@]}" --time-limit "$secs" "$dev" &
+    # 지도에 콜드 안착시킨 뒤 녹화를 시작하고, 그 다음에 흐름 딥링크를 쏜다.
+    # (흐름 시작 자체가 콘텐츠라 전환을 놓치면 안 된다 → 녹화가 먼저.)
+    adb shell "am start -S -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=map&lang=$CAP_LANG'" >/dev/null 2>&1
+    sleep 24; dismiss_anr; demo_on
+    adb shell screenrecord "${FLOW_REC[@]}" --time-limit "$secs" "$dev" &
     local rec=$!; sleep 1
-    if [ "$act" = "__pan__" ]; then
-      swp 800 1500 300 1200 1200; sleep 1; swp 300 1200 800 1600 1200; sleep 1; swp 540 1700 540 1100 1200
-    elif [ "$mode" = settled ]; then
-      # 이미 열린 화면에 은은한 스크롤 모션. **위로만** 스와이프한다 —
-      # 아래로 끌면 바텀시트(상세/공유/필터)가 닫혀 화면이 날아간다.
-      sleep 1; swp 540 1600 540 1250 1000; sleep 2; swp 540 1600 540 1300 1000
-    else
-      # 녹화 중 액션 딥링크 → 시트 슬라이드업/카메라 비행이 화면에 잡힘.
-      adb shell "am start -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=$act&lang=$flang'" >/dev/null 2>&1
-    fi
+    # 콜드 재시작 없이(-S 없음) 흐름 시작 → 앱이 내부에서 연속 전환.
+    adb shell "am start -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=$cmd&lang=$CAP_LANG'" >/dev/null 2>&1
     sleep "$secs"
     adb shell pkill -INT screenrecord >/dev/null 2>&1 || true
-    sleep 2; wait "$rec" 2>/dev/null || true
-    adb pull "$dev" "$RAW/${feat}_${flang}.mp4" >/dev/null 2>&1 || true
+    sleep 3; wait "$rec" 2>/dev/null || true
+    adb pull "$dev" "$rawout" >/dev/null 2>&1 || true
     adb shell rm -f "$dev" >/dev/null 2>&1 || true
+    d="$(vdur "$rawout")"; d="${d:-0}"
+    if [ "$d" -lt $(( secs / 2 )) ]; then
+      echo "::warning::흐름 녹화 짧음(${d}s < ${secs}s) — 재시도: $name"
+      adb shell "am start -S -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=map&lang=$CAP_LANG'" >/dev/null 2>&1
+      sleep 24; dismiss_anr; demo_on
+      adb shell screenrecord "${FLOW_REC[@]}" --time-limit "$secs" "$dev" &
+      rec=$!; sleep 1
+      adb shell "am start -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=$cmd&lang=$CAP_LANG'" >/dev/null 2>&1
+      sleep "$secs"; adb shell pkill -INT screenrecord >/dev/null 2>&1 || true
+      sleep 3; wait "$rec" 2>/dev/null || true
+      adb pull "$dev" "$rawout" >/dev/null 2>&1 || true
+      adb shell rm -f "$dev" >/dev/null 2>&1 || true
+      d="$(vdur "$rawout")"; d="${d:-0}"
+    fi
+    if [ "$d" -le 0 ]; then echo "::warning::흐름 mp4 회수 실패: $name"; return; fi
+    # 9:16 크롭(재인코딩 1회) — 릴스 규격 완성본.
+    ffmpeg -y -loglevel error -i "$rawout" -vf "$FLOW_CROP" \
+      -c:v libx264 -preset veryfast -pix_fmt yuv420p -r 30 -an "$out" 2>&1 | tail -2
+    log "  ↳ flows/${name}_${CAP_LANG}.mp4 (${d}s, 1080x1920)"
   }
 
-  # 기본은 settled(기능 화면 안착 후 녹화) — 클립 전체가 그 기능을 보여준다.
-  # 지도만 __pan__ 으로 패닝 모션을 담는다.
-  film() { # film <feat> <lang> <action_cmd|__pan__> <secs>
-    local feat="$1" flang="$2" act="$3" secs="${4:-9}"
-    local out="$RAW/${feat}_${flang}.mp4" d mode=settled
-    [ "$act" = "__pan__" ] && mode=motion
-    log "🎬 raw 녹화: ${feat}_${flang} (${mode})"
-    shoot "$feat" "$flang" "$act" "$secs" "$mode"
-    d="$(vdur "$out")"; d="${d:-0}"
-    # 인코더 조기 종료 판정: 요청의 절반도 못 채웠으면 1회 재시도.
-    if [ "$d" -lt $(( secs / 2 )) ]; then
-      echo "::warning::녹화 짧음(${d}s < ${secs}s) — 재시도: ${feat}_${flang}"
-      shoot "$feat" "$flang" "$act" "$secs" "$mode"
-      d="$(vdur "$out")"; d="${d:-0}"
-    fi
-    if [ "$d" -gt 0 ]; then log "  ↳ raw/${feat}_${flang}.mp4 (${d}s)"
-    else echo "::warning::mp4 회수 실패: ${feat}_${flang}"; fi
-  }
-  for L in $REEL_LANGS; do
-    film map      "$L" __pan__  9   # 지도 패닝(전국 동호회 마커)
-    film filter   "$L" filter   8   # 필터 시트 슬라이드업
-    film pickup   "$L" pickup   8   # 픽업 목록
-    film detail   "$L" detail   9   # 마커 카메라 비행 + 상세 시트
-    film lunchbox "$L" lunchbox 8   # 도시락 찜
-    film share    "$L" share    9   # 공유 카드
-    film profile  "$L" profile  8   # 밥이름 프로필
+  # 흐름 3종(픽업 제외) — 각 흐름은 앱 내부 스크립트가 구동한다.
+  flow discover flow_discover 38   # 지도 → 필터 → 결과 → 클럽 상세
+  flow save     flow_save     32   # 상세 → 도시락 찜 → 반찬칸 → 식단표
+  flow share    flow_share    36   # 밥이름 → 네임카드 → 공유
+
+  # 풀 투어: 3편 이어붙이기(편집 없이 바로 쓰는 앱 소개용).
+  TOUR_LIST="$FLOWS_DIR/.tour.txt"; : > "$TOUR_LIST"
+  for n in discover save share; do
+    f="$FLOWS_DIR/${n}_${CAP_LANG}.mp4"
+    [ -s "$f" ] && echo "file '$(basename "$f")'" >> "$TOUR_LIST"
   done
+  if [ -s "$TOUR_LIST" ]; then
+    ( cd "$FLOWS_DIR" && ffmpeg -y -loglevel error -f concat -safe 0 -i .tour.txt \
+        -c copy "full_tour_${CAP_LANG}.mp4" 2>&1 | tail -2 )
+    log "  ↳ flows/full_tour_${CAP_LANG}.mp4"
+  fi
+  rm -f "$TOUR_LIST"
+
+  echo "===== FLOW FINGERPRINT ====="
+  for n in discover save share full_tour; do
+    flow_montage "$FLOWS_DIR/${n}_${CAP_LANG}.mp4" "flow_${n}"
+  done
+  echo "===== END FLOW FINGERPRINT ====="
 fi
 
 adb logcat -d > "$LOGS/logcat.txt" 2>/dev/null || true

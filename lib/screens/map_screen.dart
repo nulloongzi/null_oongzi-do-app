@@ -634,7 +634,8 @@ class _MapScreenState extends State<MapScreen> {
 
   /// ① 찾기: 지도 → 필터(서울·화·성인) → 결과 → 클럽 상세 → 연락
   Future<void> _flowDiscover() async {
-    if (!await _hold(3.5)) return; // 지도 전경(전국 마커·클러스터)
+    await _hold(3.5); // 지도 전경(전국 마커·클러스터)
+    if (!mounted) return;
 
     // 필터 시트를 '이미 선택된' 상태로 띄운다 — 좌표 탭 없이 칩 선택이 보인다.
     const preset = ClubFilter(
@@ -643,8 +644,9 @@ class _MapScreenState extends State<MapScreen> {
       targets: {'성인'},
     );
     final sheet = showFilterSheet(context, preset);
-    if (!await _hold(5)) return; // 지역·요일·대상 칩을 읽을 시간
-    if (mounted) Navigator.of(context).pop(preset); // '적용하기' 상당
+    await _hold(5); // 지역·요일·대상 칩을 읽을 시간
+    if (!mounted) return;
+    Navigator.of(context).pop(preset); // '적용하기' 상당
     final applied = await sheet;
     if (!mounted) return;
     if (applied != null) {
@@ -732,7 +734,8 @@ class _MapScreenState extends State<MapScreen> {
     final c = _clubs.isNotEmpty ? _clubs.first : null;
     if (c == null) return;
     await _focusAndShowClub(c);
-    if (!await _hold(2)) return;
+    await _hold(2);
+    if (!mounted) return;
     showShareMenu(
       context,
       url: ShareService.clubUrl(c.id),

@@ -182,8 +182,11 @@ jobs:
       # ── 영상 후반합성(에뮬 밖, 러너 호스트) ─────────────────────
       # 에뮬이 뽑은 reels/raw/<feat>_<lang>.mp4 → 크림 9:16 브랜디드 홍보 릴스 +
       # 앱 소개 영상(한/영). ffmpeg/ImageMagick 은 위에서 설치됨.
-      - name: Compose marketing videos
-        if: ${{ env.SMOKE_ONLY == 'false' && env.INCLUDE_REELS == 'true' }}
+      # 기본은 끔: 산출물이 '자막·TTS를 편집에서 얹는 raw 수준 흐름 영상'으로 바뀌어
+      # 브랜디드 합성(크림 캔버스+카피 오버레이)은 불필요. 필요하면 커밋 메시지에
+      # [cap-branded] 를 넣어 이번 실행만 켠다. (스토어 스샷 합성은 계속 동작)
+      - name: Compose marketing videos (branded, opt-in)
+        if: ${{ env.SMOKE_ONLY == 'false' && env.INCLUDE_REELS == 'true' && contains(github.event.head_commit.message, '[cap-branded]') }}
         env:
           ARTIFACTS_DIR: ${{ github.workspace }}/marketing-assets
           CAP_LANGS: ${{ env.CAP_LANGS }}
