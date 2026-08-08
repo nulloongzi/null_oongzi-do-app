@@ -600,7 +600,146 @@ class _MapScreenState extends State<MapScreen> {
         } catch (_) {}
         if (mounted) showProfileSheet(context);
         break;
+
+      // ── 흐름(flow): 여러 기능을 한 테이크로 이어서 시연 ──────────────
+      // 낱개 화면 캡처와 달리 앱 안에서 연속 전환하므로(콜드 재시작 없음)
+      // 전환이 Flutter 내비게이션 속도(~0.3s)로 끝난다. 홍보 영상용.
+      // 체류시간은 편집에서 자막·TTS를 얹을 여유를 두고 넉넉히 잡았다.
+      case 'flow_discover':
+        await _flowDiscover();
+        break;
+      case 'flow_save':
+        await _flowSave(pick());
+        break;
+      case 'flow_share':
+        await _flowShare();
+        break;
     }
+  }
+
+  /// 캡처 흐름 공용: n초 대기(위젯이 사라졌으면 중단).
+  Future<bool> _hold(double sec) async {
+    await Future<void>.delayed(
+      Duration(milliseconds: (sec * 1000).round()),
+    );
+    return mounted;
+  }
+
+  /// 열려 있는 시트/화면을 닫아 지도로 복귀.
+  Future<void> _backToMap() async {
+    if (!mounted) return;
+    Navigator.of(context).popUntil((r) => r.isFirst);
+    await _hold(0.6);
+  }
+
+  /// ① 찾기: 지도 → 필터(서울·화·성인) → 결과 → 클럽 상세 → 연락
+  Future<void> _flowDiscover() async {
+    if (!await _hold(3.5)) return; // 지도 전경(전국 마커·클러스터)
+
+    // 필터 시트를 '이미 선택된' 상태로 띄운다 — 좌표 탭 없이 칩 선택이 보인다.
+    const preset = ClubFilter(
+      regions: {'서울'},
+      days: {'화'},
+      targets: {'성인'},
+    );
+    final sheet = showFilterSheet(context, preset);
+    if (!await _hold(5)) return; // 지역·요일·대상 칩을 읽을 시간
+    if (mounted) Navigator.of(context).pop(preset); // '적용하기' 상당
+    final applied = await sheet;
+    if (!mounted) return;
+    if (applied != null) {
+      setState(() {
+        _filter = applied;
+        _search.text = applied.keyword;
+      });
+      await _refreshMarkers();
+      _fitToFilter();
+    }
+    if (!await _hold(4)) return; // 좁혀진 결과 지도
+
+    // 결과 중 한 팀을 열어 일정·회비·위치를 보여준다.
+    final c = _clubs.where(_filter.matches).isNotEmpty
+        ? _clubs.firstWhere(_filter.matches)
+        : (_clubs.isNotEmpty ? _clubs.first : null);
+    if (c == null) return;
+    await _focusAndShowClub(c);
+    if (!await _hold(6)) return; // 상세: 일정·회비·주소·버튼
+
+    // 필터 원복(다음 캡처 오염 방지)
+    await _backToMap();
+    if (!mounted) return;
+    setState(() {
+      _filter = const ClubFilter();
+      _search.text = '';
+    });
+    await _refreshMarkers();
+  }
+
+  /// ② 담고 관리: 클럽 상세 → 도시락 찜 → 도시락(반찬칸) → 식단표
+  Future<void> _flowSave(Club? c) async {
+    if (c == null) return;
+    await _focusAndShowClub(c);
+    if (!await _hold(4)) return; // 상세에서 시작
+
+    // 찜(도시락 담기) — 실제 저장까지 수행해 도시락이 비지 않게.
+    try {
+      final uid = await _repo.ensureUid();
+      final lb = LunchboxService();
+      await lb.addBookmark(uid, c.id);
+      var seeded = 1;
+      for (final x in _clubs) {
+        if (seeded >= 4) break;
+        if (x.id == c.id) continue;
+        final hasSched =
+            (x.schedule ?? '').isNotEmpty || (x.scheduleRaw?.isNotEmpty ?? false);
+        if (!hasSched) continue;
+        await lb.addBookmark(uid, x.id);
+        seeded++;
+      }
+    } catch (_) {}
+    if (!await _hold(1.5)) return;
+
+    await _backToMap();
+    if (!mounted) return;
+    showLunchboxSheet(context);
+    if (!await _hold(9)) return; // 반찬칸 그리드 + 식단표 버튼까지 읽을 시간
+    await _backToMap();
+  }
+
+  /// ③ 자랑하기: 밥이름 프로필 → 네임카드(도시락+시간표+QR) → 공유
+  Future<void> _flowShare() async {
+    try {
+      await _repo.ensureUid();
+    } catch (_) {}
+    if (!mounted) return;
+    showProfileSheet(context);
+    if (!await _hold(5)) return; // 밥이름 카드·스탬프
+
+    await _backToMap();
+    if (!mounted) return;
+    // 네임카드(피드형/스토리형 전환 + 이미지로 공유·저장)
+    unawaited(
+      Navigator.push(
+        context,
+        MaterialPageRoute<void>(builder: (_) => const ShareImageScreen()),
+      ),
+    );
+    if (!await _hold(9)) return;
+
+    await _backToMap();
+    if (!mounted) return;
+    // 클럽 공유 메뉴(인스타 스토리·카톡·링크)
+    final c = _clubs.isNotEmpty ? _clubs.first : null;
+    if (c == null) return;
+    await _focusAndShowClub(c);
+    if (!await _hold(2)) return;
+    showShareMenu(
+      context,
+      url: ShareService.clubUrl(c.id),
+      shareTitle: c.name,
+      onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
+    );
+    await _hold(6);
   }
 
   Future<void> _focusAndShowSpot(PickupSpot spot) async {
