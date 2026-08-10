@@ -21,6 +21,8 @@ SCREENS="$ART/screens"
 # 카피 합성본 디렉터리는 전체 캡처 경로(아래)에서만 만들어진다. 스모크 경로는 그 전에
 # fingerprint()를 호출하므로, 미정의 상태로 참조되면 set -u 에 걸려 죽는다 → 빈 값으로 선언.
 STORE="${STORE:-}"
+# stills/ 도 같은 이유로 미리 빈 값 선언(스모크 경로가 fingerprint 를 먼저 부른다).
+STILLS="${STILLS:-}"
 REELS="$ART/reels"
 LOGS="$ART/logs"
 mkdir -p "$SCREENS" "$REELS" "$LOGS"
@@ -73,12 +75,15 @@ shot() { adb exec-out screencap -p > "$SCREENS/$1.png"; }
 #  · 지도 1장은 base64 썸네일(로그에서 육안 확인)
 fingerprint() {
   echo "===== CAPTURE FINGERPRINT ====="
-  for f in "$SCREENS"/*.png ${STORE:+"$STORE"/*.png}; do
+  for f in "$SCREENS"/*.png ${STORE:+"$STORE"/*.png} ${STILLS:+"$STILLS"/*.png}; do
     [ -e "$f" ] || continue
     local b m d
     b="$(basename "$f" .png)"
-    # store/ 합성본은 이름 충돌 방지로 접두어
-    case "$f" in "$STORE"/*) b="store_$b";; esac
+    # store/ 합성본·stills/ 는 이름 충돌 방지로 접두어
+    case "$f" in
+      "$STORE"/*) b="store_$b";;
+      "$STILLS"/*) b="still_$b";;
+    esac
     m="$(convert "$f" -colorspace Gray -format '%[fx:mean]' info: 2>/dev/null || echo NA)"
     d="$(identify -format '%wx%h' "$f" 2>/dev/null || echo '?')"
     echo "FP $b mean=$m dim=$d"
@@ -166,6 +171,37 @@ open_cap profile 32;  cap "play_06_profile_${CAP_LANG}"
 open_cap share 34;    cap "play_07_share_${CAP_LANG}"
 open_cap story 36;    cap "play_08_story_${CAP_LANG}"
 open_cap login 32;    cap "play_09_login_${CAP_LANG}"
+
+# ── 모션그래픽용 스틸 세트(st_*) ─────────────────────────────
+# 에뮬 실시간 녹화는 GPU 없는 CI(SwiftShader)에서 렉·타일로딩 때문에 품질이 안 난다.
+# 대신 정확한 UI 상태 스틸을 찍고, 전환은 후반작업에서 앱의 실제 모션으로 재현한다.
+#
+# 결정적 요구사항: **스텝 사이에 콜드 재시작(-S)을 하지 않는다.**
+# 재시작하면 지도 카메라가 달라져 '배경만' 스틸과 '오버레이' 스틸의 배경이 어긋나고,
+# 두 장의 차이로 시트 레이어·좌표를 뽑는 합성이 통째로 깨진다.
+STILLS="$ART/stills"; mkdir -p "$STILLS"   # (상단에서 빈 값으로 선언됨 — 여기서 확정)
+step() { # step <cmd> <wait>
+  # -S 없음: 실행 중인 액티비티에 새 인텐트만 전달 → 카메라/스크롤 상태 유지.
+  adb shell "am start -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=$1&lang=$CAP_LANG'" >/dev/null 2>&1
+  sleep "${2:-6}"; dismiss_anr
+}
+still() { dismiss_anr; demo_on; sleep 1; adb exec-out screencap -p > "$STILLS/$1.png"; log "  스틸: $1"; }
+
+# 세션 시작만 콜드로(깨끗한 출발) — 이후는 델타만 적용.
+open_cap st_map 30;         still "01_map"
+step st_filter_open 7;      still "02_filter_open"
+step st_filter_set 7;       still "03_filter_set"
+step st_map_filtered 9;     still "04_map_filtered"
+step st_club_bg 9;          still "05_club_bg"
+step st_club_sheet 7;       still "06_club_sheet"
+step st_lunchbox_bg 9;      still "07_lunchbox_bg"
+step st_lunchbox 8;         still "08_lunchbox"
+step st_lunchbox_diet 9;    still "09_lunchbox_diet"
+step st_profile_bg 7;       still "10_profile_bg"
+step st_profile 7;          still "11_profile"
+step st_namecard 12;        still "12_namecard"
+step st_share_bg 9;         still "13_share_bg"
+step st_share 7;            still "14_share"
 
 # ── 카피 오버레이 합성(업로드용 최종 이미지) ──────────────────
 # Play 마케팅 프레임: 크림 1080×1920 캔버스 + 상단 2줄 카피(나눔고딕Bold) +

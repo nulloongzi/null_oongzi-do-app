@@ -505,6 +505,16 @@ class _MapScreenState extends State<MapScreen> {
     await Future<void>.delayed(const Duration(milliseconds: 800));
     if (!mounted) return;
 
+    // 스틸 캡처(st_*)는 **리셋하지 않고** 델타만 적용한다.
+    // 모션그래픽은 '오버레이 없는 배경'과 '오버레이 있는 화면' 두 장의 차이로
+    // 시트 레이어와 좌표를 얻는데, 매 스텝 콜드 리셋을 하면 지도 카메라가 달라져
+    // 두 장의 배경이 어긋나고 합성이 즉시 티가 난다. 따라서 st_* 는 같은 세션에서
+    // 순차 딥링크(-S 없이)로 호출되며 카메라를 건드리지 않는다.
+    if (cmd.startsWith('st_')) {
+      await _runStill(cmd);
+      return;
+    }
+
     // 잔존 시트/다이얼로그(이전 캡처의 상세·공유 등) 정리 → 매 캡처를 깨끗한 지도에서 시작.
     Navigator.of(context).popUntil((r) => r.isFirst);
     await Future<void>.delayed(const Duration(milliseconds: 400));
@@ -613,6 +623,178 @@ class _MapScreenState extends State<MapScreen> {
         break;
       case 'flow_share':
         await _flowShare();
+        break;
+    }
+  }
+
+  // ── 스틸 캡처 상태 머신(모션그래픽용) ────────────────────────────
+  // 에뮬레이터 실시간 녹화는 GPU 없는 CI(SwiftShader)에서 렉·타일 로딩 때문에
+  // 마케팅 품질이 안 나온다. 대신 **정확한 UI 상태 스틸**을 찍고, 그 사이를
+  // 앱의 실제 전환(바텀시트 슬라이드 등)으로 이어 붙여 영상을 만든다.
+  // 여기서는 그 스틸 상태들을 결정적으로 만들어 준다.
+
+  /// 스틸 세트에서 쓰는 고정 필터(찾기 스토리: 서울·화요일·성인).
+  static const _stillPreset = ClubFilter(
+    regions: {'서울'},
+    days: {'화'},
+    targets: {'성인'},
+  );
+
+  /// 스틸 전용 대상 클럽 — 프리셋에 걸리는 팀 우선, 없으면 급구→검증→첫 팀.
+  Club? _stillClub() {
+    if (_clubs.isEmpty) return null;
+    for (final c in _clubs) {
+      if (_stillPreset.matches(c)) return c;
+    }
+    for (final c in _clubs) {
+      if (c.isUrgent && (c.urgentMsg?.isNotEmpty ?? false)) return c;
+    }
+    return _clubs.first;
+  }
+
+  Future<void> _closeOverlays() async {
+    if (!mounted) return;
+    Navigator.of(context).popUntil((r) => r.isFirst);
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+  }
+
+  /// st_* 상태 적용. 지도 카메라는 st_club_bg 에서 한 번만 움직이고,
+  /// 이후 오버레이 상태들은 카메라를 건드리지 않아 배경이 픽셀 단위로 같다.
+  Future<void> _runStill(String cmd) async {
+    switch (cmd) {
+      // ── 찾기 ──────────────────────────────────────────────
+      case 'st_map': // 지도 기본(필터 없음)
+        await _closeOverlays();
+        if (!mounted) return;
+        setState(() {
+          _filter = const ClubFilter();
+          _search.text = '';
+        });
+        await _refreshMarkers();
+        break;
+
+      case 'st_filter_open': // 필터 시트(미선택)
+        unawaited(showFilterSheet(context, const ClubFilter()));
+        break;
+
+      case 'st_filter_set': // 같은 시트, 칩 3개 선택된 상태
+        await _closeOverlays();
+        if (!mounted) return;
+        unawaited(showFilterSheet(context, _stillPreset));
+        break;
+
+      case 'st_map_filtered': // 필터 적용된 지도
+        await _closeOverlays();
+        if (!mounted) return;
+        setState(() {
+          _filter = _stillPreset;
+          _search.text = '';
+        });
+        await _refreshMarkers();
+        _fitToFilter();
+        break;
+
+      case 'st_club_bg': // 대상 클럽으로 카메라 이동 — 시트 없음(배경 쌍)
+        await _closeOverlays();
+        final c = _stillClub();
+        if (c != null) await _centerOnPin(c.lat, c.lng);
+        break;
+
+      case 'st_club_sheet': // 같은 카메라에 상세 시트만 얹기
+        final c2 = _stillClub();
+        if (c2 != null && mounted) {
+          showClubDetail(
+            context,
+            c2,
+            currentUid: _repo.currentUid,
+            isAdmin: _isAdmin,
+            onChanged: _load,
+          );
+        }
+        break;
+
+      // ── 담고 관리 ─────────────────────────────────────────
+      case 'st_lunchbox_bg': // 오버레이만 걷어냄(카메라 유지)
+        await _closeOverlays();
+        // 도시락이 비면 화면이 휑하므로 일정 있는 팀을 시드(캡처 빌드 전용).
+        try {
+          final uid = await _repo.ensureUid();
+          final lb = LunchboxService();
+          var n = 0;
+          final target = _stillClub();
+          if (target != null) {
+            await lb.addBookmark(uid, target.id);
+            n++;
+          }
+          for (final x in _clubs) {
+            if (n >= 4) break;
+            if (target != null && x.id == target.id) continue;
+            final hasSched =
+                (x.schedule ?? '').isNotEmpty ||
+                (x.scheduleRaw?.isNotEmpty ?? false);
+            if (!hasSched) continue;
+            await lb.addBookmark(uid, x.id);
+            n++;
+          }
+        } catch (_) {}
+        break;
+
+      case 'st_lunchbox': // 도시락 모달
+        if (mounted) showLunchboxSheet(context);
+        break;
+
+      case 'st_lunchbox_diet': // 도시락 모달 + 식단표 펼침
+        await _closeOverlays();
+        if (mounted) showLunchboxSheet(context, openDiet: true);
+        break;
+
+      // ── 자랑하기 ──────────────────────────────────────────
+      case 'st_profile_bg':
+        await _closeOverlays();
+        try {
+          await _repo.ensureUid();
+        } catch (_) {}
+        break;
+
+      case 'st_profile': // 밥이름 카드
+        if (mounted) showProfileSheet(context);
+        break;
+
+      case 'st_namecard': // 네임카드(도시락+시간표+QR)
+        await _closeOverlays();
+        if (!mounted) return;
+        unawaited(
+          Navigator.push(
+            context,
+            MaterialPageRoute<void>(builder: (_) => const ShareImageScreen()),
+          ),
+        );
+        break;
+
+      case 'st_share_bg': // 상세 시트만(공유 메뉴 없음) — 배경 쌍
+        await _closeOverlays();
+        final c3 = _stillClub();
+        if (c3 != null && mounted) {
+          showClubDetail(
+            context,
+            c3,
+            currentUid: _repo.currentUid,
+            isAdmin: _isAdmin,
+            onChanged: _load,
+          );
+        }
+        break;
+
+      case 'st_share': // 상세 + 공유 메뉴
+        final c4 = _stillClub();
+        if (c4 != null && mounted) {
+          showShareMenu(
+            context,
+            url: ShareService.clubUrl(c4.id),
+            shareTitle: c4.name,
+            onStory: () => shareStoryCard(context, StoryCardData.fromClub(c4)),
+          );
+        }
         break;
     }
   }
@@ -1657,6 +1839,10 @@ class _UrgentTickerState extends State<_UrgentTicker> {
 
   void _start() {
     _timer?.cancel();
+    // 캡처 빌드에선 배너를 고정한다. 4초마다 문구가 바뀌면 스틸마다 상단 배너가
+    // 달라져(예: [GVT] → [피터팬]) 스틸을 이어 붙일 때 배너가 깜빡이고,
+    // 그 순간 합성 티가 난다. 캡처는 항상 첫 항목으로 고정.
+    if (kCaptureMode) return;
     if (widget.clubs.length > 1) {
       _timer = Timer.periodic(const Duration(seconds: 4), (_) {
         if (!mounted) return;
