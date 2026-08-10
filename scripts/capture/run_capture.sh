@@ -188,11 +188,13 @@ step() { # step <cmd> <wait>
 still() { dismiss_anr; demo_on; sleep 1; adb exec-out screencap -p > "$STILLS/$1.png"; log "  스틸: $1"; }
 
 # 세션 시작만 콜드로(깨끗한 출발) — 이후는 델타만 적용.
+# 카메라가 움직이는 스텝(04·05)은 타일 로딩 여유를 크게 준다 — #28에서 fitBounds/
+# centerOnPin 직후 9초로는 부족해 지도가 연녹색 민무늬로 찍혔다.
 open_cap st_map 30;         still "01_map"
 step st_filter_open 7;      still "02_filter_open"
 step st_filter_set 7;       still "03_filter_set"
-step st_map_filtered 9;     still "04_map_filtered"
-step st_club_bg 9;          still "05_club_bg"
+step st_map_filtered 20;    still "04_map_filtered"
+step st_club_bg 20;         still "05_club_bg"
 step st_club_sheet 7;       still "06_club_sheet"
 step st_lunchbox_bg 9;      still "07_lunchbox_bg"
 step st_lunchbox 8;         still "08_lunchbox"

@@ -654,7 +654,12 @@ class _MapScreenState extends State<MapScreen> {
 
   Future<void> _closeOverlays() async {
     if (!mounted) return;
-    Navigator.of(context).popUntil((r) => r.isFirst);
+    // 상세 패널은 Navigator 라우트가 아니라 detailPanel notifier 로 MapScreen Stack
+    // 에서 렌더된다(상세 위에 공유·삭제확인 모달이 뜨도록 한 설계) → popUntil 로는
+    // 닫히지 않는다. 캡처 #28에서 '배경만' 스틸에 상세 시트가 남아 배경 쌍이
+    // 오염된 원인이 이것. notifier 를 먼저 비우고 라우트를 정리한다.
+    detailPanel.value = null;
+    Navigator.of(context, rootNavigator: true).popUntil((r) => r.isFirst);
     await Future<void>.delayed(const Duration(milliseconds: 350));
   }
 
@@ -808,7 +813,9 @@ class _MapScreenState extends State<MapScreen> {
   /// 열려 있는 시트/화면을 닫아 지도로 복귀.
   Future<void> _backToMap() async {
     if (!mounted) return;
-    Navigator.of(context).popUntil((r) => r.isFirst);
+    // 상세 패널은 라우트가 아니라 notifier 렌더 → popUntil 로 안 닫힌다(_closeOverlays 주석).
+    detailPanel.value = null;
+    Navigator.of(context, rootNavigator: true).popUntil((r) => r.isFirst);
     await _hold(0.6);
   }
 
