@@ -34,6 +34,7 @@ import '../widgets/bounce_tap.dart';
 import '../widgets/filter_sheet.dart';
 import '../widgets/glass_surface.dart';
 import '../widgets/insta_embed.dart';
+import '../widgets/map_detail_panel.dart';
 import '../widgets/pickup_list_panel.dart';
 import '../widgets/share_menu.dart';
 import '../widgets/story_card.dart';
@@ -652,6 +653,40 @@ class _MapScreenState extends State<MapScreen> {
     return _clubs.first;
   }
 
+  /// 캡처용: 현재 화면에 떠 있는 바텀시트/상세패널의 **정확한 상단 y(디바이스 px)**.
+  ///
+  /// 스크린샷만으로 시트 상단을 추정하려 했으나 신뢰할 수 없었다(검증됨):
+  ///  · 스크림이 화면 전체를 덮어 '차이가 생기는 첫 행'은 항상 0 이 된다.
+  ///  · 밝기 프로파일도 시트 내부의 어두운 행(라벨·구분선) 때문에 튄다.
+  ///  · 상세 패널은 아예 비모달이라 스크림이 없어 규칙이 또 다르다.
+  /// 앱은 정확한 값을 알고 있으므로 그대로 내준다. 시트 파일은 건드리지 않고
+  /// 렌더 트리에서 BottomSheet(머티리얼 공개 위젯)/MapDetailPanel 을 찾는다.
+  int? _overlayTopPx() {
+    double? best;
+    void visit(Element el) {
+      final w = el.widget;
+      if (w is BottomSheet || w is MapDetailPanel) {
+        final ro = el.renderObject;
+        if (ro is RenderBox && ro.attached && ro.hasSize) {
+          final dy = ro.localToGlobal(Offset.zero).dy;
+          if (best == null || dy < best!) best = dy;
+        }
+      }
+      el.visitChildren(visit);
+    }
+
+    WidgetsBinding.instance.rootElement?.visitChildren(visit);
+    if (best == null) return null;
+    final dpr = View.of(context).devicePixelRatio;
+    return (best! * dpr).round();
+  }
+
+  /// 스틸 상태가 안정된 뒤 좌표를 로그로 남긴다(run_capture.sh 가 logcat 에서 수거).
+  void _dumpRect(String cmd) {
+    final top = _overlayTopPx();
+    debugPrint('CAPTURE_RECT cmd=$cmd sheetTopPx=${top ?? -1}');
+  }
+
   Future<void> _closeOverlays() async {
     if (!mounted) return;
     // 상세 패널은 Navigator 라우트가 아니라 detailPanel notifier 로 MapScreen Stack
@@ -666,6 +701,14 @@ class _MapScreenState extends State<MapScreen> {
   /// st_* 상태 적용. 지도 카메라는 st_club_bg 에서 한 번만 움직이고,
   /// 이후 오버레이 상태들은 카메라를 건드리지 않아 배경이 픽셀 단위로 같다.
   Future<void> _runStill(String cmd) async {
+    await _applyStill(cmd);
+    // 레이아웃이 안정된 뒤 오버레이 좌표를 남긴다.
+    await Future<void>.delayed(const Duration(milliseconds: 1200));
+    if (!mounted) return;
+    _dumpRect(cmd);
+  }
+
+  Future<void> _applyStill(String cmd) async {
     switch (cmd) {
       // ── 찾기 ──────────────────────────────────────────────
       case 'st_map': // 지도 기본(필터 없음)

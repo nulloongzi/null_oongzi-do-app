@@ -182,6 +182,17 @@ jobs:
       # ── 영상 후반합성(에뮬 밖, 러너 호스트) ─────────────────────
       # 에뮬이 뽑은 reels/raw/<feat>_<lang>.mp4 → 크림 9:16 브랜디드 홍보 릴스 +
       # 앱 소개 영상(한/영). ffmpeg/ImageMagick 은 위에서 설치됨.
+      # ── 스틸 → 앱 시연 영상(모션그래픽) ────────────────────────
+      # CI 러너엔 GPU가 없어 에뮬 실시간 녹화는 렉·타일로딩으로 마케팅 품질이 안 난다.
+      # 정확한 UI 상태 스틸을 찍고 전환은 앱의 실제 모션(바텀시트 250ms/decelerate,
+      # 스크림 black54)으로 재현한다. 에뮬 밖에서 수십 초면 끝난다.
+      - name: Compose motion (stills → demo video)
+        if: ${{ env.SMOKE_ONLY == 'false' }}
+        env:
+          ARTIFACTS_DIR: ${{ github.workspace }}/marketing-assets
+          CAP_LANG: ${{ env.CAP_LANG }}
+        run: bash scripts/capture/compose_motion.sh
+
       # 기본은 끔: 산출물이 '자막·TTS를 편집에서 얹는 raw 수준 흐름 영상'으로 바뀌어
       # 브랜디드 합성(크림 캔버스+카피 오버레이)은 불필요. 필요하면 커밋 메시지에
       # [cap-branded] 를 넣어 이번 실행만 켠다. (스토어 스샷 합성은 계속 동작)

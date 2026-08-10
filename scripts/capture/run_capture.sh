@@ -186,6 +186,16 @@ step() { # step <cmd> <wait>
   sleep "${2:-6}"; dismiss_anr
 }
 still() { dismiss_anr; demo_on; sleep 1; adb exec-out screencap -p > "$STILLS/$1.png"; log "  스틸: $1"; }
+# 앱이 남긴 오버레이 좌표(CAPTURE_RECT)를 수거한다. 이미지 휴리스틱으로는 시트 상단을
+# 안정적으로 못 찾는다(스크림이 전면을 덮고, 시트 내부 대비도 케이스마다 달라 검출이 튄다).
+collect_rects() {
+  adb logcat -d 2>/dev/null \
+    | grep -o "CAPTURE_RECT cmd=[A-Za-z_]* sheetTopPx=-\?[0-9]*" \
+    | awk '{print $2" "$3}' | sed 's/cmd=//; s/sheetTopPx=//' \
+    | awk '!seen[$1]++ || 1' > "$STILLS/rects.txt" 2>/dev/null || true
+  log "  좌표 수거: $(wc -l < "$STILLS/rects.txt" 2>/dev/null || echo 0)건"
+  sed 's/^/    RECT /' "$STILLS/rects.txt" 2>/dev/null || true
+}
 
 # 세션 시작만 콜드로(깨끗한 출발) — 이후는 델타만 적용.
 # 카메라가 움직이는 스텝(04·05)은 타일 로딩 여유를 크게 준다 — #28에서 fitBounds/
@@ -204,6 +214,7 @@ step st_profile 7;          still "11_profile"
 step st_namecard 12;        still "12_namecard"
 step st_share_bg 9;         still "13_share_bg"
 step st_share 7;            still "14_share"
+collect_rects
 
 # ── 카피 오버레이 합성(업로드용 최종 이미지) ──────────────────
 # Play 마케팅 프레임: 크림 1080×1920 캔버스 + 상단 2줄 카피(나눔고딕Bold) +
