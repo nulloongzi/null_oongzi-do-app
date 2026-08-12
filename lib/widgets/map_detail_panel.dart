@@ -28,6 +28,11 @@ class DetailPanelScope extends InheritedWidget {
       expand != old.expand || toggle != old.toggle;
 }
 
+/// 상세 패널의 현재 **상단 y(논리 px)**. 패널이 떠 있지 않으면 -1.
+/// 마케팅 시연 영상 합성기가 시트 슬라이드업을 정확한 위치로 재현하는 데 쓴다.
+/// (패널은 화면을 채우는 Align 안에 있어 렌더박스 상단을 재면 항상 0 이 나온다.)
+final ValueNotifier<double> detailPanelTop = ValueNotifier<double>(-1);
+
 class MapDetailPanel extends StatefulWidget {
   final Widget child; // 스크롤될 상세 본문
   final VoidCallback onClose;
@@ -55,6 +60,13 @@ class _MapDetailPanelState extends State<MapDetailPanel> {
   void _apply(double h) {
     _height = h;
     _expand.value = _ratio;
+    _publishTop();
+  }
+
+  void _publishTop() {
+    if (!mounted) return;
+    final sh = MediaQuery.of(context).size.height;
+    detailPanelTop.value = sh - _height;
   }
 
   void _ensure(double screenH) {
@@ -63,6 +75,7 @@ class _MapDetailPanelState extends State<MapDetailPanel> {
     _expanded = screenH * 0.9;
     _height = _peek; // _expand 초기값 0 = peek 비율과 일치
     _ready = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _publishTop());
   }
 
   void _onDragEnd() {
@@ -89,6 +102,7 @@ class _MapDetailPanelState extends State<MapDetailPanel> {
   @override
   void dispose() {
     _expand.dispose();
+    detailPanelTop.value = -1; // 패널이 사라지면 좌표도 무효화
     super.dispose();
   }
 

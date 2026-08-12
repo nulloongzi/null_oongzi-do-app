@@ -276,6 +276,7 @@ class _MapScreenState extends State<MapScreen> {
   static const _labelZoomShow = 12.2; // 이 줌 이상 → 이름 알약 켜기
   static const _labelZoomHide = 11.8; // 이 줌 미만 → 끄기 (사이 구간은 현 상태 유지)
   static const _focusZoom = 15.0; // 마커 탭 시 확대 축척
+  static const _captureFocusZoom = 12.5; // 캡처용(타일이 실제로 렌더되는 축척)
   bool _showLabels = false; // 현재 줌이 임계 이상? (스테이지3=알약 표시)
 
   // 라벨 토글을 clear+add 없이 in-place(setIcon/setSize)로 적용하기 위한 보관.
@@ -461,7 +462,9 @@ class _MapScreenState extends State<MapScreen> {
         .clamp(0.18, 0.5)
         .toDouble();
     // 정해진 축척으로 확대(현재가 더 크면 유지 — 줌아웃 방지)
-    double z = _focusZoom;
+    // 캡처 빌드는 줌을 낮춘다: GPU 없는 CI 에뮬(SwiftShader)에서 고배율 타일이
+    // 20초를 기다려도 안 와 지도가 연녹색 민무늬로 찍혔다(#32 04·05).
+    double z = kCaptureMode ? _captureFocusZoom : _focusZoom;
     try {
       final cam = await c.getCameraPosition();
       if (cam.zoom > z) z = cam.zoom;
@@ -662,23 +665,29 @@ class _MapScreenState extends State<MapScreen> {
   /// 앱은 정확한 값을 알고 있으므로 그대로 내준다. 시트 파일은 건드리지 않고
   /// 렌더 트리에서 BottomSheet(머티리얼 공개 위젯)/MapDetailPanel 을 찾는다.
   int? _overlayTopPx() {
-    double? best;
+    // 모달 바텀시트(필터·공유)는 렌더박스가 곧 시트다.
+    double? sheet;
     void visit(Element el) {
-      final w = el.widget;
-      if (w is BottomSheet || w is MapDetailPanel) {
+      if (el.widget is BottomSheet) {
         final ro = el.renderObject;
         if (ro is RenderBox && ro.attached && ro.hasSize) {
           final dy = ro.localToGlobal(Offset.zero).dy;
-          if (best == null || dy < best!) best = dy;
+          if (sheet == null || dy < sheet!) sheet = dy;
         }
       }
       el.visitChildren(visit);
     }
 
     WidgetsBinding.instance.rootElement?.visitChildren(visit);
-    if (best == null) return null;
+
+    // 상세 패널은 화면을 채우는 Align 안에 있어 렌더박스 상단이 항상 0 이다
+    // (#32에서 128 로 잡혀 detail·share 좌표가 뭉개진 원인) → 패널이 직접
+    // 알려주는 detailPanelTop 을 쓴다. 모달이 위에 있으면 모달이 우선.
+    final panel = detailPanelTop.value;
+    final top = sheet ?? (panel >= 0 ? panel : null);
+    if (top == null) return null;
     final dpr = View.of(context).devicePixelRatio;
-    return (best! * dpr).round();
+    return (top * dpr).round();
   }
 
   /// 스틸 상태가 안정된 뒤 좌표를 로그로 남긴다(run_capture.sh 가 logcat 에서 수거).
@@ -1285,6 +1294,9 @@ class _MapScreenState extends State<MapScreen> {
 
   // 필터/검색 활성 시 결과가 다 보이게 카메라 맞춤 (웹 map.setBounds 대응)
   void _fitToFilter() {
+    // 캡처: 카메라를 옮기면 (a) 고배율 타일이 안 오고 (b) '필터 적용' 스틸의 배경이
+    // 지도 스틸과 달라져 디졸브가 어색해진다. 같은 화면에서 마커만 줄어드는 게 낫다.
+    if (kCaptureMode) return;
     if (_tab != 'clubs' || _filter.isEmpty) return;
     final pts = <NLatLng>[];
     for (final club in _clubs.where(_filter.matches)) {
