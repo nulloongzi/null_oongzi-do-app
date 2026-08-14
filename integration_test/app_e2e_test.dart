@@ -52,61 +52,57 @@ void main() {
     await FirebaseStorage.instance.useStorageEmulator(_emuHost, 9199);
   });
 
-  testWidgets(
-    'e2e: 부팅 → 게스트 게이트 → 익명 로그인 → 도시락 → 등록 룰 라운드트립',
-    (tester) async {
-      // ── 0. 게스트 상태 보장 + 부팅 ──
-      await FirebaseAuth.instance.signOut();
-      app.main();
-      // 지도 셸 UI(도시락 FAB)가 뜰 때까지 대기 = Firebase init + 첫 로드 완료
-      await pumpUntil(
-        tester,
-        find.text('🍱'),
-        timeout: const Duration(seconds: 40),
-      );
+  testWidgets('e2e: 부팅 → 게스트 게이트 → 익명 로그인 → 도시락 → 등록 룰 라운드트립', (tester) async {
+    // ── 0. 게스트 상태 보장 + 부팅 ──
+    await FirebaseAuth.instance.signOut();
+    app.main();
+    // 지도 셸 UI(도시락 FAB)가 뜰 때까지 대기 = Firebase init + 첫 로드 완료
+    await pumpUntil(
+      tester,
+      find.text('🍱'),
+      timeout: const Duration(seconds: 40),
+    );
 
-      // ── 1. 게스트 게이트: 로그인 없이 도시락 → LoginScreen ──
-      await tester.tap(find.text('🍱'));
-      await pumpUntil(tester, find.byType(LoginScreen));
-      expect(
-        find.byType(LunchboxScreen),
-        findsNothing,
-        reason: '게스트에게 도시락이 바로 열리면 안 됨',
-      );
-      tester.state<NavigatorState>(find.byType(Navigator).first).pop();
-      await tester.pump(const Duration(milliseconds: 600));
+    // ── 1. 게스트 게이트: 로그인 없이 도시락 → LoginScreen ──
+    await tester.tap(find.text('🍱'));
+    await pumpUntil(tester, find.byType(LoginScreen));
+    expect(
+      find.byType(LunchboxScreen),
+      findsNothing,
+      reason: '게스트에게 도시락이 바로 열리면 안 됨',
+    );
+    tester.state<NavigatorState>(find.byType(Navigator).first).pop();
+    await tester.pump(const Duration(milliseconds: 600));
 
-      // ── 2. 익명 로그인(Auth 에뮬레이터) 후 도시락 열림 ──
-      await FirebaseAuth.instance.signInAnonymously();
-      expect(FirebaseAuth.instance.currentUser, isNotNull);
-      await tester.tap(find.text('🍱'));
-      await pumpUntil(tester, find.byType(LunchboxScreen));
-      expect(find.byType(LoginScreen), findsNothing);
-      tester.state<NavigatorState>(find.byType(Navigator).first).pop();
-      await tester.pump(const Duration(milliseconds: 600));
+    // ── 2. 익명 로그인(Auth 에뮬레이터) 후 도시락 열림 ──
+    await FirebaseAuth.instance.signInAnonymously();
+    expect(FirebaseAuth.instance.currentUser, isNotNull);
+    await tester.tap(find.text('🍱'));
+    await pumpUntil(tester, find.byType(LunchboxScreen));
+    expect(find.byType(LoginScreen), findsNothing);
+    tester.state<NavigatorState>(find.byType(Navigator).first).pop();
+    await tester.pump(const Duration(milliseconds: 600));
 
-      // ── 3. 등록 라운드트립: 프로덕션 경로(DataRepository) → 실제 룰 통과 검증 ──
-      final repo = DataRepository();
+    // ── 3. 등록 라운드트립: 프로덕션 경로(DataRepository) → 실제 룰 통과 검증 ──
+    final repo = DataRepository();
 
-      // 클럽: registered_by==uid·is_verified=false 등 룰 필드가 create를 통과해야 함
-      final clubId = await repo.createClub({
-        'name': 'e2e검증클럽',
-        'address': '서울 강남구',
-        'coordinates': {'lat': 37.5, 'lng': 127.0},
-      });
-      final club = await repo.getClub(clubId);
-      expect(club, isNotNull);
-      expect(club!.name, 'e2e검증클럽');
-      expect(club.isVerified, false);
+    // 클럽: registered_by==uid·is_verified=false 등 룰 필드가 create를 통과해야 함
+    final clubId = await repo.createClub({
+      'name': 'e2e검증클럽',
+      'address': '서울 강남구',
+      'coordinates': {'lat': 37.5, 'lng': 127.0},
+    });
+    final club = await repo.getClub(clubId);
+    expect(club, isNotNull);
+    expect(club!.name, 'e2e검증클럽');
+    expect(club.isVerified, false);
 
-      // 픽업: owner_uid==uid 룰 + 만료 필터 통과(expire_at 없음=상시)
-      await repo.createPickup({'title': 'e2e픽업', 'english_ok': true});
-      final spots = await repo.loadPickups();
-      expect(spots.any((s) => s.title == 'e2e픽업'), true);
+    // 픽업: owner_uid==uid 룰 + 만료 필터 통과(expire_at 없음=상시)
+    await repo.createPickup({'title': 'e2e픽업', 'english_ok': true});
+    final spots = await repo.loadPickups();
+    expect(spots.any((s) => s.title == 'e2e픽업'), true);
 
-      // 뒷정리(에뮬레이터라 필수는 아니지만 재실행 안정성)
-      await repo.deleteClub(clubId);
-    },
-    timeout: const Timeout(Duration(minutes: 6)),
-  );
+    // 뒷정리(에뮬레이터라 필수는 아니지만 재실행 안정성)
+    await repo.deleteClub(clubId);
+  }, timeout: const Timeout(Duration(minutes: 6)));
 }
