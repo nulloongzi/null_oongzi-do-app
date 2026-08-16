@@ -34,7 +34,7 @@ import '../widgets/bounce_tap.dart';
 import '../widgets/filter_sheet.dart';
 import '../widgets/glass_surface.dart';
 import '../widgets/insta_embed.dart';
-import '../widgets/pickup_list_panel.dart';
+import '../widgets/pickup_list_sheet.dart';
 import '../widgets/share_menu.dart';
 import '../widgets/story_card.dart';
 
@@ -83,9 +83,8 @@ class _MapScreenState extends State<MapScreen> {
   bool _pkEnglishOnly = false; // 픽업: English OK만
   String _pkRegion = ''; // 픽업: 지역 칩. '' = 전체
   String _pkLevel = ''; // 픽업: 레벨. '' = 전체
-  // 픽업 목록은 지도와 공존하는 드래그 시트로 상시 표시한다(화면 높이 대비 비율).
-  // peek 0.42 ↔ 확장 0.9. 좌표 없는 크루도 시트 목록엔 항상 뜬다.
-  double _pkSheetFrac = 0.42;
+  // 픽업 목록은 지도와 공존하는 드래그 시트(PickupListSheet)로 상시 표시한다.
+  // 시트 높이/드래그 상태는 그 위젯이 자체 관리 → 드래그 시 MapScreen을 리빌드하지 않는다.
   bool _isAdmin = false; // 관리자(픽업 모더레이션 삭제)
   final _search = TextEditingController(); // 상단 검색바 (동호회=필터키워드 / 픽업=목록검색)
   final _deepLinks = DeepLinkService();
@@ -140,16 +139,6 @@ class _MapScreenState extends State<MapScreen> {
   /// (시트를 42% 위로 확장하면 불투명 시트가 FAB을 덮으므로 위치는 고정.)
   double _pkFabBottom(BuildContext context) =>
       MediaQuery.of(context).size.height * 0.42 + 14;
-
-  /// 드래그 종료 시 가까운 스냅 지점(최소/peek/확장)으로 정렬.
-  double _snapSheet(double frac) {
-    const snaps = [0.14, 0.42, 0.9];
-    var best = snaps.first;
-    for (final s in snaps) {
-      if ((frac - s).abs() < (frac - best).abs()) best = s;
-    }
-    return best;
-  }
 
   // 📍 내 위치로 이동(추적 follow). 권한 거부 시 무시.
   Future<void> _moveToMe() async {
@@ -1060,58 +1049,15 @@ class _MapScreenState extends State<MapScreen> {
                 bottom: _tab == 'pickup' ? _pkFabBottom(context) : 30,
                 child: _fab('📍', t('fab_my_location'), _moveToMe),
               ),
-              // 픽업 목록: 지도·마커와 공존하는 드래그 시트(peek 42% ↔ 확장 90%).
-              // Positioned(불투명)라 시트 위쪽 지도는 그대로 조작되고, FAB(먼저 그림)는
-              // 시트가 42% 위로 확장되면 자연히 덮인다. 상세 패널은 뒤에 그려 시트 위에 뜬다.
+              // 픽업 목록: 지도·마커와 공존하는 드래그 시트. Align 기반이라 시트 위쪽
+              // 터치는 지도로 통과되고, 드래그 상태는 위젯이 자체 관리(부드러움).
+              // FAB(먼저 그림)는 시트가 42% 위로 확장되면 단색 시트에 덮인다.
               if (_tab == 'pickup')
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  height: MediaQuery.of(context).size.height * _pkSheetFrac,
-                  child: GlassSurface(
-                    color: const Color(0xF5FFFFFF), // 흰 0.96
-                    blur: 10,
-                    radius: const BorderRadius.vertical(
-                      top: Radius.circular(24),
-                    ),
-                    child: Column(
-                      children: [
-                        // 드래그 핸들 — 위/아래로 끌어 시트 높이 조절(peek↔확장), 놓으면 스냅.
-                        GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onVerticalDragUpdate: (d) => setState(() {
-                            final h = MediaQuery.of(context).size.height;
-                            _pkSheetFrac = (_pkSheetFrac - d.delta.dy / h)
-                                .clamp(0.12, 0.9)
-                                .toDouble();
-                          }),
-                          onVerticalDragEnd: (_) => setState(
-                            () => _pkSheetFrac = _snapSheet(_pkSheetFrac),
-                          ),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            alignment: Alignment.center,
-                            child: Container(
-                              width: 40,
-                              height: 5,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFD8CFC6),
-                                borderRadius: BorderRadius.circular(3),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: PickupListPanel(
-                            spots: _visibleSpots(),
-                            onTap: _focusAndShowSpot,
-                            onInstaTap: _openSpotInsta,
-                          ),
-                        ),
-                      ],
-                    ),
+                Positioned.fill(
+                  child: PickupListSheet(
+                    spots: _visibleSpots(),
+                    onTap: _focusAndShowSpot,
+                    onInstaTap: _openSpotInsta,
                   ),
                 ),
               if (_error != null)
