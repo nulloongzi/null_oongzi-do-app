@@ -25,7 +25,6 @@ class PickupListSheet extends StatefulWidget {
 
 class _PickupListSheetState extends State<PickupListSheet> {
   double _height = 0;
-  double _min = 0; // 최소(살짝만)
   double _peek = 0; // 기본
   double _expanded = 0; // 확장
   bool _ready = false;
@@ -33,22 +32,18 @@ class _PickupListSheetState extends State<PickupListSheet> {
 
   void _ensure(double screenH) {
     if (_ready) return;
-    _min = screenH * 0.14;
     _peek = screenH * 0.42;
     _expanded = screenH * 0.9;
     _height = _peek;
     _ready = true;
   }
 
-  // 드래그 종료 → 가까운 스냅 지점(최소/기본/확장). 목록이라 닫지는 않는다.
+  // 드래그 종료 → 가까운 스냅 지점(기본/확장). 목록이라 peek 밑으론 안 내려가고 닫지도 않는다.
   void _onDragEnd() {
-    var best = _peek;
-    for (final s in [_min, _peek, _expanded]) {
-      if ((_height - s).abs() < (_height - best).abs()) best = s;
-    }
+    final mid = (_peek + _expanded) / 2;
     setState(() {
       _dragging = false;
-      _height = best;
+      _height = _height >= mid ? _expanded : _peek;
     });
   }
 
@@ -82,7 +77,7 @@ class _PickupListSheetState extends State<PickupListSheet> {
               onVerticalDragStart: (_) => setState(() => _dragging = true),
               onVerticalDragUpdate: (d) => setState(
                 () => _height = (_height - d.delta.dy)
-                    .clamp(_min, _expanded)
+                    .clamp(_peek, _expanded)
                     .toDouble(),
               ),
               onVerticalDragEnd: (_) => _onDragEnd(),
