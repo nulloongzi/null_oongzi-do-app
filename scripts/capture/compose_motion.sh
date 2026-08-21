@@ -26,9 +26,25 @@ LANG_TAG="${CAP_LANG:-ko}"
 mkdir -p "$OUT" "$WORK"
 
 W=1080; H=1920; FPS=60
-# 9:16 크롭: 위 390px(상태바·검색바)만 덜어내고 바텀시트 하단 버튼은 살린다.
-# (실제 캡처 6화면으로 검증한 값)
-CROP_Y=390
+# 9:16 크롭은 **소스 해상도에서 비율로** 계산한다. 실기기는 1080x2400 이 아닐 수 있고
+# (1080x2340, 1440x3120 …) 좌표를 하드코딩하면 화면이 잘리거나 어긋난다.
+# 기준: 1080x2400 에서 위 390px 를 덜어내면 상태바·검색바만 빠지고 바텀시트 하단
+# 버튼은 살아남는다(실제 캡처 6화면으로 검증) → 390/2400 = 0.1625.
+CROP_RATIO="${CROP_RATIO:-0.1625}"
+_probe="$(ls "$STILLS"/*.png 2>/dev/null | head -1)"
+if [ -n "$_probe" ]; then
+  SRC_W="$(identify -format '%w' "$_probe")"
+  SRC_H="$(identify -format '%h' "$_probe")"
+else
+  SRC_W=1080; SRC_H=2400
+fi
+# 크롭 창: 소스 폭 그대로, 높이는 9:16. 시작 y 는 비율로.
+CROP_H="$(awk -v w="$SRC_W" 'BEGIN{printf "%d", int(w*16/9/2)*2}')"
+CROP_Y="$(awk -v h="$SRC_H" -v ch="$CROP_H" -v r="$CROP_RATIO" \
+  'BEGIN{y=int(h*r); if (y+ch>h) y=h-ch; if (y<0) y=0; printf "%d", y}')"
+# 소스 px → 출력 px 환산(시트 좌표 보정용)
+SCALE_Y="$(awk -v ch="$CROP_H" -v oh="$H" 'BEGIN{printf "%.6f", oh/ch}')"
+echo "▶ 소스 ${SRC_W}x${SRC_H} → 크롭 ${SRC_W}x${CROP_H}+0+${CROP_Y} → 출력 ${W}x${H}"
 ENC=(-c:v libx264 -preset medium -profile:v high -pix_fmt yuv420p -r $FPS -an)
 
 log() { echo "▶ $*"; }
@@ -40,7 +56,8 @@ prep() { # prep <name>
   local n="$1"
   [ -s "$WORK/$n.png" ] && return 0
   have "$n" || { warn "스틸 없음: $n"; return 1; }
-  convert "$STILLS/$n.png" -crop ${W}x${H}+0+${CROP_Y} +repage "$WORK/$n.png"
+  convert "$STILLS/$n.png" -crop ${SRC_W}x${CROP_H}+0+${CROP_Y} +repage \
+    -resize ${W}x${H}! "$WORK/$n.png"
 }
 
 # ── 좌표 자동 추출 ────────────────────────────────────────────
@@ -189,8 +206,9 @@ rect_of() { # rect_of <st_cmd> → 크롭 보정된 y (없으면 빈 값)
   local v
   v="$(awk -v k="$1" '$1==k {print $2}' "$RECTS" | tail -1)"
   [ -n "${v:-}" ] && [ "$v" != "-1" ] || return 0
-  # 앱은 화면 전체(2400) 기준으로 준다 → 9:16 크롭만큼 뺀다.
-  awk -v y="$v" -v c="$CROP_Y" 'BEGIN{ d=y-c; if (d<0) d=0; print int(d) }'
+  # 앱은 소스 화면 좌표로 준다 → 크롭만큼 빼고 출력 배율로 환산.
+  awk -v y="$v" -v c="$CROP_Y" -v s="$SCALE_Y" \
+    'BEGIN{ d=(y-c)*s; if (d<0) d=0; print int(d) }'
 }
 FT="$(rect_of st_filter_open)"; [ -n "$FT" ] || FT="$(diff_top 01_map 02_filter_open 2>/dev/null || true)"; FT="${FT:-620}"
 DT="$(rect_of st_club_sheet)"; [ -n "$DT" ] || DT="$(diff_top 05_club_bg 06_club_sheet 2>/dev/null || true)"; DT="${DT:-1180}"
