@@ -30,9 +30,13 @@ say()  { printf '\033[1;33m▶ %s\033[0m\n' "$*"; }
 die()  { printf '\033[1;31m✗ %s\033[0m\n' "$*" >&2; exit 1; }
 
 # ── 사전 점검 ────────────────────────────────────────────────
-for c in adb ffmpeg convert; do
-  command -v "$c" >/dev/null 2>&1 || die "$c 가 없습니다. (adb=Android SDK, ffmpeg/convert=ImageMagick)"
+for c in adb ffmpeg; do
+  command -v "$c" >/dev/null 2>&1 || die "$c 가 없습니다. (adb=Android SDK, ffmpeg)"
 done
+# ImageMagick: IM7 은 magick, IM6 은 convert. Windows 의 convert.exe(디스크 유틸)와
+# 혼동하지 않도록 magick 을 우선 확인한다.
+command -v magick >/dev/null 2>&1 || command -v convert >/dev/null 2>&1 \
+  || die "ImageMagick 이 없습니다. (Windows: winget install ImageMagick.ImageMagick / macOS: brew install imagemagick)"
 [ -n "${SKIP_BUILD:-}" ] || command -v flutter >/dev/null 2>&1 || die "flutter 가 없습니다. SKIP_BUILD=1 로 기존 APK 를 쓰거나 Flutter 를 설치하세요."
 
 # ── 기기 확인 ────────────────────────────────────────────────

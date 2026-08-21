@@ -18,6 +18,23 @@
 # 출력: $ART/motion/<story>_<lang>.mp4 (1080×1920, 60fps, 무음)
 set -euo pipefail
 
+# ── ImageMagick 호출 정규화 (Windows/Git Bash 안전) ──────────────
+# IM7 의 실행파일은 `magick` 이다. Windows 에서 `convert` 는 **OS 기본 디스크 변환
+# 유틸(C:\Windows\System32\convert.exe)** 과 이름이 겹쳐, Git Bash 에서 그쪽이
+# 먼저 잡히면 이미지가 아니라 볼륨 변환을 시도한다(치명적).
+# magick 이 있으면 전부 magick 경유로 강제한다. Linux IM6 에서는 원래 바이너리 사용.
+if command -v magick >/dev/null 2>&1; then
+  convert()  { magick "$@"; }
+  identify() { magick identify "$@"; }
+  montage()  { magick montage "$@"; }
+  compare()  { magick compare "$@"; }
+  IM_ARGV0="magick"; IM_ARGV1=""
+else
+  IM_ARGV0="convert"; IM_ARGV1=""
+fi
+export IM_ARGV0 IM_ARGV1
+
+
 ART="${ARTIFACTS_DIR:-marketing-assets}"
 STILLS="$ART/stills"
 OUT="$ART/motion"
@@ -72,7 +89,10 @@ diff_top() { # diff_top <bg> <overlay>  → 시트 상단 y (없으면 빈 값)
   python3 - "$a" "$b" <<'PY'
 import subprocess,sys
 a,b=sys.argv[1],sys.argv[2]
-out=subprocess.run(["convert",a,b,"-compose","difference","-composite",
+import os
+# bash 함수는 subprocess 에 안 잡힌다 → 실제 바이너리를 env 로 받는다(Windows 안전).
+IM=[os.environ.get("IM_ARGV0","convert")]
+out=subprocess.run(IM+[a,b,"-compose","difference","-composite",
                     "-colorspace","Gray","-resize","1x1920!","-depth","8","txt:-"],
                    capture_output=True,text=True).stdout
 vals=[]

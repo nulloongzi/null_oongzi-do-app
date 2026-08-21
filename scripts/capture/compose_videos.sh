@@ -11,6 +11,19 @@
 # 아티팩트 다운로드가 프록시에 막히므로, 각 산출 영상의 프레임 몬타주를 base64 로 로그에 남긴다.
 set -uo pipefail
 
+# ── ImageMagick 호출 정규화 (Windows/Git Bash 안전) ──────────────
+# IM7 의 실행파일은 `magick` 이다. Windows 에서 `convert` 는 **OS 기본 디스크 변환
+# 유틸(C:\Windows\System32\convert.exe)** 과 이름이 겹쳐, Git Bash 에서 그쪽이
+# 먼저 잡히면 이미지가 아니라 볼륨 변환을 시도한다(치명적).
+# magick 이 있으면 전부 magick 경유로 강제한다. Linux IM6 에서는 원래 바이너리 사용.
+if command -v magick >/dev/null 2>&1; then
+  convert()  { magick "$@"; }
+  identify() { magick identify "$@"; }
+  montage()  { magick montage "$@"; }
+  compare()  { magick compare "$@"; }
+fi
+
+
 ART="${ARTIFACTS_DIR:-marketing-assets}"
 REELS="$ART/reels"
 RAW="$REELS/raw"
