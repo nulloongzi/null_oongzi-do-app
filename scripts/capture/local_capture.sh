@@ -50,9 +50,10 @@ DEV_COUNT="$(adb devices | awk 'NR>1 && $2=="device"' | wc -l | tr -d ' ')"
 DEV_MODEL="$(adb shell getprop ro.product.model 2>/dev/null | tr -d '\r')"
 DEV_SIZE="$(adb shell wm size 2>/dev/null | tr -d '\r' | awk -F': ' '{print $2}')"
 say "기기: $DEV_MODEL ($DEV_SIZE)"
+# 크롭은 소스 해상도에 자동 대응한다(compose_motion.sh). 참고용으로만 알린다.
 case "$DEV_SIZE" in
   1080x2400) ;;
-  *) printf '\033[1;33m  ⚠ 화면이 1080x2400 이 아닙니다 — 9:16 크롭 좌표(CROP_Y)를 조정해야 할 수 있습니다.\033[0m\n' ;;
+  *) printf '\033[0;36m  · 1080x2400 이 아니지만 크롭은 자동 대응합니다(9:16 정규화).\033[0m\n' ;;
 esac
 
 # ── APK 빌드 & 설치 ──────────────────────────────────────────

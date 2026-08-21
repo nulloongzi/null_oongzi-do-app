@@ -47,7 +47,11 @@ W=1080; H=1920; FPS=60
 # (1080x2340, 1440x3120 …) 좌표를 하드코딩하면 화면이 잘리거나 어긋난다.
 # 기준: 1080x2400 에서 위 390px 를 덜어내면 상태바·검색바만 빠지고 바텀시트 하단
 # 버튼은 살아남는다(실제 캡처 6화면으로 검증) → 390/2400 = 0.1625.
-CROP_RATIO="${CROP_RATIO:-0.1625}"
+# 상단 크롬(상태바+검색바)은 **dp 기반**이라 화면이 길어져도 픽셀 높이가 그대로다.
+# 같은 dp 폭(411dp)의 폰들은 dpr 이 폭에 비례하므로 **폭 기준으로 스케일**하는 게 맞다.
+# (높이 비율로 잡으면 세로로 긴 폰에서 필요 이상으로 잘려 칩 줄까지 먹는다 —
+#  Z 플립 6(1080x2640) 에서 429px vs 390px 로 39px 더 잘릴 뻔했다.)
+CROP_TOP_AT_1080="${CROP_TOP_AT_1080:-390}"
 _probe="$(ls "$STILLS"/*.png 2>/dev/null | head -1)"
 if [ -n "$_probe" ]; then
   SRC_W="$(identify -format '%w' "$_probe")"
@@ -57,8 +61,8 @@ else
 fi
 # 크롭 창: 소스 폭 그대로, 높이는 9:16. 시작 y 는 비율로.
 CROP_H="$(awk -v w="$SRC_W" 'BEGIN{printf "%d", int(w*16/9/2)*2}')"
-CROP_Y="$(awk -v h="$SRC_H" -v ch="$CROP_H" -v r="$CROP_RATIO" \
-  'BEGIN{y=int(h*r); if (y+ch>h) y=h-ch; if (y<0) y=0; printf "%d", y}')"
+CROP_Y="$(awk -v h="$SRC_H" -v ch="$CROP_H" -v w="$SRC_W" -v t="$CROP_TOP_AT_1080" \
+  'BEGIN{y=int(t*w/1080); if (y+ch>h) y=h-ch; if (y<0) y=0; printf "%d", y}')"
 # 소스 px → 출력 px 환산(시트 좌표 보정용)
 SCALE_Y="$(awk -v ch="$CROP_H" -v oh="$H" 'BEGIN{printf "%.6f", oh/ch}')"
 echo "▶ 소스 ${SRC_W}x${SRC_H} → 크롭 ${SRC_W}x${CROP_H}+0+${CROP_Y} → 출력 ${W}x${H}"
