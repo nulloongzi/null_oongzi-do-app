@@ -50,12 +50,22 @@ void main() {
   group('최대 라운드', () {
     test('3시간에 3경기×15분 + 휴식 10분이면 3라운드', () {
       // 180분. 라운드당 45+10=55분, 마지막 휴식 보정 → (180+10)/55 = 3.45 → 3
-      final s = AnchigiSchedule(warmup: '14:00', end: '17:00', perGame: 15, rest: 10);
+      final s = AnchigiSchedule(
+        warmup: '14:00',
+        end: '17:00',
+        perGame: 15,
+        rest: 10,
+      );
       expect(s.maxRounds(3), 3);
     });
 
     test('휴식이 없으면 더 많이 들어간다', () {
-      final s = AnchigiSchedule(warmup: '14:00', end: '17:00', perGame: 15, rest: 0);
+      final s = AnchigiSchedule(
+        warmup: '14:00',
+        end: '17:00',
+        perGame: 15,
+        rest: 0,
+      );
       expect(s.maxRounds(3), 4);
     });
 

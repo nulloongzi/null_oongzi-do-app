@@ -111,7 +111,9 @@ class AnchigiStore extends ChangeNotifier {
 
     players = read('players', <AnchigiPlayer>[], (v) {
       return (v as List)
-          .map((e) => AnchigiPlayer.fromJson(Map<String, dynamic>.from(e as Map)))
+          .map(
+            (e) => AnchigiPlayer.fromJson(Map<String, dynamic>.from(e as Map)),
+          )
           .toList();
     });
     stat = read('stat', <String, AnchigiStat>{}, (v) {
@@ -251,8 +253,7 @@ class AnchigiStore extends ChangeNotifier {
     _commitChange();
   }
 
-  bool hasName(String name) =>
-      players.any((p) => p.name.trim() == name.trim());
+  bool hasName(String name) => players.any((p) => p.name.trim() == name.trim());
 
   void removePlayer(String id) {
     players.removeWhere((p) => p.id == id);

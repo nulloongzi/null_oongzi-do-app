@@ -338,7 +338,9 @@ class AnchigiSolver {
     bool bt(int depth) {
       // 코어 인원이 남은 자리보다 많으면 가망 없음.
       // 이 검사는 depth==N보다 먼저 와야 마지막 슬롯에서 코어가 대기로 새지 않는다.
-      if (must != null && (need[0] > left[0] || need[1] > left[1])) return false;
+      if (must != null && (need[0] > left[0] || need[1] > left[1])) {
+        return false;
+      }
       if (depth == n) return true;
       if (++nodes > nodeCap) return false;
 
@@ -361,17 +363,18 @@ class AnchigiSolver {
 
       // 싼 후보부터, 다만 매번 다른 결과가 나오도록 난수를 섞는다.
       final slot = slots[bi];
-      final keyed = bc
-          .map(
-            (p) => (
-              p: p,
-              key:
-                  _slotCost(p.id, slot.pos, sc, p.pos.length) +
-                  _rnd.nextDouble() * 1.6,
-            ),
-          )
-          .toList()
-        ..sort((x, y) => x.key.compareTo(y.key));
+      final keyed =
+          bc
+              .map(
+                (p) => (
+                  p: p,
+                  key:
+                      _slotCost(p.id, slot.pos, sc, p.pos.length) +
+                      _rnd.nextDouble() * 1.6,
+                ),
+              )
+              .toList()
+            ..sort((x, y) => x.key.compareTo(y.key));
 
       final tm = slot.team;
       for (final e in keyed) {
@@ -451,21 +454,22 @@ class AnchigiSolver {
 
     // 유연성이 낮은 사람부터 배정해야 자리가 막히지 않는다.
     // 과다 출전 세터 전용은 뒤로 밀어 작은 C 코어로 가게 한다.
-    final byFlex = pool
-        .map(
-          (p) => (
-            p: p,
-            over: overusedSetter(p) ? 1 : 0,
-            flex: p.pos.length,
-            jit: _rnd.nextDouble(),
-          ),
-        )
-        .toList()
-      ..sort((a, b) {
-        if (a.over != b.over) return a.over - b.over;
-        if (a.flex != b.flex) return a.flex - b.flex;
-        return a.jit.compareTo(b.jit);
-      });
+    final byFlex =
+        pool
+            .map(
+              (p) => (
+                p: p,
+                over: overusedSetter(p) ? 1 : 0,
+                flex: p.pos.length,
+                jit: _rnd.nextDouble(),
+              ),
+            )
+            .toList()
+          ..sort((a, b) {
+            if (a.over != b.over) return a.over - b.over;
+            if (a.flex != b.flex) return a.flex - b.flex;
+            return a.jit.compareTo(b.jit);
+          });
 
     final cores = <List<AnchigiPlayer>>[[], [], []];
     final coreOf = <String, int>{};
@@ -476,10 +480,15 @@ class AnchigiSolver {
           [0, 1, 2]
               .where(
                 (c) =>
-                    cores[c].length < szs[c] &&
-                    _coreFits([...cores[c], p], t),
+                    cores[c].length < szs[c] && _coreFits([...cores[c], p], t),
               )
-              .map((c) => (c: c, room: szs[c] - cores[c].length, jit: _rnd.nextDouble()))
+              .map(
+                (c) => (
+                  c: c,
+                  room: szs[c] - cores[c].length,
+                  jit: _rnd.nextDouble(),
+                ),
+              )
               .toList()
             // 남은 자리가 많은 코어부터 채운다.
             ..sort((a, b) {
@@ -737,8 +746,7 @@ class AnchigiSolver {
     );
   }
 
-  double _totalCost(List<GameResult> gs) =>
-      gs.fold(0.0, (s, g) => s + g.cost);
+  double _totalCost(List<GameResult> gs) => gs.fold(0.0, (s, g) => s + g.cost);
 
   RoundResult? solveRound() {
     if (quickInfeasible() != null) return null;
@@ -810,11 +818,7 @@ class AnchigiSolver {
       final able = present.where((q) => q.tier.containsKey(p)).length;
       if (able < mins) {
         out.add(
-          InfeasibleReason('few', {
-            'pos': p,
-            'able': '$able',
-            'min': '$mins',
-          }),
+          InfeasibleReason('few', {'pos': p, 'able': '$able', 'min': '$mins'}),
         );
       }
     }

@@ -1,6 +1,5 @@
 // 저장소 검증 — 저장/복원 왕복, 티어 순환 규칙, 확정·초기화 흐름.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nulloongzido/models/anchigi/anchigi_player.dart';
 import 'package:nulloongzido/models/anchigi/anchigi_round.dart';
 import 'package:nulloongzido/services/anchigi/anchigi_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -235,7 +234,13 @@ void main() {
     test('대기 인원 범위', () async {
       final s = await freshStore();
       for (var i = 0; i < 14; i++) {
-        s.addPlayer('P$i', {'S': 'main', 'OP': 'main', 'OH': 'main', 'MB': 'main', 'Li': 'main'});
+        s.addPlayer('P$i', {
+          'S': 'main',
+          'OP': 'main',
+          'OH': 'main',
+          'MB': 'main',
+          'Li': 'main',
+        });
       }
       // 6인 템플릿이면 2명 대기, 7인 템플릿이면 0명 대기.
       expect(s.benchRange, (0, 2));

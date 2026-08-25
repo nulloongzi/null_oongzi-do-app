@@ -98,7 +98,8 @@ class GameResult {
           .map(
             (t) => (t as List)
                 .map(
-                  (a) => SlotAssign.fromJson(Map<String, dynamic>.from(a as Map)),
+                  (a) =>
+                      SlotAssign.fromJson(Map<String, dynamic>.from(a as Map)),
                 )
                 .toList(),
           )

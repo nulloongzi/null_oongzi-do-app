@@ -89,7 +89,7 @@ void main() {
       final r = AnchigiSolver(req(pool)).solveRound();
       expect(r, isNotNull);
       expect(r!.games.length, 3);
-      expectPositionsValid(r!, pool);
+      expectPositionsValid(r, pool);
       expectNoDuplicates(r);
       expectTeamsMatchTemplate(r, ['mb2', 'mb1li', 'mb2li']);
     });
@@ -250,9 +250,7 @@ void main() {
           }),
         );
       }
-      final solver = AnchigiSolver(
-        req(pool, feel: 'comp', allowed: ['mb2']),
-      );
+      final solver = AnchigiSolver(req(pool, feel: 'comp', allowed: ['mb2']));
       final r = solver.solveRound();
       expect(r, isNotNull);
       // mb2는 팀당 MB가 2자리 → 팀당 비주 2명 필요 → 예산이 2까지 올라간다.
@@ -271,9 +269,7 @@ void main() {
         pool.add(p('A$i', allMain()));
       }
       // mb1li: 팀당 Li 1자리 → 최대 2자리. 대기를 감안해도 9명은 과다.
-      final d = AnchigiSolver(
-        req(pool, allowed: ['mb1li']),
-      ).diagnose();
+      final d = AnchigiSolver(req(pool, allowed: ['mb1li'])).diagnose();
       expect(d.any((x) => x.kind == 'only' && x.params['pos'] == 'Li'), isTrue);
     });
 
@@ -330,9 +326,11 @@ void main() {
       ).solveRound();
       expect(r, isNotNull);
       final g = r!.games[0];
-      final coreOfP0 = [0, 1, 2].firstWhere(
-        (c) => g.cores![c].any((m) => m.id == 'id_P0'),
-      );
+      final coreOfP0 = [
+        0,
+        1,
+        2,
+      ].firstWhere((c) => g.cores![c].any((m) => m.id == 'id_P0'));
       final onCourt = <String>{
         for (final team in g.teams) ...team.map((a) => a.id),
       };
@@ -423,9 +421,7 @@ void main() {
 
       // 18경기 동안 아무도 한 포지션만 계속 서지 않아야 한다.
       for (final q in pool) {
-        final used = stat[q.id]!.pos.entries
-            .where((e) => e.value > 0)
-            .length;
+        final used = stat[q.id]!.pos.entries.where((e) => e.value > 0).length;
         expect(used, greaterThanOrEqualTo(2), reason: '${q.name}이(가) 한 포지션만 섬');
       }
     });

@@ -26,6 +26,7 @@ import '../theme.dart';
 import 'detail_sheet.dart';
 import 'login_screen.dart';
 import 'pickup_form_screen.dart';
+import 'anchigi_screen.dart';
 import 'club_form_screen.dart';
 import 'lunchbox_screen.dart';
 import 'profile_screen.dart';
@@ -880,6 +881,14 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   // ＋등록: 활성 탭에 따라 픽업/동호회 폼. 등록 성공 시 데이터 재로딩→마커 갱신.
+  /// 안치기 화면 열기. 로컬 도구라 로그인 게이트가 없다.
+  void _openAnchigi() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AnchigiScreen()),
+    );
+  }
+
   Future<void> _openRegister() async {
     // 클럽 등록은 로그인 필수(웹과 동일). 픽업은 무로그인(익명) 허용.
     // 측정 파리티(웹 registration_login_gate): 미로그인 상태로 등록 시도한 신호
@@ -1033,7 +1042,14 @@ class _MapScreenState extends State<MapScreen> {
                   bottom: 30,
                   child: _fab('🍚', t('fab_profile'), _openProfile),
                 ),
-              ],
+              ] else
+                // 안치기: 픽업(번개) 탭에서만 여는 로컬 배치 도구. 로그인 불필요.
+                // 오른쪽 FAB과 같은 높이로 올려 목록 시트에 덮이지 않게 한다.
+                Positioned(
+                  left: 15,
+                  bottom: _pkFabBottom(context),
+                  child: _fab('🏐', t('ag_title'), _openAnchigi),
+                ),
               Positioned(
                 right: 15,
                 bottom: _tab == 'pickup' ? _pkFabBottom(context) + 62 : 95,
