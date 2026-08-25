@@ -502,4 +502,361 @@ const Map<String, Map<String, String>> kStrings = {
   't_men': {'ko': '남성전용', 'en': 'Men'},
   't_expro': {'ko': '선출가능', 'en': 'Ex-pro OK'},
   't_6s': {'ko': '6인제', 'en': '6s'},
+
+  // ── 안치기 (라운드 배치 도구) — anchigi.html i18n 포팅 ──
+  // HTML 태그는 제거하고 강조는 위젯 스타일로 처리한다.
+  'ag_title': {'ko': '안치기', 'en': 'Lineup'},
+  'ag_hero_sub': {
+    'ko': '온 사람을 솥에 안치듯 넣으면 라운드 배치가 나옵니다.',
+    'en': 'Add who showed up and it draws round-by-round lineups.',
+  },
+  'ag_tab_lineup': {'ko': '배치', 'en': 'Lineup'},
+  'ag_tab_roster': {'ko': '명단', 'en': 'Roster'},
+  'ag_tab_record': {'ko': '기록', 'en': 'Record'},
+  'ag_tab_help': {'ko': '설명', 'en': 'Help'},
+
+  // 온보딩(빈 명단)
+  'ag_intro_title': {'ko': '안치기 시작하기', 'en': 'Get started'},
+  'ag_intro_s1': {
+    'ko': '명단 탭에서 사람을 추가하세요',
+    'en': 'Add players on the Roster tab',
+  },
+  'ag_intro_s2': {'ko': '포지션을 골라주세요', 'en': 'Pick their positions'},
+  'ag_intro_s3': {
+    'ko': '참석 체크하고 여기서 뽑기!',
+    'en': 'Check attendance and Draw here!',
+  },
+  'ag_intro_go': {'ko': '명단 추가하러 가기 →', 'en': 'Go to Roster →'},
+
+  // 시간 설정
+  'ag_card_time': {'ko': '시간 설정', 'en': 'Schedule'},
+  'ag_lb_start': {'ko': '운동 시작', 'en': 'Session start'},
+  'ag_lb_gamestart': {'ko': '게임 시작', 'en': 'Games start'},
+  'ag_lb_end': {'ko': '운동 종료', 'en': 'Session end'},
+  'ag_lb_pergame': {'ko': '경기당(분)', 'en': 'Per game (min)'},
+  'ag_lb_rest': {'ko': '라운드 휴식(분)', 'en': 'Round rest (min)'},
+  'ag_min': {'ko': '분', 'en': 'min'},
+  'ag_people': {'ko': '명', 'en': ''},
+  'ag_est': {'ko': '예상', 'en': 'Est.'},
+  'ag_round_unit': {'ko': '라운드', 'en': ' rounds'},
+  'ag_rest_word': {'ko': '휴식', 'en': 'rest'},
+  'ag_ends': {'ko': '종료', 'en': 'ends'},
+
+  // 설정
+  'ag_card_settings': {'ko': '설정', 'en': 'Settings'},
+  'ag_mode_abc': {'ko': 'A · B · C 고정', 'en': 'A · B · C fixed'},
+  'ag_mode_abc_sub': {'ko': '차출로 채우기', 'en': 'fill by borrowing'},
+  'ag_mode_free': {'ko': '자유 편성', 'en': 'Free draft'},
+  'ag_mode_free_sub': {'ko': '매 경기 새로', 'en': 'new each game'},
+  'ag_feel_title': {'ko': '게임 성격', 'en': 'Game feel'},
+  'ag_feel_comp': {'ko': '경쟁', 'en': 'Competitive'},
+  'ag_feel_comp_sub': {'ko': '주 포지션만', 'en': 'Main positions only'},
+  'ag_feel_real': {'ko': '실전', 'en': 'Real'},
+  'ag_feel_real_sub': {'ko': '팀당 실험 1자리', 'en': '1 open slot per team'},
+  'ag_feel_mix': {'ko': '고루', 'en': 'Mixed'},
+  'ag_feel_mix_sub': {'ko': '팀당 실험 2자리', 'en': '2 open slots per team'},
+  'ag_feel_exp': {'ko': '경험', 'en': 'Try it'},
+  'ag_feel_exp_sub': {'ko': '자리 제한 없음', 'en': 'No restriction'},
+  'ag_feel_hint': {
+    'ko': '실험 자리 = 주 포지션이 아닌 사람이 서는 자리. 이 수만큼만 열립니다.',
+    'en':
+        'An open slot is one filled by someone off their main position. Only this many are allowed.',
+  },
+  'ag_tpl_title': {'ko': '팀 구성', 'en': 'Team format'},
+  'ag_tpl_hint': {
+    'ko': '(여러 개 고르면 그중에서 골라 씁니다)',
+    'en': '(pick several to choose among)',
+  },
+  'ag_tpl_mb2': {'ko': 'MB 2', 'en': 'MB 2'},
+  'ag_tpl_mb2_desc': {'ko': '리베로 없음', 'en': 'no libero'},
+  'ag_tpl_mb1li': {'ko': 'MB 1 + Li 1', 'en': 'MB 1 + Li 1'},
+  'ag_tpl_mb1li_desc': {'ko': '센터 1 · 리베로 1', 'en': '1 center · 1 libero'},
+  'ag_tpl_mb2li': {'ko': 'MB 2 + Li 1', 'en': 'MB 2 + Li 1'},
+  'ag_tpl_mb2li_desc': {
+    'ko': '리베로가 후위 센터와 교대',
+    'en': 'libero swaps with back-row center',
+  },
+  'ag_tpl_person': {'ko': '인', 'en': '-person'},
+  'ag_games_count': {'ko': '경기 수', 'en': 'Games'},
+  'ag_attend': {'ko': '참석', 'en': 'Present'},
+  'ag_bench_per': {'ko': '경기당 대기', 'en': 'Bench/game'},
+
+  // 뽑기
+  'ag_this_round': {'ko': '이번 라운드', 'en': 'This round'},
+  'ag_draw_btn': {'ko': '배치 뽑기', 'en': 'Draw lineup'},
+  'ag_drawing': {'ko': '뽑는 중…', 'en': 'Drawing…'},
+  'ag_draw_hint': {
+    'ko': '명단 탭에서 온 사람만 체크하고 뽑으세요. 마음에 안 들면 다시 뽑으면 됩니다.',
+    'en':
+        'On the Roster tab, check who came, then draw. Not happy? Just redraw.',
+  },
+  'ag_again': {'ko': '다시 뽑기', 'en': 'Redraw'},
+  'ag_confirm_next': {'ko': '확정 · 다음 라운드', 'en': 'Confirm · next round'},
+  'ag_confirm_hint': {
+    'ko': '확정하면 기록에 반영돼 다음 라운드에서 출전 · 대기 · 포지션이 더 고르게 분배됩니다.',
+    'en':
+        'Confirming logs it, so play, bench, and positions spread more evenly next round.',
+  },
+
+  // 결과 안내
+  'ag_ok_done': {'ko': '{r}R 배치 완료', 'en': 'Round {r} set'},
+  'ag_ok_abc': {
+    'ko': 'A · B · C 코어를 정하고 안 뛰는 팀에서 차출해 채웠습니다. 차출 표시가 붙은 사람은 원래 다른 팀입니다.',
+    'en':
+        'Set A · B · C cores and filled gaps by borrowing from the team sitting out. Players marked borrowed belong to another team.',
+  },
+  'ag_ok_free': {
+    'ko': '매 경기 두 팀을 새로 짰습니다.',
+    'en': 'Drafted two fresh teams for each game.',
+  },
+  'ag_relaxed': {
+    'ko': '주 포지션만으로는 팀이 안 짜여서 실험 자리를 팀당 {n}개까지 열었습니다.',
+    'en':
+        'Main positions alone could not fill the teams, so up to {n} open slot(s) per team were allowed.',
+  },
+  'ag_core_title': {'ko': '이번 라운드 코어', 'en': 'Cores this round'},
+  'ag_core_none': {'ko': '없음 (전원 차출)', 'en': 'none (all borrowed)'},
+  'ag_no_c_core': {
+    'ko':
+        '참석 인원이 팀 인원의 정확히 2배라 C 코어가 없습니다. C는 안 뛰는 팀에서 전원 차출되므로 세 경기 모두 같은 두 팀이 붙습니다. 경기마다 상대를 섞으려면 자유 편성으로 바꿔주세요.',
+    'en':
+        'Attendance is exactly twice a team size, so there is no C core. C is fully borrowed from the sitting-out team, so all three games pit the same two teams. To mix opponents, switch to Free draft.',
+  },
+  'ag_infeasible': {
+    'ko': '이 인원 · 설정으로는 배치를 만들 수 없습니다.',
+    'en': "Can't build a lineup with these players and settings.",
+  },
+
+  // 코트 / 타임라인
+  'ag_court_zone_short': {'ko': '존 ', 'en': 'Z'},
+  'ag_timeline': {'ko': '타임라인', 'en': 'Timeline'},
+  'ag_warmup': {'ko': '몸풀기', 'en': 'Warm-up'},
+  'ag_game_word': {'ko': '경기', 'en': 'Game'},
+  'ag_leave_word': {'ko': '퇴장', 'en': 'leaves'},
+  'ag_bench_label': {'ko': '대기', 'en': 'Bench'},
+  'ag_bench_none': {'ko': '없음 · 전원 출전', 'en': 'none · everyone plays'},
+  'ag_borrowed': {'ko': '차출', 'en': 'borrowed'},
+  'ag_team_swap': {'ko': '후위 센터와 교대', 'en': 'swaps with back-row center'},
+  'ag_team_word': {'ko': 'TEAM', 'en': 'TEAM'},
+  'ag_fitgap_even': {
+    'ko': '두 팀 자리 적합도가 고릅니다.',
+    'en': 'Both teams sit at similar position fit.',
+  },
+  'ag_fitgap_off': {
+    'ko': '한쪽 팀이 낯선 자리를 더 맡았습니다.',
+    'en': 'One team took more unfamiliar slots.',
+  },
+
+  // 과거 라운드
+  'ag_past_title': {'ko': '확정된 라운드', 'en': 'Confirmed rounds'},
+  'ag_past_unit': {'ko': '개', 'en': ''},
+  'ag_past_hint': {
+    'ko': '지난 라운드 배치입니다. 제목을 눌러 펼치거나 접습니다.',
+    'en': 'Past round lineups. Tap a title to expand or collapse.',
+  },
+  'ag_past_round_suf': {'ko': 'R 배치', 'en': ' lineup'},
+
+  // 명단
+  'ag_roster': {'ko': '명단', 'en': 'Roster'},
+  'ag_roster_total': {'ko': '전체', 'en': 'total'},
+  'ag_roster_empty': {
+    'ko': '아직 명단이 없습니다. 아래에서 사람을 추가하세요.',
+    'en': 'No players yet. Add someone below.',
+  },
+  'ag_add_person': {'ko': '사람 추가', 'en': 'Add player'},
+  'ag_name_ph': {'ko': '이름', 'en': 'Name'},
+  'ag_add_btn': {'ko': '추가', 'en': 'Add'},
+  'ag_add_hint': {
+    'ko':
+        '자리를 고르고 추가하세요. 처음 고른 자리가 주가 됩니다. 안 고르면 세터(S) 하나로 시작해요 — 추가 후 칩을 눌러 바꾸세요.',
+    'en':
+        'Pick positions and add. Your first pick is the main. If none, starts with Setter (S) — change it later by tapping the chips.',
+  },
+  'ag_tier_main': {'ko': '주', 'en': 'Main'},
+  'ag_tier_sub': {'ko': '가능', 'en': 'Can'},
+  'ag_tier_want': {'ko': '도전', 'en': 'Want'},
+  'ag_set_main': {'ko': '주 포지션으로', 'en': 'Set as main'},
+  'ag_tier_hint': {
+    'ko':
+        '처음 고른 자리가 주 포지션이에요. 더 누르면 가능 → 도전 → 해제로 바뀌고, ☆를 누르면 주 포지션을 바꿉니다. 경쟁 게임은 주만 씁니다.',
+    'en':
+        'Your first pick is your Main. Tap again for Can → Want → off; tap ☆ to change your main. Competitive games use Main only.',
+  },
+  'ag_bulk': {'ko': '일괄', 'en': 'Bulk'},
+  'ag_all_on': {'ko': '전원 참석', 'en': 'All present'},
+  'ag_all_off': {'ko': '전원 해제', 'en': 'All out'},
+  'ag_to_default': {'ko': '명단 비우기', 'en': 'Clear roster'},
+  'ag_clear_confirm': {
+    'ko': '명단을 전부 비웁니다. 계속할까요?',
+    'en': 'This clears the whole roster. Continue?',
+  },
+  'ag_del_confirm': {
+    'ko': '{name} 님을 명단에서 지울까요?',
+    'en': '{name} — remove from roster?',
+  },
+  'ag_dup_name': {
+    'ko': '같은 이름이 이미 있습니다. 다른 사람으로 추가할까요?',
+    'en': 'That name already exists. Add as a different person?',
+  },
+  'ag_leave_title': {'ko': '퇴장 시간', 'en': 'Leave time'},
+  'ag_leave_none': {'ko': '끝까지', 'en': 'Stays'},
+
+  // 기록
+  'ag_record_title': {'ko': '누적 기록', 'en': 'Cumulative record'},
+  'ag_th_name': {'ko': '이름', 'en': 'Name'},
+  'ag_th_play': {'ko': '출전', 'en': 'Played'},
+  'ag_th_bench': {'ko': '대기', 'en': 'Bench'},
+  'ag_rounds_confirmed': {'ko': '{n}개 라운드 확정', 'en': '{n} rounds confirmed'},
+  'ag_stat_empty': {
+    'ko': '아직 확정한 라운드가 없습니다. 배치를 뽑고 확정을 누르면 여기에 쌓입니다.',
+    'en':
+        'No rounds confirmed yet. Draw a lineup and hit Confirm to log it here.',
+  },
+  'ag_stat_hint': {
+    'ko': '이 기록을 보고 다음 라운드에서 출전 · 대기 · 포지션을 고르게 나눕니다.',
+    'en':
+        'This record spreads play, bench, and positions evenly across next rounds.',
+  },
+  'ag_reset_title': {'ko': '초기화', 'en': 'Reset'},
+  'ag_reset_btn': {'ko': '기록 지우기', 'en': 'Clear record'},
+  'ag_reset_hint': {
+    'ko': '다음 모임을 시작할 때 눌러주세요. 명단은 남습니다.',
+    'en': 'Hit this when starting the next meetup. The roster stays.',
+  },
+  'ag_reset_confirm': {
+    'ko': '누적 기록을 지우고 1R부터 다시 시작합니다.',
+    'en': 'Clear the cumulative record and restart from R1.',
+  },
+
+  // 포지션 이름
+  'ag_pos_S': {'ko': '세터', 'en': 'Setter'},
+  'ag_pos_OP': {'ko': '라이트', 'en': 'Opposite'},
+  'ag_pos_OH': {'ko': '레프트', 'en': 'Outside'},
+  'ag_pos_MB': {'ko': '센터', 'en': 'Middle'},
+  'ag_pos_Li': {'ko': '리베로', 'en': 'Libero'},
+
+  // 진단 (뽑기 불가 사유)
+  'ag_dg_short': {
+    'ko': '지금 설정으로는 한 경기에 {mc}명이 필요합니다. 참석 {n}명 — {gap}명 부족합니다.',
+    'en':
+        'This setup needs {mc} on court per game. Present: {n} — {gap} short.',
+  },
+  'ag_dg_only': {
+    'ko':
+        '{pos}({posko}) 전용이 {cnt}명({names})인데, 코트에 {pos} 자리는 최대 {max}개이고 대기는 {bench}명뿐입니다.',
+    'en':
+        '{cnt} players are {pos}-only ({names}), but there are at most {max} {pos} slots on court and only {bench} bench spots.',
+  },
+  'ag_dg_few': {
+    'ko': '{pos}({posko})를 볼 수 있는 사람이 {able}명뿐입니다. 한 경기에 최소 {min}명이 필요합니다.',
+    'en': 'Only {able} players can play {pos}. Each game needs at least {min}.',
+  },
+  'ag_dg_abc': {
+    'ko':
+        'A · B · C 모드는 팀 인원의 2배 이상 3배 이하일 때만 됩니다. {ranges}명 — 지금 {n}명입니다. 자유 편성으로 바꾸거나 팀 구성을 조정해 주세요.',
+    'en':
+        'A · B · C mode needs attendance 2× to 3× a team size. {ranges} — currently {n}. Switch to Free draft or adjust the team format.',
+  },
+  'ag_dg_generic': {
+    'ko': '포지션 조합이 맞아떨어지지 않습니다. 가능 포지션을 늘리거나 팀 구성 · 인원을 조정해 주세요.',
+    'en':
+        "The position mix doesn't work out. Add more eligible positions, or adjust team format / headcount.",
+  },
+
+  // 설명 탭
+  'ag_help_h1': {'ko': '배치가 정해지는 순서', 'en': 'How lineups are decided'},
+  'ag_help_1a': {
+    'ko': '참석자 중 경기가 끝나기 전에 퇴장하는 사람을 그 경기에서 뺍니다.',
+    'en':
+        'Among attendees, anyone leaving before a game ends is removed from it.',
+  },
+  'ag_help_1b': {
+    'ko':
+        'A · B · C 고정 — 라운드 시작에 세 팀 코어를 정합니다. A · B는 팀 인원만큼 꽉 채우고 남는 사람이 C 코어가 됩니다. 경기는 A vs B → B vs C → C vs A 순서이고, 코어는 자기 팀 경기에 반드시 출전합니다. 모자란 자리는 그 경기에 안 뛰는 팀에서 차출합니다.',
+    'en':
+        'A · B · C fixed — three team cores are set at round start. A · B fill up to team size, the rest become the C core. Games run A vs B → B vs C → C vs A, and cores always play their own team\'s game. Missing spots are borrowed from the team sitting out.',
+  },
+  'ag_help_1c': {
+    'ko': '자유 편성 — 경기마다 참석자 전원 중에서 두 팀을 새로 짭니다.',
+    'en':
+        'Free draft — two fresh teams are drafted from all attendees each game.',
+  },
+  'ag_help_1d': {
+    'ko':
+        '모든 자리가 그 사람의 가능 포지션 안이어야 하고, 팀마다 세터 1명 · 대각(S↔OP, OH↔OH, MB↔Li) 구성을 만족해야 합니다.',
+    'en':
+        'Every slot must be within a player\'s eligible positions, and each team needs one setter with a valid diagonal (S↔OP, OH↔OH, MB↔Li).',
+  },
+  'ag_help_1e': {
+    'ko': '조건을 만족하는 배치를 여러 개 뽑아 아래 공정성 점수가 가장 좋은 것을 고릅니다.',
+    'en':
+        'Several valid lineups are drawn and the one with the best fairness score below is chosen.',
+  },
+  'ag_help_h2': {
+    'ko': '누가 먼저 뛰나 (공정성 점수)',
+    'en': 'Who plays first (fairness score)',
+  },
+  'ag_help_2intro': {
+    'ko': '점수가 낮은 사람이 먼저 코트에 들어갑니다. 확정한 라운드의 누적 기록과 이번 라운드 안의 기록을 합쳐서 봅니다.',
+    'en':
+        'Lower score goes on court first. It combines the confirmed cumulative record with what\'s happened within this round.',
+  },
+  'ag_help_2a': {'ko': '출전 횟수가 적을수록 먼저.', 'en': 'Fewer games played → sooner.'},
+  'ag_help_2b': {
+    'ko': '대기 횟수가 많을수록 먼저. 연속 대기는 벌점이 큽니다.',
+    'en':
+        'More times benched → sooner. Consecutive benching is penalized heavily.',
+  },
+  'ag_help_2c': {
+    'ko':
+        '가능 포지션이 적은 사람이 먼저. 세터만 되는 사람은 세터 자리에 우선 들어갑니다. 그래야 그 사람이 대기로 밀리지 않습니다.',
+    'en':
+        'Fewer eligible positions → sooner. Setter-only players get the setter slot first, so they don\'t get benched.',
+  },
+  'ag_help_2d': {
+    'ko':
+        '같은 포지션 반복은 피합니다. 단, 포지션을 고를 수 있는 사람에게만 적용되고, 한 포지션만 되는 사람은 반복해도 벌점이 없습니다.',
+    'en':
+        'Repeating the same position is avoided — but only for players who can pick; single-position players get no penalty for repeating.',
+  },
+  'ag_help_2e': {
+    'ko': '운동 종료 전에 가는 사람은 있는 동안 거의 무조건 출전합니다. 어차피 뒤 경기를 못 뛰기 때문입니다.',
+    'en':
+        'Players leaving before session end play almost every game while present, since they can\'t play later ones.',
+  },
+  'ag_help_h3': {'ko': '자주 묻는 것', 'en': 'FAQ'},
+  'ag_help_q1': {
+    'ko': '세터 전용이 있으면 다른 사람 S를 꺼야 하나?',
+    'en': 'If there\'s a setter-only player, should I turn off S for others?',
+  },
+  'ag_help_a1': {
+    'ko':
+        '아니요. 세터 전용이 있으면 어차피 그 사람이 세터 자리를 먼저 가져갑니다. S를 켜둬야 세터 전용이 대기 중이거나 일찍 갔을 때 대신 들어갈 수 있습니다.',
+    'en':
+        'No. A setter-only player takes the setter slot first anyway. Keep S on so someone can cover when that setter is benched or has left.',
+  },
+  'ag_help_q2': {
+    'ko': 'A · B · C 모드가 안 만들어져요.',
+    'en': 'A · B · C mode won\'t build.',
+  },
+  'ag_help_a2': {
+    'ko':
+        '참석 인원이 팀 인원의 2배~3배 사이여야 합니다 (6인 팀 12~18명, 7인 팀 14~21명). 인원이 맞는데도 안 되면 특정 포지션 전용 인원이 코트 자리보다 많은 경우입니다. 에러 안내를 확인하거나 자유 편성으로 바꿔 보세요.',
+    'en':
+        'Attendance must be 2×–3× a team size (6-team: 12–18, 7-team: 14–21). If the count fits but it still fails, some position-only group outnumbers the court slots. Check the error note or switch to Free draft.',
+  },
+  'ag_help_q3': {'ko': 'C 코어가 없다고 나와요.', 'en': 'It says there\'s no C core.'},
+  'ag_help_a3': {
+    'ko':
+        '참석이 팀 인원의 정확히 2배일 때입니다. C는 전원 차출이라 세 경기 모두 같은 두 팀이 붙습니다. 상대를 섞으려면 자유 편성을 쓰세요.',
+    'en':
+        'That\'s when attendance is exactly 2× a team size. C is fully borrowed, so all three games pit the same two teams. Use Free draft to mix opponents.',
+  },
+  'ag_help_q4': {'ko': '확정은 언제 누르나?', 'en': 'When do I hit Confirm?'},
+  'ag_help_a4': {
+    'ko':
+        '그 라운드를 실제로 뛰고 나서요. 확정해야 기록에 쌓이고 다음 라운드 공정성에 반영됩니다. 마음에 안 들면 확정 전에 다시 뽑으면 됩니다.',
+    'en':
+        'After actually playing that round. Confirming logs it and feeds next round\'s fairness. Not happy? Redraw before confirming.',
+  },
 };
