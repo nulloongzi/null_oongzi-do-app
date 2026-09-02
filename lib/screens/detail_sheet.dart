@@ -1011,6 +1011,12 @@ void showSpotDetail(
             'type': 'insta',
             'sport': s.sport,
           });
+          // NSM 전용 이벤트 — 웹 pickup-detail.js와 동일 스키마
+          Track.event('contact_click', {
+            'channel': 'instagram',
+            'id': s.id,
+            'source': 'pickup',
+          });
           _open('https://instagram.com/${s.insta}');
         }),
       if (s.contactLink != null && s.contactLink!.isNotEmpty)
@@ -1019,6 +1025,12 @@ void showSpotDetail(
             'id': s.id,
             'type': 'link',
             'sport': s.sport,
+          });
+          // NSM 전용 이벤트 — 단톡 링크도 연락 전환이므로 channel:'link'로 집계
+          Track.event('contact_click', {
+            'channel': 'link',
+            'id': s.id,
+            'source': 'pickup',
           });
           _open(s.contactLink);
         }),
@@ -1123,11 +1135,23 @@ void showClubDetail(
           if (c.insta != null && c.insta!.isNotEmpty)
             _instaIcon(() {
               Track.event('club_contact', {'type': 'insta', 'club_id': c.id});
+              // NSM 전용 이벤트 — 웹 club-detail.js와 동일 스키마로 병행 발화
+              Track.event('contact_click', {
+                'channel': 'instagram',
+                'club_id': c.id,
+                'source': 'club',
+              });
               _open('https://instagram.com/${c.insta}');
             }),
           if (c.link != null && c.link!.isNotEmpty)
             _homeIcon(() {
               Track.event('club_contact', {'type': 'link', 'club_id': c.id});
+              // NSM 전용 이벤트 — 홈페이지 링크도 연락 전환으로 집계
+              Track.event('contact_click', {
+                'channel': 'link',
+                'club_id': c.id,
+                'source': 'club',
+              });
               _open(c.link);
             }),
           if (currentUid != null)
@@ -1212,6 +1236,11 @@ void showClubDetail(
                   Track.event('club_contact', {
                     'type': 'directions',
                     'club_id': c.id,
+                  });
+                  // NSM(주당 길찾기 클릭) 전용 이벤트 — 웹과 동일 스키마
+                  Track.event('get_directions', {
+                    'club_id': c.id,
+                    'source': 'club',
                   });
                   _open(
                     'https://map.kakao.com/link/to/${c.name},${c.lat},${c.lng}',

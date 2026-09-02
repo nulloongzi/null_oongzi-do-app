@@ -1352,6 +1352,12 @@ class _MapScreenState extends State<MapScreen> {
       'type': 'insta',
       'sport': s.sport,
     });
+    // NSM 전용 이벤트 — 웹 pickup-ui.js와 동일 스키마
+    Track.event('contact_click', {
+      'channel': 'instagram',
+      'id': s.id,
+      'source': 'pickup',
+    });
     final u = Uri.parse('https://instagram.com/$handle');
     if (await canLaunchUrl(u)) {
       await launchUrl(u, mode: LaunchMode.externalApplication);

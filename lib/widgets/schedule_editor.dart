@@ -15,9 +15,10 @@ class ScheduleEditor extends StatelessWidget {
     required this.onChanged,
   });
 
-  static final _dayOptions = ScheduleBlock.dayOrder
-      .map((d) => (label: d, value: d))
-      .toList();
+  // 요일 칩: 라벨만 현지화, 값은 한글 유지(웹 registration.js:57 i18nDay 대응).
+  // 언어 토글 시 재평가되도록 getter(정적 캐시 금지).
+  static List<ChipOption> get _dayOptions =>
+      ScheduleBlock.dayOrder.map((d) => (label: i18nDay(d), value: d)).toList();
 
   @override
   Widget build(BuildContext context) {
