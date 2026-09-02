@@ -277,6 +277,26 @@ const Map<String, Map<String, String>> kStrings = {
     'en': 'Reassign owner (admin only)',
   },
   'cf_owner_email_hint': {'ko': '새 소유자 이메일', 'en': 'New owner email'},
+  // 웹 reg_owner_hint/reg_owner_none 대응 — {nick}은 호출부에서 치환
+  'cf_owner_current': {
+    'ko': '현재 소유자: {nick} (비우면 변경 안 됨)',
+    'en': 'Current owner: {nick} (leave blank to keep)',
+  },
+  'cf_owner_none': {
+    'ko': '소유자 없음 (레거시) · 이메일 입력하여 지정',
+    'en': 'No owner (legacy) · enter an email to assign',
+  },
+  // 웹 reg_tip 대응 — 요일별 체육관이 다르면 장소별 개별 등록 안내
+  'cf_tip': {
+    'ko': 'tip: 요일별로 체육관 위치가 다른 경우, 정확한 핀 표시를 위해 장소별로 각각 등록 부탁드립니다!',
+    'en': 'Tip: If your gym location differs by day, please register each location separately so the map pins are accurate!',
+  },
+  // 웹 reg_error/pk_create_err 대응 — 실패 원문 앞에 붙는 현지화 프리픽스
+  'cf_save_err': {
+    'ko': '등록 중 오류가 발생했습니다: ',
+    'en': 'An error occurred during registration: ',
+  },
+  'pf_save_err': {'ko': '게임 처리 중 오류: ', 'en': 'Something went wrong: '},
   'logout_confirm': {'ko': '로그아웃 하시겠습니까?', 'en': 'Log out?'},
   'share_mode_feed': {'ko': '피드형 (식단표 포함)', 'en': 'Feed (with schedule)'},
   'share_mode_story': {'ko': '스토리형', 'en': 'Story'},
@@ -334,6 +354,8 @@ const Map<String, Map<String, String>> kStrings = {
     'en': "Couldn't find it — pick on the map",
   },
   'f_pick_loc': {'ko': '지도에서 위치를 선택해주세요', 'en': 'Pick a location on the map'},
+  // 웹 reg_map_loc 대응 — 역지오코딩 실패 시 주소칸 기본 문구
+  'f_map_loc': {'ko': '지도에서 선택된 위치', 'en': 'Location picked on map'},
   'f_link_invalid': {
     'ko': '링크 형식이 올바르지 않아요 (http/https)',
     'en': 'Invalid link (http/https)',
@@ -471,8 +493,8 @@ const Map<String, Map<String, String>> kStrings = {
   'cf_req': {'ko': '이름·대상·주소는 필수예요', 'en': 'Name, target, address required'},
   'cf_created': {'ko': '동호회가 등록됐어요!', 'en': 'Club registered!'},
   'cf_insta_invalid': {
-    'ko': '인스타 핸들 형식이 올바르지 않아요',
-    'en': 'Invalid Instagram handle',
+    'ko': '인스타그램 핸들은 영문/숫자/언더스코어/점 1~30자만 가능합니다. (@ 제외)',
+    'en': 'Instagram handle allows only letters/numbers/underscore/dot, 1–30 chars. (no @)',
   },
   'cf_name_max': {'ko': '팀 이름은 60자 이하로', 'en': 'Name must be ≤ 60 chars'},
   'cf_target_max': {'ko': '대상은 80자 이하로', 'en': 'Target must be ≤ 80 chars'},
