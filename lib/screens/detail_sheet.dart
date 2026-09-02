@@ -1011,6 +1011,12 @@ void showSpotDetail(
             'type': 'insta',
             'sport': s.sport,
           });
+          // NSM 전용 이벤트 — 웹 pickup-detail.js와 동일 스키마
+          Track.event('contact_click', {
+            'channel': 'instagram',
+            'id': s.id,
+            'source': 'pickup',
+          });
           _open('https://instagram.com/${s.insta}');
         }),
       if (s.contactLink != null && s.contactLink!.isNotEmpty)
@@ -1123,6 +1129,12 @@ void showClubDetail(
           if (c.insta != null && c.insta!.isNotEmpty)
             _instaIcon(() {
               Track.event('club_contact', {'type': 'insta', 'club_id': c.id});
+              // NSM 전용 이벤트 — 웹 club-detail.js와 동일 스키마로 병행 발화
+              Track.event('contact_click', {
+                'channel': 'instagram',
+                'club_id': c.id,
+                'source': 'club',
+              });
               _open('https://instagram.com/${c.insta}');
             }),
           if (c.link != null && c.link!.isNotEmpty)
@@ -1212,6 +1224,11 @@ void showClubDetail(
                   Track.event('club_contact', {
                     'type': 'directions',
                     'club_id': c.id,
+                  });
+                  // NSM(주당 길찾기 클릭) 전용 이벤트 — 웹과 동일 스키마
+                  Track.event('get_directions', {
+                    'club_id': c.id,
+                    'source': 'club',
                   });
                   _open(
                     'https://map.kakao.com/link/to/${c.name},${c.lat},${c.lng}',
