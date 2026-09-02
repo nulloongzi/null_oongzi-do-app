@@ -289,7 +289,8 @@ const Map<String, Map<String, String>> kStrings = {
   // 웹 reg_tip 대응 — 요일별 체육관이 다르면 장소별 개별 등록 안내
   'cf_tip': {
     'ko': 'tip: 요일별로 체육관 위치가 다른 경우, 정확한 핀 표시를 위해 장소별로 각각 등록 부탁드립니다!',
-    'en': 'Tip: If your gym location differs by day, please register each location separately so the map pins are accurate!',
+    'en':
+        'Tip: If your gym location differs by day, please register each location separately so the map pins are accurate!',
   },
   // 웹 reg_error/pk_create_err 대응 — 실패 원문 앞에 붙는 현지화 프리픽스
   'cf_save_err': {
@@ -494,7 +495,8 @@ const Map<String, Map<String, String>> kStrings = {
   'cf_created': {'ko': '동호회가 등록됐어요!', 'en': 'Club registered!'},
   'cf_insta_invalid': {
     'ko': '인스타그램 핸들은 영문/숫자/언더스코어/점 1~30자만 가능합니다. (@ 제외)',
-    'en': 'Instagram handle allows only letters/numbers/underscore/dot, 1–30 chars. (no @)',
+    'en':
+        'Instagram handle allows only letters/numbers/underscore/dot, 1–30 chars. (no @)',
   },
   'cf_name_max': {'ko': '팀 이름은 60자 이하로', 'en': 'Name must be ≤ 60 chars'},
   'cf_target_max': {'ko': '대상은 80자 이하로', 'en': 'Target must be ≤ 80 chars'},
