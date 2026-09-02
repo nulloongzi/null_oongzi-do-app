@@ -1,5 +1,6 @@
 // pickup_form_screen.dart — 픽업 스팟 등록/수정 폼. 웹 pickup-host.js 포팅.
 // 누구나 등록(무로그인=익명 인증). 좌표는 선택 — 없으면 지도 마커 없이 목록에만 뜬다.
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import '../models/pickup_spot.dart';
@@ -97,11 +98,10 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
     setState(() {
       _geocoding = false;
       if (r != null) {
+        // 좌표만 채우고 주소칸은 보존(웹 pickup-host.js:143-154) —
+        // "잠실학생체육관 앞" 같은 사람이 쓴 표현을 지우지 않는다.
         _lat = r.lat;
         _lng = r.lng;
-        if (r.roadAddress != null && r.roadAddress!.isNotEmpty) {
-          _address.text = r.roadAddress!;
-        }
       }
     });
     _snack(r != null ? t('f_addr_found') : t('f_addr_notfound'));
@@ -232,8 +232,12 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
       // 프로그램적 대입은 onChanged를 안 타므로 방금 확정한 좌표가 무효화되지 않는다.
       final before = _address.text;
       final addr = await GeocodingService.reverseGeocode(result.$1, result.$2);
-      if (addr != null && mounted && _address.text == before) {
+      if (!mounted || _address.text != before) return;
+      if (addr != null) {
         _address.text = addr;
+      } else if (before.trim().isEmpty) {
+        // 실패 시 기본 문구로 위치가 정해졌음을 표시(웹 registration.js:305-309).
+        _address.text = t('f_map_loc');
       }
     }
   }
@@ -259,19 +263,6 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
       contact = s;
     }
 
-    // 릴스/게시물(선택, 여러 개): 줄바꿈 구분, 각각 공개 permalink 검증
-    final reels = <String>[];
-    for (final c in _reels) {
-      final ln = c.text.trim();
-      if (ln.isEmpty) continue;
-      final s = Sanitize.instaPostUrl(ln);
-      if (s.isEmpty) {
-        _snack(t('f_reel_invalid'));
-        return;
-      }
-      reels.add(s);
-    }
-
     // 인스타 핸들(선택): 외국인에게 건네는 주 연락처. 동호회 등록과 동일 검증 재사용.
     var insta = _insta.text.trim();
     if (insta.isNotEmpty) {
@@ -281,6 +272,14 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
         return;
       }
       insta = s;
+    }
+
+    // 릴스/게시물(선택, 여러 개): 행마다 permalink 검증 + 중복 제거
+    // (웹 pickup-host.js:180-191과 동일 흐름, 검증 순서도 웹과 일치: 인스타 다음)
+    final reels = Sanitize.collectReels(_reels.map((c) => c.text));
+    if (reels == null) {
+      _snack(t('f_reel_invalid'));
+      return;
     }
 
     final fields = <String, dynamic>{
@@ -315,6 +314,17 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
     };
 
     setState(() => _saving = true);
+    // 지도에서 안 찍었으면 주소로 자동 지오코딩(웹 pickup-host.js:230-238).
+    // 실패해도 등록은 진행 — 좌표 없는 크루는 목록에만 뜬다. 수정 중 주소를 고쳐
+    // onChanged가 좌표를 지운 경우도 여기서 재지오코딩되어 기존 핀이 유지된다.
+    if ((_lat == null || _lng == null) && address.isNotEmpty) {
+      final r = await GeocodingService.geocode(address); // 오류 시 null
+      if (r != null) {
+        _lat = r.lat;
+        _lng = r.lng;
+        fields['coordinates'] = {'lat': _lat, 'lng': _lng};
+      }
+    }
     try {
       if (_isEdit) {
         await _repo.updatePickup(widget.editing!.id, fields);
@@ -327,7 +337,9 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
       Navigator.pop(context, true);
     } catch (e) {
       setState(() => _saving = false);
-      _snack('$e');
+      // 원문 그대로 대신 현지화 접두 + 간결한 메시지(웹 pickup-host.js:253-255)
+      final msg = e is FirebaseException ? (e.message ?? e.code) : '$e';
+      _snack('${t('pf_save_err')}$msg');
     }
   }
 
