@@ -1026,6 +1026,12 @@ void showSpotDetail(
             'type': 'link',
             'sport': s.sport,
           });
+          // NSM 전용 이벤트 — 단톡 링크도 연락 전환이므로 channel:'link'로 집계
+          Track.event('contact_click', {
+            'channel': 'link',
+            'id': s.id,
+            'source': 'pickup',
+          });
           _open(s.contactLink);
         }),
       _primaryBtn(
@@ -1140,6 +1146,12 @@ void showClubDetail(
           if (c.link != null && c.link!.isNotEmpty)
             _homeIcon(() {
               Track.event('club_contact', {'type': 'link', 'club_id': c.id});
+              // NSM 전용 이벤트 — 홈페이지 링크도 연락 전환으로 집계
+              Track.event('contact_click', {
+                'channel': 'link',
+                'club_id': c.id,
+                'source': 'club',
+              });
               _open(c.link);
             }),
           if (currentUid != null)

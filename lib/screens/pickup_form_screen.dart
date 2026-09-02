@@ -93,6 +93,10 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
       return;
     }
     setState(() => _geocoding = true);
+    // 지오코딩 함수는 인증 필수 — 무로그인 사용자는 익명 인증부터.
+    try {
+      await _repo.ensureUid();
+    } catch (_) {}
     final r = await GeocodingService.geocode(addr);
     if (!mounted) return;
     setState(() {
@@ -231,6 +235,10 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
       // 웹 coord2Address 대응: 찍은 좌표의 주소를 자동으로 채운다(이후 수정 가능).
       // 프로그램적 대입은 onChanged를 안 타므로 방금 확정한 좌표가 무효화되지 않는다.
       final before = _address.text;
+      // 리버스 지오코딩 함수도 인증 필수 — 무로그인 사용자는 익명 인증부터.
+      try {
+        await _repo.ensureUid();
+      } catch (_) {}
       final addr = await GeocodingService.reverseGeocode(result.$1, result.$2);
       if (!mounted || _address.text != before) return;
       if (addr != null) {
@@ -318,6 +326,11 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
     // 실패해도 등록은 진행 — 좌표 없는 크루는 목록에만 뜬다. 수정 중 주소를 고쳐
     // onChanged가 좌표를 지운 경우도 여기서 재지오코딩되어 기존 핀이 유지된다.
     if ((_lat == null || _lng == null) && address.isNotEmpty) {
+      // 지오코딩 함수는 인증 필수 — 무로그인 등록 흐름에선 먼저 익명 인증을
+      // 확보해야 조용히 실패하지 않는다(createPickup의 ensureUid와 동일 경로).
+      try {
+        await _repo.ensureUid();
+      } catch (_) {}
       final r = await GeocodingService.geocode(address); // 오류 시 null
       if (r != null) {
         _lat = r.lat;

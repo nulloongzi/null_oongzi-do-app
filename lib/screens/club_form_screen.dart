@@ -295,7 +295,10 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
       if (r == null) {
         Track.event('registration_geocode_fail');
         setState(() => _saving = false);
-        return _err(t('f_pick_loc'));
+        _err(t('f_pick_loc'));
+        // 웹(:426-436)·앱의 주소검색 버튼과 동일: 에러만 두지 않고 피커를 연다.
+        await _pickLocation();
+        return;
       }
       setState(() {
         _lat = r.lat;
