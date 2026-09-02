@@ -228,6 +228,13 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
         _lat = result.$1;
         _lng = result.$2;
       });
+      // 웹 coord2Address 대응: 찍은 좌표의 주소를 자동으로 채운다(이후 수정 가능).
+      // 프로그램적 대입은 onChanged를 안 타므로 방금 확정한 좌표가 무효화되지 않는다.
+      final before = _address.text;
+      final addr = await GeocodingService.reverseGeocode(result.$1, result.$2);
+      if (addr != null && mounted && _address.text == before) {
+        _address.text = addr;
+      }
     }
   }
 
