@@ -191,6 +191,15 @@ if [ "$MEAN" != "NA" ] && awk -v m="$MEAN" 'BEGIN{exit !(m < 0.03)}'; then
   adb logcat -d > "$LOGS/logcat_smoke.txt" 2>/dev/null || true
   exit 1
 fi
+# 밝기만으로는 "인증 실패로 빈 지도" 를 못 잡는다 — 인증이 깨져도 배경은 옅은 회색이라
+# 검정 판정에 안 걸린다. 앱의 onAuthFailed(main.dart)가 남기는 로그를 직접 확인한다.
+NAVER_AUTH_ERR="$(adb logcat -d 2>/dev/null | grep -iE '네이버지도 인증 실패|NaverMapSdk.*(Auth|401|403)' | tail -3 || true)"
+if [ -n "$NAVER_AUTH_ERR" ]; then
+  echo "::error::네이버 지도 인증에 실패했습니다 — 타일이 안 뜬 상태로 캡처됩니다."
+  echo "$NAVER_AUTH_ERR" | sed 's/^/::error::  /'
+  echo "::error::앱 코드가 아니라 NCP 콘솔 설정 문제입니다(키/서비스 활성화/쿼터). CAPTURE_IGNORE_AUTH=1 로 무시하고 진행 가능."
+  [ -n "${CAPTURE_IGNORE_AUTH:-}" ] || exit 1
+fi
 log "✅ 지도 렌더 확인(비-검정)."
 
 if [ "$SMOKE_ONLY" = "true" ]; then
