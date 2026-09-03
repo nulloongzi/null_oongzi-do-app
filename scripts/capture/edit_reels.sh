@@ -171,10 +171,10 @@ scene_cuts() { # scene_cuts <mp4> <dur> → 정렬된 컷 시각 목록
 
 # ── 자막 스크립트 읽기 ───────────────────────────────────────
 # 행: <흐름>|<종류>|<앵커>|<윗줄>|<아랫줄>
-lines_for() { # lines_for <파일> <flow> <kind> → "앵커|한글윗줄|한글아랫줄|영문"
+lines_for() { # lines_for <파일> <flow> <kind> → "앵커|한글윗줄|한글아랫줄|영문|나레이션"
   awk -F'|' -v f="$2" -v k="$3" '
     /^#/ || NF<6 { next }
-    $1==f && $2==k { print $3 "|" $4 "|" $5 "|" $6 }
+    $1==f && $2==k { print $3 "|" $4 "|" $5 "|" $6 "|" $7 }
   ' "$1"
 }
 
@@ -240,13 +240,15 @@ for flow in $FLOWS; do
 
   # 훅
   if [ -n "$HOOK" ]; then
-    h="${HOOK#*|}"; hk1="${h%%|*}"; h2="${h#*|}"; hk2="${h2%%|*}"; hken="${h2#*|}"
+    h="${HOOK#*|}"; hk1="${h%%|*}"; h2="${h#*|}"
+    hk2="${h2%%|*}"; h3="${h2#*|}"; hken="${h3%%|*}"; hknar="${h3#*|}"
+    [ -n "$hknar" ] || hknar="$hk1 $hk2"
     hook_card "$hk1" "$hk2" "$hken" "$WORK/${flow}_hook.png"
     INPUTS+=(-loop 1 -t "$DUR" -i "$WORK/${flow}_hook.png")
     FC+="[${idx}:v]format=rgba,fade=t=out:st=$(awk -v d="$HOOK_D" 'BEGIN{printf "%.2f", d-0.4}'):d=0.4:alpha=1[hk];"
     FC+="${CUR}[hk]overlay=0:0:enable='lt(t,$HOOK_D)'[v${idx}];"
     CUR="[v${idx}]"; idx=$((idx+1))
-    if narrate "$WORK/${flow}_n_hook.mp3" "$hk1 $hk2"; then
+    if narrate "$WORK/${flow}_n_hook.mp3" "$hknar"; then
       # 훅 음성도 첫 자막 음성과 겹치면 두 목소리가 동시에 난다(실측으로 확인).
       # 첫 자막이 시작하는 시각까지가 훅의 구간이다.
       hk_end="$(awk -v b="${BOUNDS[0]}" -v h="$HOOK_D" 'BEGIN{printf "%.2f", (b<h?h:b)+0.1}')"
@@ -260,7 +262,11 @@ for flow in $FLOWS; do
   for cap in "${CAPS[@]}"; do
     rest="${cap#*|}"                 # 앵커 제거
     l1="${rest%%|*}"; r2="${rest#*|}"
-    l2="${r2%%|*}";  cen="${r2#*|}"
+    l2="${r2%%|*}";  r3="${r2#*|}"
+    cen="${r3%%|*}"; cnar="${r3#*|}"
+    # 화면에 쓰는 문구와 읽는 문구는 달라도 된다 — 실제 제작에서도 그렇게 한다.
+    # 화면은 짧고 굵게, 음성은 자연스럽게. 비워두면 한글 두 줄을 그대로 읽는다.
+    [ -n "$cnar" ] || cnar="$l1 $l2"
     st="${BOUNDS[$n]}"; en="${BOUNDS[$((n+1))]}"
     # 훅과 겹치지 않게 밀어준다.
     st="$(awk -v s="$st" -v h="$HOOK_D" 'BEGIN{printf "%.2f", (s<h?h:s)+0.1}')"
@@ -272,7 +278,7 @@ for flow in $FLOWS; do
     FC+="${CUR}[c${n}]overlay=(W-w)/2:$CAP_Y:enable='between(t,${st},${en})'[v${idx}];"
     CUR="[v${idx}]"; idx=$((idx+1))
     # 음성은 한국어 두 줄만 읽는다(영문은 자막 전용). 자막이 뜨는 순간에 맞춘다.
-    if narrate "$WORK/${flow}_n${n}.mp3" "$l1 $l2"; then
+    if narrate "$WORK/${flow}_n${n}.mp3" "$cnar"; then
       fit_narration "$WORK/${flow}_n${n}.mp3" "$st" "$en" "$l1"
       NAR_T+=("$st"); NAR_F+=("$WORK/${flow}_n${n}.mp3")
     fi
@@ -313,7 +319,9 @@ for flow in $FLOWS; do
 
   # ── 아웃트로 붙이기 ────────────────────────────────────────
   if [ -n "$OUTRO" ]; then
-    o="${OUTRO#*|}"; o1="${o%%|*}"; o2r="${o#*|}"; o2="${o2r%%|*}"; oen="${o2r#*|}"
+    o="${OUTRO#*|}"; o1="${o%%|*}"; o2r="${o#*|}"; o2="${o2r%%|*}"
+    o3="${o2r#*|}"; oen="${o3%%|*}"; onar="${o3#*|}"
+    [ -n "$onar" ] || onar="$o1 $o2"
     outro_card "$o1" "$o2" "$oen" "$WORK/${flow}_outro.png"
     ffmpeg -y -loglevel error -loop 1 -t "$OUTRO_D" -i "$WORK/${flow}_outro.png" \
       -vf "fps=$FPS,scale=$W:$H,setsar=1,format=yuv420p,fade=t=in:st=0:d=0.35" \
@@ -322,7 +330,7 @@ for flow in $FLOWS; do
     # concat 은 두 파일의 스트림 구성이 같아야 한다 — 본문에 소리가 있으면
     # 아웃트로에도 오디오 트랙을 붙인다(나레이션이 없으면 무음 트랙).
     if [ "$HAS_AUDIO" = 1 ]; then
-      if narrate "$WORK/${flow}_n_outro.mp3" "$o1 $o2"; then
+      if narrate "$WORK/${flow}_n_outro.mp3" "$onar"; then
         ffmpeg -y -loglevel error -i "$WORK/${flow}_outro.mp4" -i "$WORK/${flow}_n_outro.mp3" \
           -filter_complex "[1:a]adelay=250|250,aformat=sample_rates=44100:channel_layouts=stereo,apad[aout]" -map 0:v -map "[aout]" \
           -c:v copy -c:a aac -b:a 128k -shortest "$WORK/${flow}_outro_a.mp4" 2>/dev/null \
