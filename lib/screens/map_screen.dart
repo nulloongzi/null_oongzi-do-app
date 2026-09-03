@@ -869,7 +869,14 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   /// 캡처 흐름 공용: n초 대기(위젯이 사라졌으면 중단).
-  Future<bool> _hold(double sec) async {
+  ///
+  /// [beat] 를 주면 대기 직전에 로그로 표시를 남긴다. 후반작업(edit_reels.sh)이
+  /// 자막을 붙일 지점을 여기서 가져간다. 예전엔 영상에서 장면 전환을 감지해
+  /// 추정했는데, 앱의 전환이 부드러워(시트 250ms 슬라이드) 점수가 낮게 나오고
+  /// 시트가 '열리는' 순간과 '화면이 바뀌는' 순간이 뒤섞여 자막이 엉뚱한 프레임에
+  /// 붙었다. 언제 무엇을 보여주는지는 앱이 가장 정확히 안다.
+  Future<bool> _hold(double sec, [String? beat]) async {
+    if (beat != null && kCaptureMode) debugPrint('CAPTURE_BEAT $beat');
     await Future<void>.delayed(Duration(milliseconds: (sec * 1000).round()));
     return mounted;
   }
@@ -885,7 +892,7 @@ class _MapScreenState extends State<MapScreen> {
 
   /// ① 찾기: 지도 → 필터(서울·화·성인) → 결과 → 클럽 상세 → 연락
   Future<void> _flowDiscover() async {
-    await _hold(2.5); // 지도 전경(전국 마커·클러스터)
+    await _hold(2.5, 'map'); // 지도 전경(전국 마커·클러스터)
     if (!mounted) return;
 
     // 필터 시트를 '이미 선택된' 상태로 띄운다 — 좌표 탭 없이 칩 선택이 보인다.
@@ -893,7 +900,7 @@ class _MapScreenState extends State<MapScreen> {
     // 줄었고, 스틸 영상과 녹화 영상의 내용이 서로 달라 비교가 안 됐다.
     const preset = _stillPreset;
     final sheet = showFilterSheet(context, preset);
-    await _hold(4); // 지역·대상 칩을 읽을 시간
+    await _hold(4, 'filter'); // 지역·대상 칩을 읽을 시간
     if (!mounted) return;
     Navigator.of(context).pop(preset); // '적용하기' 상당
     final applied = await sheet;
@@ -906,7 +913,7 @@ class _MapScreenState extends State<MapScreen> {
       await _refreshMarkers();
       _fitToFilter();
     }
-    if (!await _hold(3)) return; // 좁혀진 결과 지도
+    if (!await _hold(3, 'result')) return; // 좁혀진 결과 지도
 
     // 결과 중 한 팀을 열어 일정·회비·위치를 보여준다.
     final c = _clubs.where(_filter.matches).isNotEmpty
@@ -914,7 +921,7 @@ class _MapScreenState extends State<MapScreen> {
         : (_clubs.isNotEmpty ? _clubs.first : null);
     if (c == null) return;
     await _focusAndShowClub(c);
-    if (!await _hold(4)) return; // 상세: 일정·회비·주소·버튼
+    if (!await _hold(4, 'detail')) return; // 상세: 일정·회비·주소·버튼
 
     // 필터 원복(다음 캡처 오염 방지)
     await _backToMap();
@@ -930,7 +937,7 @@ class _MapScreenState extends State<MapScreen> {
   Future<void> _flowSave(Club? c) async {
     if (c == null) return;
     await _focusAndShowClub(c);
-    if (!await _hold(3)) return; // 상세에서 시작
+    if (!await _hold(3, 'detail')) return; // 상세에서 시작
 
     // 찜(도시락 담기) — 실제 저장까지 수행해 도시락이 비지 않게.
     try {
@@ -949,12 +956,12 @@ class _MapScreenState extends State<MapScreen> {
         seeded++;
       }
     } catch (_) {}
-    if (!await _hold(1.5)) return;
+    if (!await _hold(1.5, 'saved')) return;
 
     await _backToMap();
     if (!mounted) return;
     showLunchboxSheet(context);
-    if (!await _hold(6)) return; // 반찬칸 그리드 + 식단표 버튼까지 읽을 시간
+    if (!await _hold(6, 'lunchbox')) return; // 반찬칸 그리드 + 식단표 버튼까지 읽을 시간
     await _backToMap();
   }
 
@@ -965,7 +972,7 @@ class _MapScreenState extends State<MapScreen> {
     } catch (_) {}
     if (!mounted) return;
     showProfileSheet(context);
-    if (!await _hold(3.5)) return; // 밥이름 카드·스탬프
+    if (!await _hold(3.5, 'profile')) return; // 밥이름 카드·스탬프
 
     await _backToMap();
     if (!mounted) return;
@@ -976,7 +983,7 @@ class _MapScreenState extends State<MapScreen> {
         MaterialPageRoute<void>(builder: (_) => const ShareImageScreen()),
       ),
     );
-    if (!await _hold(6)) return;
+    if (!await _hold(6, 'namecard')) return;
 
     await _backToMap();
     if (!mounted) return;
@@ -992,7 +999,7 @@ class _MapScreenState extends State<MapScreen> {
       shareTitle: c.name,
       onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
     );
-    await _hold(4);
+    await _hold(4, 'share');
   }
 
   Future<void> _focusAndShowSpot(PickupSpot spot) async {

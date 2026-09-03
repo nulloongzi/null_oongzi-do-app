@@ -1,0 +1,31 @@
+# 릴스 자막 스크립트 (KO)
+#
+# 형식: <흐름>|<종류>|<앵커>|<윗줄>|<아랫줄>
+#   hook  = 도입 1.6초, 영상 위 큰 글씨. 앵커 칸은 비운다.
+#   cap   = 본문 자막. 앵커는 앱이 남기는 CAPTURE_BEAT 이름이다
+#           (map/filter/result/detail/saved/lunchbox/profile/namecard/share).
+#           앱이 그 화면을 띄우는 순간에 정확히 붙고, 다음 비트에서 사라진다.
+#   outro = 마지막 브랜드 카드. 앵커 칸은 비운다.
+# 아랫줄을 비우면 한 줄짜리 자막이 된다.
+#
+# 비트가 수거되지 않은 경우(구버전 앱으로 찍은 녹화본)에는 장면 전환 감지 →
+# 균등 분할 순으로 물러난다. 그때는 여기 적힌 순서대로 배정된다.
+
+discover|hook||같이 배구할 팀,|어디서 찾지?
+discover|cap|map|전국 배구 동호회를|지도 한 장에
+discover|cap|filter|지역·대상만 고르면 끝|
+discover|cap|result|우리 동네 팀이|바로 여기
+discover|cap|detail|일정·회비·위치까지|한눈에
+discover|outro||누룽지도|지금 내 팀 찾기
+
+save|hook||마음에 드는 팀,|까먹기 전에
+save|cap|detail|괜찮은 팀 찾았다면|
+save|cap|saved|도시락에 담아두기|
+save|cap|lunchbox|반찬칸·식단표로|주간 일정 한눈에
+save|outro||누룽지도|내 도시락 만들기
+
+share|hook||내 배구 기록,|이렇게 자랑하자
+share|cap|profile|나만의 밥이름|프로필
+share|cap|namecard|도시락·시간표·QR|명함 한 장에
+share|cap|share|인스타 스토리·카톡|바로 공유
+share|outro||누룽지도|do.nulloongzi.com

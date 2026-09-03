@@ -412,17 +412,35 @@ if [ "$INCLUDE_REELS" = "true" ] && want flows; then
   FLOW_CROP="crop=${REC_W}:${CROP_H}:0:${CROP_Y},scale=1080:1920:flags=lanczos"
   log "녹화 ${REC_W}x${REC_H} → 크롭 ${REC_W}x${CROP_H}@y=${CROP_Y} → 1080x1920 (기기 $DEV_WH)"
 
+  # 앱이 남긴 CAPTURE_BEAT 를 "녹화 시작 기준 초"로 바꿔 저장한다.
+  # 후반작업(edit_reels.sh)이 자막을 이 지점에 붙인다 — 영상에서 장면 전환을
+  # 추정하는 것보다 정확하다(앱 전환이 부드러워 감지 점수가 낮고, 시트가 열리는
+  # 순간과 화면이 바뀌는 순간이 뒤섞인다).
+  # 기준 시각은 **기기 시계**로 잡는다(logcat -v epoch 도 기기 시계다).
+  harvest_beats() { # harvest_beats <t0> <출력>
+    adb logcat -d -v epoch 2>/dev/null \
+      | awk -v t0="$1" '/CAPTURE_BEAT/ {
+          for (i=1;i<=NF;i++) if ($i=="CAPTURE_BEAT") {
+            d=$1-t0; if (d>=0) printf "%s %.2f\n", $(i+1), d; break
+          }
+        }' > "$2" 2>/dev/null || : > "$2"
+    log "  비트 $(wc -l < "$2" 2>/dev/null || echo 0)개: $(tr '\n' ' ' < "$2" 2>/dev/null)"
+  }
+
   flow() { # flow <name> <capture_cmd> <secs>
     local name="$1" cmd="$2" secs="$3"
     local dev="/sdcard/flow_${name}.mp4"
     local rawout="$RAW/flow_${name}_${CAP_LANG}.mp4"
-    local out="$FLOWS_DIR/${name}_${CAP_LANG}.mp4" d
+    local out="$FLOWS_DIR/${name}_${CAP_LANG}.mp4" d t0
+    local beats="$FLOWS_DIR/${name}_beats.txt"
     log "🎬 흐름 녹화: ${name} (${secs}s)"
     adb shell rm -f "$dev" >/dev/null 2>&1 || true
     # 지도에 콜드 안착시킨 뒤 녹화를 시작하고, 그 다음에 흐름 딥링크를 쏜다.
     # (흐름 시작 자체가 콘텐츠라 전환을 놓치면 안 된다 → 녹화가 먼저.)
     adb shell "am start -S -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=map&lang=$CAP_LANG'" >/dev/null 2>&1
     sleep 24; dismiss_anr; demo_on
+    adb logcat -c >/dev/null 2>&1 || true
+    t0="$(adb shell date +%s.%N 2>/dev/null | tr -d '\r')"
     adb shell screenrecord "${FLOW_REC[@]}" --time-limit "$secs" "$dev" &
     local rec=$!; sleep 1
     # 콜드 재시작 없이(-S 없음) 흐름 시작 → 앱이 내부에서 연속 전환.
@@ -437,6 +455,8 @@ if [ "$INCLUDE_REELS" = "true" ] && want flows; then
       echo "::warning::흐름 녹화 짧음(${d}s < ${secs}s) — 재시도: $name"
       adb shell "am start -S -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=map&lang=$CAP_LANG'" >/dev/null 2>&1
       sleep 24; dismiss_anr; demo_on
+      adb logcat -c >/dev/null 2>&1 || true
+      t0="$(adb shell date +%s.%N 2>/dev/null | tr -d '\r')"
       adb shell screenrecord "${FLOW_REC[@]}" --time-limit "$secs" "$dev" &
       rec=$!; sleep 1
       adb shell "am start -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=$cmd&lang=$CAP_LANG'" >/dev/null 2>&1
@@ -447,6 +467,7 @@ if [ "$INCLUDE_REELS" = "true" ] && want flows; then
       d="$(vdur "$rawout")"; d="${d:-0}"
     fi
     if [ "$d" -le 0 ]; then echo "::warning::흐름 mp4 회수 실패: $name"; return; fi
+    harvest_beats "${t0:-0}" "$beats"
     # 9:16 크롭(재인코딩 1회) — 릴스 규격 완성본.
     if ! ffmpeg -y -loglevel error -i "$rawout" -vf "$FLOW_CROP" \
         -c:v libx264 -preset veryfast -pix_fmt yuv420p -threads "${X264_THREADS:-4}" \
