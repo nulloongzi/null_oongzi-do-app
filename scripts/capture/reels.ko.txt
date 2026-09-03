@@ -1,32 +1,32 @@
-# 릴스 자막 스크립트 (KO)
+# 릴스 자막 스크립트 (한글 + 영문 병기, 나레이션은 한국어)
 #
-# 형식: <흐름>|<종류>|<앵커>|<윗줄>|<아랫줄>
+# 형식: <흐름>|<종류>|<앵커>|<한글 윗줄>|<한글 아랫줄>|<영문>
 #   hook  = 도입 1.6초, 영상 위 큰 글씨. 앵커 칸은 비운다.
 #   cap   = 본문 자막. 앵커는 앱이 남기는 CAPTURE_BEAT 이름이다
-#           (map/filter/result/detail/saved/lunchbox/profile/namecard/share).
-#           앱이 그 화면을 띄우는 순간에 정확히 붙고, 다음 비트에서 사라진다.
+#           (map/filter/result/detail/saved/lunchbox/diet/profile/namecard/share).
+#           앱이 그 화면을 띄우는 순간에 붙고 다음 비트에서 사라진다.
 #   outro = 마지막 브랜드 카드. 앵커 칸은 비운다.
-# 아랫줄을 비우면 한 줄짜리 자막이 된다.
 #
-# 비트가 수거되지 않은 경우(구버전 앱으로 찍은 녹화본)에는 장면 전환 감지 →
-# 균등 분할 순으로 물러난다. 그때는 여기 적힌 순서대로 배정된다.
+# 한글 아랫줄을 비우면 윗줄이 큰 글씨 한 줄로 나온다.
+# 영문은 한글 아래 작은 글씨로 함께 나온다(같은 영상 안에 병기).
+# **나레이션(TTS)은 한글 두 줄만 읽는다** — 영문은 자막 전용이다.
 
-discover|hook||같이 배구할 팀,|어디서 찾지?
-discover|cap|map|전국 배구 동호회를|지도 한 장에
-discover|cap|filter|지역·대상만 고르면 끝|
-discover|cap|result|우리 동네 팀이|바로 여기
-discover|cap|detail|일정·회비·위치까지|한눈에
-discover|outro||누룽지도|지금 내 팀 찾기
+discover|hook||같이 배구할 팀,|어디서 찾지?|Where do you find a club to play with?
+discover|cap|map|전국 배구 동호회를|지도 한 장에|Every club in Korea, on one map
+discover|cap|filter|지역·대상만 고르면 끝||Just pick a region and who it is for
+discover|cap|result|우리 동네 팀이|바로 여기|The clubs near you, right here
+discover|cap|detail|일정·회비·위치까지|한눈에|Schedule, fees and location at a glance
+discover|outro||누룽지도|지금 내 팀 찾기|Find your club today
 
-save|hook||마음에 드는 팀,|까먹기 전에
-save|cap|detail|괜찮은 팀 찾았다면|
-save|cap|saved|한 번에 도시락으로|
-save|cap|lunchbox|찜한 팀은 반찬칸에|차곡차곡
-save|cap|diet|식단표로 주간 일정|한 번에 비교
-save|outro||누룽지도|내 도시락 만들기
+save|hook||마음에 드는 팀,|까먹기 전에|Save the club you like, before you forget
+save|cap|detail|괜찮은 팀 찾았다면||Found one that fits?
+save|cap|saved|한 번에 도시락으로||One tap puts it in your lunchbox
+save|cap|lunchbox|찜한 팀은 반찬칸에|차곡차곡|All your saved clubs in one box
+save|cap|diet|식단표로 주간 일정|한 번에 비교|Compare weekly schedules side by side
+save|outro||누룽지도|내 도시락 만들기|Build your own lunchbox
 
-share|hook||내 배구 기록,|이렇게 자랑하자
-share|cap|profile|나만의 밥이름|프로필
-share|cap|namecard|도시락·시간표·QR|명함 한 장에
-share|cap|share|인스타 스토리·카톡|바로 공유
-share|outro||누룽지도|do.nulloongzi.com
+share|hook||내 배구 기록,|이렇게 자랑하자|Show off your volleyball life
+share|cap|profile|나만의 밥이름|프로필|Your own rice-name profile
+share|cap|namecard|도시락·시간표·QR|명함 한 장에|Clubs, schedule and QR on one card
+share|cap|share|인스타 스토리·카톡|바로 공유|Share straight to Instagram or KakaoTalk
+share|outro||누룽지도|do.nulloongzi.com|Volleyball club map for Korea

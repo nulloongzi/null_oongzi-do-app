@@ -59,34 +59,32 @@ rm -rf "$WORK"; mkdir -p "$WORK" "$OUT_DIR"
 # (윈도우 드라이브 콜론) 문제를 피하고, 둥근 모서리·그림자·2단 조판을 제대로 짤 수 있다.
 # Pretendard 는 가변 폰트라 IM 이 굵기를 못 고른다 → stroke 로 굵기를 낸다(2px 검증됨).
 
-cap_card() { # cap_card <윗줄> <아랫줄> <출력>
-  local l1="$1" l2="$2" out="$3"
-  local cw=936 pad=40
-  local h1=46 h2=62
-  local th=$(( pad*2 + h1 + 18 + h2 ))
-  [ -z "$l2" ] && th=$(( pad*2 + h2 ))
+cap_card() { # cap_card <한글윗줄> <한글아랫줄> <영문> <출력>
+  local l1="$1" l2="$2" en="$3" out="$4"
+  local cw=936 pad=38 hs=44 hb=62 he=32 th y
+  if [ -n "$l2" ]; then th=$(( pad*2 + hs + 14 + hb )); else th=$(( pad*2 + hb )); fi
+  [ -n "$en" ] && th=$(( th + 16 + he ))
   convert -size ${cw}x${th} xc:none \
-    -fill "$C_BG" -draw "roundrectangle 0,0 $((cw-1)),$((th-1)) 28,28" \
-    -font "$FONT" -gravity north \
-    \( -clone 0 -alpha extract -blur 0x12 -shade 0x0 \) -delete 1 \
-    "$out.bg.png" 2>/dev/null
+    -fill "$C_BG" -draw "roundrectangle 0,0 $((cw-1)),$((th-1)) 28,28" "$out.bg.png"
+  local a=(-font "$FONT" -gravity north)
+  y=$pad
   if [ -n "$l2" ]; then
-    convert "$out.bg.png" -font "$FONT" -gravity north \
-      -fill "$C_BROWN" -stroke "$C_BROWN" -strokewidth 1 -pointsize $h1 -annotate +0+$pad "$l1" \
-      -fill "$C_DARK"  -stroke "$C_DARK"  -strokewidth 2 -pointsize $h2 -annotate +0+$(( pad + h1 + 18 )) "$l2" \
-      "$out"
+    a+=(-fill "$C_BROWN" -stroke "$C_BROWN" -strokewidth 1 -pointsize $hs -annotate +0+$y "$l1")
+    y=$(( y + hs + 14 ))
+    a+=(-fill "$C_DARK" -stroke "$C_DARK" -strokewidth 2 -pointsize $hb -annotate +0+$y "$l2")
+    y=$(( y + hb + 16 ))
   else
-    convert "$out.bg.png" -font "$FONT" -gravity north \
-      -fill "$C_DARK" -stroke "$C_DARK" -strokewidth 2 -pointsize $h2 -annotate +0+$pad "$l1" \
-      "$out"
+    a+=(-fill "$C_DARK" -stroke "$C_DARK" -strokewidth 2 -pointsize $hb -annotate +0+$y "$l1")
+    y=$(( y + hb + 16 ))
   fi
+  # 영문은 한글 아래 작은 글씨 — 읽는 사람을 늘리되 한글의 위계를 깨지 않는다.
+  [ -n "$en" ] && a+=(-fill "$C_BROWN" -stroke none -pointsize $he -annotate +0+$y "$en")
+  convert "$out.bg.png" "${a[@]}" "$out"
   rm -f "$out.bg.png"
 }
 
-hook_card() { # hook_card <윗줄> <아랫줄> <출력>
-  # 훅은 카드가 아니라 화면 전체를 덮는 그라데이션 스크림 + 큰 글씨.
-  # 첫 프레임부터 영상이 움직이는 게 중요해서(정지 타이틀은 넘겨진다) 배경을 가리지 않는다.
-  local l1="$1" l2="$2" out="$3"
+hook_card() { # hook_card <한글윗줄> <한글아랫줄> <영문> <출력>
+  local l1="$1" l2="$2" en="$3" out="$4"
   # 첫 1초가 전부다 — 작게 넣으면 그냥 넘어간다. 화면 폭을 꽉 쓰고,
   # 옅은 지도 위에서도 읽히도록 스크림을 진하게 깐다.
   # 스크림: 위 660px 은 단색, 그 아래 480px 만 페이드. 순수 그라데이션으로 하면
@@ -95,15 +93,16 @@ hook_card() { # hook_card <윗줄> <아랫줄> <출력>
     \( -size ${W}x660 xc:"rgba(62,40,35,0.82)" \) -geometry +0+0 -composite \
     \( -size ${W}x480 gradient:"rgba(62,40,35,0.82)"-none \) -geometry +0+660 -composite \
     -font "$FONT" -gravity north \
-    -fill "$C_YELLOW" -stroke "$C_YELLOW" -strokewidth 3 -pointsize 104 -annotate +0+330 "$l1" \
-    -fill white -stroke white -strokewidth 4 -pointsize 128 -annotate +0+480 "$l2" \
+    -fill "$C_YELLOW" -stroke "$C_YELLOW" -strokewidth 3 -pointsize 104 -annotate +0+300 "$l1" \
+    -fill white -stroke white -strokewidth 4 -pointsize 128 -annotate +0+450 "$l2" \
     -fill "$C_YELLOW" -stroke none \
-      -draw "roundrectangle $((W/2-70)),700 $((W/2+70)),710 5,5" \
+      -draw "roundrectangle $((W/2-70)),620 $((W/2+70)),630 5,5" \
+    -fill "#F2E6E0" -stroke none -pointsize 44 -annotate +0+672 "$en" \
     "$out"
 }
 
-outro_card() { # outro_card <윗줄> <아랫줄> <출력>
-  local l1="$1" l2="$2" out="$3"
+outro_card() { # outro_card <한글윗줄> <한글아랫줄> <영문> <출력>
+  local l1="$1" l2="$2" en="$3" out="$4"
   convert -size ${W}x${H} xc:"$C_BG" "$out.base.png"
   if [ -f "$LOGO" ]; then
     convert "$out.base.png" \( "$LOGO" -resize 460x460 \) \
@@ -111,11 +110,21 @@ outro_card() { # outro_card <윗줄> <아랫줄> <출력>
   fi
   convert "$out.base.png" -font "$FONT" -gravity center \
     -fill "$C_DARK" -stroke "$C_DARK" -strokewidth 3 -pointsize 104 -annotate +0+130 "$l1" \
-    -fill "$C_YELLOW" -stroke "$C_YELLOW" -strokewidth 1 \
+    -fill "$C_YELLOW" -stroke none \
       -draw "roundrectangle $((W/2-90)),$((H/2+215)) $((W/2+90)),$((H/2+223)) 4,4" \
     -fill "$C_BROWN" -stroke none -pointsize 52 -annotate +0+300 "$l2" \
+    -fill "$C_BROWN" -stroke none -pointsize 34 -annotate +0+375 "$en" \
     "$out"
   rm -f "$out.base.png"
+}
+
+# ── 나레이션(한국어 TTS) ─────────────────────────────────────
+# 영문은 자막 전용이고 음성은 한국어만 읽는다. 엔진이 없으면 무음으로 진행한다.
+TTS="${TTS:-auto}"   # auto | off
+narrate() { # narrate <출력.mp3> <읽을 텍스트> → 성공 시 0
+  [ "$TTS" = "off" ] && return 1
+  [ -n "$2" ] || return 1
+  bash "$HERE/tts.sh" "$1" "$2" >/dev/null 2>&1
 }
 
 # ── 장면 전환 감지 ───────────────────────────────────────────
@@ -134,10 +143,10 @@ scene_cuts() { # scene_cuts <mp4> <dur> → 정렬된 컷 시각 목록
 
 # ── 자막 스크립트 읽기 ───────────────────────────────────────
 # 행: <흐름>|<종류>|<앵커>|<윗줄>|<아랫줄>
-lines_for() { # lines_for <파일> <flow> <kind> → "앵커|윗줄|아랫줄"
+lines_for() { # lines_for <파일> <flow> <kind> → "앵커|한글윗줄|한글아랫줄|영문"
   awk -F'|' -v f="$2" -v k="$3" '
-    /^#/ || NF<4 { next }
-    $1==f && $2==k { print $3 "|" $4 "|" $5 }
+    /^#/ || NF<6 { next }
+    $1==f && $2==k { print $3 "|" $4 "|" $5 "|" $6 }
   ' "$1"
 }
 
@@ -199,31 +208,46 @@ for flow in $FLOWS; do
   INPUTS=(-i "$SRC")
   FC=""; CUR="[0:v]"
   idx=1
+  NAR_T=(); NAR_F=()   # 나레이션 (시작초, 파일)
 
   # 훅
   if [ -n "$HOOK" ]; then
-    h="${HOOK#*|}"; hook_card "${h%%|*}" "${h#*|}" "$WORK/${flow}_hook.png"
+    h="${HOOK#*|}"; hk1="${h%%|*}"; h2="${h#*|}"; hk2="${h2%%|*}"; hken="${h2#*|}"
+    hook_card "$hk1" "$hk2" "$hken" "$WORK/${flow}_hook.png"
     INPUTS+=(-loop 1 -t "$DUR" -i "$WORK/${flow}_hook.png")
     FC+="[${idx}:v]format=rgba,fade=t=out:st=$(awk -v d="$HOOK_D" 'BEGIN{printf "%.2f", d-0.4}'):d=0.4:alpha=1[hk];"
     FC+="${CUR}[hk]overlay=0:0:enable='lt(t,$HOOK_D)'[v${idx}];"
     CUR="[v${idx}]"; idx=$((idx+1))
+    if narrate "$WORK/${flow}_n_hook.mp3" "$hk1 $hk2"; then
+      NAR_T+=(0.30); NAR_F+=("$WORK/${flow}_n_hook.mp3")
+    fi
   fi
 
   # 본문 자막 — 훅이 끝난 뒤부터
   n=0
   for cap in "${CAPS[@]}"; do
-    rest="${cap#*|}"          # 앵커 제거
-    l1="${rest%%|*}"; l2="${rest#*|}"
+    rest="${cap#*|}"                 # 앵커 제거
+    l1="${rest%%|*}"; r2="${rest#*|}"
+    l2="${r2%%|*}";  cen="${r2#*|}"
     st="${BOUNDS[$n]}"; en="${BOUNDS[$((n+1))]}"
     # 훅과 겹치지 않게 밀어준다.
     st="$(awk -v s="$st" -v h="$HOOK_D" 'BEGIN{printf "%.2f", (s<h?h:s)+0.1}')"
     en="$(awk -v e="$en" 'BEGIN{printf "%.2f", e-0.15}')"
     awk -v s="$st" -v e="$en" 'BEGIN{exit !(e-s > 0.7)}' || { n=$((n+1)); continue; }
-    cap_card "$l1" "$l2" "$WORK/${flow}_c${n}.png"
+    cap_card "$l1" "$l2" "$cen" "$WORK/${flow}_c${n}.png"
     INPUTS+=(-loop 1 -t "$DUR" -i "$WORK/${flow}_c${n}.png")
     FC+="[${idx}:v]format=rgba,fade=t=in:st=${st}:d=$CAP_FADE:alpha=1,fade=t=out:st=$(awk -v e="$en" -v f="$CAP_FADE" 'BEGIN{printf "%.2f", e-f}'):d=$CAP_FADE:alpha=1[c${n}];"
     FC+="${CUR}[c${n}]overlay=(W-w)/2:$CAP_Y:enable='between(t,${st},${en})'[v${idx}];"
     CUR="[v${idx}]"; idx=$((idx+1))
+    # 음성은 한국어 두 줄만 읽는다(영문은 자막 전용). 자막이 뜨는 순간에 맞춘다.
+    if narrate "$WORK/${flow}_n${n}.mp3" "$l1 $l2"; then
+      NAR_T+=("$st"); NAR_F+=("$WORK/${flow}_n${n}.mp3")
+      # 음성이 자막 구간보다 길면 다음 자막 위로 넘어간다. 자동으로 자르지 않고
+      # 알려만 준다 — 문구를 줄이거나 TTS_RATE 를 올리는 게 맞는 해결이다.
+      nd="$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$WORK/${flow}_n${n}.mp3" 2>/dev/null)"
+      awk -v d="${nd:-0}" -v s="$st" -v e="$en" \
+        'BEGIN{ if (d > e-s+0.4) printf "  ! 나레이션이 구간보다 깁니다: %.1fs > %.1fs\n", d, e-s }'
+    fi
     n=$((n+1))
   done
 
@@ -233,17 +257,61 @@ for flow in $FLOWS; do
     -c:v libx264 -preset medium -profile:v high -crf 20 \
     -threads "${X264_THREADS:-4}" -an "$WORK/${flow}_body.mp4"
 
+  # ── 나레이션 믹스 ──────────────────────────────────────────
+  # 각 음성을 자막이 뜨는 시각으로 지연(adelay)시켜 하나의 트랙으로 합친다.
+  # normalize=0 이 아니면 amix 가 입력 수만큼 볼륨을 나눠 소리가 작아진다.
+  HAS_AUDIO=0
+  if [ "${#NAR_T[@]}" -gt 0 ]; then
+    AIN=(); AFC=""; MIXIN=""
+    for i in "${!NAR_T[@]}"; do
+      AIN+=(-i "${NAR_F[$i]}")
+      ms="$(awk -v t="${NAR_T[$i]}" 'BEGIN{printf "%d", t*1000}')"
+      AFC+="[$((i+1)):a]adelay=${ms}|${ms}[n$i];"
+      MIXIN+="[n$i]"
+    done
+    AFC+="${MIXIN}amix=inputs=${#NAR_T[@]}:normalize=0:dropout_transition=0,aformat=sample_rates=44100:channel_layouts=stereo,apad[aout]"
+    if ffmpeg -y -loglevel error -i "$WORK/${flow}_body.mp4" "${AIN[@]}" \
+        -filter_complex "$AFC" -map 0:v -map "[aout]" \
+        -c:v copy -c:a aac -b:a 128k -shortest "$WORK/${flow}_body_a.mp4" 2>/dev/null; then
+      mv -f "$WORK/${flow}_body_a.mp4" "$WORK/${flow}_body.mp4"
+      HAS_AUDIO=1
+      log "  나레이션 ${#NAR_T[@]}줄 삽입"
+    else
+      warn "  나레이션 믹스 실패 — 무음으로 진행"
+    fi
+  else
+    [ "$TTS" = "off" ] || warn "  TTS 엔진 없음 — 무음(pip install edge-tts 로 활성화)"
+  fi
+
   # ── 아웃트로 붙이기 ────────────────────────────────────────
   if [ -n "$OUTRO" ]; then
-    o="${OUTRO#*|}"; outro_card "${o%%|*}" "${o#*|}" "$WORK/${flow}_outro.png"
+    o="${OUTRO#*|}"; o1="${o%%|*}"; o2r="${o#*|}"; o2="${o2r%%|*}"; oen="${o2r#*|}"
+    outro_card "$o1" "$o2" "$oen" "$WORK/${flow}_outro.png"
     ffmpeg -y -loglevel error -loop 1 -t "$OUTRO_D" -i "$WORK/${flow}_outro.png" \
       -vf "fps=$FPS,scale=$W:$H,setsar=1,format=yuv420p,fade=t=in:st=0:d=0.35" \
       -c:v libx264 -preset medium -profile:v high -crf 20 \
       -threads "${X264_THREADS:-4}" -an "$WORK/${flow}_outro.mp4"
+    # concat 은 두 파일의 스트림 구성이 같아야 한다 — 본문에 소리가 있으면
+    # 아웃트로에도 오디오 트랙을 붙인다(나레이션이 없으면 무음 트랙).
+    if [ "$HAS_AUDIO" = 1 ]; then
+      if narrate "$WORK/${flow}_n_outro.mp3" "$o1 $o2"; then
+        ffmpeg -y -loglevel error -i "$WORK/${flow}_outro.mp4" -i "$WORK/${flow}_n_outro.mp3" \
+          -filter_complex "[1:a]adelay=250|250,aformat=sample_rates=44100:channel_layouts=stereo,apad[aout]" -map 0:v -map "[aout]" \
+          -c:v copy -c:a aac -b:a 128k -shortest "$WORK/${flow}_outro_a.mp4" 2>/dev/null \
+          && mv -f "$WORK/${flow}_outro_a.mp4" "$WORK/${flow}_outro.mp4"
+      else
+        ffmpeg -y -loglevel error -i "$WORK/${flow}_outro.mp4" \
+          -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 \
+          -map 0:v -map 1:a -c:v copy -c:a aac -b:a 128k -shortest \
+          "$WORK/${flow}_outro_a.mp4" 2>/dev/null \
+          && mv -f "$WORK/${flow}_outro_a.mp4" "$WORK/${flow}_outro.mp4"
+      fi
+    fi
     printf "file '%s'\nfile '%s'\n" "${flow}_body.mp4" "${flow}_outro.mp4" > "$WORK/${flow}.txt"
+    ACODEC=(-an); [ "$HAS_AUDIO" = 1 ] && ACODEC=(-c:a aac -b:a 128k)
     ( cd "$WORK" && ffmpeg -y -loglevel error -f concat -safe 0 -i "${flow}.txt" \
         -c:v libx264 -preset medium -profile:v high -crf 20 \
-        -threads "${X264_THREADS:-4}" -an "$OUT_DIR/${flow}_${LANG_TAG}.mp4" )
+        -threads "${X264_THREADS:-4}" "${ACODEC[@]}" "$OUT_DIR/${flow}_${LANG_TAG}.mp4" )
   else
     cp "$WORK/${flow}_body.mp4" "$OUT_DIR/${flow}_${LANG_TAG}.mp4"
   fi
