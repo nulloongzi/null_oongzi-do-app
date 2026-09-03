@@ -956,12 +956,19 @@ class _MapScreenState extends State<MapScreen> {
         seeded++;
       }
     } catch (_) {}
+    // 서비스만 호출하면 화면에 아무 변화가 없어 '담았다'는 사실이 영상에 안 보인다.
+    // 사용자가 🍱 를 눌렀을 때와 같은 스낵바를 띄운다(detail_sheet 의 _toggle 과 동일).
+    if (!mounted) return;
+    _snack(t('lb_added'));
     if (!await _hold(1.5, 'saved')) return;
 
     await _backToMap();
     if (!mounted) return;
     showLunchboxSheet(context);
-    if (!await _hold(6, 'lunchbox')) return; // 반찬칸 그리드 + 식단표 버튼까지 읽을 시간
+    if (!await _hold(4, 'lunchbox')) return; // 반찬칸 그리드
+    // 식단표 펼치기 — 시트를 닫았다 열지 않고 실제 버튼과 같은 확장 애니메이션.
+    lunchboxDietOpenSignal.value++;
+    if (!await _hold(4, 'diet')) return;
     await _backToMap();
   }
 

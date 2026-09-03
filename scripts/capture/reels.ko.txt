@@ -20,8 +20,9 @@ discover|outro||누룽지도|지금 내 팀 찾기
 
 save|hook||마음에 드는 팀,|까먹기 전에
 save|cap|detail|괜찮은 팀 찾았다면|
-save|cap|saved|도시락에 담아두기|
-save|cap|lunchbox|반찬칸·식단표로|주간 일정 한눈에
+save|cap|saved|한 번에 도시락으로|
+save|cap|lunchbox|찜한 팀은 반찬칸에|차곡차곡
+save|cap|diet|식단표로 주간 일정|한 번에 비교
 save|outro||누룽지도|내 도시락 만들기
 
 share|hook||내 배구 기록,|이렇게 자랑하자

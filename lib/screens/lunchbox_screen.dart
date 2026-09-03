@@ -90,6 +90,12 @@ class _LunchboxModal extends StatelessWidget {
   }
 }
 
+/// 캡처 시연용: 식단표 아코디언을 **밖에서** 펼치라는 신호(값이 바뀌면 펼친다).
+/// 시연 흐름은 손으로 버튼을 못 누른다. 시트를 닫았다 다시 여는 방법도 있지만
+/// 그러면 슬라이드다운/업이 끼어 어색하다 — 사용자가 버튼을 눌렀을 때와 똑같은
+/// 펼침 애니메이션이 나오는 게 시연 영상에 맞다.
+final ValueNotifier<int> lunchboxDietOpenSignal = ValueNotifier<int>(0);
+
 class LunchboxScreen extends StatefulWidget {
   const LunchboxScreen({super.key, this.openDiet = false});
 
@@ -119,9 +125,20 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
   ];
   // (칸별 색상은 diet_grid.dart로 이동 — 벤토 셀은 채움=노랑테두리/빈칸=점선 균일 스타일)
 
+  void _onDietSignal() {
+    if (mounted && !_showDiet) setState(() => _showDiet = true);
+  }
+
+  @override
+  void dispose() {
+    lunchboxDietOpenSignal.removeListener(_onDietSignal);
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
+    lunchboxDietOpenSignal.addListener(_onDietSignal);
     _load();
   }
 
