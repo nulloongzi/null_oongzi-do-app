@@ -60,6 +60,16 @@ git add -f "$REV"
 git commit -q -m "chore(capture): 리뷰용 프록시 업로드 (스틸 ${n}장 / 영상 ${v}편)" || { echo "▶ 변경 없음"; exit 0; }
 # 캡처가 도는 동안 원격에 커밋이 올라가 있는 경우가 잦다(스크립트 수정 등).
 # 프록시는 신규 파일뿐이라 리베이스가 안전하다.
+#
+# 다만 flutter build 가 generated_plugin_registrant 류를 다시 써서 작업본이
+# 더러워져 있는 일이 잦고("cannot pull with rebase: You have unstaged changes"),
+# 그러면 리베이스가 막혀 푸시까지 거부된다 → 추적 파일 변경만 잠시 치운다.
+# (-u 를 안 붙인다: marketing-assets 의 원본 PNG·MP4 수백 MB 까지 딸려간다)
+STASHED=0
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  git stash push -q -m "share_results-auto" && STASHED=1
+fi
 git pull --rebase -q origin "$BR" || echo "▶ 리베이스 실패 — 수동 확인 필요"
-git push -u origin "$BR"
+git push -u origin "$BR" || true
+[ "$STASHED" = 1 ] && git stash pop -q || true
 echo "✔ 업로드 완료 → $BR : marketing-assets/_review/"
