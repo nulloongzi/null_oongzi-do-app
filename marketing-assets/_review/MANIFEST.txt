@@ -1,11 +1,11 @@
-# 캡처 원본 목록 (2026-09-03 16:31)
+# 캡처 원본 목록 (2026-09-03 16:38)
 기기:  / 
 
 2790763	/c/Users/user/null_oongzi-do-app/marketing-assets/motion/discover_ko.mp4
 5111691	/c/Users/user/null_oongzi-do-app/marketing-assets/motion/full_tour_ko.mp4
 1098116	/c/Users/user/null_oongzi-do-app/marketing-assets/motion/save_ko.mp4
 1224562	/c/Users/user/null_oongzi-do-app/marketing-assets/motion/share_ko.mp4
-5007351	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/discover_body.mp4
+5007678	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/discover_body.mp4
 21937	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/discover_c0.png
 19166	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/discover_c1.png
 17771	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/discover_c2.png
@@ -13,7 +13,7 @@
 121800	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/discover_hook.png
 67429	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/discover_outro.mp4
 108267	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/discover_outro.png
-3727909	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/save_body.mp4
+3727396	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/save_body.mp4
 17012	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/save_c0.png
 17837	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/save_c1.png
 21456	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/save_c2.png
@@ -21,16 +21,16 @@
 112604	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/save_hook.png
 68720	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/save_outro.mp4
 108952	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/save_outro.png
-4458333	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/share_body.mp4
+4455837	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/share_body.mp4
 15122	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/share_c0.png
 25198	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/share_c1.png
 23356	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/share_c2.png
 108182	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/share_hook.png
 72221	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/share_outro.mp4
 115996	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/share_outro.png
-4923887	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/final/discover_ko.mp4
-3687488	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/final/save_ko.mp4
-4378234	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/final/share_ko.mp4
+4924773	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/final/discover_ko.mp4
+3687084	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/final/save_ko.mp4
+4375784	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/final/share_ko.mp4
 3279883	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/flows/discover_ko.mp4
 9017619	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/flows/full_tour_ko.mp4
 2502751	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/flows/save_ko.mp4
