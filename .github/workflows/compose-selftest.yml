@@ -1,0 +1,49 @@
+name: Compose Videos Selftest (no emulator)
+
+# 영상 후반합성(compose_videos.sh)만 에뮬 없이 빠르게 검증한다(~2분).
+# 가짜 raw 클립을 ffmpeg로 만들어 브랜디드 클립·홍보 릴스·앱 소개 영상까지 전 경로를 돌리고,
+# 각 산출 영상의 프레임 몬타주를 base64로 로그에 남긴다(아티팩트 다운로드가 프록시에 막힘).
+# ffmpeg 필터그래프/폰트/스티칭을 실기 에뮬 20분 없이 확정하기 위한 자기점검.
+
+on:
+  push:
+    branches: ["claude/**"]
+    paths:
+      - "scripts/capture/compose_videos.sh"
+      - ".github/workflows/compose-selftest.yml"
+  workflow_dispatch:
+    inputs:
+      langs:
+        description: "합성 언어(공백구분). 예: ko en"
+        type: string
+        default: "ko en"
+
+concurrency:
+  group: compose-selftest-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ffmpeg + ImageMagick + Korean font
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg imagemagick fonts-nanum fontconfig
+
+      - name: Compose (SELFTEST)
+        env:
+          SELFTEST: "1"
+          CAP_LANGS: ${{ github.event.inputs.langs || 'ko en' }}
+          ARTIFACTS_DIR: ${{ github.workspace }}/marketing-assets
+        run: bash scripts/capture/compose_videos.sh
+
+      - name: Upload selftest videos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compose-selftest-videos
+          path: marketing-assets/reels/**
+          if-no-files-found: warn
+          retention-days: 7

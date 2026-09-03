@@ -8,6 +8,19 @@
 #           INCLUDE_REELS(true) · TEST_ACCOUNT_EMAIL/PASSWORD(로그인 화면용, 옵션)
 set -euo pipefail
 
+# ── ImageMagick 호출 정규화 (Windows/Git Bash 안전) ──────────────
+# IM7 의 실행파일은 `magick` 이다. Windows 에서 `convert` 는 **OS 기본 디스크 변환
+# 유틸(C:\Windows\System32\convert.exe)** 과 이름이 겹쳐, Git Bash 에서 그쪽이
+# 먼저 잡히면 이미지가 아니라 볼륨 변환을 시도한다(치명적).
+# magick 이 있으면 전부 magick 경유로 강제한다. Linux IM6 에서는 원래 바이너리 사용.
+if command -v magick >/dev/null 2>&1; then
+  convert()  { magick "$@"; }
+  identify() { magick identify "$@"; }
+  montage()  { magick montage "$@"; }
+  compare()  { magick compare "$@"; }
+fi
+
+
 APP_ID="com.nulloongzi.nulloongzido"
 APK="${APK_PATH:?APK_PATH env 필요}"
 ART="${ARTIFACTS_DIR:-marketing-assets}"
@@ -21,6 +34,8 @@ SCREENS="$ART/screens"
 # 카피 합성본 디렉터리는 전체 캡처 경로(아래)에서만 만들어진다. 스모크 경로는 그 전에
 # fingerprint()를 호출하므로, 미정의 상태로 참조되면 set -u 에 걸려 죽는다 → 빈 값으로 선언.
 STORE="${STORE:-}"
+# stills/ 도 같은 이유로 미리 빈 값 선언(스모크 경로가 fingerprint 를 먼저 부른다).
+STILLS="${STILLS:-}"
 REELS="$ART/reels"
 LOGS="$ART/logs"
 mkdir -p "$SCREENS" "$REELS" "$LOGS"
@@ -73,12 +88,15 @@ shot() { adb exec-out screencap -p > "$SCREENS/$1.png"; }
 #  · 지도 1장은 base64 썸네일(로그에서 육안 확인)
 fingerprint() {
   echo "===== CAPTURE FINGERPRINT ====="
-  for f in "$SCREENS"/*.png ${STORE:+"$STORE"/*.png}; do
+  for f in "$SCREENS"/*.png ${STORE:+"$STORE"/*.png} ${STILLS:+"$STILLS"/*.png}; do
     [ -e "$f" ] || continue
     local b m d
     b="$(basename "$f" .png)"
-    # store/ 합성본은 이름 충돌 방지로 접두어
-    case "$f" in "$STORE"/*) b="store_$b";; esac
+    # store/ 합성본·stills/ 는 이름 충돌 방지로 접두어
+    case "$f" in
+      "$STORE"/*) b="store_$b";;
+      "$STILLS"/*) b="still_$b";;
+    esac
     m="$(convert "$f" -colorspace Gray -format '%[fx:mean]' info: 2>/dev/null || echo NA)"
     d="$(identify -format '%wx%h' "$f" 2>/dev/null || echo '?')"
     echo "FP $b mean=$m dim=$d"
@@ -167,6 +185,50 @@ open_cap share 34;    cap "play_07_share_${CAP_LANG}"
 open_cap story 36;    cap "play_08_story_${CAP_LANG}"
 open_cap login 32;    cap "play_09_login_${CAP_LANG}"
 
+# ── 모션그래픽용 스틸 세트(st_*) ─────────────────────────────
+# 에뮬 실시간 녹화는 GPU 없는 CI(SwiftShader)에서 렉·타일로딩 때문에 품질이 안 난다.
+# 대신 정확한 UI 상태 스틸을 찍고, 전환은 후반작업에서 앱의 실제 모션으로 재현한다.
+#
+# 결정적 요구사항: **스텝 사이에 콜드 재시작(-S)을 하지 않는다.**
+# 재시작하면 지도 카메라가 달라져 '배경만' 스틸과 '오버레이' 스틸의 배경이 어긋나고,
+# 두 장의 차이로 시트 레이어·좌표를 뽑는 합성이 통째로 깨진다.
+STILLS="$ART/stills"; mkdir -p "$STILLS"   # (상단에서 빈 값으로 선언됨 — 여기서 확정)
+step() { # step <cmd> <wait>
+  # -S 없음: 실행 중인 액티비티에 새 인텐트만 전달 → 카메라/스크롤 상태 유지.
+  adb shell "am start -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=$1&lang=$CAP_LANG'" >/dev/null 2>&1
+  sleep "${2:-6}"; dismiss_anr
+}
+still() { dismiss_anr; demo_on; sleep 1; adb exec-out screencap -p > "$STILLS/$1.png"; log "  스틸: $1"; }
+# 앱이 남긴 오버레이 좌표(CAPTURE_RECT)를 수거한다. 이미지 휴리스틱으로는 시트 상단을
+# 안정적으로 못 찾는다(스크림이 전면을 덮고, 시트 내부 대비도 케이스마다 달라 검출이 튄다).
+collect_rects() {
+  adb logcat -d 2>/dev/null \
+    | grep -o "CAPTURE_RECT cmd=[A-Za-z_]* sheetTopPx=-\?[0-9]*" \
+    | awk '{print $2" "$3}' | sed 's/cmd=//; s/sheetTopPx=//' \
+    | awk '!seen[$1]++ || 1' > "$STILLS/rects.txt" 2>/dev/null || true
+  log "  좌표 수거: $(wc -l < "$STILLS/rects.txt" 2>/dev/null || echo 0)건"
+  sed 's/^/    RECT /' "$STILLS/rects.txt" 2>/dev/null || true
+}
+
+# 세션 시작만 콜드로(깨끗한 출발) — 이후는 델타만 적용.
+# 카메라가 움직이는 스텝(04·05)은 타일 로딩 여유를 크게 준다 — #28에서 fitBounds/
+# centerOnPin 직후 9초로는 부족해 지도가 연녹색 민무늬로 찍혔다.
+open_cap st_map 30;         still "01_map"
+step st_filter_open 7;      still "02_filter_open"
+step st_filter_set 7;       still "03_filter_set"
+step st_map_filtered 20;    still "04_map_filtered"
+step st_club_bg 20;         still "05_club_bg"
+step st_club_sheet 7;       still "06_club_sheet"
+step st_lunchbox_bg 9;      still "07_lunchbox_bg"
+step st_lunchbox 8;         still "08_lunchbox"
+step st_lunchbox_diet 9;    still "09_lunchbox_diet"
+step st_profile_bg 7;       still "10_profile_bg"
+step st_profile 7;          still "11_profile"
+step st_namecard 12;        still "12_namecard"
+step st_share_bg 9;         still "13_share_bg"
+step st_share 7;            still "14_share"
+collect_rects
+
 # ── 카피 오버레이 합성(업로드용 최종 이미지) ──────────────────
 # Play 마케팅 프레임: 크림 1080×1920 캔버스 + 상단 2줄 카피(나눔고딕Bold) +
 # 옐로 언더라인 + 앱 스샷(다크 테두리). 한글 폰트는 워크플로에서 설치(fonts-nanum).
@@ -200,34 +262,112 @@ else
   echo "::warning::한글 폰트(nanum) 미탐지 — 카피 합성 스킵($KFONT)"
 fi
 
-# ── 릴스: 지도 로드 후 녹화 시작 → 액션 딥링크로 모션 유발 ────
-# 1080×2400 원본 → 릴스(1080×1920)는 편집서 크롭.
+# ── 릴스 원본(raw): 기능별 모션 클립을 언어별로 녹화 ──────────
+# 후반합성기(compose_videos.sh)가 이 raw 를 크림 9:16 브랜디드 릴스로 만든다.
+# 산출: reels/raw/<feat>_<lang>.mp4 (앱 1080×2400 화면녹화, 무음).
+# 각 클립: 대상 언어로 지도에 콜드 안착 → 녹화 시작 → 기능 딥링크로 모션(시트/카메라) 유발.
 if [ "$INCLUDE_REELS" = "true" ]; then
-  reel() { # reel <name> <action_cmd|""> <secs>
-    local name="$1" act="$2" secs="${3:-15}" dev="/sdcard/${1}.mp4"
-    log "🎬 릴스 녹화: $name"
-    open_cap map 26; demo_on                       # 지도 로드 완료 후
-    adb shell screenrecord --bit-rate 8000000 --time-limit "$secs" "$dev" &
-    local rec=$!; sleep 1
-    if [ -n "$act" ]; then
-      # 실행 중 앱에 액션 딥링크 → 카메라 이동/시트 슬라이드가 화면에 녹화됨
-      adb shell "am start -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=$act&lang=$CAP_LANG'" >/dev/null 2>&1
-    else
-      # 피날레: 부드러운 지도 패닝
-      swp 800 1400 300 1200 1300; sleep 1
-      swp 300 1200 800 1400 1300; sleep 1
-      swp 540 1600 540 1000 1300
+  RAW="$REELS/raw"; mkdir -p "$RAW"
+  vdur() { ffprobe -v error -show_entries format=duration -of csv=p=0 "$1" 2>/dev/null | cut -d. -f1; }
+
+  # 흐름 검증 몬타주: 아티팩트 다운로드가 프록시에 막히므로, 각 흐름 영상의
+  # 프레임을 전체 구간에 균등 추출해 base64 로 로그에 남긴다(육안 확인 경로).
+  # 흐름은 길어 6장으론 전환을 놓친다 → 12장(4×3).
+  flow_montage() { # flow_montage <mp4> <label>
+    local mp4="$1" label="$2" dur fps td
+    [ -s "$mp4" ] || { echo "MONTAGE_MISSING $label"; return; }
+    dur="$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$mp4" 2>/dev/null)"
+    echo "VID $label dur=${dur%%.*}s dim=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x "$mp4" 2>/dev/null)"
+    fps="$(awk -v d="${dur:-30}" 'BEGIN{ if(d<=0) d=30; printf "%.4f", 12.0/d }')"
+    td="$(mktemp -d)"
+    ffmpeg -y -loglevel error -i "$mp4" -vf "fps=${fps},scale=270:-1" -frames:v 12 "$td/f_%02d.png" 2>/dev/null
+    if ls "$td"/f_*.png >/dev/null 2>&1; then
+      montage "$td"/f_*.png -tile 4x3 -geometry +3+3 -background '#FFF8E1' "$td/m.png" 2>/dev/null
+      echo "MONTAGE_BEGIN $label"
+      convert "$td/m.png" -resize 1100x -quality 72 jpg:- 2>/dev/null | base64 -w0
+      echo ""
+      echo "MONTAGE_END $label"
     fi
-    sleep 2; adb shell pkill -INT screenrecord >/dev/null 2>&1 || true
-    sleep 2; wait "$rec" 2>/dev/null || true
-    adb pull "$dev" "$REELS/${name}.mp4" >/dev/null 2>&1 && log "  ↳ $REELS/${name}.mp4" || echo "::warning::mp4 회수 실패: $name"
-    adb shell rm -f "$dev" >/dev/null 2>&1 || true
+    rm -rf "$td"
   }
-  reel "reel_1_findmap" detail 15    # 지도 → 마커로 카메라 비행 + 상세 오픈
-  reel "reel_2_filter"  filter 12    # 필터 시트 슬라이드업
-  reel "reel_7_finale"  ""      15   # 부드러운 지도 패닝
+  # ── 흐름(flow) 녹화: 여러 기능을 한 테이크로 ─────────────────
+  # 앱 안의 캡처 디렉터(flow_*)가 연속 전환을 수행하므로, 여기선 딥링크 한 번 쏘고
+  # 흐름이 끝날 때까지 통으로 녹화한다(중간 개입 없음 = 손떨림 없는 데모).
+  # 산출은 9:16(1080×1920) 크롭본 — 자막·TTS는 편집에서 얹는다.
+  FLOWS_DIR="$REELS/flows"; mkdir -p "$FLOWS_DIR"
+  # 흐름은 길어(35~45s) 인코더 부하가 크다. 화질(크롭 후 1080폭)을 살리되 조기 종료를
+  # 피하도록 원본 1080×2400 @5Mbps 로 녹화한다.
+  FLOW_REC=(--size 1080x2400 --bit-rate 5000000)
+  # 9:16 크롭: 위 390px(상태바·검색바)을 덜어내고 아래 상세시트 버튼까지 살린다.
+  # (1080×2400 → y=390..2310) 편집에서 다시 자르지 않아도 릴스 규격.
+  FLOW_CROP="crop=1080:1920:0:390"
+
+  flow() { # flow <name> <capture_cmd> <secs>
+    local name="$1" cmd="$2" secs="$3"
+    local dev="/sdcard/flow_${name}.mp4"
+    local rawout="$RAW/flow_${name}_${CAP_LANG}.mp4"
+    local out="$FLOWS_DIR/${name}_${CAP_LANG}.mp4" d
+    log "🎬 흐름 녹화: ${name} (${secs}s)"
+    adb shell rm -f "$dev" >/dev/null 2>&1 || true
+    # 지도에 콜드 안착시킨 뒤 녹화를 시작하고, 그 다음에 흐름 딥링크를 쏜다.
+    # (흐름 시작 자체가 콘텐츠라 전환을 놓치면 안 된다 → 녹화가 먼저.)
+    adb shell "am start -S -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=map&lang=$CAP_LANG'" >/dev/null 2>&1
+    sleep 24; dismiss_anr; demo_on
+    adb shell screenrecord "${FLOW_REC[@]}" --time-limit "$secs" "$dev" &
+    local rec=$!; sleep 1
+    # 콜드 재시작 없이(-S 없음) 흐름 시작 → 앱이 내부에서 연속 전환.
+    adb shell "am start -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=$cmd&lang=$CAP_LANG'" >/dev/null 2>&1
+    sleep "$secs"
+    adb shell pkill -INT screenrecord >/dev/null 2>&1 || true
+    sleep 3; wait "$rec" 2>/dev/null || true
+    adb pull "$dev" "$rawout" >/dev/null 2>&1 || true
+    adb shell rm -f "$dev" >/dev/null 2>&1 || true
+    d="$(vdur "$rawout")"; d="${d:-0}"
+    if [ "$d" -lt $(( secs / 2 )) ]; then
+      echo "::warning::흐름 녹화 짧음(${d}s < ${secs}s) — 재시도: $name"
+      adb shell "am start -S -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=map&lang=$CAP_LANG'" >/dev/null 2>&1
+      sleep 24; dismiss_anr; demo_on
+      adb shell screenrecord "${FLOW_REC[@]}" --time-limit "$secs" "$dev" &
+      rec=$!; sleep 1
+      adb shell "am start -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=$cmd&lang=$CAP_LANG'" >/dev/null 2>&1
+      sleep "$secs"; adb shell pkill -INT screenrecord >/dev/null 2>&1 || true
+      sleep 3; wait "$rec" 2>/dev/null || true
+      adb pull "$dev" "$rawout" >/dev/null 2>&1 || true
+      adb shell rm -f "$dev" >/dev/null 2>&1 || true
+      d="$(vdur "$rawout")"; d="${d:-0}"
+    fi
+    if [ "$d" -le 0 ]; then echo "::warning::흐름 mp4 회수 실패: $name"; return; fi
+    # 9:16 크롭(재인코딩 1회) — 릴스 규격 완성본.
+    ffmpeg -y -loglevel error -i "$rawout" -vf "$FLOW_CROP" \
+      -c:v libx264 -preset veryfast -pix_fmt yuv420p -r 30 -an "$out" 2>&1 | tail -2
+    log "  ↳ flows/${name}_${CAP_LANG}.mp4 (${d}s, 1080x1920)"
+  }
+
+  # 흐름 3종(픽업 제외) — 각 흐름은 앱 내부 스크립트가 구동한다.
+  flow discover flow_discover 38   # 지도 → 필터 → 결과 → 클럽 상세
+  flow save     flow_save     32   # 상세 → 도시락 찜 → 반찬칸 → 식단표
+  flow share    flow_share    36   # 밥이름 → 네임카드 → 공유
+
+  # 풀 투어: 3편 이어붙이기(편집 없이 바로 쓰는 앱 소개용).
+  TOUR_LIST="$FLOWS_DIR/.tour.txt"; : > "$TOUR_LIST"
+  for n in discover save share; do
+    f="$FLOWS_DIR/${n}_${CAP_LANG}.mp4"
+    [ -s "$f" ] && echo "file '$(basename "$f")'" >> "$TOUR_LIST"
+  done
+  if [ -s "$TOUR_LIST" ]; then
+    ( cd "$FLOWS_DIR" && ffmpeg -y -loglevel error -f concat -safe 0 -i .tour.txt \
+        -c copy "full_tour_${CAP_LANG}.mp4" 2>&1 | tail -2 )
+    log "  ↳ flows/full_tour_${CAP_LANG}.mp4"
+  fi
+  rm -f "$TOUR_LIST"
+
+  echo "===== FLOW FINGERPRINT ====="
+  for n in discover save share full_tour; do
+    flow_montage "$FLOWS_DIR/${n}_${CAP_LANG}.mp4" "flow_${n}"
+  done
+  echo "===== END FLOW FINGERPRINT ====="
 fi
 
 adb logcat -d > "$LOGS/logcat.txt" 2>/dev/null || true
 fingerprint
-log "완료. screens=$(ls -1 "$SCREENS" 2>/dev/null | wc -l)장, reels=$(ls -1 "$REELS" 2>/dev/null | wc -l)편."
+log "완료. screens=$(ls -1 "$SCREENS" 2>/dev/null | wc -l)장, raw=$(ls -1 "$REELS/raw" 2>/dev/null | wc -l)편(후반합성은 compose_videos.sh)."

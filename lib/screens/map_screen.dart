@@ -35,6 +35,7 @@ import '../widgets/bounce_tap.dart';
 import '../widgets/filter_sheet.dart';
 import '../widgets/glass_surface.dart';
 import '../widgets/insta_embed.dart';
+import '../widgets/map_detail_panel.dart';
 import '../widgets/pickup_list_sheet.dart';
 import '../widgets/share_menu.dart';
 import '../widgets/story_card.dart';
@@ -71,6 +72,12 @@ class MapScreen extends StatefulWidget {
 /// 마케팅 자산 자동 캡처 빌드 플래그(`--dart-define=CAPTURE_MODE=true`).
 /// 켜져 있을 때만 `?capture=` 딥링크가 화면을 결정적으로 이동한다(일반 릴리즈엔 무영향).
 const bool kCaptureMode = bool.fromEnvironment('CAPTURE_MODE');
+
+/// GPU 없는 CI 에뮬(SwiftShader)용 완화 플래그.
+/// 고배율 타일이 오지 않고 카메라 이동 중 렌더가 깨져, 축척을 낮추고 fitBounds 를
+/// 건너뛴다. **로컬/실기기(진짜 GPU)에서는 켜지 않는다** — 앱의 실제 동작 그대로가
+/// 더 좋은 그림이고, 그게 홍보 영상에 맞다.
+const bool kCaptureLowGpu = bool.fromEnvironment('CAPTURE_LOW_GPU');
 
 class _MapScreenState extends State<MapScreen> {
   NaverMapController? _controller;
@@ -283,6 +290,7 @@ class _MapScreenState extends State<MapScreen> {
   static const _labelZoomShow = 12.2; // 이 줌 이상 → 이름 알약 켜기
   static const _labelZoomHide = 11.8; // 이 줌 미만 → 끄기 (사이 구간은 현 상태 유지)
   static const _focusZoom = 15.0; // 마커 탭 시 확대 축척
+  static const _captureFocusZoom = 12.5; // 저사양 캡처용(타일이 실제로 렌더되는 축척)
   bool _showLabels = false; // 현재 줌이 임계 이상? (스테이지3=알약 표시)
 
   // 라벨 토글을 clear+add 없이 in-place(setIcon/setSize)로 적용하기 위한 보관.
@@ -468,7 +476,9 @@ class _MapScreenState extends State<MapScreen> {
         .clamp(0.18, 0.5)
         .toDouble();
     // 정해진 축척으로 확대(현재가 더 크면 유지 — 줌아웃 방지)
-    double z = _focusZoom;
+    // 캡처 빌드는 줌을 낮춘다: GPU 없는 CI 에뮬(SwiftShader)에서 고배율 타일이
+    // 20초를 기다려도 안 와 지도가 연녹색 민무늬로 찍혔다(#32 04·05).
+    double z = kCaptureLowGpu ? _captureFocusZoom : _focusZoom;
     try {
       final cam = await c.getCameraPosition();
       if (cam.zoom > z) z = cam.zoom;
@@ -512,6 +522,16 @@ class _MapScreenState extends State<MapScreen> {
     if (!mounted) return;
     await Future<void>.delayed(const Duration(milliseconds: 800));
     if (!mounted) return;
+
+    // 스틸 캡처(st_*)는 **리셋하지 않고** 델타만 적용한다.
+    // 모션그래픽은 '오버레이 없는 배경'과 '오버레이 있는 화면' 두 장의 차이로
+    // 시트 레이어와 좌표를 얻는데, 매 스텝 콜드 리셋을 하면 지도 카메라가 달라져
+    // 두 장의 배경이 어긋나고 합성이 즉시 티가 난다. 따라서 st_* 는 같은 세션에서
+    // 순차 딥링크(-S 없이)로 호출되며 카메라를 건드리지 않는다.
+    if (cmd.startsWith('st_')) {
+      await _runStill(cmd);
+      return;
+    }
 
     // 잔존 시트/다이얼로그(이전 캡처의 상세·공유 등) 정리 → 매 캡처를 깨끗한 지도에서 시작.
     Navigator.of(context).popUntil((r) => r.isFirst);
@@ -607,7 +627,371 @@ class _MapScreenState extends State<MapScreen> {
         } catch (_) {}
         if (mounted) showProfileSheet(context);
         break;
+
+      // ── 흐름(flow): 여러 기능을 한 테이크로 이어서 시연 ──────────────
+      // 낱개 화면 캡처와 달리 앱 안에서 연속 전환하므로(콜드 재시작 없음)
+      // 전환이 Flutter 내비게이션 속도(~0.3s)로 끝난다. 홍보 영상용.
+      // 체류시간은 편집에서 자막·TTS를 얹을 여유를 두고 넉넉히 잡았다.
+      case 'flow_discover':
+        await _flowDiscover();
+        break;
+      case 'flow_save':
+        await _flowSave(pick());
+        break;
+      case 'flow_share':
+        await _flowShare();
+        break;
     }
+  }
+
+  // ── 스틸 캡처 상태 머신(모션그래픽용) ────────────────────────────
+  // 에뮬레이터 실시간 녹화는 GPU 없는 CI(SwiftShader)에서 렉·타일 로딩 때문에
+  // 마케팅 품질이 안 나온다. 대신 **정확한 UI 상태 스틸**을 찍고, 그 사이를
+  // 앱의 실제 전환(바텀시트 슬라이드 등)으로 이어 붙여 영상을 만든다.
+  // 여기서는 그 스틸 상태들을 결정적으로 만들어 준다.
+
+  /// 스틸 세트에서 쓰는 고정 필터(찾기 스토리: 서울·화요일·성인).
+  static const _stillPreset = ClubFilter(
+    regions: {'서울'},
+    days: {'화'},
+    targets: {'성인'},
+  );
+
+  /// 스틸 전용 대상 클럽 — 프리셋에 걸리는 팀 우선, 없으면 급구→검증→첫 팀.
+  Club? _stillClub() {
+    if (_clubs.isEmpty) return null;
+    for (final c in _clubs) {
+      if (_stillPreset.matches(c)) return c;
+    }
+    for (final c in _clubs) {
+      if (c.isUrgent && (c.urgentMsg?.isNotEmpty ?? false)) return c;
+    }
+    return _clubs.first;
+  }
+
+  /// 캡처용: 현재 화면에 떠 있는 바텀시트/상세패널의 **정확한 상단 y(디바이스 px)**.
+  ///
+  /// 스크린샷만으로 시트 상단을 추정하려 했으나 신뢰할 수 없었다(검증됨):
+  ///  · 스크림이 화면 전체를 덮어 '차이가 생기는 첫 행'은 항상 0 이 된다.
+  ///  · 밝기 프로파일도 시트 내부의 어두운 행(라벨·구분선) 때문에 튄다.
+  ///  · 상세 패널은 아예 비모달이라 스크림이 없어 규칙이 또 다르다.
+  /// 앱은 정확한 값을 알고 있으므로 그대로 내준다. 시트 파일은 건드리지 않고
+  /// 렌더 트리에서 BottomSheet(머티리얼 공개 위젯)/MapDetailPanel 을 찾는다.
+  int? _overlayTopPx() {
+    // 모달 바텀시트(필터·공유)는 렌더박스가 곧 시트다.
+    double? sheet;
+    void visit(Element el) {
+      if (el.widget is BottomSheet) {
+        final ro = el.renderObject;
+        if (ro is RenderBox && ro.attached && ro.hasSize) {
+          final dy = ro.localToGlobal(Offset.zero).dy;
+          if (sheet == null || dy < sheet!) sheet = dy;
+        }
+      }
+      el.visitChildren(visit);
+    }
+
+    WidgetsBinding.instance.rootElement?.visitChildren(visit);
+
+    // 상세 패널은 화면을 채우는 Align 안에 있어 렌더박스 상단이 항상 0 이다
+    // (#32에서 128 로 잡혀 detail·share 좌표가 뭉개진 원인) → 패널이 직접
+    // 알려주는 detailPanelTop 을 쓴다. 모달이 위에 있으면 모달이 우선.
+    final panel = detailPanelTop.value;
+    final top = sheet ?? (panel >= 0 ? panel : null);
+    if (top == null) return null;
+    final dpr = View.of(context).devicePixelRatio;
+    return (top * dpr).round();
+  }
+
+  /// 스틸 상태가 안정된 뒤 좌표를 로그로 남긴다(run_capture.sh 가 logcat 에서 수거).
+  void _dumpRect(String cmd) {
+    final top = _overlayTopPx();
+    debugPrint('CAPTURE_RECT cmd=$cmd sheetTopPx=${top ?? -1}');
+  }
+
+  Future<void> _closeOverlays() async {
+    if (!mounted) return;
+    // 상세 패널은 Navigator 라우트가 아니라 detailPanel notifier 로 MapScreen Stack
+    // 에서 렌더된다(상세 위에 공유·삭제확인 모달이 뜨도록 한 설계) → popUntil 로는
+    // 닫히지 않는다. 캡처 #28에서 '배경만' 스틸에 상세 시트가 남아 배경 쌍이
+    // 오염된 원인이 이것. notifier 를 먼저 비우고 라우트를 정리한다.
+    detailPanel.value = null;
+    Navigator.of(context, rootNavigator: true).popUntil((r) => r.isFirst);
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+  }
+
+  /// st_* 상태 적용. 지도 카메라는 st_club_bg 에서 한 번만 움직이고,
+  /// 이후 오버레이 상태들은 카메라를 건드리지 않아 배경이 픽셀 단위로 같다.
+  Future<void> _runStill(String cmd) async {
+    await _applyStill(cmd);
+    // 레이아웃이 안정된 뒤 오버레이 좌표를 남긴다.
+    await Future<void>.delayed(const Duration(milliseconds: 1200));
+    if (!mounted) return;
+    _dumpRect(cmd);
+  }
+
+  Future<void> _applyStill(String cmd) async {
+    switch (cmd) {
+      // ── 찾기 ──────────────────────────────────────────────
+      case 'st_map': // 지도 기본(필터 없음)
+        await _closeOverlays();
+        if (!mounted) return;
+        setState(() {
+          _filter = const ClubFilter();
+          _search.text = '';
+        });
+        await _refreshMarkers();
+        break;
+
+      case 'st_filter_open': // 필터 시트(미선택)
+        unawaited(showFilterSheet(context, const ClubFilter()));
+        break;
+
+      case 'st_filter_set': // 같은 시트, 칩 3개 선택된 상태
+        await _closeOverlays();
+        if (!mounted) return;
+        unawaited(showFilterSheet(context, _stillPreset));
+        break;
+
+      case 'st_map_filtered': // 필터 적용된 지도
+        await _closeOverlays();
+        if (!mounted) return;
+        setState(() {
+          _filter = _stillPreset;
+          _search.text = '';
+        });
+        await _refreshMarkers();
+        _fitToFilter();
+        break;
+
+      case 'st_club_bg': // 대상 클럽으로 카메라 이동 — 시트 없음(배경 쌍)
+        await _closeOverlays();
+        final c = _stillClub();
+        if (c != null) await _centerOnPin(c.lat, c.lng);
+        break;
+
+      case 'st_club_sheet': // 같은 카메라에 상세 시트만 얹기
+        final c2 = _stillClub();
+        if (c2 != null && mounted) {
+          showClubDetail(
+            context,
+            c2,
+            currentUid: _repo.currentUid,
+            isAdmin: _isAdmin,
+            onChanged: _load,
+          );
+        }
+        break;
+
+      // ── 담고 관리 ─────────────────────────────────────────
+      case 'st_lunchbox_bg': // 오버레이만 걷어냄(카메라 유지)
+        await _closeOverlays();
+        // 도시락이 비면 화면이 휑하므로 일정 있는 팀을 시드(캡처 빌드 전용).
+        try {
+          final uid = await _repo.ensureUid();
+          final lb = LunchboxService();
+          var n = 0;
+          final target = _stillClub();
+          if (target != null) {
+            await lb.addBookmark(uid, target.id);
+            n++;
+          }
+          for (final x in _clubs) {
+            if (n >= 4) break;
+            if (target != null && x.id == target.id) continue;
+            final hasSched =
+                (x.schedule ?? '').isNotEmpty ||
+                (x.scheduleRaw?.isNotEmpty ?? false);
+            if (!hasSched) continue;
+            await lb.addBookmark(uid, x.id);
+            n++;
+          }
+        } catch (_) {}
+        break;
+
+      case 'st_lunchbox': // 도시락 모달
+        if (mounted) showLunchboxSheet(context);
+        break;
+
+      case 'st_lunchbox_diet': // 도시락 모달 + 식단표 펼침
+        await _closeOverlays();
+        if (mounted) showLunchboxSheet(context, openDiet: true);
+        break;
+
+      // ── 자랑하기 ──────────────────────────────────────────
+      case 'st_profile_bg':
+        await _closeOverlays();
+        try {
+          await _repo.ensureUid();
+        } catch (_) {}
+        break;
+
+      case 'st_profile': // 밥이름 카드
+        if (mounted) showProfileSheet(context);
+        break;
+
+      case 'st_namecard': // 네임카드(도시락+시간표+QR)
+        await _closeOverlays();
+        if (!mounted) return;
+        unawaited(
+          Navigator.push(
+            context,
+            MaterialPageRoute<void>(builder: (_) => const ShareImageScreen()),
+          ),
+        );
+        break;
+
+      case 'st_share_bg': // 상세 시트만(공유 메뉴 없음) — 배경 쌍
+        await _closeOverlays();
+        final c3 = _stillClub();
+        if (c3 != null && mounted) {
+          showClubDetail(
+            context,
+            c3,
+            currentUid: _repo.currentUid,
+            isAdmin: _isAdmin,
+            onChanged: _load,
+          );
+        }
+        break;
+
+      case 'st_share': // 상세 + 공유 메뉴
+        final c4 = _stillClub();
+        if (c4 != null && mounted) {
+          showShareMenu(
+            context,
+            url: ShareService.clubUrl(c4.id),
+            shareTitle: c4.name,
+            onStory: () => shareStoryCard(context, StoryCardData.fromClub(c4)),
+          );
+        }
+        break;
+    }
+  }
+
+  /// 캡처 흐름 공용: n초 대기(위젯이 사라졌으면 중단).
+  Future<bool> _hold(double sec) async {
+    await Future<void>.delayed(Duration(milliseconds: (sec * 1000).round()));
+    return mounted;
+  }
+
+  /// 열려 있는 시트/화면을 닫아 지도로 복귀.
+  Future<void> _backToMap() async {
+    if (!mounted) return;
+    // 상세 패널은 라우트가 아니라 notifier 렌더 → popUntil 로 안 닫힌다(_closeOverlays 주석).
+    detailPanel.value = null;
+    Navigator.of(context, rootNavigator: true).popUntil((r) => r.isFirst);
+    await _hold(0.6);
+  }
+
+  /// ① 찾기: 지도 → 필터(서울·화·성인) → 결과 → 클럽 상세 → 연락
+  Future<void> _flowDiscover() async {
+    await _hold(3.5); // 지도 전경(전국 마커·클러스터)
+    if (!mounted) return;
+
+    // 필터 시트를 '이미 선택된' 상태로 띄운다 — 좌표 탭 없이 칩 선택이 보인다.
+    const preset = ClubFilter(regions: {'서울'}, days: {'화'}, targets: {'성인'});
+    final sheet = showFilterSheet(context, preset);
+    await _hold(5); // 지역·요일·대상 칩을 읽을 시간
+    if (!mounted) return;
+    Navigator.of(context).pop(preset); // '적용하기' 상당
+    final applied = await sheet;
+    if (!mounted) return;
+    if (applied != null) {
+      setState(() {
+        _filter = applied;
+        _search.text = applied.keyword;
+      });
+      await _refreshMarkers();
+      _fitToFilter();
+    }
+    if (!await _hold(4)) return; // 좁혀진 결과 지도
+
+    // 결과 중 한 팀을 열어 일정·회비·위치를 보여준다.
+    final c = _clubs.where(_filter.matches).isNotEmpty
+        ? _clubs.firstWhere(_filter.matches)
+        : (_clubs.isNotEmpty ? _clubs.first : null);
+    if (c == null) return;
+    await _focusAndShowClub(c);
+    if (!await _hold(6)) return; // 상세: 일정·회비·주소·버튼
+
+    // 필터 원복(다음 캡처 오염 방지)
+    await _backToMap();
+    if (!mounted) return;
+    setState(() {
+      _filter = const ClubFilter();
+      _search.text = '';
+    });
+    await _refreshMarkers();
+  }
+
+  /// ② 담고 관리: 클럽 상세 → 도시락 찜 → 도시락(반찬칸) → 식단표
+  Future<void> _flowSave(Club? c) async {
+    if (c == null) return;
+    await _focusAndShowClub(c);
+    if (!await _hold(4)) return; // 상세에서 시작
+
+    // 찜(도시락 담기) — 실제 저장까지 수행해 도시락이 비지 않게.
+    try {
+      final uid = await _repo.ensureUid();
+      final lb = LunchboxService();
+      await lb.addBookmark(uid, c.id);
+      var seeded = 1;
+      for (final x in _clubs) {
+        if (seeded >= 4) break;
+        if (x.id == c.id) continue;
+        final hasSched =
+            (x.schedule ?? '').isNotEmpty ||
+            (x.scheduleRaw?.isNotEmpty ?? false);
+        if (!hasSched) continue;
+        await lb.addBookmark(uid, x.id);
+        seeded++;
+      }
+    } catch (_) {}
+    if (!await _hold(1.5)) return;
+
+    await _backToMap();
+    if (!mounted) return;
+    showLunchboxSheet(context);
+    if (!await _hold(9)) return; // 반찬칸 그리드 + 식단표 버튼까지 읽을 시간
+    await _backToMap();
+  }
+
+  /// ③ 자랑하기: 밥이름 프로필 → 네임카드(도시락+시간표+QR) → 공유
+  Future<void> _flowShare() async {
+    try {
+      await _repo.ensureUid();
+    } catch (_) {}
+    if (!mounted) return;
+    showProfileSheet(context);
+    if (!await _hold(5)) return; // 밥이름 카드·스탬프
+
+    await _backToMap();
+    if (!mounted) return;
+    // 네임카드(피드형/스토리형 전환 + 이미지로 공유·저장)
+    unawaited(
+      Navigator.push(
+        context,
+        MaterialPageRoute<void>(builder: (_) => const ShareImageScreen()),
+      ),
+    );
+    if (!await _hold(9)) return;
+
+    await _backToMap();
+    if (!mounted) return;
+    // 클럽 공유 메뉴(인스타 스토리·카톡·링크)
+    final c = _clubs.isNotEmpty ? _clubs.first : null;
+    if (c == null) return;
+    await _focusAndShowClub(c);
+    await _hold(2);
+    if (!mounted) return;
+    showShareMenu(
+      context,
+      url: ShareService.clubUrl(c.id),
+      shareTitle: c.name,
+      onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
+    );
+    await _hold(6);
   }
 
   Future<void> _focusAndShowSpot(PickupSpot spot) async {
@@ -937,6 +1321,9 @@ class _MapScreenState extends State<MapScreen> {
 
   // 필터/검색 활성 시 결과가 다 보이게 카메라 맞춤 (웹 map.setBounds 대응)
   void _fitToFilter() {
+    // 캡처: 카메라를 옮기면 (a) 고배율 타일이 안 오고 (b) '필터 적용' 스틸의 배경이
+    // 지도 스틸과 달라져 디졸브가 어색해진다. 같은 화면에서 마커만 줄어드는 게 낫다.
+    if (kCaptureLowGpu) return;
     if (_tab != 'clubs' || _filter.isEmpty) return;
     final pts = <NLatLng>[];
     for (final club in _clubs.where(_filter.matches)) {
@@ -1499,6 +1886,10 @@ class _UrgentTickerState extends State<_UrgentTicker> {
 
   void _start() {
     _timer?.cancel();
+    // 캡처 빌드에선 배너를 고정한다. 4초마다 문구가 바뀌면 스틸마다 상단 배너가
+    // 달라져(예: [GVT] → [피터팬]) 스틸을 이어 붙일 때 배너가 깜빡이고,
+    // 그 순간 합성 티가 난다. 캡처는 항상 첫 항목으로 고정.
+    if (kCaptureMode) return;
     if (widget.clubs.length > 1) {
       _timer = Timer.periodic(const Duration(seconds: 4), (_) {
         if (!mounted) return;
