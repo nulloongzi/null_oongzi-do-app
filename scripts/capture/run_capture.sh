@@ -481,9 +481,11 @@ if [ "$INCLUDE_REELS" = "true" ] && want flows; then
   # 흐름 3종(픽업 제외) — 각 흐름은 앱 내부 스크립트가 구동한다.
   # 길이는 앱 쪽 _hold() 합계 + 전환 여유로 맞춘다. 예전엔 넉넉하게 잡았더니
   # discover 38s 중 마지막 16s 가 정지된 지도(무의미한 꼬리)로 채워졌다.
-  flow discover flow_discover 22   # 지도 → 필터 → 결과 → 클럽 상세
-  flow save     flow_save     20   # 상세 → 도시락 찜 → 반찬칸 → 식단표
-  flow share    flow_share    26   # 밥이름 → 네임카드 → 공유
+  # 실측(장면 전환 시각)으로 맞춘 길이 + 여유 2초.
+  #   discover 내용 종료 16.1s · save 14.8s · share 19.7s
+  flow discover flow_discover 18   # 지도 → 필터 → 결과 → 클럽 상세
+  flow save     flow_save     16   # 상세 → 도시락 찜 → 반찬칸 → 식단표
+  flow share    flow_share    22   # 밥이름 → 네임카드 → 공유
 
   # 풀 투어: 3편 이어붙이기(편집 없이 바로 쓰는 앱 소개용).
   TOUR_LIST="$FLOWS_DIR/.tour.txt"; : > "$TOUR_LIST"
