@@ -43,6 +43,9 @@ INCLUDE_REELS="${INCLUDE_REELS:-true}"
 # 실행할 단계. 콤마 구분: play(스토어 스샷) · stills(모션용 스틸) · flows(흐름 녹화).
 # 예) PHASES=stills,flows  → 스토어 스샷 9장(약 5분)을 건너뛴다.
 PHASES="${PHASES:-play,stills,flows}"
+# 아티팩트를 다운로드할 수 없는 CI 에서는 base64 썸네일이 유일한 검증 경로지만,
+# 로컬에서는 파일을 바로 열어보면 되고 콘솔만 뒤덮는다 → 끌 수 있게 한다.
+FINGERPRINT="${FINGERPRINT:-true}"
 want() { case ",$PHASES," in *,"$1",*) return 0;; esac; return 1; }
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -132,6 +135,7 @@ shot() { capture_to "$SCREENS/$1.png"; }
 #  · 각 스샷의 평균 밝기+해상도(블랙/블랭크 조기 감지)
 #  · 지도 1장은 base64 썸네일(로그에서 육안 확인)
 fingerprint() {
+  [ "$FINGERPRINT" = "true" ] || return 0
   echo "===== CAPTURE FINGERPRINT ====="
   for f in "$SCREENS"/*.png ${STORE:+"$STORE"/*.png} ${STILLS:+"$STILLS"/*.png}; do
     [ -e "$f" ] || continue
@@ -309,9 +313,14 @@ fi
 # ── 카피 오버레이 합성(업로드용 최종 이미지) ──────────────────
 # Play 마케팅 프레임: 크림 1080×1920 캔버스 + 상단 2줄 카피(나눔고딕Bold) +
 # 옐로 언더라인 + 앱 스샷(다크 테두리). 한글 폰트는 워크플로에서 설치(fonts-nanum).
+# 이 블록은 play 단계 전용이다. 예전엔 단계와 무관하게 실행됐는데, 폰트 탐색이
+# `set -euo pipefail` 아래에서 스크립트를 통째로 죽였다: Windows 에는 fc-list 가
+# 없어 파이프가 실패 → pipefail → 명령치환 실패 → set -e 종료. 그것도 **에러 한 줄
+# 없이** 끝나서 원인이 안 보였다(스틸까지 다 찍고 흐름 녹화 직전에 사라짐).
+if want play; then
 STORE="$ART/store"; mkdir -p "$STORE"
-KFONT="$(fc-list 2>/dev/null | grep -i nanum | grep -i bold | head -1 | cut -d: -f1 | xargs)"
-[ -z "$KFONT" ] && KFONT="/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf"
+KFONT="$(fc-list 2>/dev/null | grep -i nanum | grep -i bold | head -1 | cut -d: -f1 | xargs || true)"
+[ -n "$KFONT" ] || KFONT="/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf"
 compose_store() { # compose_store <basename> <line1> <line2>
   local src="$SCREENS/$1.png" out="$STORE/$1.png" tmp="$STORE/.t_$1.png"
   [ -e "$src" ] || { echo "::warning::합성 스킵(원본 없음): $1"; return; }
@@ -325,7 +334,7 @@ compose_store() { # compose_store <basename> <line1> <line2>
     "$out" 2>/dev/null && log "  합성: store/$1.png" || echo "::warning::합성 실패: $1"
   rm -f "$tmp"
 }
-if want play && [ -e "$KFONT" ]; then
+if [ -e "$KFONT" ]; then
   compose_store "play_01_map_${CAP_LANG}"      "전국 배구 동호회," "지도 한 눈에"
   compose_store "play_02_filter_${CAP_LANG}"   "지역·요일·대상으로" "딱 맞는 팀"
   compose_store "play_04_detail_${CAP_LANG}"   "일정·회비·위치 확인하고" "바로 연락"
@@ -335,8 +344,9 @@ if want play && [ -e "$KFONT" ]; then
   compose_store "play_07_share_${CAP_LANG}"    "카톡·인스타로" "우리 팀 자랑"
   compose_store "play_08_story_${CAP_LANG}"    "내 카드 한 장으로" "스토리에 자랑"
   compose_store "play_09_login_${CAP_LANG}"    "카카오·네이버로" "몇 초면 시작"
-elif want play; then
+else
   echo "::warning::한글 폰트(nanum) 미탐지 — 카피 합성 스킵($KFONT)"
+fi
 fi
 
 # ── 릴스 원본(raw): 기능별 모션 클립을 언어별로 녹화 ──────────
@@ -345,7 +355,12 @@ fi
 # 각 클립: 대상 언어로 지도에 콜드 안착 → 녹화 시작 → 기능 딥링크로 모션(시트/카메라) 유발.
 if [ "$INCLUDE_REELS" = "true" ] && want flows; then
   RAW="$REELS/raw"; mkdir -p "$RAW"
-  vdur() { ffprobe -v error -show_entries format=duration -of csv=p=0 "$1" 2>/dev/null | cut -d. -f1; }
+  # ffprobe 실패(파일 없음·손상)는 흔한 정상 경로다. pipefail 아래에서 그대로 두면
+  # d="$(vdur ...)" 가 set -e 를 물어 스크립트가 조용히 끝난다 → 항상 0 을 돌려준다.
+  vdur() {
+    ffprobe -v error -show_entries format=duration -of csv=p=0 "$1" 2>/dev/null \
+      | cut -d. -f1 || true
+  }
 
   # 흐름 검증 몬타주: 아티팩트 다운로드가 프록시에 막히므로, 각 흐름 영상의
   # 프레임을 전체 구간에 균등 추출해 base64 로 로그에 남긴다(육안 확인 경로).
@@ -359,7 +374,7 @@ if [ "$INCLUDE_REELS" = "true" ] && want flows; then
     td="$(mktemp -d)"
     ffmpeg -y -loglevel error -i "$mp4" -vf "fps=${fps},scale=270:-1" -frames:v 12 "$td/f_%02d.png" 2>/dev/null
     if ls "$td"/f_*.png >/dev/null 2>&1; then
-      montage "$td"/f_*.png -tile 4x3 -geometry +3+3 -background '#FFF8E1' "$td/m.png" 2>/dev/null
+      montage "$td"/f_*.png -tile 4x3 -geometry +3+3 -background '#FFF8E1' "$td/m.png" 2>/dev/null || true
       echo "MONTAGE_BEGIN $label"
       convert "$td/m.png" -resize 1100x -quality 72 jpg:- 2>/dev/null | base64 -w0
       echo ""
@@ -430,8 +445,11 @@ if [ "$INCLUDE_REELS" = "true" ] && want flows; then
     fi
     if [ "$d" -le 0 ]; then echo "::warning::흐름 mp4 회수 실패: $name"; return; fi
     # 9:16 크롭(재인코딩 1회) — 릴스 규격 완성본.
-    ffmpeg -y -loglevel error -i "$rawout" -vf "$FLOW_CROP" \
-      -c:v libx264 -preset veryfast -pix_fmt yuv420p -r 30 -an "$out" 2>&1 | tail -2
+    if ! ffmpeg -y -loglevel error -i "$rawout" -vf "$FLOW_CROP" \
+        -c:v libx264 -preset veryfast -pix_fmt yuv420p -r 30 -an "$out" 2>&1 | tail -2; then
+      echo "::warning::9:16 크롭 인코딩 실패: $name (원본은 raw/ 에 남아 있음)"
+      return
+    fi
     log "  ↳ flows/${name}_${CAP_LANG}.mp4 (${d}s, 1080x1920)"
   }
 
@@ -444,20 +462,23 @@ if [ "$INCLUDE_REELS" = "true" ] && want flows; then
   TOUR_LIST="$FLOWS_DIR/.tour.txt"; : > "$TOUR_LIST"
   for n in discover save share; do
     f="$FLOWS_DIR/${n}_${CAP_LANG}.mp4"
-    [ -s "$f" ] && echo "file '$(basename "$f")'" >> "$TOUR_LIST"
+    [ -s "$f" ] && echo "file '$(basename "$f")'" >> "$TOUR_LIST" || true
   done
   if [ -s "$TOUR_LIST" ]; then
     ( cd "$FLOWS_DIR" && ffmpeg -y -loglevel error -f concat -safe 0 -i .tour.txt \
-        -c copy "full_tour_${CAP_LANG}.mp4" 2>&1 | tail -2 )
+        -c copy "full_tour_${CAP_LANG}.mp4" 2>&1 | tail -2 ) \
+      || echo "::warning::풀 투어 이어붙이기 실패"
     log "  ↳ flows/full_tour_${CAP_LANG}.mp4"
   fi
   rm -f "$TOUR_LIST"
 
+  if [ "$FINGERPRINT" = "true" ]; then
   echo "===== FLOW FINGERPRINT ====="
   for n in discover save share full_tour; do
     flow_montage "$FLOWS_DIR/${n}_${CAP_LANG}.mp4" "flow_${n}"
   done
   echo "===== END FLOW FINGERPRINT ====="
+  fi
 fi
 
 adb logcat -d > "$LOGS/logcat.txt" 2>/dev/null || true

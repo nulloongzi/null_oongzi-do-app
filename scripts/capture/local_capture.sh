@@ -120,7 +120,7 @@ esac
 say "캡처 시작 (MODE=$MODE · 단계=$PH)…"
 APK_PATH="$APK_OUT" ARTIFACTS_DIR="$OUT" SMOKE_ONLY=false \
   CAP_LANG="$LANG_TAG" INCLUDE_REELS="$REELS" PHASES="$PH" \
-  SHOT_MODE="${SHOT_MODE:-execout}" \
+  SHOT_MODE="${SHOT_MODE:-execout}" FINGERPRINT="${FINGERPRINT:-false}" \
   bash "$HERE/run_capture.sh"
 
 # ── 후반작업(스틸 → 시연 영상) ───────────────────────────────
