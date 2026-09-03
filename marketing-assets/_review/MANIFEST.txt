@@ -1,10 +1,10 @@
-# 캡처 원본 목록 (2026-09-03 13:31)
+# 캡처 원본 목록 (2026-09-03 14:36)
 기기: SM-F741N / Physical size: 1080x2640
 
-2982853	/c/Users/user/null_oongzi-do-app/marketing-assets/motion/discover_ko.mp4
-5295136	/c/Users/user/null_oongzi-do-app/marketing-assets/motion/full_tour_ko.mp4
-1098451	/c/Users/user/null_oongzi-do-app/marketing-assets/motion/save_ko.mp4
-1215566	/c/Users/user/null_oongzi-do-app/marketing-assets/motion/share_ko.mp4
+2788590	/c/Users/user/null_oongzi-do-app/marketing-assets/motion/discover_ko.mp4
+5104392	/c/Users/user/null_oongzi-do-app/marketing-assets/motion/full_tour_ko.mp4
+1093839	/c/Users/user/null_oongzi-do-app/marketing-assets/motion/save_ko.mp4
+1223713	/c/Users/user/null_oongzi-do-app/marketing-assets/motion/share_ko.mp4
 2429141	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/flows/discover_ko.mp4
 8296521	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/flows/full_tour_ko.mp4
 2528105	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/flows/save_ko.mp4
