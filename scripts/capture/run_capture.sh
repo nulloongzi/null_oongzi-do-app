@@ -293,6 +293,9 @@ collect_rects() {
 # 카메라가 움직이는 스텝(04·05)은 타일 로딩 여유를 크게 준다 — #28에서 fitBounds/
 # centerOnPin 직후 9초로는 부족해 지도가 연녹색 민무늬로 찍혔다.
 if want stills; then
+# 이전 런의 CAPTURE_RECT 가 링버퍼에 남아 있으면 collect_rects 가 그것까지 주워
+# 옛 좌표를 쓸 수 있다(UI 가 바뀌면 합성이 어긋난다) → 스틸 시작 전에 비운다.
+adb logcat -c >/dev/null 2>&1 || true
 open_cap st_map 30;         still "01_map"
 step st_filter_open 7;      still "02_filter_open"
 step st_filter_set 7;       still "03_filter_set"
