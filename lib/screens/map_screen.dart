@@ -892,7 +892,9 @@ class _MapScreenState extends State<MapScreen> {
 
   /// ① 찾기: 지도 → 필터(서울·화·성인) → 결과 → 클럽 상세 → 연락
   Future<void> _flowDiscover() async {
-    await _hold(2.5, 'map'); // 지도 전경(전국 마커·클러스터)
+    // 3.5s: 이 구간에 얹히는 한국어 나레이션이 약 2.9초라 2.5s 로는 다음 줄과
+    // 겹쳤다. 화면이 짧은 게 원인이므로 문구를 깎는 대신 홀드를 늘린다.
+    await _hold(3.5, 'map'); // 지도 전경(전국 마커·클러스터)
     if (!mounted) return;
 
     // 필터 시트를 '이미 선택된' 상태로 띄운다 — 좌표 탭 없이 칩 선택이 보인다.

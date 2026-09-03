@@ -127,6 +127,34 @@ narrate() { # narrate <출력.mp3> <읽을 텍스트> → 성공 시 0
   bash "$HERE/tts.sh" "$1" "$2" >/dev/null 2>&1
 }
 
+# 음성이 자막 구간보다 길면 **다음 줄 음성과 겹쳐 두 목소리가 동시에 난다.**
+# 문구를 일일이 맞추는 대신 살짝 빠르게 재생해 구간에 맞춘다(atempo).
+# 1.22배까지만 — 한국어 TTS 는 그 이상 빨라지면 급하게 들린다. 그래도 넘치면
+# 문구를 줄이거나 앱의 _hold 를 늘리라고 알린다(진짜 원인은 화면이 짧은 것이다).
+NAR_GAP=0.15   # 다음 나레이션과의 최소 간격
+fit_narration() { # fit_narration <mp3> <시작> <끝> <라벨>
+  local f="$1" st="$2" en="$3" label="$4" d win r
+  d="$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$f" 2>/dev/null)"
+  [ -n "$d" ] || return 0
+  win="$(awk -v s="$st" -v e="$en" -v g="$NAR_GAP" 'BEGIN{printf "%.3f", e-s-g}')"
+  awk -v w="$win" 'BEGIN{exit !(w > 0.5)}' || return 0
+  r="$(awk -v d="$d" -v w="$win" 'BEGIN{printf "%.4f", (d>w ? d/w : 1)}')"
+  awk -v r="$r" 'BEGIN{exit !(r > 1.01)}' || return 0
+  local capped
+  capped="$(awk -v r="$r" 'BEGIN{printf "%.4f", (r>1.22 ? 1.22 : r)}')"
+  if ffmpeg -y -loglevel error -i "$f" -filter:a "atempo=$capped" \
+      -c:a libmp3lame -q:a 4 "$f.fit.mp3" 2>/dev/null && [ -s "$f.fit.mp3" ]; then
+    mv -f "$f.fit.mp3" "$f"
+    awk -v r="$r" -v c="$capped" -v l="$label" -v d="$d" -v w="$win" 'BEGIN{
+      if (r > 1.225)
+        printf "  ! \"%s\" 음성이 너무 깁니다(%.1fs > %.1fs). %.2f배로 줄였지만 여전히 넘칩니다 — 문구를 줄이세요.\n", l, d, w, c
+      else
+        printf "  · \"%s\" 음성 %.2f배로 구간에 맞춤(%.1fs → %.1fs)\n", l, c, d, w
+    }'
+  fi
+  rm -f "$f.fit.mp3"
+}
+
 # ── 장면 전환 감지 ───────────────────────────────────────────
 # 자막을 초 단위로 하드코딩하면 앱의 _hold() 를 조금만 건드려도 어긋난다.
 # 영상 자체에서 전환 지점을 뽑아 그 구간마다 자막을 하나씩 배정한다.
@@ -241,12 +269,8 @@ for flow in $FLOWS; do
     CUR="[v${idx}]"; idx=$((idx+1))
     # 음성은 한국어 두 줄만 읽는다(영문은 자막 전용). 자막이 뜨는 순간에 맞춘다.
     if narrate "$WORK/${flow}_n${n}.mp3" "$l1 $l2"; then
+      fit_narration "$WORK/${flow}_n${n}.mp3" "$st" "$en" "$l1"
       NAR_T+=("$st"); NAR_F+=("$WORK/${flow}_n${n}.mp3")
-      # 음성이 자막 구간보다 길면 다음 자막 위로 넘어간다. 자동으로 자르지 않고
-      # 알려만 준다 — 문구를 줄이거나 TTS_RATE 를 올리는 게 맞는 해결이다.
-      nd="$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$WORK/${flow}_n${n}.mp3" 2>/dev/null)"
-      awk -v d="${nd:-0}" -v s="$st" -v e="$en" \
-        'BEGIN{ if (d > e-s+0.4) printf "  ! 나레이션이 구간보다 깁니다: %.1fs > %.1fs\n", d, e-s }'
     fi
     n=$((n+1))
   done

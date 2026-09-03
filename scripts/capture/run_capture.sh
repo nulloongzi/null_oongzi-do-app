@@ -483,7 +483,7 @@ if [ "$INCLUDE_REELS" = "true" ] && want flows; then
   # discover 38s 중 마지막 16s 가 정지된 지도(무의미한 꼬리)로 채워졌다.
   # 실측(장면 전환 시각)으로 맞춘 길이 + 여유 2초.
   #   discover 내용 종료 16.1s · save 14.8s · share 19.7s
-  flow discover flow_discover 18   # 지도 → 필터 → 결과 → 클럽 상세
+  flow discover flow_discover 19   # 지도 → 필터 → 결과 → 클럽 상세
   flow save     flow_save     20   # 상세 → 도시락 찜 → 반찬칸 → 식단표
   flow share    flow_share    22   # 밥이름 → 네임카드 → 공유
 

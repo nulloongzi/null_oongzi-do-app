@@ -37,8 +37,11 @@ for d in final flows motion; do
   esac
   for f in "$src"/*.mp4; do
     [ -e "$f" ] || continue
+    # 완성본은 나레이션이 들어 있으므로 소리를 남긴다(원격에서 음성까지 확인).
+    # 편집 전 소스는 어차피 무음이라 -an 으로 용량을 아낀다.
+    aopt=(-an); [ "$d" = final ] && aopt=(-c:a aac -b:a 64k -ac 1)
     ffmpeg -y -loglevel error -i "$f" -vf "scale=360:-2" -c:v libx264 -preset veryfast \
-      -crf 32 -pix_fmt yuv420p -an "$REV/${d}_$(basename "${f%.mp4}").mp4" 2>/dev/null || continue
+      -crf 32 -pix_fmt yuv420p "${aopt[@]}" "$REV/${d}_$(basename "${f%.mp4}").mp4" 2>/dev/null || continue
     v=$((v+1))
   done
 done
