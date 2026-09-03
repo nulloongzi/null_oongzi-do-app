@@ -247,6 +247,10 @@ for flow in $FLOWS; do
     FC+="${CUR}[hk]overlay=0:0:enable='lt(t,$HOOK_D)'[v${idx}];"
     CUR="[v${idx}]"; idx=$((idx+1))
     if narrate "$WORK/${flow}_n_hook.mp3" "$hk1 $hk2"; then
+      # 훅 음성도 첫 자막 음성과 겹치면 두 목소리가 동시에 난다(실측으로 확인).
+      # 첫 자막이 시작하는 시각까지가 훅의 구간이다.
+      hk_end="$(awk -v b="${BOUNDS[0]}" -v h="$HOOK_D" 'BEGIN{printf "%.2f", (b<h?h:b)+0.1}')"
+      fit_narration "$WORK/${flow}_n_hook.mp3" 0.30 "$hk_end" "$hk1"
       NAR_T+=(0.30); NAR_F+=("$WORK/${flow}_n_hook.mp3")
     fi
   fi
