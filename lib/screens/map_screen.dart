@@ -283,6 +283,12 @@ class _MapScreenState extends State<MapScreen> {
   static const _labelZoomHide = 11.8; // 이 줌 미만 → 끄기 (사이 구간은 현 상태 유지)
   static const _focusZoom = 15.0; // 마커 탭 시 확대 축척
   static const _captureFocusZoom = 12.5; // 저사양 캡처용(타일이 실제로 렌더되는 축척)
+  // fitBounds 를 쓸 최소 경계 크기(위경도 도). 이보다 좁으면 최대 축척까지 확대돼
+  // 타일 없는 빈 화면이 되므로 고정 축척으로 중심 이동한다. 0.01도 ≈ 1.1km.
+  static const _minFitSpanDeg = 0.01;
+  // 이전 카메라의 축척을 물려받을 상한. 이게 없으면 한 번 과확대된 상태가
+  // 이후 모든 이동에 계속 전파된다(줌아웃 방지 규칙 때문).
+  static const _maxInheritZoom = 16.0;
   bool _showLabels = false; // 현재 줌이 임계 이상? (스테이지3=알약 표시)
 
   // 라벨 토글을 clear+add 없이 in-place(setIcon/setSize)로 적용하기 위한 보관.
@@ -473,7 +479,9 @@ class _MapScreenState extends State<MapScreen> {
     double z = kCaptureLowGpu ? _captureFocusZoom : _focusZoom;
     try {
       final cam = await c.getCameraPosition();
-      if (cam.zoom > z) z = cam.zoom;
+      // 현재가 더 크면 유지하되, 비정상적으로 과확대된(타일 없는) 축척까지
+      // 물려받지는 않는다 — 그러면 빈 지도가 다음 화면으로 계속 번진다.
+      if (cam.zoom > z && cam.zoom <= _maxInheritZoom) z = cam.zoom;
     } catch (_) {}
     try {
       final update = NCameraUpdate.scrollAndZoomTo(
@@ -643,12 +651,10 @@ class _MapScreenState extends State<MapScreen> {
   // 앱의 실제 전환(바텀시트 슬라이드 등)으로 이어 붙여 영상을 만든다.
   // 여기서는 그 스틸 상태들을 결정적으로 만들어 준다.
 
-  /// 스틸 세트에서 쓰는 고정 필터(찾기 스토리: 서울·화요일·성인).
-  static const _stillPreset = ClubFilter(
-    regions: {'서울'},
-    days: {'화'},
-    targets: {'성인'},
-  );
+  /// 스틸 세트에서 쓰는 고정 필터(찾기 스토리: 서울·성인).
+  // 요일까지 걸면 결과가 1팀으로 줄어 지도에 핀 하나만 남는다 — 시연 영상에서
+  // "필터로 좁혔더니 지도가 비었다"로 보인다. 지역·대상만 걸어 여러 팀이 남게 한다.
+  static const _stillPreset = ClubFilter(regions: {'서울'}, targets: {'성인'});
 
   /// 스틸 전용 대상 클럽 — 프리셋에 걸리는 팀 우선, 없으면 급구→검증→첫 팀.
   Club? _stillClub() {
@@ -1312,6 +1318,27 @@ class _MapScreenState extends State<MapScreen> {
     }
     if (pts.isEmpty) return;
     try {
+      // 결과가 1곳이거나 아주 좁게 모여 있으면 fitBounds 가 최대 축척까지 확대한다.
+      // 그 배율에는 타일이 없어 지도가 통째로 빈 연녹색이 된다(축척 2m). 필터를
+      // 좁힐수록 지도가 사라지는 셈이라 실사용에서도 버그다 → 고정 축척으로 대체.
+      double minLat = pts.first.latitude, maxLat = minLat;
+      double minLng = pts.first.longitude, maxLng = minLng;
+      for (final p in pts) {
+        minLat = math.min(minLat, p.latitude);
+        maxLat = math.max(maxLat, p.latitude);
+        minLng = math.min(minLng, p.longitude);
+        maxLng = math.max(maxLng, p.longitude);
+      }
+      final span = math.max(maxLat - minLat, maxLng - minLng);
+      if (span < _minFitSpanDeg) {
+        _controller?.updateCamera(
+          NCameraUpdate.scrollAndZoomTo(
+            target: NLatLng((minLat + maxLat) / 2, (minLng + maxLng) / 2),
+            zoom: _focusZoom,
+          ),
+        );
+        return;
+      }
       final bounds = NLatLngBounds.from(pts);
       _controller?.updateCamera(
         NCameraUpdate.fitBounds(bounds, padding: const EdgeInsets.all(64)),
