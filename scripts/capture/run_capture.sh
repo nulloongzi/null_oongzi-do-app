@@ -13,6 +13,15 @@ set -euo pipefail
 # 유틸(C:\Windows\System32\convert.exe)** 과 이름이 겹쳐, Git Bash 에서 그쪽이
 # 먼저 잡히면 이미지가 아니라 볼륨 변환을 시도한다(치명적).
 # magick 이 있으면 전부 magick 경유로 강제한다. Linux IM6 에서는 원래 바이너리 사용.
+# ── Git Bash(MSYS2) 경로 변환 차단 ──────────────────────────
+# MSYS2 런타임은 네이티브 .exe 에 넘기는 "/로 시작하는 인자"를 윈도우 경로로 자동
+# 변환한다. adb 에는 치명적이다 — **기기 안의 경로**인 /sdcard/x.png 가
+# C:\Program Files\Git\sdcard\x.png 로 바뀌어 screencap·pull·screenrecord 가
+# 통째로 실패한다(로컬 폴더에 파일이 안 생겨서 원인이 잘 안 보인다).
+# 기기 경로 접두어만 변환에서 제외한다 — 로컬 경로 변환은 그대로 필요하다
+# (adb pull 의 목적지는 윈도우 경로여야 한다). 리눅스/macOS 에서는 무시된다.
+export MSYS2_ARG_CONV_EXCL='/sdcard;/data/local/tmp'
+
 IM_OK=0
 if command -v magick >/dev/null 2>&1; then
   convert()  { magick "$@"; }
@@ -111,7 +120,11 @@ capture_to() { # capture_to <파일경로>
   adb shell screencap -p /sdcard/_cap.png >/dev/null 2>&1
   adb pull /sdcard/_cap.png "$out" >/dev/null 2>&1
   adb shell rm -f /sdcard/_cap.png >/dev/null 2>&1
-  is_png "$out"
+  if is_png "$out"; then return 0; fi
+  echo "::error::스크린샷을 만들지 못했습니다: $out"
+  echo "::error::exec-out·pull 두 방식 모두 실패 — adb 가 기기 경로를 제대로 못 받고 있을 수 있습니다."
+  echo "::error::확인: adb shell screencap -p /sdcard/_cap.png && adb pull /sdcard/_cap.png ."
+  return 1
 }
 shot() { capture_to "$SCREENS/$1.png"; }
 
