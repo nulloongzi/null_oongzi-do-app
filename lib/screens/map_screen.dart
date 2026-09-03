@@ -885,13 +885,15 @@ class _MapScreenState extends State<MapScreen> {
 
   /// ① 찾기: 지도 → 필터(서울·화·성인) → 결과 → 클럽 상세 → 연락
   Future<void> _flowDiscover() async {
-    await _hold(3.5); // 지도 전경(전국 마커·클러스터)
+    await _hold(2.5); // 지도 전경(전국 마커·클러스터)
     if (!mounted) return;
 
     // 필터 시트를 '이미 선택된' 상태로 띄운다 — 좌표 탭 없이 칩 선택이 보인다.
-    const preset = ClubFilter(regions: {'서울'}, days: {'화'}, targets: {'성인'});
+    // 스틸 세트와 같은 프리셋을 쓴다: 여기만 요일까지 걸려 있어 결과가 1팀으로
+    // 줄었고, 스틸 영상과 녹화 영상의 내용이 서로 달라 비교가 안 됐다.
+    const preset = _stillPreset;
     final sheet = showFilterSheet(context, preset);
-    await _hold(5); // 지역·요일·대상 칩을 읽을 시간
+    await _hold(4); // 지역·대상 칩을 읽을 시간
     if (!mounted) return;
     Navigator.of(context).pop(preset); // '적용하기' 상당
     final applied = await sheet;
@@ -904,7 +906,7 @@ class _MapScreenState extends State<MapScreen> {
       await _refreshMarkers();
       _fitToFilter();
     }
-    if (!await _hold(4)) return; // 좁혀진 결과 지도
+    if (!await _hold(3)) return; // 좁혀진 결과 지도
 
     // 결과 중 한 팀을 열어 일정·회비·위치를 보여준다.
     final c = _clubs.where(_filter.matches).isNotEmpty
@@ -912,7 +914,7 @@ class _MapScreenState extends State<MapScreen> {
         : (_clubs.isNotEmpty ? _clubs.first : null);
     if (c == null) return;
     await _focusAndShowClub(c);
-    if (!await _hold(6)) return; // 상세: 일정·회비·주소·버튼
+    if (!await _hold(4)) return; // 상세: 일정·회비·주소·버튼
 
     // 필터 원복(다음 캡처 오염 방지)
     await _backToMap();
@@ -928,7 +930,7 @@ class _MapScreenState extends State<MapScreen> {
   Future<void> _flowSave(Club? c) async {
     if (c == null) return;
     await _focusAndShowClub(c);
-    if (!await _hold(4)) return; // 상세에서 시작
+    if (!await _hold(3)) return; // 상세에서 시작
 
     // 찜(도시락 담기) — 실제 저장까지 수행해 도시락이 비지 않게.
     try {
@@ -952,7 +954,7 @@ class _MapScreenState extends State<MapScreen> {
     await _backToMap();
     if (!mounted) return;
     showLunchboxSheet(context);
-    if (!await _hold(9)) return; // 반찬칸 그리드 + 식단표 버튼까지 읽을 시간
+    if (!await _hold(6)) return; // 반찬칸 그리드 + 식단표 버튼까지 읽을 시간
     await _backToMap();
   }
 
@@ -963,7 +965,7 @@ class _MapScreenState extends State<MapScreen> {
     } catch (_) {}
     if (!mounted) return;
     showProfileSheet(context);
-    if (!await _hold(5)) return; // 밥이름 카드·스탬프
+    if (!await _hold(3.5)) return; // 밥이름 카드·스탬프
 
     await _backToMap();
     if (!mounted) return;
@@ -974,7 +976,7 @@ class _MapScreenState extends State<MapScreen> {
         MaterialPageRoute<void>(builder: (_) => const ShareImageScreen()),
       ),
     );
-    if (!await _hold(9)) return;
+    if (!await _hold(6)) return;
 
     await _backToMap();
     if (!mounted) return;
@@ -990,7 +992,7 @@ class _MapScreenState extends State<MapScreen> {
       shareTitle: c.name,
       onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
     );
-    await _hold(6);
+    await _hold(4);
   }
 
   Future<void> _focusAndShowSpot(PickupSpot spot) async {
