@@ -56,6 +56,42 @@ case "$DEV_SIZE" in
   *) printf '\033[0;36m  · 1080x2400 이 아니지만 크롭은 자동 대응합니다(9:16 정규화).\033[0m\n' ;;
 esac
 
+# ── Gradle 힙 사전 점검 ──────────────────────────────────────
+# 이 프로젝트의 android/gradle.properties 는 CI 러너 기준으로 -Xmx8G 를 잡는다.
+# 개인 PC(특히 16GB 이하)에서는 JVM 이 힙을 확보하지 못해 Gradle 데몬이 통째로
+# 크래시한다("Gradle build daemon disappeared unexpectedly" + hs_err_pid*.log).
+# 레포 파일은 건드리지 않고, 사용자 레벨 설정(~/.gradle/gradle.properties)이
+# 프로젝트 설정보다 우선한다는 점을 이용해 안내한다.
+if [ -z "${SKIP_BUILD:-}" ]; then
+  want_g="$(grep -o 'Xmx[0-9]*G' android/gradle.properties 2>/dev/null | head -1 | tr -dc '0-9')"
+  user_props="$HOME/.gradle/gradle.properties"
+  have_override=0
+  [ -f "$user_props" ] && grep -q 'org.gradle.jvmargs' "$user_props" && have_override=1
+  # 가용 RAM(GB) — Linux/macOS/Git Bash 각각 다른 경로
+  ram_g=""
+  if [ -r /proc/meminfo ]; then
+    ram_g="$(awk '/MemTotal/{printf "%d", $2/1024/1024}' /proc/meminfo)"
+  elif command -v sysctl >/dev/null 2>&1; then
+    ram_g="$(sysctl -n hw.memsize 2>/dev/null | awk '{printf "%d", $1/1024/1024/1024}')"
+  elif command -v wmic >/dev/null 2>&1; then
+    ram_g="$(wmic computersystem get TotalPhysicalMemory 2>/dev/null | tr -dc '0-9' | awk '{printf "%d", $1/1024/1024/1024}')"
+  fi
+  if [ -n "${want_g:-}" ] && [ "$have_override" = 0 ] && [ -n "$ram_g" ] && [ "$ram_g" -gt 0 ] \
+     && [ "$want_g" -gt $(( ram_g / 2 )) ]; then
+    printf '\033[1;31m'
+    echo "✗ Gradle 힙 설정이 이 PC 에 과합니다: -Xmx${want_g}G (전체 RAM ${ram_g}GB)"
+    echo "  그대로 두면 Gradle 데몬이 크래시합니다. 아래를 실행해 사용자 레벨로 낮추세요:"
+    printf '\033[0m'
+    safe=$(( ram_g / 4 )); [ "$safe" -lt 2 ] && safe=2
+    echo ""
+    echo "    mkdir -p ~/.gradle"
+    echo "    printf 'org.gradle.jvmargs=-Xmx${safe}G -XX:MaxMetaspaceSize=1G\\norg.gradle.workers.max=2\\n' > ~/.gradle/gradle.properties"
+    echo ""
+    echo "  (레포 파일은 CI 기준이므로 건드리지 않습니다. 사용자 설정이 우선합니다.)"
+    exit 1
+  fi
+fi
+
 # ── APK 빌드 & 설치 ──────────────────────────────────────────
 if [ -z "${SKIP_BUILD:-}" ]; then
   say "APK 빌드 (CAPTURE_MODE=true)…"
