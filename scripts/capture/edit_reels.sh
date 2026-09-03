@@ -87,11 +87,18 @@ hook_card() { # hook_card <윗줄> <아랫줄> <출력>
   # 훅은 카드가 아니라 화면 전체를 덮는 그라데이션 스크림 + 큰 글씨.
   # 첫 프레임부터 영상이 움직이는 게 중요해서(정지 타이틀은 넘겨진다) 배경을 가리지 않는다.
   local l1="$1" l2="$2" out="$3"
+  # 첫 1초가 전부다 — 작게 넣으면 그냥 넘어간다. 화면 폭을 꽉 쓰고,
+  # 옅은 지도 위에서도 읽히도록 스크림을 진하게 깐다.
+  # 스크림: 위 660px 은 단색, 그 아래 480px 만 페이드. 순수 그라데이션으로 하면
+  # 글자가 놓이는 y=330~600 구간에서 이미 반투명해져 지도와 섞인다(검증됨).
   convert -size ${W}x${H} xc:none \
-    \( -size ${W}x900 gradient:"rgba(78,52,46,0.72)"-none \) -geometry +0+0 -composite \
+    \( -size ${W}x660 xc:"rgba(62,40,35,0.82)" \) -geometry +0+0 -composite \
+    \( -size ${W}x480 gradient:"rgba(62,40,35,0.82)"-none \) -geometry +0+660 -composite \
     -font "$FONT" -gravity north \
-    -fill "$C_YELLOW" -stroke "$C_YELLOW" -strokewidth 2 -pointsize 78 -annotate +0+300 "$l1" \
-    -fill white -stroke white -strokewidth 3 -pointsize 96 -annotate +0+420 "$l2" \
+    -fill "$C_YELLOW" -stroke "$C_YELLOW" -strokewidth 3 -pointsize 104 -annotate +0+330 "$l1" \
+    -fill white -stroke white -strokewidth 4 -pointsize 128 -annotate +0+480 "$l2" \
+    -fill "$C_YELLOW" -stroke none \
+      -draw "roundrectangle $((W/2-70)),700 $((W/2+70)),710 5,5" \
     "$out"
 }
 
