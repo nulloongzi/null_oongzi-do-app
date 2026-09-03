@@ -50,5 +50,8 @@ echo "▶ 영상 프록시 ${v}편"
 BR="$(git rev-parse --abbrev-ref HEAD)"
 git add -f "$REV"
 git commit -q -m "chore(capture): 리뷰용 프록시 업로드 (스틸 ${n}장 / 영상 ${v}편)" || { echo "▶ 변경 없음"; exit 0; }
+# 캡처가 도는 동안 원격에 커밋이 올라가 있는 경우가 잦다(스크립트 수정 등).
+# 프록시는 신규 파일뿐이라 리베이스가 안전하다.
+git pull --rebase -q origin "$BR" || echo "▶ 리베이스 실패 — 수동 확인 필요"
 git push -u origin "$BR"
 echo "✔ 업로드 완료 → $BR : marketing-assets/_review/"
