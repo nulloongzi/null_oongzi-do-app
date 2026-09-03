@@ -131,7 +131,8 @@ narrate() { # narrate <출력.mp3> <읽을 텍스트> → 성공 시 0
 # 문구를 일일이 맞추는 대신 살짝 빠르게 재생해 구간에 맞춘다(atempo).
 # 1.22배까지만 — 한국어 TTS 는 그 이상 빨라지면 급하게 들린다. 그래도 넘치면
 # 문구를 줄이거나 앱의 _hold 를 늘리라고 알린다(진짜 원인은 화면이 짧은 것이다).
-NAR_GAP=0.15   # 다음 나레이션과의 최소 간격
+NAR_GAP=0.15        # 다음 나레이션과의 최소 간격
+NAR_MAX_SHIFT=0.6   # 앞 음성이 길 때 뒤로 밀 수 있는 최대치
 fit_narration() { # fit_narration <mp3> <시작> <끝> <라벨>
   local f="$1" st="$2" en="$3" label="$4" d win r
   d="$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$f" 2>/dev/null)"
@@ -236,7 +237,7 @@ for flow in $FLOWS; do
   INPUTS=(-i "$SRC")
   FC=""; CUR="[0:v]"
   idx=1
-  NAR_T=(); NAR_F=()   # 나레이션 (시작초, 파일)
+  NAR_T=(); NAR_F=(); NAR_CUR=0   # 나레이션 (시작초, 파일) + 다음 시작 가능 시각
 
   # 훅
   if [ -n "$HOOK" ]; then
@@ -254,6 +255,8 @@ for flow in $FLOWS; do
       hk_end="$(awk -v b="${BOUNDS[0]}" -v h="$HOOK_D" 'BEGIN{printf "%.2f", (b<h?h:b)+0.1}')"
       fit_narration "$WORK/${flow}_n_hook.mp3" 0.30 "$hk_end" "$hk1"
       NAR_T+=(0.30); NAR_F+=("$WORK/${flow}_n_hook.mp3")
+      hkd="$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$WORK/${flow}_n_hook.mp3" 2>/dev/null)"
+      NAR_CUR="$(awk -v d="${hkd:-0}" -v g="$NAR_GAP" 'BEGIN{printf "%.2f", 0.30+d+g}')"
     fi
   fi
 
@@ -279,8 +282,14 @@ for flow in $FLOWS; do
     CUR="[v${idx}]"; idx=$((idx+1))
     # 음성은 한국어 두 줄만 읽는다(영문은 자막 전용). 자막이 뜨는 순간에 맞춘다.
     if narrate "$WORK/${flow}_n${n}.mp3" "$cnar"; then
-      fit_narration "$WORK/${flow}_n${n}.mp3" "$st" "$en" "$l1"
-      NAR_T+=("$st"); NAR_F+=("$WORK/${flow}_n${n}.mp3")
+      # 배속만으로 안 맞으면 시작을 조금 늦춘다. 자막은 이미 화면에 떠 있고
+      # 목소리가 0.5초쯤 뒤따르는 건 자연스럽다 — 두 목소리가 겹치는 것보다 낫다.
+      nst="$(awk -v s="$st" -v c="${NAR_CUR:-0}" -v m="$NAR_MAX_SHIFT" \
+        'BEGIN{ x=(c>s?c:s); lim=s+m; if (x>lim) x=lim; printf "%.2f", x }')"
+      fit_narration "$WORK/${flow}_n${n}.mp3" "$nst" "$en" "$l1"
+      NAR_T+=("$nst"); NAR_F+=("$WORK/${flow}_n${n}.mp3")
+      nd2="$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$WORK/${flow}_n${n}.mp3" 2>/dev/null)"
+      NAR_CUR="$(awk -v a="$nst" -v d="${nd2:-0}" -v g="$NAR_GAP" 'BEGIN{printf "%.2f", a+d+g}')"
     fi
     n=$((n+1))
   done

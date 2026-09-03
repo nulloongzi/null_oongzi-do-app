@@ -74,6 +74,17 @@ if ! git diff --quiet || ! git diff --cached --quiet; then
   git stash push -q -m "share_results-auto" && STASHED=1
 fi
 git pull --rebase -q origin "$BR" || echo "▶ 리베이스 실패 — 수동 확인 필요"
-git push -u origin "$BR" || true
+# push 실패(권한·네트워크)를 성공으로 찍으면 안 된다 — 원격에 없는 파일을
+# 있다고 믿고 다음 작업을 진행하게 된다. 결과를 그대로 알린다.
+PUSH_OK=1
+git push -u origin "$BR" || PUSH_OK=0
 [ "$STASHED" = 1 ] && git stash pop -q || true
-echo "✔ 업로드 완료 → $BR : marketing-assets/_review/"
+if [ "$PUSH_OK" = 1 ]; then
+  echo "✔ 업로드 완료 → $BR : marketing-assets/_review/"
+else
+  printf '\033[1;31m✗ 푸시 실패 — 원격에 올라가지 않았습니다(커밋은 로컬에 남아 있음).\033[0m\n' >&2
+  echo "  권한 오류(403)라면 Windows 자격 증명을 지우고 다시 인증하세요:" >&2
+  echo "    cmdkey /delete:git:https://github.com" >&2
+  echo "  그 뒤 아무 push 나 실행하면 브라우저 인증 창이 뜹니다." >&2
+  exit 1
+fi
