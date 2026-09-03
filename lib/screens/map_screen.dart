@@ -960,7 +960,7 @@ class _MapScreenState extends State<MapScreen> {
     // 사용자가 🍱 를 눌렀을 때와 같은 스낵바를 띄운다(detail_sheet 의 _toggle 과 동일).
     if (!mounted) return;
     _snack(t('lb_added'));
-    if (!await _hold(1.5, 'saved')) return;
+    if (!await _hold(2.5, 'saved')) return;
 
     await _backToMap();
     if (!mounted) return;
@@ -1109,7 +1109,20 @@ class _MapScreenState extends State<MapScreen> {
 
   void _snack(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    // 캡처 영상은 9:16 으로 잘려 화면 맨 아래(약 330px)가 빠진다. 기본 위치의
+    // 스낵바는 정확히 그 잘린 영역에 떠서 영상에는 아예 안 보인다 — 도시락에
+    // 담긴 사실이 화면에 드러나지 않았다. 캡처 빌드에서만 크롭 안쪽으로 띄운다.
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        behavior: kCaptureMode
+            ? SnackBarBehavior.floating
+            : SnackBarBehavior.fixed,
+        margin: kCaptureMode
+            ? const EdgeInsets.only(left: 24, right: 24, bottom: 180)
+            : null,
+      ),
+    );
   }
 
   Future<void> _refreshMarkers({bool fade = false}) async {
