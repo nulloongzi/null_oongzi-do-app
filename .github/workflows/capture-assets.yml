@@ -12,9 +12,10 @@ name: Capture Marketing Assets (emulator)
 #  · 최대 리스크는 x86_64 에뮬 SwiftShader에서 네이버맵 타일 미렌더(함정4).
 #    → 항상 "지도 렌더 스모크 게이트"를 가장 먼저 돌려 (near-)black이면 즉시 실패시킨다.
 #
-# 수동 실행(workflow_dispatch)이 기본. 워크플로가 아직 default 브랜치에 없어 API dispatch가
-# 안 되는 동안엔, claude/** 브랜치 push 로도 자동 실행된다(capture 파일 변경 시).
-# push 트리거는 입력값이 없으므로 안전 기본값(debug + smoke_only)으로 동작 → 시크릿 불필요.
+# **수동 실행(workflow_dispatch) 전용.** 에뮬 캡처는 러너 GPU가 없어 품질이 실기기만
+# 못하고 한 런에 최대 45분이 든다 — 커밋마다 자동으로 돌 이유가 없다.
+# 실제 마케팅 자산은 scripts/capture/local_capture.sh (로컬 GPU/USB 연결한 실제 폰)로 뽑고,
+# 이 워크플로는 파이프라인 회귀 확인용으로 필요할 때만 돌린다.
 # 첫 실행은 smoke_only=true 로 지도 렌더부터 검증하라(함정4 조기 판정).
 
 on:
@@ -38,12 +39,10 @@ on:
         description: "릴스 화면녹화(mp4)까지 캡처 (smoke_only=false 일 때만)"
         type: boolean
         default: true
-  push:
-    branches: ["claude/**"]
-    paths:
-      - ".github/workflows/capture-assets.yml"
-      - "scripts/capture/**"
-      - ".maestro/**"
+      branded:
+        description: "브랜디드 합성(크림 캔버스+카피 오버레이)까지 — 보통 불필요"
+        type: boolean
+        default: false
 
 concurrency:
   group: capture-assets-${{ github.ref }}
@@ -53,17 +52,14 @@ jobs:
   capture:
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    # push 트리거엔 inputs가 없으므로: 안전 기본값(debug+smoke)으로 폴백하되,
-    # 커밋 메시지 마커로 이번 실행만 승격시킨다(워크플로가 default 브랜치에 없어
-    # API dispatch가 안 되는 상황의 우회 — 일반 push는 계속 스모크로 안전).
-    #   [cap-full]    → smoke 해제(전체 스샷/릴스 캡처)
-    #   [cap-reels]   → 릴스 화면녹화 포함
-    #   [cap-release] → release 서명 빌드(시크릿 필요)
+    # dispatch 전용이라 inputs가 항상 있다. || 뒤는 방어적 기본값(안전한 쪽: debug+smoke).
     env:
-      BUILD_TYPE: ${{ github.event.inputs.build_type || (contains(github.event.head_commit.message, '[cap-release]') && 'release' || 'debug') }}
-      SMOKE_ONLY: ${{ github.event.inputs.smoke_only || (contains(github.event.head_commit.message, '[cap-full]') && 'false' || 'true') }}
-      CAP_LANG: ${{ github.event.inputs.capture_lang || 'ko' }}
-      INCLUDE_REELS: ${{ github.event.inputs.include_reels || (contains(github.event.head_commit.message, '[cap-reels]') && 'true' || 'false') }}
+      BUILD_TYPE: ${{ inputs.build_type || 'debug' }}
+      SMOKE_ONLY: ${{ inputs.smoke_only || 'true' }}
+      CAP_LANG: ${{ inputs.capture_lang || 'ko' }}
+      # 릴스 원본은 언어별로 캡처(후반합성이 한/영 자막을 각각 입힘). 스샷은 CAP_LANG(ko) 유지.
+      CAP_LANGS: "ko en"
+      INCLUDE_REELS: ${{ inputs.include_reels || 'false' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -114,13 +110,13 @@ jobs:
           # 릴리즈 AAB(release-aab.yml)도 켜져 있으므로 실제 앱과 일치한다. 시크릿이 없으면
           # 버튼을 눌렀을 때만 실패하고, 캡처는 누르지 않으므로 안전하다.
           if [ "${{ env.BUILD_TYPE }}" = "release" ]; then
-            flutter build apk --release --dart-define=CAPTURE_MODE=true --dart-define=NAVER_LOGIN_ENABLED=true
+            flutter build apk --release --dart-define=CAPTURE_MODE=true --dart-define=CAPTURE_LOW_GPU=true --dart-define=NAVER_LOGIN_ENABLED=true
             echo "apk=build/app/outputs/flutter-apk/app-release.apk" >> "$GITHUB_OUTPUT"
           else
             # debug: 커밋된 debug-fixed.keystore 서명(비밀 아님). main.dart 가
             # debugShowCheckedModeBanner:false 라 DEBUG 리본은 없지만, 카카오 공유는
             # release 키해시가 필요하므로 debug 세트에선 공유 스샷 품질이 제한될 수 있음.
-            flutter build apk --debug --dart-define=CAPTURE_MODE=true --dart-define=NAVER_LOGIN_ENABLED=true
+            flutter build apk --debug --dart-define=CAPTURE_MODE=true --dart-define=CAPTURE_LOW_GPU=true --dart-define=NAVER_LOGIN_ENABLED=true
             echo "apk=build/app/outputs/flutter-apk/app-debug.apk" >> "$GITHUB_OUTPUT"
           fi
 
@@ -135,9 +131,10 @@ jobs:
           fi
 
       # ── 이미지 도구(스모크 black 게이트용) ──────────────────────
-      - name: Install ImageMagick + Korean font
-        # imagemagick: 블랙 게이트 + 카피 오버레이 합성 / fonts-nanum: 한글 캡션 렌더
-        run: sudo apt-get update && sudo apt-get install -y imagemagick fonts-nanum fontconfig
+      - name: Install ImageMagick + ffmpeg + Korean font
+        # imagemagick: 블랙 게이트 + 카피 오버레이 합성 / ffmpeg: 영상 후반합성
+        # fonts-nanum: 한글 캡션 렌더
+        run: sudo apt-get update && sudo apt-get install -y imagemagick ffmpeg fonts-nanum fontconfig
 
       # ── 안드 에뮬 가속(KVM) ─────────────────────────────────────
       - name: Enable KVM
@@ -171,9 +168,34 @@ jobs:
           SMOKE_ONLY: ${{ env.SMOKE_ONLY }}
           CAP_LANG: ${{ env.CAP_LANG }}
           INCLUDE_REELS: ${{ env.INCLUDE_REELS }}
+          CAP_LANGS: ${{ env.CAP_LANGS }}
           # 로그인 필요 화면(도시락/프로필/닉네임) 옵션 — 테스트 계정 시크릿 있을 때만 동작.
           TEST_ACCOUNT_EMAIL: ${{ secrets.TEST_ACCOUNT_EMAIL }}
           TEST_ACCOUNT_PASSWORD: ${{ secrets.TEST_ACCOUNT_PASSWORD }}
+
+      # ── 영상 후반합성(에뮬 밖, 러너 호스트) ─────────────────────
+      # 에뮬이 뽑은 reels/raw/<feat>_<lang>.mp4 → 크림 9:16 브랜디드 홍보 릴스 +
+      # 앱 소개 영상(한/영). ffmpeg/ImageMagick 은 위에서 설치됨.
+      # ── 스틸 → 앱 시연 영상(모션그래픽) ────────────────────────
+      # CI 러너엔 GPU가 없어 에뮬 실시간 녹화는 렉·타일로딩으로 마케팅 품질이 안 난다.
+      # 정확한 UI 상태 스틸을 찍고 전환은 앱의 실제 모션(바텀시트 250ms/decelerate,
+      # 스크림 black54)으로 재현한다. 에뮬 밖에서 수십 초면 끝난다.
+      - name: Compose motion (stills → demo video)
+        if: ${{ env.SMOKE_ONLY == 'false' }}
+        env:
+          ARTIFACTS_DIR: ${{ github.workspace }}/marketing-assets
+          CAP_LANG: ${{ env.CAP_LANG }}
+        run: bash scripts/capture/compose_motion.sh
+
+      # 기본은 끔: 산출물이 '자막·TTS를 편집에서 얹는 raw 수준 흐름 영상'으로 바뀌어
+      # 브랜디드 합성(크림 캔버스+카피 오버레이)은 불필요. 필요하면 실행 시
+      # branded 입력을 켠다. (스토어 스샷 합성은 계속 동작)
+      - name: Compose marketing videos (branded, opt-in)
+        if: ${{ env.SMOKE_ONLY == 'false' && env.INCLUDE_REELS == 'true' && inputs.branded }}
+        env:
+          ARTIFACTS_DIR: ${{ github.workspace }}/marketing-assets
+          CAP_LANGS: ${{ env.CAP_LANGS }}
+        run: bash scripts/capture/compose_videos.sh
 
       # ── 산출물 업로드 ───────────────────────────────────────────
       - name: Upload marketing assets

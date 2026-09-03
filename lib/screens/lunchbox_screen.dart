@@ -13,14 +13,14 @@ import '../widgets/diet_grid.dart';
 import 'detail_sheet.dart';
 
 /// 도시락 팝업: 웹 도시락 오버레이 대응 — 화면 중앙 통(카드) 모달(딤 blur + 스프링 등장).
-Future<void> showLunchboxSheet(BuildContext context) {
+Future<void> showLunchboxSheet(BuildContext context, {bool openDiet = false}) {
   return showGeneralDialog<void>(
     context: context,
     barrierDismissible: false, // 딤·blur·바깥탭을 _LunchboxModal에서 직접 처리
     barrierLabel: 'lunchbox',
     barrierColor: Colors.transparent,
     transitionDuration: const Duration(milliseconds: 300),
-    pageBuilder: (ctx, a1, a2) => const _LunchboxModal(),
+    pageBuilder: (ctx, a1, a2) => _LunchboxModal(openDiet: openDiet),
     transitionBuilder: (ctx, anim, sec, child) =>
         FadeTransition(opacity: anim, child: child),
   );
@@ -28,7 +28,10 @@ Future<void> showLunchboxSheet(BuildContext context) {
 
 // 중앙 모달: 배경 blur+갈색 딤(바깥 탭 닫기) + 스프링으로 떠오르는 도시락 통.
 class _LunchboxModal extends StatelessWidget {
-  const _LunchboxModal();
+  const _LunchboxModal({this.openDiet = false});
+
+  /// 캡처용: 식단표를 펼친 상태로 연다(스틸 캡처가 아코디언 탭을 못 하므로).
+  final bool openDiet;
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +77,9 @@ class _LunchboxModal extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: const SingleChildScrollView(child: LunchboxScreen()),
+                  child: SingleChildScrollView(
+                    child: LunchboxScreen(openDiet: openDiet),
+                  ),
                 ),
               ),
             ),
@@ -86,7 +91,10 @@ class _LunchboxModal extends StatelessWidget {
 }
 
 class LunchboxScreen extends StatefulWidget {
-  const LunchboxScreen({super.key});
+  const LunchboxScreen({super.key, this.openDiet = false});
+
+  /// 캡처용: 식단표 아코디언을 처음부터 펼친 상태로.
+  final bool openDiet;
 
   @override
   State<LunchboxScreen> createState() => _LunchboxScreenState();
@@ -98,7 +106,7 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
   LunchboxData? _data;
   final Map<String, Club> _clubs = {};
   bool _loading = true;
-  bool _showDiet = false;
+  late bool _showDiet = widget.openDiet;
   int? _selectedSlot; // 순서 바꾸기: 선택된 칸
   bool _editing = false; // 편집 모드(순서변경·빼기 활성)
 
