@@ -13,11 +13,15 @@ set -euo pipefail
 # 유틸(C:\Windows\System32\convert.exe)** 과 이름이 겹쳐, Git Bash 에서 그쪽이
 # 먼저 잡히면 이미지가 아니라 볼륨 변환을 시도한다(치명적).
 # magick 이 있으면 전부 magick 경유로 강제한다. Linux IM6 에서는 원래 바이너리 사용.
+IM_OK=0
 if command -v magick >/dev/null 2>&1; then
   convert()  { magick "$@"; }
   identify() { magick identify "$@"; }
   montage()  { magick montage "$@"; }
   compare()  { magick compare "$@"; }
+  IM_OK=1
+elif command -v convert >/dev/null 2>&1 && convert -version 2>/dev/null | grep -qi imagemagick; then
+  IM_OK=1   # IM6(리눅스). `convert` 가 System32 디스크 유틸이면 여기 안 걸린다.
 fi
 
 
@@ -27,6 +31,10 @@ ART="${ARTIFACTS_DIR:-marketing-assets}"
 SMOKE_ONLY="${SMOKE_ONLY:-true}"
 CAP_LANG="${CAP_LANG:-ko}"
 INCLUDE_REELS="${INCLUDE_REELS:-true}"
+# 실행할 단계. 콤마 구분: play(스토어 스샷) · stills(모션용 스틸) · flows(흐름 녹화).
+# 예) PHASES=stills,flows  → 스토어 스샷 9장(약 5분)을 건너뛴다.
+PHASES="${PHASES:-play,stills,flows}"
+want() { case ",$PHASES," in *,"$1",*) return 0;; esac; return 1; }
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FLOWS="$(cd "$HERE/../../.maestro" && pwd)"
@@ -81,7 +89,31 @@ demo_off() {
 trap demo_off EXIT
 
 # 프레임버퍼 캡처(네이티브 지도 포함). Flutter takeScreenshot 은 플랫폼뷰를 검게 잡음.
-shot() { adb exec-out screencap -p > "$SCREENS/$1.png"; }
+#
+# `adb exec-out` 은 바이너리를 그대로 흘려보내는 게 정상이지만, 환경(특히 Windows 의
+# 셸/어댑터 조합)에 따라 개행이 CRLF 로 번역돼 PNG 가 조용히 깨진다. 깨진 PNG 는
+# 파일 크기가 멀쩡해 보여서 그대로 진행되고, 나중에 밝기 측정·합성이 전부 실패한다.
+# → 매직바이트로 검증하고, 깨졌으면 기기 저장 후 pull 하는 방식(바이너리 안전)으로
+#   런 전체를 전환한다.
+is_png() {
+  [ -s "$1" ] || return 1
+  [ "$(head -c8 "$1" | od -An -tx1 | tr -d ' \n')" = "89504e470d0a1a0a" ]
+}
+SHOT_MODE="${SHOT_MODE:-execout}"
+capture_to() { # capture_to <파일경로>
+  local out="$1"
+  if [ "$SHOT_MODE" = "execout" ]; then
+    adb exec-out screencap -p > "$out" 2>/dev/null || true
+    is_png "$out" && return 0
+    echo "::warning::exec-out PNG 손상 감지 → pull 방식으로 전환합니다."
+    SHOT_MODE=pull
+  fi
+  adb shell screencap -p /sdcard/_cap.png >/dev/null 2>&1
+  adb pull /sdcard/_cap.png "$out" >/dev/null 2>&1
+  adb shell rm -f /sdcard/_cap.png >/dev/null 2>&1
+  is_png "$out"
+}
+shot() { capture_to "$SCREENS/$1.png"; }
 
 # 캡처 결과 지문: 아티팩트를 못 받는 환경(에이전트 프록시)에서도 로그로 검증하기 위해
 #  · 각 스샷의 평균 밝기+해상도(블랙/블랭크 조기 감지)
@@ -122,8 +154,24 @@ demo_on
 sleep 2
 shot "play_01_map_${CAP_LANG}"
 
-MEAN="$(convert "$SCREENS/play_01_map_${CAP_LANG}.png" -colorspace Gray -format '%[fx:mean]' info: 2>/dev/null || echo NA)"
+SMOKE_PNG="$SCREENS/play_01_map_${CAP_LANG}.png"
+MEAN="$(convert "$SMOKE_PNG" -colorspace Gray -format '%[fx:mean]' info: 2>/dev/null || echo NA)"
 log "지도 스샷 평균 밝기 = $MEAN (0=검정, 1=흰색)"
+# NA 는 "지도가 멀쩡하다"는 뜻이 아니라 **측정 자체가 실패했다**는 뜻이다.
+# 원인이 둘(깨진 PNG / ImageMagick 부재)인데 결과가 완전히 다르므로 갈라서 진단한다.
+if [ "$MEAN" = "NA" ]; then
+  if ! is_png "$SMOKE_PNG"; then
+    echo "::error::스크린샷이 PNG 가 아닙니다($SMOKE_PNG) — adb 캡처가 깨졌습니다."
+    echo "::error::SHOT_MODE=pull 로 다시 실행해 보세요: SHOT_MODE=pull bash scripts/capture/local_capture.sh"
+    exit 1
+  fi
+  if [ "$IM_OK" != 1 ]; then
+    echo "::error::ImageMagick 을 찾지 못했습니다(밝기 측정·스틸 합성 불가)."
+    echo "::error::Windows: winget install ImageMagick.ImageMagick 후 셸을 새로 여세요(PATH 갱신)."
+    exit 1
+  fi
+  echo "::warning::PNG·ImageMagick 은 정상인데 밝기 측정만 실패했습니다 — 계속 진행합니다."
+fi
 if [ "$MEAN" != "NA" ] && awk -v m="$MEAN" 'BEGIN{exit !(m < 0.03)}'; then
   echo "::error::지도 화면이 (거의) 검정입니다 — 함정4: x86_64 SwiftShader 네이버맵 타일 미렌더 의심."
   echo "::error::완화: -gpu 옵션/이미지 조합 변경, 대기 증가. 그래도 안 되면 실기기(사용자 폰) 폴백."
@@ -175,6 +223,8 @@ open_cap() { # open_cap <cmd> [wait]
 cap() { dismiss_anr; demo_on; sleep 1; shot "$1"; log "  캡처: $1"; }
 
 # ── 스크린샷 세트(딥링크 결정적) ─────────────────────────────
+# 스토어용 9장. 영상만 뽑을 때는 순수 낭비(약 5분)라 단계로 분리했다 → PHASES=stills,flows
+if want play; then
 open_cap map 30;      cap "play_01_map_${CAP_LANG}"
 open_cap filter 30;   cap "play_02_filter_${CAP_LANG}"
 open_cap pickup 30;   cap "play_03_pickup_${CAP_LANG}"
@@ -184,6 +234,7 @@ open_cap profile 32;  cap "play_06_profile_${CAP_LANG}"
 open_cap share 34;    cap "play_07_share_${CAP_LANG}"
 open_cap story 36;    cap "play_08_story_${CAP_LANG}"
 open_cap login 32;    cap "play_09_login_${CAP_LANG}"
+fi
 
 # ── 모션그래픽용 스틸 세트(st_*) ─────────────────────────────
 # 에뮬 실시간 녹화는 GPU 없는 CI(SwiftShader)에서 렉·타일로딩 때문에 품질이 안 난다.
@@ -192,13 +243,15 @@ open_cap login 32;    cap "play_09_login_${CAP_LANG}"
 # 결정적 요구사항: **스텝 사이에 콜드 재시작(-S)을 하지 않는다.**
 # 재시작하면 지도 카메라가 달라져 '배경만' 스틸과 '오버레이' 스틸의 배경이 어긋나고,
 # 두 장의 차이로 시트 레이어·좌표를 뽑는 합성이 통째로 깨진다.
+if want stills; then
 STILLS="$ART/stills"; mkdir -p "$STILLS"   # (상단에서 빈 값으로 선언됨 — 여기서 확정)
+fi
 step() { # step <cmd> <wait>
   # -S 없음: 실행 중인 액티비티에 새 인텐트만 전달 → 카메라/스크롤 상태 유지.
   adb shell "am start -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=$1&lang=$CAP_LANG'" >/dev/null 2>&1
   sleep "${2:-6}"; dismiss_anr
 }
-still() { dismiss_anr; demo_on; sleep 1; adb exec-out screencap -p > "$STILLS/$1.png"; log "  스틸: $1"; }
+still() { dismiss_anr; demo_on; sleep 1; capture_to "$STILLS/$1.png"; log "  스틸: $1"; }
 # 앱이 남긴 오버레이 좌표(CAPTURE_RECT)를 수거한다. 이미지 휴리스틱으로는 시트 상단을
 # 안정적으로 못 찾는다(스크림이 전면을 덮고, 시트 내부 대비도 케이스마다 달라 검출이 튄다).
 collect_rects() {
@@ -213,6 +266,7 @@ collect_rects() {
 # 세션 시작만 콜드로(깨끗한 출발) — 이후는 델타만 적용.
 # 카메라가 움직이는 스텝(04·05)은 타일 로딩 여유를 크게 준다 — #28에서 fitBounds/
 # centerOnPin 직후 9초로는 부족해 지도가 연녹색 민무늬로 찍혔다.
+if want stills; then
 open_cap st_map 30;         still "01_map"
 step st_filter_open 7;      still "02_filter_open"
 step st_filter_set 7;       still "03_filter_set"
@@ -228,6 +282,7 @@ step st_namecard 12;        still "12_namecard"
 step st_share_bg 9;         still "13_share_bg"
 step st_share 7;            still "14_share"
 collect_rects
+fi
 
 # ── 카피 오버레이 합성(업로드용 최종 이미지) ──────────────────
 # Play 마케팅 프레임: 크림 1080×1920 캔버스 + 상단 2줄 카피(나눔고딕Bold) +
@@ -248,7 +303,7 @@ compose_store() { # compose_store <basename> <line1> <line2>
     "$out" 2>/dev/null && log "  합성: store/$1.png" || echo "::warning::합성 실패: $1"
   rm -f "$tmp"
 }
-if [ -e "$KFONT" ]; then
+if want play && [ -e "$KFONT" ]; then
   compose_store "play_01_map_${CAP_LANG}"      "전국 배구 동호회," "지도 한 눈에"
   compose_store "play_02_filter_${CAP_LANG}"   "지역·요일·대상으로" "딱 맞는 팀"
   compose_store "play_04_detail_${CAP_LANG}"   "일정·회비·위치 확인하고" "바로 연락"
@@ -258,7 +313,7 @@ if [ -e "$KFONT" ]; then
   compose_store "play_07_share_${CAP_LANG}"    "카톡·인스타로" "우리 팀 자랑"
   compose_store "play_08_story_${CAP_LANG}"    "내 카드 한 장으로" "스토리에 자랑"
   compose_store "play_09_login_${CAP_LANG}"    "카카오·네이버로" "몇 초면 시작"
-else
+elif want play; then
   echo "::warning::한글 폰트(nanum) 미탐지 — 카피 합성 스킵($KFONT)"
 fi
 
@@ -266,7 +321,7 @@ fi
 # 후반합성기(compose_videos.sh)가 이 raw 를 크림 9:16 브랜디드 릴스로 만든다.
 # 산출: reels/raw/<feat>_<lang>.mp4 (앱 1080×2400 화면녹화, 무음).
 # 각 클립: 대상 언어로 지도에 콜드 안착 → 녹화 시작 → 기능 딥링크로 모션(시트/카메라) 유발.
-if [ "$INCLUDE_REELS" = "true" ]; then
+if [ "$INCLUDE_REELS" = "true" ] && want flows; then
   RAW="$REELS/raw"; mkdir -p "$RAW"
   vdur() { ffprobe -v error -show_entries format=duration -of csv=p=0 "$1" 2>/dev/null | cut -d. -f1; }
 
@@ -295,12 +350,27 @@ if [ "$INCLUDE_REELS" = "true" ]; then
   # 흐름이 끝날 때까지 통으로 녹화한다(중간 개입 없음 = 손떨림 없는 데모).
   # 산출은 9:16(1080×1920) 크롭본 — 자막·TTS는 편집에서 얹는다.
   FLOWS_DIR="$REELS/flows"; mkdir -p "$FLOWS_DIR"
-  # 흐름은 길어(35~45s) 인코더 부하가 크다. 화질(크롭 후 1080폭)을 살리되 조기 종료를
-  # 피하도록 원본 1080×2400 @5Mbps 로 녹화한다.
-  FLOW_REC=(--size 1080x2400 --bit-rate 5000000)
-  # 9:16 크롭: 위 390px(상태바·검색바)을 덜어내고 아래 상세시트 버튼까지 살린다.
-  # (1080×2400 → y=390..2310) 편집에서 다시 자르지 않아도 릴스 규격.
-  FLOW_CROP="crop=1080:1920:0:390"
+  # 녹화 해상도·크롭은 **기기 해상도에서 계산한다.** 예전엔 1080×2400(에뮬 pixel_6)로
+  # 박아뒀는데, 실제 폰은 제각각이다(갤럭시 Z 플립 6 = 1080×2640). screenrecord 에
+  # 다른 크기를 주면 스케일이 끼어 화면이 왜곡되고, 고정 크롭은 시트 하단 버튼을
+  # 잘라먹는다. 폭이 1080 을 넘을 때만 1080 기준으로 비율 유지 축소한다.
+  DEV_WH="$(adb shell wm size 2>/dev/null | tr -d '\r' | awk -F': ' '/Override|Physical/{print $2}' | tail -1)"
+  case "$DEV_WH" in [0-9]*x[0-9]*) ;; *) DEV_WH="1080x2400";; esac
+  DEV_W="${DEV_WH%x*}"; DEV_H="${DEV_WH#*x}"
+  REC_W="$DEV_W"; REC_H="$DEV_H"
+  if [ "$DEV_W" -gt 1080 ]; then
+    REC_W=1080
+    REC_H="$(awk -v h="$DEV_H" -v w="$DEV_W" 'BEGIN{printf "%d", int(h*1080/w/2)*2}')"
+  fi
+  # 9:16 크롭: 위쪽(상태바·검색바)을 덜어내고 아래 상세시트 버튼까지 살린다.
+  # 기준값 390px 은 1080 폭에서의 값 — 다른 폭이면 비례로 환산한다.
+  CROP_H="$(awk -v w="$REC_W" 'BEGIN{printf "%d", int(w*16/9/2)*2}')"
+  CROP_Y="$(awk -v h="$REC_H" -v ch="$CROP_H" -v w="$REC_W" \
+    'BEGIN{y=int(390*w/1080); if (y+ch>h) y=h-ch; if (y<0) y=0; printf "%d", y}')"
+  # 흐름은 길어(35~45s) 인코더 부하가 크다. 실기기는 대역폭 여유가 있어 8Mbps.
+  FLOW_REC=(--size "${REC_W}x${REC_H}" --bit-rate 8000000)
+  FLOW_CROP="crop=${REC_W}:${CROP_H}:0:${CROP_Y},scale=1080:1920:flags=lanczos"
+  log "녹화 ${REC_W}x${REC_H} → 크롭 ${REC_W}x${CROP_H}@y=${CROP_Y} → 1080x1920 (기기 $DEV_WH)"
 
   flow() { # flow <name> <capture_cmd> <secs>
     local name="$1" cmd="$2" secs="$3"

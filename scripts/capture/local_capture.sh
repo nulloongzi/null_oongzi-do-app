@@ -9,10 +9,12 @@
 # 손으로 촬영할 필요가 없다 — 폰은 꽂아두기만 하면 된다. 진짜 GPU·진짜 관성.
 #
 # 사용법:
-#   scripts/capture/local_capture.sh                # 흐름 영상 + 스틸 + 후반작업 전부
+#   scripts/capture/local_capture.sh                # 영상에 필요한 것만(스틸+흐름) — 기본
 #   MODE=stills scripts/capture/local_capture.sh    # 스틸만(빠름)
 #   MODE=video  scripts/capture/local_capture.sh    # 흐름 영상만
+#   MODE=all    scripts/capture/local_capture.sh    # + 스토어 스샷 9장(약 5분 추가)
 #   SKIP_BUILD=1 scripts/capture/local_capture.sh   # APK 재빌드 없이 기존 것 사용
+#   KEEP_OUT=1   scripts/capture/local_capture.sh   # 기존 산출물 유지(중단 후 이어서)
 #
 # 필요한 것: adb(Android SDK) · flutter · ffmpeg · imagemagick
 set -euo pipefail
@@ -21,7 +23,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 cd "$ROOT"
 
-MODE="${MODE:-all}"                       # all | stills | video
+MODE="${MODE:-motion}"                    # motion(기본) | stills | video | all
 OUT="${ARTIFACTS_DIR:-$ROOT/marketing-assets}"
 LANG_TAG="${CAP_LANG:-ko}"
 APK_OUT="build/app/outputs/flutter-apk/app-debug.apk"
@@ -102,17 +104,23 @@ say "설치…"
 adb install -r -g "$APK_OUT" >/dev/null 2>&1 || adb install -r "$APK_OUT" >/dev/null
 
 # ── 캡처 ─────────────────────────────────────────────────────
-rm -rf "$OUT"; mkdir -p "$OUT"
+# 기본은 깨끗한 산출물(부분 실패가 이전 런 결과와 섞이지 않게).
+# 중간에 끊겨 다시 돌릴 때는 KEEP_OUT=1 로 남긴다.
+[ -n "${KEEP_OUT:-}" ] || rm -rf "$OUT"
+mkdir -p "$OUT"
 case "$MODE" in
-  stills) SMOKE=false; REELS=false ;;
-  video)  SMOKE=false; REELS=true  ;;
-  all)    SMOKE=false; REELS=true  ;;
-  *) die "MODE 는 all|stills|video 중 하나" ;;
+  # 스토어 스샷 9장은 영상과 무관한데 5분쯤 잡아먹는다 → 기본에서 뺐다.
+  motion) PH=stills,flows      ; REELS=true  ;;
+  stills) PH=stills            ; REELS=false ;;
+  video)  PH=flows             ; REELS=true  ;;
+  all)    PH=play,stills,flows ; REELS=true  ;;
+  *) die "MODE 는 motion|stills|video|all 중 하나" ;;
 esac
 
-say "캡처 시작 (MODE=$MODE)…"
-APK_PATH="$APK_OUT" ARTIFACTS_DIR="$OUT" SMOKE_ONLY="$SMOKE" \
-  CAP_LANG="$LANG_TAG" INCLUDE_REELS="$REELS" \
+say "캡처 시작 (MODE=$MODE · 단계=$PH)…"
+APK_PATH="$APK_OUT" ARTIFACTS_DIR="$OUT" SMOKE_ONLY=false \
+  CAP_LANG="$LANG_TAG" INCLUDE_REELS="$REELS" PHASES="$PH" \
+  SHOT_MODE="${SHOT_MODE:-execout}" \
   bash "$HERE/run_capture.sh"
 
 # ── 후반작업(스틸 → 시연 영상) ───────────────────────────────
