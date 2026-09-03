@@ -72,6 +72,8 @@ const Map<String, Map<String, String>> kStrings = {
         'I request an edit or removal for the crew below. (We will action it as soon as we verify.)',
   },
   'pk_list_share': {'ko': '목록 공유', 'en': 'Share list'},
+  // 목록 시트 안 상세 모드의 뒤로가기(웹 pk_back_to_list 대응)
+  'pk_back_to_list': {'ko': '← 목록으로', 'en': '← Back to list'},
   'pk_no_map_hint': {
     'ko': '장소가 유동적인 크루 {n}곳은 지도에 없어요 — 목록에서 확인하세요',
     'en': "{n} crew(s) without a fixed venue aren't on the map — see the list",
