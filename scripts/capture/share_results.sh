@@ -29,10 +29,11 @@ echo "▶ 스틸 프록시 ${n}장"
 # flows/ 와 motion/ 은 파일명이 같다(discover_ko.mp4 …). 그대로 복사하면 뒤에
 # 처리되는 쪽이 앞을 덮어써서 절반만 올라간다 → 출처를 접두어로 붙인다.
 v=0
-for d in flows motion; do
+for d in final flows motion; do
   case "$d" in
-    flows) src="$SRC/reels/flows" ;;
-    motion) src="$SRC/motion" ;;
+    final)  src="$SRC/reels/final" ;;   # 자막·훅·아웃트로까지 얹은 완성본
+    flows)  src="$SRC/reels/flows" ;;   # 앱 화면 그대로(편집 전)
+    motion) src="$SRC/motion" ;;        # 스틸 합성본(보조)
   esac
   for f in "$src"/*.mp4; do
     [ -e "$f" ] || continue
