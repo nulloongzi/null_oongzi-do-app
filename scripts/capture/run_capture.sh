@@ -449,7 +449,8 @@ if [ "$INCLUDE_REELS" = "true" ] && want flows; then
     if [ "$d" -le 0 ]; then echo "::warning::흐름 mp4 회수 실패: $name"; return; fi
     # 9:16 크롭(재인코딩 1회) — 릴스 규격 완성본.
     if ! ffmpeg -y -loglevel error -i "$rawout" -vf "$FLOW_CROP" \
-        -c:v libx264 -preset veryfast -pix_fmt yuv420p -r 30 -an "$out" 2>&1 | tail -2; then
+        -c:v libx264 -preset veryfast -pix_fmt yuv420p -threads "${X264_THREADS:-4}" \
+        -r 30 -an "$out" 2>&1 | tail -2; then
       echo "::warning::9:16 크롭 인코딩 실패: $name (원본은 raw/ 에 남아 있음)"
       return
     fi

@@ -66,7 +66,12 @@ CROP_Y="$(awk -v h="$SRC_H" -v ch="$CROP_H" -v w="$SRC_W" -v t="$CROP_TOP_AT_108
 # 소스 px → 출력 px 환산(시트 좌표 보정용)
 SCALE_Y="$(awk -v ch="$CROP_H" -v oh="$H" 'BEGIN{printf "%.6f", oh/ch}')"
 echo "▶ 소스 ${SRC_W}x${SRC_H} → 크롭 ${SRC_W}x${CROP_H}+0+${CROP_Y} → 출력 ${W}x${H}"
-ENC=(-c:v libx264 -preset medium -profile:v high -pix_fmt yuv420p -r $FPS -an)
+# x264 는 기본으로 코어 수의 1.5배까지 스레드를 띄우고, 스레드마다 1080x1920
+# 프레임 버퍼를 잡는다. 코어가 많고 RAM 이 적은 PC(20코어/8GB 등)에서는 이것만으로
+# 할당이 실패한다("malloc of size ... failed"). 화질·속도 손해는 거의 없으므로
+# 스레드를 묶어 둔다. 필요하면 X264_THREADS 로 조절.
+ENC=(-c:v libx264 -preset medium -profile:v high -pix_fmt yuv420p
+     -threads "${X264_THREADS:-4}" -r $FPS -an)
 
 log() { echo "▶ $*"; }
 warn() { echo "::warning::$*"; }
