@@ -78,6 +78,8 @@ class _MapScreenState extends State<MapScreen> {
   List<Club> _clubs = [];
   List<PickupSpot> _spots = [];
   String _tab = 'clubs'; // 'clubs' | 'pickup'
+  // 픽업 목록 시트의 상세 모드 대상. null=목록. (상세는 별도 패널이 아니라 시트의 모드)
+  PickupSpot? _selectedSpot;
   bool _loading = true;
   String? _error;
   ClubFilter _filter = const ClubFilter(); // 동호회 필터/검색
@@ -224,13 +226,7 @@ class _MapScreenState extends State<MapScreen> {
       if (s != null && mounted) {
         setState(() => _tab = 'pickup');
         _refreshMarkers();
-        showSpotDetail(
-          context,
-          s,
-          currentUid: _repo.currentUid,
-          isAdmin: _isAdmin,
-          onChanged: _load,
-        );
+        _selectSpot(s);
       }
     }
   }
@@ -245,6 +241,18 @@ class _MapScreenState extends State<MapScreen> {
       setState(() {
         _clubs = results[0] as List<Club>;
         _spots = results[1] as List<PickupSpot>;
+        // 상세 모드 중 재로드(수정·삭제 후)면 같은 id의 최신 문서로 교체, 사라졌으면 목록으로
+        final sel = _selectedSpot;
+        if (sel != null) {
+          PickupSpot? fresh;
+          for (final x in _spots) {
+            if (x.id == sel.id) {
+              fresh = x;
+              break;
+            }
+          }
+          _selectedSpot = fresh;
+        }
         _loading = false;
       });
       _refreshMarkers();
@@ -531,6 +539,7 @@ class _MapScreenState extends State<MapScreen> {
       case 'pickup':
         setState(() {
           _tab = 'pickup';
+          _selectedSpot = null;
         });
         _refreshMarkers();
         break;
@@ -604,13 +613,18 @@ class _MapScreenState extends State<MapScreen> {
   Future<void> _focusAndShowSpot(PickupSpot spot) async {
     await _centerOnPin(spot.lat, spot.lng);
     if (!mounted) return;
-    showSpotDetail(
-      context,
-      spot,
-      currentUid: _repo.currentUid,
-      isAdmin: _isAdmin,
-      onChanged: _load,
-    );
+    _selectSpot(spot);
+  }
+
+  // 목록 시트를 상세 모드로. view_pickup은 여기서 한 번만(본문 빌더는 리빌드마다 불림).
+  void _selectSpot(PickupSpot spot) {
+    Track.event('view_pickup', {'id': spot.id});
+    setState(() => _selectedSpot = spot);
+  }
+
+  void _closeSpot() {
+    if (_selectedSpot == null) return;
+    setState(() => _selectedSpot = null);
   }
 
   // 줌 변경 후: 데드밴드(히스테리시스)로 라벨 on/off 결정 → 넘나들면 in-place로 아이콘만 교체.
@@ -874,6 +888,7 @@ class _MapScreenState extends State<MapScreen> {
     setState(() {
       _tab = t;
       _reelPeek = null; // 탭 전환: 이전 탭의 오버레이 정리
+      _selectedSpot = null; // 픽업으로 돌아왔을 때 이전 상세가 아니라 목록부터
     });
     detailPanel.value = null; // 이전 탭 항목의 상세 패널 닫기
     Track.event('switch_tab', {'tab': t});
@@ -1074,6 +1089,18 @@ class _MapScreenState extends State<MapScreen> {
                     spots: _visibleSpots(),
                     onTap: _focusAndShowSpot,
                     onInstaTap: _openSpotInsta,
+                    detailId: _selectedSpot?.id,
+                    detail: _selectedSpot == null
+                        ? null
+                        : spotDetailBody(
+                            context,
+                            _selectedSpot!,
+                            close: _closeSpot,
+                            currentUid: _repo.currentUid,
+                            isAdmin: _isAdmin,
+                            onChanged: _load,
+                          ),
+                    onBack: _closeSpot,
                   ),
                 ),
               if (_error != null)

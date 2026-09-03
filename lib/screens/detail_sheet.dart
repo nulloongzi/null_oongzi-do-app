@@ -921,14 +921,35 @@ void _showDetailSheet(
   );
 }
 
-void showSpotDetail(
+/// 픽업 상세 본문 — 별도 패널이 아니라 목록 시트(PickupListSheet) 안의 상세 모드에서
+/// 그린다(웹 .pickup-list-panel.detail 대응). view_pickup 계측은 선택 시점에 호출부가
+/// 한 번만 한다 — 이 함수는 리빌드마다 다시 불리기 때문.
+Widget spotDetailBody(
   BuildContext context,
   PickupSpot s, {
+  required VoidCallback close,
+  String? currentUid,
+  bool isAdmin = false,
+  Future<void> Function()? onChanged,
+}) => _sheet(
+  _spotDetailChildren(
+    context,
+    s,
+    close,
+    currentUid: currentUid,
+    isAdmin: isAdmin,
+    onChanged: onChanged,
+  ),
+);
+
+List<Widget> _spotDetailChildren(
+  BuildContext context,
+  PickupSpot s,
+  VoidCallback close, {
   String? currentUid,
   bool isAdmin = false,
   Future<void> Function()? onChanged,
 }) {
-  Track.event('view_pickup', {'id': s.id});
   // 장소가 유동적인 크루는 체육관·주소가 비어 있다 → 지역 칩으로 대체 표시.
   final where = [
     s.venueName,
@@ -946,137 +967,127 @@ void showSpotDetail(
   final spotEvents = (s.scheduleRaw != null && s.scheduleRaw!.isNotEmpty)
       ? eventsFromRaw(s.scheduleRaw)
       : eventsFromText(s.schedule ?? s.scheduleText);
-  _showDetailSheet(
-    context,
-    (close) => [
-      Text(s.title, style: _titleStyle),
-      const SizedBox(height: 12),
-      Wrap(
-        spacing: 6,
-        runSpacing: 6,
+  return [
+    Text(s.title, style: _titleStyle),
+    const SizedBox(height: 12),
+    Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        _chip(_sportLabel(s.sport), NurungjiColors.yellow, NurungjiColors.dark),
+        _chip(
+          _levelLabel(s.level),
+          NurungjiColors.chipBg,
+          NurungjiColors.chipFg,
+        ),
+        if (s.beginnerFriendly)
+          _chip(
+            t('beginner_ok'),
+            const Color(0xFFE7F6E7),
+            const Color(0xFF2E7D32),
+          ),
+        if (s.englishOk)
+          _chip(
+            t('english_ok'),
+            const Color(0xFFE6F0FB),
+            const Color(0xFF1565C0),
+          ),
+      ],
+    ),
+    if (s.thisWeek != null && s.thisWeek!.isNotEmpty)
+      _banner(t('this_week'), s.thisWeek!),
+    _ScheduleMorph(
+      summaryText: spotEvents.isNotEmpty
+          ? scheduleSummary(spotEvents)
+          : (((s.schedule ?? s.scheduleText) != null &&
+                    (s.schedule ?? s.scheduleText)!.isNotEmpty)
+                ? i18nSchedule(s.schedule ?? s.scheduleText)
+                : null),
+      full: ScheduleTimetable(events: spotEvents, accent: NurungjiColors.teal),
+    ),
+    // 일정 메모(비정기): 구조화 일정이 있어 요약에 안 쓰였을 때 별도 행(웹 동일)
+    if ((s.schedule ?? '').isNotEmpty && (s.scheduleText ?? '').isNotEmpty)
+      _infoRow('🗓', s.scheduleText!),
+    // 주소가 있으면 복사/길찾기가 붙은 주소 행, 지역만 있으면 단순 정보 행.
+    if (where.isNotEmpty)
+      _addressRow(context, where, s.address ?? where)
+    else if (whereLabel.isNotEmpty)
+      _infoRow('📍', whereLabel),
+    if (s.feeInfo != null && s.feeInfo!.isNotEmpty)
+      _infoRow('💰', i18nPrice(s.feeInfo)),
+    // 인스타 핸들 — 단톡 링크가 없는 크루의 실질적인 "들어가는 문"
+    if (s.insta != null && s.insta!.isNotEmpty)
+      _primaryBtn('📷 @${s.insta}', () {
+        Track.event('pickup_contact', {
+          'id': s.id,
+          'type': 'insta',
+          'sport': s.sport,
+        });
+        // NSM 전용 이벤트 — 웹 pickup-detail.js와 동일 스키마
+        Track.event('contact_click', {
+          'channel': 'instagram',
+          'id': s.id,
+          'source': 'pickup',
+        });
+        _open('https://instagram.com/${s.insta}');
+      }),
+    if (s.contactLink != null && s.contactLink!.isNotEmpty)
+      _primaryBtn(t('chat_join'), () {
+        Track.event('pickup_contact', {
+          'id': s.id,
+          'type': 'link',
+          'sport': s.sport,
+        });
+        // NSM 전용 이벤트 — 단톡 링크도 연락 전환이므로 channel:'link'로 집계
+        Track.event('contact_click', {
+          'channel': 'link',
+          'id': s.id,
+          'source': 'pickup',
+        });
+        _open(s.contactLink);
+      }),
+    _primaryBtn(
+      t('share_btn'),
+      () => showShareMenu(
+        context,
+        url: ShareService.spotUrl(s.id),
+        shareTitle: s.title,
+        onStory: () => shareStoryCard(context, StoryCardData.fromSpot(s)),
+      ),
+    ),
+    // 추가 안내(notes) — 웹 픽업 상세 메모 행 (폼 저장값 표시 누락 보완)
+    if (s.notes != null && s.notes!.isNotEmpty) _infoRow('📝', s.notes!),
+    // 시딩 항목: 크루 본인이 올린 게 아니라 owner_uid가 관리자다.
+    // 이 고지+요청 링크가 유일한 옵트아웃 경로라 반드시 노출한다.
+    if (s.source == 'curated') _CuratedNote(spot: s),
+    // 펼쳐야 보이는 영역: 릴스 + 소유자 수정/삭제
+    _ExpandReveal(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _chip(
-            _sportLabel(s.sport),
-            NurungjiColors.yellow,
-            NurungjiColors.dark,
-          ),
-          _chip(
-            _levelLabel(s.level),
-            NurungjiColors.chipBg,
-            NurungjiColors.chipFg,
-          ),
-          if (s.beginnerFriendly)
-            _chip(
-              t('beginner_ok'),
-              const Color(0xFFE7F6E7),
-              const Color(0xFF2E7D32),
-            ),
-          if (s.englishOk)
-            _chip(
-              t('english_ok'),
-              const Color(0xFFE6F0FB),
-              const Color(0xFF1565C0),
+          if (s.instaReels.isNotEmpty) _ReelsSection(reels: s.instaReels),
+          if (canModify)
+            _modifyRow(
+              onEdit: () async {
+                close();
+                final ok = await showPickupFormSheet(
+                  context,
+                  editing: s,
+                  initialCenter: _centerOf(s.lat, s.lng),
+                );
+                if (ok == true) await onChanged?.call();
+              },
+              onDelete: () => _confirmDelete(
+                context,
+                onChanged,
+                close,
+                () => DataRepository().deletePickup(s.id),
+              ),
             ),
         ],
       ),
-      if (s.thisWeek != null && s.thisWeek!.isNotEmpty)
-        _banner(t('this_week'), s.thisWeek!),
-      _ScheduleMorph(
-        summaryText: spotEvents.isNotEmpty
-            ? scheduleSummary(spotEvents)
-            : (((s.schedule ?? s.scheduleText) != null &&
-                      (s.schedule ?? s.scheduleText)!.isNotEmpty)
-                  ? i18nSchedule(s.schedule ?? s.scheduleText)
-                  : null),
-        full: ScheduleTimetable(
-          events: spotEvents,
-          accent: NurungjiColors.teal,
-        ),
-      ),
-      // 일정 메모(비정기): 구조화 일정이 있어 요약에 안 쓰였을 때 별도 행(웹 동일)
-      if ((s.schedule ?? '').isNotEmpty && (s.scheduleText ?? '').isNotEmpty)
-        _infoRow('🗓', s.scheduleText!),
-      // 주소가 있으면 복사/길찾기가 붙은 주소 행, 지역만 있으면 단순 정보 행.
-      if (where.isNotEmpty)
-        _addressRow(context, where, s.address ?? where)
-      else if (whereLabel.isNotEmpty)
-        _infoRow('📍', whereLabel),
-      if (s.feeInfo != null && s.feeInfo!.isNotEmpty)
-        _infoRow('💰', i18nPrice(s.feeInfo)),
-      // 인스타 핸들 — 단톡 링크가 없는 크루의 실질적인 "들어가는 문"
-      if (s.insta != null && s.insta!.isNotEmpty)
-        _primaryBtn('📷 @${s.insta}', () {
-          Track.event('pickup_contact', {
-            'id': s.id,
-            'type': 'insta',
-            'sport': s.sport,
-          });
-          // NSM 전용 이벤트 — 웹 pickup-detail.js와 동일 스키마
-          Track.event('contact_click', {
-            'channel': 'instagram',
-            'id': s.id,
-            'source': 'pickup',
-          });
-          _open('https://instagram.com/${s.insta}');
-        }),
-      if (s.contactLink != null && s.contactLink!.isNotEmpty)
-        _primaryBtn(t('chat_join'), () {
-          Track.event('pickup_contact', {
-            'id': s.id,
-            'type': 'link',
-            'sport': s.sport,
-          });
-          // NSM 전용 이벤트 — 단톡 링크도 연락 전환이므로 channel:'link'로 집계
-          Track.event('contact_click', {
-            'channel': 'link',
-            'id': s.id,
-            'source': 'pickup',
-          });
-          _open(s.contactLink);
-        }),
-      _primaryBtn(
-        t('share_btn'),
-        () => showShareMenu(
-          context,
-          url: ShareService.spotUrl(s.id),
-          shareTitle: s.title,
-          onStory: () => shareStoryCard(context, StoryCardData.fromSpot(s)),
-        ),
-      ),
-      // 추가 안내(notes) — 웹 픽업 상세 메모 행 (폼 저장값 표시 누락 보완)
-      if (s.notes != null && s.notes!.isNotEmpty) _infoRow('📝', s.notes!),
-      // 시딩 항목: 크루 본인이 올린 게 아니라 owner_uid가 관리자다.
-      // 이 고지+요청 링크가 유일한 옵트아웃 경로라 반드시 노출한다.
-      if (s.source == 'curated') _CuratedNote(spot: s),
-      // 펼쳐야 보이는 영역: 릴스 + 소유자 수정/삭제
-      _ExpandReveal(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (s.instaReels.isNotEmpty) _ReelsSection(reels: s.instaReels),
-            if (canModify)
-              _modifyRow(
-                onEdit: () async {
-                  close();
-                  final ok = await showPickupFormSheet(
-                    context,
-                    editing: s,
-                    initialCenter: _centerOf(s.lat, s.lng),
-                  );
-                  if (ok == true) await onChanged?.call();
-                },
-                onDelete: () => _confirmDelete(
-                  context,
-                  onChanged,
-                  close,
-                  () => DataRepository().deletePickup(s.id),
-                ),
-              ),
-          ],
-        ),
-      ),
-    ],
-  );
+    ),
+  ];
 }
 
 void showClubDetail(
