@@ -26,12 +26,20 @@ for f in "$SRC"/stills/*.png "$SRC"/screens/*.png; do
 done
 echo "▶ 스틸 프록시 ${n}장"
 
+# flows/ 와 motion/ 은 파일명이 같다(discover_ko.mp4 …). 그대로 복사하면 뒤에
+# 처리되는 쪽이 앞을 덮어써서 절반만 올라간다 → 출처를 접두어로 붙인다.
 v=0
-for f in "$SRC"/reels/flows/*.mp4 "$SRC"/motion/*.mp4; do
-  [ -e "$f" ] || continue
-  ffmpeg -y -loglevel error -i "$f" -vf "scale=360:-2" -c:v libx264 -preset veryfast \
-    -crf 32 -pix_fmt yuv420p -an "$REV/$(basename "${f%.mp4}").mp4" 2>/dev/null || continue
-  v=$((v+1))
+for d in flows motion; do
+  case "$d" in
+    flows) src="$SRC/reels/flows" ;;
+    motion) src="$SRC/motion" ;;
+  esac
+  for f in "$src"/*.mp4; do
+    [ -e "$f" ] || continue
+    ffmpeg -y -loglevel error -i "$f" -vf "scale=360:-2" -c:v libx264 -preset veryfast \
+      -crf 32 -pix_fmt yuv420p -an "$REV/${d}_$(basename "${f%.mp4}").mp4" 2>/dev/null || continue
+    v=$((v+1))
+  done
 done
 echo "▶ 영상 프록시 ${v}편"
 
