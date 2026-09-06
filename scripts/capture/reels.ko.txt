@@ -31,5 +31,6 @@ save|outro||누룽지도|내 도시락 만들기|Build your own lunchbox
 share|hook||내 배구 기록,|이렇게 자랑하자|Show off your volleyball life|내 배구 기록 자랑하기
 share|cap|profile|나만의 밥이름|프로필|Your own rice-name profile
 share|cap|namecard|도시락·시간표·QR|명함 한 장에|Clubs, schedule and QR on one card
+share|cap|club|마음에 든 팀도|그대로 공유|Share a club page too|마음에 든 팀도 그대로 공유
 share|cap|share|인스타 스토리·카톡|바로 공유|Share straight to Instagram or KakaoTalk
 share|outro||누룽지도|do.nulloongzi.com|Volleyball club map for Korea

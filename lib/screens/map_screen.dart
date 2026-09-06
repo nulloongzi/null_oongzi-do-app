@@ -992,7 +992,7 @@ class _MapScreenState extends State<MapScreen> {
         MaterialPageRoute<void>(builder: (_) => const ShareImageScreen()),
       ),
     );
-    if (!await _hold(6, 'namecard')) return;
+    if (!await _hold(5, 'namecard')) return;
 
     await _backToMap();
     if (!mounted) return;
@@ -1000,7 +1000,9 @@ class _MapScreenState extends State<MapScreen> {
     final c = _clubs.isNotEmpty ? _clubs.first : null;
     if (c == null) return;
     await _focusAndShowClub(c);
-    await _hold(2);
+    // 비트 없이 지나가면 명함 자막이 지도로 돌아온 뒤까지 걸린 채 남는다
+    // (실측: 6.5~16.0초 한 자막, 그중 7초는 화면이 이미 지도였다).
+    await _hold(2.5, 'club');
     if (!mounted) return;
     showShareMenu(
       context,
