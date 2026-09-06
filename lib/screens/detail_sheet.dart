@@ -20,6 +20,7 @@ import '../widgets/insta_embed.dart';
 import '../widgets/schedule_timetable.dart';
 import '../widgets/share_menu.dart';
 import '../widgets/story_card.dart';
+import '../widgets/data_trust_row.dart';
 import '../widgets/map_detail_panel.dart';
 import 'club_form_screen.dart';
 import 'login_screen.dart';
@@ -118,25 +119,33 @@ Widget _infoRow(String icon, String text) => Padding(
 );
 
 // 📍 주소 행 + 복사 알약 (웹 #sheetAddressVal + #btnCopy). display=표시값, copyText=복사값.
-Widget _addressRow(BuildContext context, String display, String copyText) =>
-    Padding(
-      padding: const EdgeInsets.only(top: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('📍', style: TextStyle(fontSize: 17)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              display,
-              style: const TextStyle(
-                fontSize: 15.5,
-                color: NurungjiColors.dark,
-                height: 1.4,
-              ),
-            ),
+// onDirections 가 있으면 길찾기 알약도 붙는다 — 좌표 없는 크루(장소 유동적)는 null.
+Widget _addressRow(
+  BuildContext context,
+  String display,
+  String copyText, {
+  VoidCallback? onDirections,
+}) => Padding(
+  padding: const EdgeInsets.only(top: 12),
+  child: Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text('📍', style: TextStyle(fontSize: 17)),
+      const SizedBox(width: 10),
+      Expanded(
+        child: Text(
+          display,
+          style: const TextStyle(
+            fontSize: 15.5,
+            color: NurungjiColors.dark,
+            height: 1.4,
           ),
-          const SizedBox(width: 8),
+        ),
+      ),
+      const SizedBox(width: 8),
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
           _outlineBtn(t('copy_address'), () async {
             await Clipboard.setData(ClipboardData(text: copyText));
             if (context.mounted) {
@@ -145,9 +154,15 @@ Widget _addressRow(BuildContext context, String display, String copyText) =>
               ).showSnackBar(SnackBar(content: Text(t('address_copied'))));
             }
           }),
+          if (onDirections != null) ...[
+            const SizedBox(height: 6),
+            _outlineBtn(t('directions_btn'), onDirections),
+          ],
         ],
       ),
-    );
+    ],
+  ),
+);
 
 // 시간표 morph (웹 #timeMorphContainer/interpolateMorph): peek=요약 텍스트, expand=주간 그리드.
 // 패널 펼침비율(DetailPanelScope.expand)에 연동해 crossfade, 탭하면 peek↔expand 토글.
@@ -1010,7 +1025,27 @@ List<Widget> _spotDetailChildren(
       _infoRow('🗓', s.scheduleText!),
     // 주소가 있으면 복사/길찾기가 붙은 주소 행, 지역만 있으면 단순 정보 행.
     if (where.isNotEmpty)
-      _addressRow(context, where, s.address ?? where)
+      _addressRow(
+        context,
+        where,
+        s.address ?? where,
+        // 픽업에도 길찾기를 준다 — 동호회에만 있으면 NSM(주당 길찾기 클릭)이
+        // 구조적으로 동호회 편향이 되고, 당일 행동인 픽업의 성과가 묻힌다.
+        onDirections: (s.lat != null && s.lng != null)
+            ? () {
+                Track.event('pickup_contact', {
+                  'id': s.id,
+                  'type': 'directions',
+                  'sport': s.sport,
+                });
+                // NSM 전용 이벤트 — source로 동호회/픽업을 분리 집계한다
+                Track.event('get_directions', {'id': s.id, 'source': 'pickup'});
+                _open(
+                  'https://map.kakao.com/link/to/${s.title},${s.lat},${s.lng}',
+                );
+              }
+            : null,
+      )
     else if (whereLabel.isNotEmpty)
       _infoRow('📍', whereLabel),
     if (s.feeInfo != null && s.feeInfo!.isNotEmpty)
@@ -1060,6 +1095,14 @@ List<Widget> _spotDetailChildren(
     // 시딩 항목: 크루 본인이 올린 게 아니라 owner_uid가 관리자다.
     // 이 고지+요청 링크가 유일한 옵트아웃 경로라 반드시 노출한다.
     if (s.source == 'curated') _CuratedNote(spot: s),
+    // 데이터 신선도 + 신고 통로 (guidelines.html 2-3 · 3-1). curated 크루는 위에
+    // 전용 takedown 고지가 따로 있고 문구가 달라('우리 팀이에요') 서로 대체하지 않는다.
+    DataTrustRow(
+      kind: 'pickup',
+      targetId: s.id,
+      targetName: s.title,
+      lastVerified: s.lastVerifiedAt,
+    ),
     // 펼쳐야 보이는 영역: 릴스 + 소유자 수정/삭제
     _ExpandReveal(
       child: Column(
@@ -1270,6 +1313,14 @@ void showClubDetail(
             ),
           ],
         ),
+      ),
+      // 데이터 신선도 + 신고 통로 (guidelines.html 2-3 · 3-1)
+      DataTrustRow(
+        kind: 'club',
+        targetId: c.id,
+        targetName: c.name,
+        lastVerified: c.lastVerifiedAt,
+        dataStatus: c.dataStatus,
       ),
       // 8~9. 펼쳐야 보이는 영역: 릴스 임베드 + 소유자(인증/급구/수정·삭제)
       _ExpandReveal(

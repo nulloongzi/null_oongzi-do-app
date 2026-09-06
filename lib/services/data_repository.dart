@@ -120,6 +120,9 @@ class DataRepository {
       'registered_by': uid,
       'is_urgent': false,
       'urgent_msg': '',
+      // 데이터 신뢰도(guidelines.html 2-3) — 웹 registration.js 와 동일.
+      'last_verified_at': now,
+      'data_status': 'active',
       'metadata': {
         'created_at': now,
         'updated_at': now,
@@ -136,12 +139,43 @@ class DataRepository {
     await _db.collection('clubs').doc(id).update({
       ...fields,
       'metadata.updated_at': FieldValue.serverTimestamp(),
+      // 소유자가 폼을 저장한 것 = "이 정보가 지금도 맞다"는 확인. 웹과 동일 규칙.
+      'last_verified_at': FieldValue.serverTimestamp(),
     });
   }
 
   /// 동호회 삭제(소유자/관리자).
   Future<void> deleteClub(String id) async {
     await _db.collection('clubs').doc(id).delete();
+  }
+
+  // ── 신고 (reports) ──
+
+  /// 잘못된 정보 신고. 필드 집합은 firestore.rules 의 화이트리스트와 정확히 같아야 한다
+  /// (하나라도 더 붙으면 hasOnly 에서 거부됨).
+  ///
+  /// 무로그인 신고가 요건이라 ensureUid()로 익명 uid를 확보한다 — 제3자는 신고하려고
+  /// 로그인하지 않는다. 접수되면 Cloud Function(onReportCreated)이 운영자에게 알린다.
+  Future<void> createReport({
+    required String kind, // 'club' | 'pickup'
+    required String targetId,
+    required String targetName,
+    required String reason,
+    String detail = '',
+  }) async {
+    final uid = await ensureUid();
+    await _db.collection('reports').add({
+      'kind': kind,
+      'target_id': targetId,
+      'target_name': targetName.length > 120
+          ? targetName.substring(0, 120)
+          : targetName,
+      'reason': reason,
+      'detail': detail.length > 500 ? detail.substring(0, 500) : detail,
+      'reporter_uid': uid,
+      'status': 'open',
+      'created_at': FieldValue.serverTimestamp(),
+    });
   }
 
   // 암호학적 난수 기반 12자 id (웹 registration.js generateId 포팅)

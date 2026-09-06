@@ -1,4 +1,6 @@
-# Play 스토어 등록 세트 (누룽지도 v2.0.0)
+# Play 스토어 등록 세트 (누룽지도)
+
+> 텍스트 자산은 v2.0.0 출시 때 쓴 것이 기준. 출시 노트만 릴리즈마다 갱신한다.
 
 Play Console → 앱 → **기본 스토어 등록정보**에 그대로 붙여넣는 자산 모음.
 - **업로드용 최종 스샷(카피 오버레이 합성본)**: CI 아티팩트 `nulloongzido-marketing-assets`의
@@ -58,7 +60,16 @@ Volleyball clubs across Korea on one map — pickup games, filters & more 🏐
 ```
 > ⚠️ 마지막 줄 "문의: (지원 이메일)" 은 Play Console의 **연락처 이메일** 필드에 넣으므로 본문에선 생략.
 
-### 출시 노트 (What's new · v2.0.0)
+### 출시 노트 (What's new · v2.5.0)
+```
+• 픽업 크루 상세에서 바로 길찾기 🚀
+• 팀·크루 정보의 '최종 확인일'을 표시 — 오래된 정보는 확인 필요 표시
+• 잘못된 정보를 앱 안에서 바로 신고 (영업일 7일 이내 확인)
+• 픽업 목록에서 크루를 고르면 같은 화면이 상세로 전환
+• 팀 등록 시 지도에서 위치를 찍으면 주소가 자동으로 채워집니다
+```
+
+<details><summary>이전 출시 노트 (v2.0.0)</summary>
 ```
 누룽지도가 네이티브 앱으로 새로워졌어요! 🏐
 • 훨씬 부드러운 지도, 빠른 실행
@@ -69,6 +80,7 @@ Volleyball clubs across Korea on one map — pickup games, filters & more 🏐
 • 나만의 '밥이름' 닉네임
 지금 업데이트하고 더 가볍게 즐겨보세요!
 ```
+</details>
 
 ### ASO 키워드(설명에 자연 노출 권장)
 `배구` · `배구 동호회` · `배구 팀` · `픽업 게임` · `생활체육 배구` · `배구 모임` · `동호회 찾기` · `배구 지도`
@@ -125,10 +137,18 @@ Play는 **최소 2장, 최대 8장**. 아래 **7장 순서**(첫 3장이 목록 
 ### 연락처·정책 (Play Console → 매장 등록정보 & 앱 콘텐츠)
 - **연락처 이메일**: `paulyoo999@gmail.com`
   - 전체 설명 본문엔 이메일 미노출(위 §1 주의) — 이 필드에만 입력.
-- **개인정보처리방침 URL**: `https://nulloongzi.github.io/null_oongzi-do/privacy.html`
+- **개인정보처리방침 URL**: `https://do.nulloongzi.com/privacy.html`
+  - #22에서 커스텀 도메인(CNAME `do.nulloongzi.com`)으로 전환됨. 옛 `nulloongzi.github.io/...`
+    주소는 Pages 리다이렉트로 살아 있지만, **Play Console 값도 새 주소로 바꿔둘 것**
+    (도메인이 깔때기 맨 위라 낡으면 아무도 모르게 낡는다).
+  - 함께 공개된 정책 문서: `/terms.html`(이용약관) · `/guidelines.html`(운영 기준) ·
+    `/data-deletion.html`(데이터 삭제).
   - `null_oongzi-do` 레포 루트 `privacy.html`(시행일 2026-07-28), GitHub Pages 배포.
   - 소셜 로그인 수집 항목(구글/카카오/네이버 식별자)과 Firebase 처리위탁 반영본.
   - 빈 템플릿이던 `privacy.md`는 제거됨(커밋 `2362796`) — 옛 `.md` URL은 쓰지 말 것.
 
-> 스샷/피처그래픽은 언제든 **push 한 번**(`[cap-release] [cap-full] [cap-reels]`)으로 최신 버전 자동 갱신.
+> 스샷/피처그래픽 갱신은 **GitHub Actions → Capture Assets → Run workflow**(수동 dispatch).
+> 릴리즈 세트는 `release` 입력을 켠다. `[cap-release]` 같은 커밋 메시지 마커는 더 이상
+> 동작하지 않는다 — #30에서 push 자동 트리거를 제거하고 dispatch 입력으로 옮겼다
+> (dispatch 이벤트엔 `head_commit`이 없어 마커 조건이 영영 false가 된다).
 > 피처 그래픽 소스: `assets/store/feature-graphic.html`(Chrome `--screenshot` 1024×500 렌더).

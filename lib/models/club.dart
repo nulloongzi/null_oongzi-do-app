@@ -3,6 +3,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 double? _toD(dynamic v) => v == null ? null : (v as num).toDouble();
 
+DateTime? _ts(dynamic v) =>
+    v is Timestamp ? v.toDate() : (v is DateTime ? v : null);
+
+// 최종 확인일: last_verified_at > metadata.updated_at > metadata.created_at.
+// 폴백이 있어야 기존 문서들도 첫 배포부터 날짜가 뜬다(웹 data-trust.js 와 동일 순서).
+DateTime? _verifiedAt(Map d) {
+  final meta = d['metadata'];
+  return _ts(d['last_verified_at']) ??
+      (meta is Map ? _ts(meta['updated_at']) ?? _ts(meta['created_at']) : null);
+}
+
 // insta_reels(배열) 우선, 없으면 insta_reel(단일) 폴백 → 항상 List로.
 List<String> _reels(Map d) {
   final raw = d['insta_reels'];
@@ -36,6 +47,10 @@ class Club {
   final bool isVerified;
   final bool isUrgent;
   final String? urgentMsg;
+  // 데이터 신뢰도(웹 guidelines.html 2-3). last_verified_at 이 없는 레거시 문서는
+  // metadata.updated_at → created_at 으로 폴백하므로 마이그레이션 없이 값이 나온다.
+  final DateTime? lastVerifiedAt;
+  final String? dataStatus; // active | needs_check | dormant
 
   Club({
     required this.id,
@@ -55,6 +70,8 @@ class Club {
     this.isVerified = false,
     this.isUrgent = false,
     this.urgentMsg,
+    this.lastVerifiedAt,
+    this.dataStatus,
   });
 
   factory Club.fromDoc(DocumentSnapshot doc) {
@@ -79,6 +96,8 @@ class Club {
       isVerified: (d['is_verified'] ?? false) as bool,
       isUrgent: (d['is_urgent'] ?? false) as bool,
       urgentMsg: d['urgent_msg'] as String?,
+      lastVerifiedAt: _verifiedAt(d),
+      dataStatus: d['data_status'] as String?,
     );
   }
 }

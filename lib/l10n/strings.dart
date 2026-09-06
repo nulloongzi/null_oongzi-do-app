@@ -885,4 +885,38 @@ const Map<String, Map<String, String>> kStrings = {
     'en':
         'After actually playing that round. Confirming logs it and feeds next round\'s fairness. Not happy? Redraw before confirming.',
   },
+
+  // ── 데이터 신뢰도 + 신고 (웹 data-trust.js / guidelines.html 2-3 · 3-1) ──
+  'dt_last_verified': {'ko': '최종 확인', 'en': 'Last checked'},
+  'dt_needs_check': {'ko': '확인 필요', 'en': 'needs check'},
+  'dt_unknown': {'ko': '최종 확인일 정보 없음', 'en': 'Last checked: unknown'},
+  'dt_report': {'ko': '정보가 틀렸어요', 'en': 'Report incorrect info'},
+  'rp_title': {'ko': '잘못된 정보 신고', 'en': 'Report incorrect info'},
+  'rp_intro': {
+    'ko': '확인 후 영업일 기준 7일 이내에 처리 결과를 반영합니다. 신고자 정보는 남기지 않습니다.',
+    'en':
+        'We review reports within 7 business days. No personal information is stored.',
+  },
+  'rp_reason_label': {'ko': '어떤 문제인가요? (필수)', 'en': "What's wrong? (required)"},
+  'rp_wrong_info': {'ko': '정보가 틀림', 'en': 'Incorrect info'},
+  'rp_closed': {'ko': '운영 종료/해체', 'en': 'No longer active'},
+  'rp_duplicate': {'ko': '중복 등록', 'en': 'Duplicate'},
+  'rp_inappropriate': {'ko': '부적절한 내용', 'en': 'Inappropriate'},
+  'rp_other': {'ko': '기타', 'en': 'Other'},
+  'rp_detail_label': {'ko': '자세히 (선택)', 'en': 'Details (optional)'},
+  'rp_detail_ph': {
+    'ko': '예: 연습 요일이 화·목으로 바뀌었어요',
+    'en': 'e.g. Practice days changed to Tue/Thu',
+  },
+  'rp_submit': {'ko': '신고 보내기', 'en': 'Send report'},
+  'rp_sending': {'ko': '보내는 중…', 'en': 'Sending…'},
+  'rp_need_reason': {'ko': '사유를 선택해주세요.', 'en': 'Please choose a reason.'},
+  'rp_done': {
+    'ko': '신고가 접수됐습니다. 확인 후 반영할게요. 감사합니다!',
+    'en': 'Report received. Thanks — we\'ll review it.',
+  },
+  'rp_fail': {
+    'ko': '전송에 실패했어요. 잠시 후 다시 시도해주세요.',
+    'en': 'Sending failed. Please try again shortly.',
+  },
 };
