@@ -1,5 +1,5 @@
-# 캡처 원본 목록 (2026-09-03 17:06)
-기기:  / 
+# 캡처 원본 목록 (2026-09-07 08:38)
+기기: SM-F741N / Physical size: 1080x2640
 
 2790763	/c/Users/user/null_oongzi-do-app/marketing-assets/motion/discover_ko.mp4
 5111691	/c/Users/user/null_oongzi-do-app/marketing-assets/motion/full_tour_ko.mp4
