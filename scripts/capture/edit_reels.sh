@@ -146,11 +146,11 @@ fit_narration() { # fit_narration <mp3> <시작> <끝> <라벨>
   if ffmpeg -y -loglevel error -i "$f" -filter:a "atempo=$capped" \
       -c:a libmp3lame -q:a 4 "$f.fit.mp3" 2>/dev/null && [ -s "$f.fit.mp3" ]; then
     mv -f "$f.fit.mp3" "$f"
-    awk -v r="$r" -v c="$capped" -v l="$label" -v d="$d" -v w="$win" 'BEGIN{
-      if (r > 1.225)
-        printf "  ! \"%s\" 음성이 너무 깁니다(%.1fs > %.1fs). %.2f배로 줄였지만 여전히 넘칩니다 — 문구를 줄이세요.\n", l, d, w, c
-      else
-        printf "  · \"%s\" 음성 %.2f배로 구간에 맞춤(%.1fs → %.1fs)\n", l, c, d, w
+    # 자막이 사라진 뒤에도 음성이 조금 이어지는 것 자체는 문제가 아니다.
+    # 진짜 문제는 다음 줄 음성과 겹치는 것인데, 그건 뒤에서 밀기까지 마친 뒤에야
+    # 알 수 있다 → 여기서는 사실만 적고 판정은 마지막 겹침 검사에 맡긴다.
+    awk -v c="$capped" -v l="$label" -v d="$d" -v w="$win" 'BEGIN{
+      printf "  · \"%s\" 음성 %.2f배(%.1fs → %.1fs)\n", l, c, d, w
     }'
   fi
   rm -f "$f.fit.mp3"
@@ -319,6 +319,16 @@ for flow in $FLOWS; do
       mv -f "$WORK/${flow}_body_a.mp4" "$WORK/${flow}_body.mp4"
       HAS_AUDIO=1
       log "  나레이션 ${#NAR_T[@]}줄 삽입"
+      # 겹침 최종 검사 — 두 목소리가 동시에 나는지는 이 시점에야 확정된다.
+      OVL=0
+      for i in "${!NAR_T[@]}"; do
+        [ "$i" -gt 0 ] || continue
+        pd="$(ffprobe -v error -show_entries format=duration -of csv=p=0 "${NAR_F[$((i-1))]}" 2>/dev/null)"
+        awk -v a="${NAR_T[$((i-1))]}" -v d="${pd:-0}" -v b="${NAR_T[$i]}" -v n="$i" \
+          'BEGIN{ o=a+d-b; if (o > 0.05) { printf "  ! %d번째 음성이 앞 음성과 %.2f초 겹칩니다 — 문구를 줄이거나 앱의 _hold 를 늘리세요.\n", n+1, o; exit 3 } }' \
+          || OVL=1
+      done
+      [ "$OVL" = 0 ] && log "  음성 겹침 없음"
     else
       warn "  나레이션 믹스 실패 — 무음으로 진행"
     fi
