@@ -13,11 +13,24 @@ set -euo pipefail
 # 유틸(C:\Windows\System32\convert.exe)** 과 이름이 겹쳐, Git Bash 에서 그쪽이
 # 먼저 잡히면 이미지가 아니라 볼륨 변환을 시도한다(치명적).
 # magick 이 있으면 전부 magick 경유로 강제한다. Linux IM6 에서는 원래 바이너리 사용.
+# ── Git Bash(MSYS2) 경로 변환 차단 ──────────────────────────
+# MSYS2 런타임은 네이티브 .exe 에 넘기는 "/로 시작하는 인자"를 윈도우 경로로 자동
+# 변환한다. adb 에는 치명적이다 — **기기 안의 경로**인 /sdcard/x.png 가
+# C:\Program Files\Git\sdcard\x.png 로 바뀌어 screencap·pull·screenrecord 가
+# 통째로 실패한다(로컬 폴더에 파일이 안 생겨서 원인이 잘 안 보인다).
+# 기기 경로 접두어만 변환에서 제외한다 — 로컬 경로 변환은 그대로 필요하다
+# (adb pull 의 목적지는 윈도우 경로여야 한다). 리눅스/macOS 에서는 무시된다.
+export MSYS2_ARG_CONV_EXCL='/sdcard;/data/local/tmp'
+
+IM_OK=0
 if command -v magick >/dev/null 2>&1; then
   convert()  { magick "$@"; }
   identify() { magick identify "$@"; }
   montage()  { magick montage "$@"; }
   compare()  { magick compare "$@"; }
+  IM_OK=1
+elif command -v convert >/dev/null 2>&1 && convert -version 2>/dev/null | grep -qi imagemagick; then
+  IM_OK=1   # IM6(리눅스). `convert` 가 System32 디스크 유틸이면 여기 안 걸린다.
 fi
 
 
@@ -27,6 +40,13 @@ ART="${ARTIFACTS_DIR:-marketing-assets}"
 SMOKE_ONLY="${SMOKE_ONLY:-true}"
 CAP_LANG="${CAP_LANG:-ko}"
 INCLUDE_REELS="${INCLUDE_REELS:-true}"
+# 실행할 단계. 콤마 구분: play(스토어 스샷) · stills(모션용 스틸) · flows(흐름 녹화).
+# 예) PHASES=stills,flows  → 스토어 스샷 9장(약 5분)을 건너뛴다.
+PHASES="${PHASES:-play,stills,flows}"
+# 아티팩트를 다운로드할 수 없는 CI 에서는 base64 썸네일이 유일한 검증 경로지만,
+# 로컬에서는 파일을 바로 열어보면 되고 콘솔만 뒤덮는다 → 끌 수 있게 한다.
+FINGERPRINT="${FINGERPRINT:-true}"
+want() { case ",$PHASES," in *,"$1",*) return 0;; esac; return 1; }
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FLOWS="$(cd "$HERE/../../.maestro" && pwd)"
@@ -81,12 +101,41 @@ demo_off() {
 trap demo_off EXIT
 
 # 프레임버퍼 캡처(네이티브 지도 포함). Flutter takeScreenshot 은 플랫폼뷰를 검게 잡음.
-shot() { adb exec-out screencap -p > "$SCREENS/$1.png"; }
+#
+# `adb exec-out` 은 바이너리를 그대로 흘려보내는 게 정상이지만, 환경(특히 Windows 의
+# 셸/어댑터 조합)에 따라 개행이 CRLF 로 번역돼 PNG 가 조용히 깨진다. 깨진 PNG 는
+# 파일 크기가 멀쩡해 보여서 그대로 진행되고, 나중에 밝기 측정·합성이 전부 실패한다.
+# → 매직바이트로 검증하고, 깨졌으면 기기 저장 후 pull 하는 방식(바이너리 안전)으로
+#   런 전체를 전환한다.
+is_png() {
+  [ -s "$1" ] || return 1
+  [ "$(head -c8 "$1" | od -An -tx1 | tr -d ' \n')" = "89504e470d0a1a0a" ]
+}
+SHOT_MODE="${SHOT_MODE:-execout}"
+capture_to() { # capture_to <파일경로>
+  local out="$1"
+  if [ "$SHOT_MODE" = "execout" ]; then
+    adb exec-out screencap -p > "$out" 2>/dev/null || true
+    is_png "$out" && return 0
+    echo "::warning::exec-out PNG 손상 감지 → pull 방식으로 전환합니다."
+    SHOT_MODE=pull
+  fi
+  adb shell screencap -p /sdcard/_cap.png >/dev/null 2>&1
+  adb pull /sdcard/_cap.png "$out" >/dev/null 2>&1
+  adb shell rm -f /sdcard/_cap.png >/dev/null 2>&1
+  if is_png "$out"; then return 0; fi
+  echo "::error::스크린샷을 만들지 못했습니다: $out"
+  echo "::error::exec-out·pull 두 방식 모두 실패 — adb 가 기기 경로를 제대로 못 받고 있을 수 있습니다."
+  echo "::error::확인: adb shell screencap -p /sdcard/_cap.png && adb pull /sdcard/_cap.png ."
+  return 1
+}
+shot() { capture_to "$SCREENS/$1.png"; }
 
 # 캡처 결과 지문: 아티팩트를 못 받는 환경(에이전트 프록시)에서도 로그로 검증하기 위해
 #  · 각 스샷의 평균 밝기+해상도(블랙/블랭크 조기 감지)
 #  · 지도 1장은 base64 썸네일(로그에서 육안 확인)
 fingerprint() {
+  [ "$FINGERPRINT" = "true" ] || return 0
   echo "===== CAPTURE FINGERPRINT ====="
   for f in "$SCREENS"/*.png ${STORE:+"$STORE"/*.png} ${STILLS:+"$STILLS"/*.png}; do
     [ -e "$f" ] || continue
@@ -122,13 +171,38 @@ demo_on
 sleep 2
 shot "play_01_map_${CAP_LANG}"
 
-MEAN="$(convert "$SCREENS/play_01_map_${CAP_LANG}.png" -colorspace Gray -format '%[fx:mean]' info: 2>/dev/null || echo NA)"
+SMOKE_PNG="$SCREENS/play_01_map_${CAP_LANG}.png"
+MEAN="$(convert "$SMOKE_PNG" -colorspace Gray -format '%[fx:mean]' info: 2>/dev/null || echo NA)"
 log "지도 스샷 평균 밝기 = $MEAN (0=검정, 1=흰색)"
+# NA 는 "지도가 멀쩡하다"는 뜻이 아니라 **측정 자체가 실패했다**는 뜻이다.
+# 원인이 둘(깨진 PNG / ImageMagick 부재)인데 결과가 완전히 다르므로 갈라서 진단한다.
+if [ "$MEAN" = "NA" ]; then
+  if ! is_png "$SMOKE_PNG"; then
+    echo "::error::스크린샷이 PNG 가 아닙니다($SMOKE_PNG) — adb 캡처가 깨졌습니다."
+    echo "::error::SHOT_MODE=pull 로 다시 실행해 보세요: SHOT_MODE=pull bash scripts/capture/local_capture.sh"
+    exit 1
+  fi
+  if [ "$IM_OK" != 1 ]; then
+    echo "::error::ImageMagick 을 찾지 못했습니다(밝기 측정·스틸 합성 불가)."
+    echo "::error::Windows: winget install ImageMagick.ImageMagick 후 셸을 새로 여세요(PATH 갱신)."
+    exit 1
+  fi
+  echo "::warning::PNG·ImageMagick 은 정상인데 밝기 측정만 실패했습니다 — 계속 진행합니다."
+fi
 if [ "$MEAN" != "NA" ] && awk -v m="$MEAN" 'BEGIN{exit !(m < 0.03)}'; then
   echo "::error::지도 화면이 (거의) 검정입니다 — 함정4: x86_64 SwiftShader 네이버맵 타일 미렌더 의심."
   echo "::error::완화: -gpu 옵션/이미지 조합 변경, 대기 증가. 그래도 안 되면 실기기(사용자 폰) 폴백."
   adb logcat -d > "$LOGS/logcat_smoke.txt" 2>/dev/null || true
   exit 1
+fi
+# 밝기만으로는 "인증 실패로 빈 지도" 를 못 잡는다 — 인증이 깨져도 배경은 옅은 회색이라
+# 검정 판정에 안 걸린다. 앱의 onAuthFailed(main.dart)가 남기는 로그를 직접 확인한다.
+NAVER_AUTH_ERR="$(adb logcat -d 2>/dev/null | grep -iE '네이버지도 인증 실패|NaverMapSdk.*(Auth|401|403)' | tail -3 || true)"
+if [ -n "$NAVER_AUTH_ERR" ]; then
+  echo "::error::네이버 지도 인증에 실패했습니다 — 타일이 안 뜬 상태로 캡처됩니다."
+  echo "$NAVER_AUTH_ERR" | sed 's/^/::error::  /'
+  echo "::error::앱 코드가 아니라 NCP 콘솔 설정 문제입니다(키/서비스 활성화/쿼터). CAPTURE_IGNORE_AUTH=1 로 무시하고 진행 가능."
+  [ -n "${CAPTURE_IGNORE_AUTH:-}" ] || exit 1
 fi
 log "✅ 지도 렌더 확인(비-검정)."
 
@@ -175,6 +249,8 @@ open_cap() { # open_cap <cmd> [wait]
 cap() { dismiss_anr; demo_on; sleep 1; shot "$1"; log "  캡처: $1"; }
 
 # ── 스크린샷 세트(딥링크 결정적) ─────────────────────────────
+# 스토어용 9장. 영상만 뽑을 때는 순수 낭비(약 5분)라 단계로 분리했다 → PHASES=stills,flows
+if want play; then
 open_cap map 30;      cap "play_01_map_${CAP_LANG}"
 open_cap filter 30;   cap "play_02_filter_${CAP_LANG}"
 open_cap pickup 30;   cap "play_03_pickup_${CAP_LANG}"
@@ -184,6 +260,7 @@ open_cap profile 32;  cap "play_06_profile_${CAP_LANG}"
 open_cap share 34;    cap "play_07_share_${CAP_LANG}"
 open_cap story 36;    cap "play_08_story_${CAP_LANG}"
 open_cap login 32;    cap "play_09_login_${CAP_LANG}"
+fi
 
 # ── 모션그래픽용 스틸 세트(st_*) ─────────────────────────────
 # 에뮬 실시간 녹화는 GPU 없는 CI(SwiftShader)에서 렉·타일로딩 때문에 품질이 안 난다.
@@ -192,13 +269,15 @@ open_cap login 32;    cap "play_09_login_${CAP_LANG}"
 # 결정적 요구사항: **스텝 사이에 콜드 재시작(-S)을 하지 않는다.**
 # 재시작하면 지도 카메라가 달라져 '배경만' 스틸과 '오버레이' 스틸의 배경이 어긋나고,
 # 두 장의 차이로 시트 레이어·좌표를 뽑는 합성이 통째로 깨진다.
+if want stills; then
 STILLS="$ART/stills"; mkdir -p "$STILLS"   # (상단에서 빈 값으로 선언됨 — 여기서 확정)
+fi
 step() { # step <cmd> <wait>
   # -S 없음: 실행 중인 액티비티에 새 인텐트만 전달 → 카메라/스크롤 상태 유지.
   adb shell "am start -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=$1&lang=$CAP_LANG'" >/dev/null 2>&1
   sleep "${2:-6}"; dismiss_anr
 }
-still() { dismiss_anr; demo_on; sleep 1; adb exec-out screencap -p > "$STILLS/$1.png"; log "  스틸: $1"; }
+still() { dismiss_anr; demo_on; sleep 1; capture_to "$STILLS/$1.png"; log "  스틸: $1"; }
 # 앱이 남긴 오버레이 좌표(CAPTURE_RECT)를 수거한다. 이미지 휴리스틱으로는 시트 상단을
 # 안정적으로 못 찾는다(스크림이 전면을 덮고, 시트 내부 대비도 케이스마다 달라 검출이 튄다).
 collect_rects() {
@@ -213,6 +292,10 @@ collect_rects() {
 # 세션 시작만 콜드로(깨끗한 출발) — 이후는 델타만 적용.
 # 카메라가 움직이는 스텝(04·05)은 타일 로딩 여유를 크게 준다 — #28에서 fitBounds/
 # centerOnPin 직후 9초로는 부족해 지도가 연녹색 민무늬로 찍혔다.
+if want stills; then
+# 이전 런의 CAPTURE_RECT 가 링버퍼에 남아 있으면 collect_rects 가 그것까지 주워
+# 옛 좌표를 쓸 수 있다(UI 가 바뀌면 합성이 어긋난다) → 스틸 시작 전에 비운다.
+adb logcat -c >/dev/null 2>&1 || true
 open_cap st_map 30;         still "01_map"
 step st_filter_open 7;      still "02_filter_open"
 step st_filter_set 7;       still "03_filter_set"
@@ -228,13 +311,19 @@ step st_namecard 12;        still "12_namecard"
 step st_share_bg 9;         still "13_share_bg"
 step st_share 7;            still "14_share"
 collect_rects
+fi
 
 # ── 카피 오버레이 합성(업로드용 최종 이미지) ──────────────────
 # Play 마케팅 프레임: 크림 1080×1920 캔버스 + 상단 2줄 카피(나눔고딕Bold) +
 # 옐로 언더라인 + 앱 스샷(다크 테두리). 한글 폰트는 워크플로에서 설치(fonts-nanum).
+# 이 블록은 play 단계 전용이다. 예전엔 단계와 무관하게 실행됐는데, 폰트 탐색이
+# `set -euo pipefail` 아래에서 스크립트를 통째로 죽였다: Windows 에는 fc-list 가
+# 없어 파이프가 실패 → pipefail → 명령치환 실패 → set -e 종료. 그것도 **에러 한 줄
+# 없이** 끝나서 원인이 안 보였다(스틸까지 다 찍고 흐름 녹화 직전에 사라짐).
+if want play; then
 STORE="$ART/store"; mkdir -p "$STORE"
-KFONT="$(fc-list 2>/dev/null | grep -i nanum | grep -i bold | head -1 | cut -d: -f1 | xargs)"
-[ -z "$KFONT" ] && KFONT="/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf"
+KFONT="$(fc-list 2>/dev/null | grep -i nanum | grep -i bold | head -1 | cut -d: -f1 | xargs || true)"
+[ -n "$KFONT" ] || KFONT="/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf"
 compose_store() { # compose_store <basename> <line1> <line2>
   local src="$SCREENS/$1.png" out="$STORE/$1.png" tmp="$STORE/.t_$1.png"
   [ -e "$src" ] || { echo "::warning::합성 스킵(원본 없음): $1"; return; }
@@ -261,14 +350,20 @@ if [ -e "$KFONT" ]; then
 else
   echo "::warning::한글 폰트(nanum) 미탐지 — 카피 합성 스킵($KFONT)"
 fi
+fi
 
 # ── 릴스 원본(raw): 기능별 모션 클립을 언어별로 녹화 ──────────
 # 후반합성기(compose_videos.sh)가 이 raw 를 크림 9:16 브랜디드 릴스로 만든다.
 # 산출: reels/raw/<feat>_<lang>.mp4 (앱 1080×2400 화면녹화, 무음).
 # 각 클립: 대상 언어로 지도에 콜드 안착 → 녹화 시작 → 기능 딥링크로 모션(시트/카메라) 유발.
-if [ "$INCLUDE_REELS" = "true" ]; then
+if [ "$INCLUDE_REELS" = "true" ] && want flows; then
   RAW="$REELS/raw"; mkdir -p "$RAW"
-  vdur() { ffprobe -v error -show_entries format=duration -of csv=p=0 "$1" 2>/dev/null | cut -d. -f1; }
+  # ffprobe 실패(파일 없음·손상)는 흔한 정상 경로다. pipefail 아래에서 그대로 두면
+  # d="$(vdur ...)" 가 set -e 를 물어 스크립트가 조용히 끝난다 → 항상 0 을 돌려준다.
+  vdur() {
+    ffprobe -v error -show_entries format=duration -of csv=p=0 "$1" 2>/dev/null \
+      | cut -d. -f1 || true
+  }
 
   # 흐름 검증 몬타주: 아티팩트 다운로드가 프록시에 막히므로, 각 흐름 영상의
   # 프레임을 전체 구간에 균등 추출해 base64 로 로그에 남긴다(육안 확인 경로).
@@ -282,7 +377,7 @@ if [ "$INCLUDE_REELS" = "true" ]; then
     td="$(mktemp -d)"
     ffmpeg -y -loglevel error -i "$mp4" -vf "fps=${fps},scale=270:-1" -frames:v 12 "$td/f_%02d.png" 2>/dev/null
     if ls "$td"/f_*.png >/dev/null 2>&1; then
-      montage "$td"/f_*.png -tile 4x3 -geometry +3+3 -background '#FFF8E1' "$td/m.png" 2>/dev/null
+      montage "$td"/f_*.png -tile 4x3 -geometry +3+3 -background '#FFF8E1' "$td/m.png" 2>/dev/null || true
       echo "MONTAGE_BEGIN $label"
       convert "$td/m.png" -resize 1100x -quality 72 jpg:- 2>/dev/null | base64 -w0
       echo ""
@@ -295,24 +390,57 @@ if [ "$INCLUDE_REELS" = "true" ]; then
   # 흐름이 끝날 때까지 통으로 녹화한다(중간 개입 없음 = 손떨림 없는 데모).
   # 산출은 9:16(1080×1920) 크롭본 — 자막·TTS는 편집에서 얹는다.
   FLOWS_DIR="$REELS/flows"; mkdir -p "$FLOWS_DIR"
-  # 흐름은 길어(35~45s) 인코더 부하가 크다. 화질(크롭 후 1080폭)을 살리되 조기 종료를
-  # 피하도록 원본 1080×2400 @5Mbps 로 녹화한다.
-  FLOW_REC=(--size 1080x2400 --bit-rate 5000000)
-  # 9:16 크롭: 위 390px(상태바·검색바)을 덜어내고 아래 상세시트 버튼까지 살린다.
-  # (1080×2400 → y=390..2310) 편집에서 다시 자르지 않아도 릴스 규격.
-  FLOW_CROP="crop=1080:1920:0:390"
+  # 녹화 해상도·크롭은 **기기 해상도에서 계산한다.** 예전엔 1080×2400(에뮬 pixel_6)로
+  # 박아뒀는데, 실제 폰은 제각각이다(갤럭시 Z 플립 6 = 1080×2640). screenrecord 에
+  # 다른 크기를 주면 스케일이 끼어 화면이 왜곡되고, 고정 크롭은 시트 하단 버튼을
+  # 잘라먹는다. 폭이 1080 을 넘을 때만 1080 기준으로 비율 유지 축소한다.
+  DEV_WH="$(adb shell wm size 2>/dev/null | tr -d '\r' | awk -F': ' '/Override|Physical/{print $2}' | tail -1)"
+  case "$DEV_WH" in [0-9]*x[0-9]*) ;; *) DEV_WH="1080x2400";; esac
+  DEV_W="${DEV_WH%x*}"; DEV_H="${DEV_WH#*x}"
+  REC_W="$DEV_W"; REC_H="$DEV_H"
+  if [ "$DEV_W" -gt 1080 ]; then
+    REC_W=1080
+    REC_H="$(awk -v h="$DEV_H" -v w="$DEV_W" 'BEGIN{printf "%d", int(h*1080/w/2)*2}')"
+  fi
+  # 9:16 크롭: 위쪽(상태바·검색바)을 덜어내고 아래 상세시트 버튼까지 살린다.
+  # 기준값 390px 은 1080 폭에서의 값 — 다른 폭이면 비례로 환산한다.
+  CROP_H="$(awk -v w="$REC_W" 'BEGIN{printf "%d", int(w*16/9/2)*2}')"
+  CROP_Y="$(awk -v h="$REC_H" -v ch="$CROP_H" -v w="$REC_W" \
+    'BEGIN{y=int(390*w/1080); if (y+ch>h) y=h-ch; if (y<0) y=0; printf "%d", y}')"
+  # 흐름은 길어(35~45s) 인코더 부하가 크다. 실기기는 대역폭 여유가 있어 8Mbps.
+  FLOW_REC=(--size "${REC_W}x${REC_H}" --bit-rate 8000000)
+  FLOW_CROP="crop=${REC_W}:${CROP_H}:0:${CROP_Y},scale=1080:1920:flags=lanczos"
+  log "녹화 ${REC_W}x${REC_H} → 크롭 ${REC_W}x${CROP_H}@y=${CROP_Y} → 1080x1920 (기기 $DEV_WH)"
+
+  # 앱이 남긴 CAPTURE_BEAT 를 "녹화 시작 기준 초"로 바꿔 저장한다.
+  # 후반작업(edit_reels.sh)이 자막을 이 지점에 붙인다 — 영상에서 장면 전환을
+  # 추정하는 것보다 정확하다(앱 전환이 부드러워 감지 점수가 낮고, 시트가 열리는
+  # 순간과 화면이 바뀌는 순간이 뒤섞인다).
+  # 기준 시각은 **기기 시계**로 잡는다(logcat -v epoch 도 기기 시계다).
+  harvest_beats() { # harvest_beats <t0> <출력>
+    adb logcat -d -v epoch 2>/dev/null \
+      | awk -v t0="$1" '/CAPTURE_BEAT/ {
+          for (i=1;i<=NF;i++) if ($i=="CAPTURE_BEAT") {
+            d=$1-t0; if (d>=0) printf "%s %.2f\n", $(i+1), d; break
+          }
+        }' > "$2" 2>/dev/null || : > "$2"
+    log "  비트 $(wc -l < "$2" 2>/dev/null || echo 0)개: $(tr '\n' ' ' < "$2" 2>/dev/null)"
+  }
 
   flow() { # flow <name> <capture_cmd> <secs>
     local name="$1" cmd="$2" secs="$3"
     local dev="/sdcard/flow_${name}.mp4"
     local rawout="$RAW/flow_${name}_${CAP_LANG}.mp4"
-    local out="$FLOWS_DIR/${name}_${CAP_LANG}.mp4" d
+    local out="$FLOWS_DIR/${name}_${CAP_LANG}.mp4" d t0
+    local beats="$FLOWS_DIR/${name}_beats.txt"
     log "🎬 흐름 녹화: ${name} (${secs}s)"
     adb shell rm -f "$dev" >/dev/null 2>&1 || true
     # 지도에 콜드 안착시킨 뒤 녹화를 시작하고, 그 다음에 흐름 딥링크를 쏜다.
     # (흐름 시작 자체가 콘텐츠라 전환을 놓치면 안 된다 → 녹화가 먼저.)
     adb shell "am start -S -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=map&lang=$CAP_LANG'" >/dev/null 2>&1
     sleep 24; dismiss_anr; demo_on
+    adb logcat -c >/dev/null 2>&1 || true
+    t0="$(adb shell date +%s.%N 2>/dev/null | tr -d '\r')"
     adb shell screenrecord "${FLOW_REC[@]}" --time-limit "$secs" "$dev" &
     local rec=$!; sleep 1
     # 콜드 재시작 없이(-S 없음) 흐름 시작 → 앱이 내부에서 연속 전환.
@@ -327,6 +455,8 @@ if [ "$INCLUDE_REELS" = "true" ]; then
       echo "::warning::흐름 녹화 짧음(${d}s < ${secs}s) — 재시도: $name"
       adb shell "am start -S -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=map&lang=$CAP_LANG'" >/dev/null 2>&1
       sleep 24; dismiss_anr; demo_on
+      adb logcat -c >/dev/null 2>&1 || true
+      t0="$(adb shell date +%s.%N 2>/dev/null | tr -d '\r')"
       adb shell screenrecord "${FLOW_REC[@]}" --time-limit "$secs" "$dev" &
       rec=$!; sleep 1
       adb shell "am start -n '$APP_ID/.MainActivity' -a android.intent.action.VIEW -d '$CAP_URL/?capture=$cmd&lang=$CAP_LANG'" >/dev/null 2>&1
@@ -337,35 +467,47 @@ if [ "$INCLUDE_REELS" = "true" ]; then
       d="$(vdur "$rawout")"; d="${d:-0}"
     fi
     if [ "$d" -le 0 ]; then echo "::warning::흐름 mp4 회수 실패: $name"; return; fi
+    harvest_beats "${t0:-0}" "$beats"
     # 9:16 크롭(재인코딩 1회) — 릴스 규격 완성본.
-    ffmpeg -y -loglevel error -i "$rawout" -vf "$FLOW_CROP" \
-      -c:v libx264 -preset veryfast -pix_fmt yuv420p -r 30 -an "$out" 2>&1 | tail -2
+    if ! ffmpeg -y -loglevel error -i "$rawout" -vf "$FLOW_CROP" \
+        -c:v libx264 -preset veryfast -pix_fmt yuv420p -threads "${X264_THREADS:-4}" \
+        -r 30 -an "$out" 2>&1 | tail -2; then
+      echo "::warning::9:16 크롭 인코딩 실패: $name (원본은 raw/ 에 남아 있음)"
+      return
+    fi
     log "  ↳ flows/${name}_${CAP_LANG}.mp4 (${d}s, 1080x1920)"
   }
 
   # 흐름 3종(픽업 제외) — 각 흐름은 앱 내부 스크립트가 구동한다.
-  flow discover flow_discover 38   # 지도 → 필터 → 결과 → 클럽 상세
-  flow save     flow_save     32   # 상세 → 도시락 찜 → 반찬칸 → 식단표
-  flow share    flow_share    36   # 밥이름 → 네임카드 → 공유
+  # 길이는 앱 쪽 _hold() 합계 + 전환 여유로 맞춘다. 예전엔 넉넉하게 잡았더니
+  # discover 38s 중 마지막 16s 가 정지된 지도(무의미한 꼬리)로 채워졌다.
+  # 실측(장면 전환 시각)으로 맞춘 길이 + 여유 2초.
+  #   discover 내용 종료 16.1s · save 14.8s · share 19.7s
+  flow discover flow_discover 19   # 지도 → 필터 → 결과 → 클럽 상세
+  flow save     flow_save     20   # 상세 → 도시락 찜 → 반찬칸 → 식단표
+  flow share    flow_share    22   # 밥이름 → 네임카드 → 공유
 
   # 풀 투어: 3편 이어붙이기(편집 없이 바로 쓰는 앱 소개용).
   TOUR_LIST="$FLOWS_DIR/.tour.txt"; : > "$TOUR_LIST"
   for n in discover save share; do
     f="$FLOWS_DIR/${n}_${CAP_LANG}.mp4"
-    [ -s "$f" ] && echo "file '$(basename "$f")'" >> "$TOUR_LIST"
+    [ -s "$f" ] && echo "file '$(basename "$f")'" >> "$TOUR_LIST" || true
   done
   if [ -s "$TOUR_LIST" ]; then
     ( cd "$FLOWS_DIR" && ffmpeg -y -loglevel error -f concat -safe 0 -i .tour.txt \
-        -c copy "full_tour_${CAP_LANG}.mp4" 2>&1 | tail -2 )
+        -c copy "full_tour_${CAP_LANG}.mp4" 2>&1 | tail -2 ) \
+      || echo "::warning::풀 투어 이어붙이기 실패"
     log "  ↳ flows/full_tour_${CAP_LANG}.mp4"
   fi
   rm -f "$TOUR_LIST"
 
+  if [ "$FINGERPRINT" = "true" ]; then
   echo "===== FLOW FINGERPRINT ====="
   for n in discover save share full_tour; do
     flow_montage "$FLOWS_DIR/${n}_${CAP_LANG}.mp4" "flow_${n}"
   done
   echo "===== END FLOW FINGERPRINT ====="
+  fi
 fi
 
 adb logcat -d > "$LOGS/logcat.txt" 2>/dev/null || true

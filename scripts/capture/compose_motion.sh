@@ -66,7 +66,12 @@ CROP_Y="$(awk -v h="$SRC_H" -v ch="$CROP_H" -v w="$SRC_W" -v t="$CROP_TOP_AT_108
 # 소스 px → 출력 px 환산(시트 좌표 보정용)
 SCALE_Y="$(awk -v ch="$CROP_H" -v oh="$H" 'BEGIN{printf "%.6f", oh/ch}')"
 echo "▶ 소스 ${SRC_W}x${SRC_H} → 크롭 ${SRC_W}x${CROP_H}+0+${CROP_Y} → 출력 ${W}x${H}"
-ENC=(-c:v libx264 -preset medium -profile:v high -pix_fmt yuv420p -r $FPS -an)
+# x264 는 기본으로 코어 수의 1.5배까지 스레드를 띄우고, 스레드마다 1080x1920
+# 프레임 버퍼를 잡는다. 코어가 많고 RAM 이 적은 PC(20코어/8GB 등)에서는 이것만으로
+# 할당이 실패한다("malloc of size ... failed"). 화질·속도 손해는 거의 없으므로
+# 스레드를 묶어 둔다. 필요하면 X264_THREADS 로 조절.
+ENC=(-c:v libx264 -preset medium -profile:v high -pix_fmt yuv420p
+     -threads "${X264_THREADS:-4}" -r $FPS -an)
 
 log() { echo "▶ $*"; }
 warn() { echo "::warning::$*"; }
@@ -236,9 +241,12 @@ rect_of() { # rect_of <st_cmd> → 크롭 보정된 y (없으면 빈 값)
 }
 FT="$(rect_of st_filter_open)"; [ -n "$FT" ] || FT="$(diff_top 01_map 02_filter_open 2>/dev/null || true)"; FT="${FT:-620}"
 DT="$(rect_of st_club_sheet)"; [ -n "$DT" ] || DT="$(diff_top 05_club_bg 06_club_sheet 2>/dev/null || true)"; DT="${DT:-1180}"
-ST="$(rect_of st_share)";      [ -n "$ST" ] || ST="$(diff_top 13_share_bg 14_share 2>/dev/null || true)"; ST="${ST:-900}"
-if [ -s "$RECTS" ]; then log "시트 상단(앱 좌표): filter=$FT detail=$DT share=$ST"
-else warn "rects.txt 없음 — 휴리스틱 폴백: filter=$FT detail=$DT share=$ST"; fi
+# 공유 UI 는 바텀시트가 아니라 화면 중앙에 뜨는 다이얼로그다. 좌표를 받아 슬라이드
+# 시키면 안 된다 — 게다가 앱이 st_share 에 대해 보고하는 값은 다이얼로그가 아니라
+# 그 뒤에 남아 있는 상세 패널의 상단(1531)이라 완전히 엉뚱한 구간이 밀려 올라온다.
+# 실제 앱 동작(페이드 인)과 같은 dialog_in 을 쓰므로 좌표 자체가 필요 없다.
+if [ -s "$RECTS" ]; then log "시트 상단(앱 좌표): filter=$FT detail=$DT"
+else warn "rects.txt 없음 — 휴리스틱 폴백: filter=$FT detail=$DT"; fi
 
 # ── ① 찾기 ────────────────────────────────────────────────────
 log "① 찾기"
@@ -271,7 +279,7 @@ hold      11_profile 2.4                   "$WORK/c2.mp4"
 page_in   11_profile 12_namecard 1.0       "$WORK/c3.mp4"
 hold      12_namecard 3.4                  "$WORK/c4.mp4"
 dissolve  12_namecard 13_share_bg 0.5      "$WORK/c5.mp4"
-sheet_in  13_share_bg 14_share "$ST" 1.2   "$WORK/c6.mp4"
+dialog_in 13_share_bg 14_share 1.0        "$WORK/c6.mp4"
 hold      14_share 2.6                     "$WORK/c7.mp4"
 concat_to "share_${LANG_TAG}.mp4" "$WORK"/c{1,2,3,4,5,6,7}.mp4 || true
 

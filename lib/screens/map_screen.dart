@@ -291,6 +291,12 @@ class _MapScreenState extends State<MapScreen> {
   static const _labelZoomHide = 11.8; // 이 줌 미만 → 끄기 (사이 구간은 현 상태 유지)
   static const _focusZoom = 15.0; // 마커 탭 시 확대 축척
   static const _captureFocusZoom = 12.5; // 저사양 캡처용(타일이 실제로 렌더되는 축척)
+  // fitBounds 를 쓸 최소 경계 크기(위경도 도). 이보다 좁으면 최대 축척까지 확대돼
+  // 타일 없는 빈 화면이 되므로 고정 축척으로 중심 이동한다. 0.01도 ≈ 1.1km.
+  static const _minFitSpanDeg = 0.01;
+  // 이전 카메라의 축척을 물려받을 상한. 이게 없으면 한 번 과확대된 상태가
+  // 이후 모든 이동에 계속 전파된다(줌아웃 방지 규칙 때문).
+  static const _maxInheritZoom = 16.0;
   bool _showLabels = false; // 현재 줌이 임계 이상? (스테이지3=알약 표시)
 
   // 라벨 토글을 clear+add 없이 in-place(setIcon/setSize)로 적용하기 위한 보관.
@@ -481,7 +487,9 @@ class _MapScreenState extends State<MapScreen> {
     double z = kCaptureLowGpu ? _captureFocusZoom : _focusZoom;
     try {
       final cam = await c.getCameraPosition();
-      if (cam.zoom > z) z = cam.zoom;
+      // 현재가 더 크면 유지하되, 비정상적으로 과확대된(타일 없는) 축척까지
+      // 물려받지는 않는다 — 그러면 빈 지도가 다음 화면으로 계속 번진다.
+      if (cam.zoom > z && cam.zoom <= _maxInheritZoom) z = cam.zoom;
     } catch (_) {}
     try {
       final update = NCameraUpdate.scrollAndZoomTo(
@@ -650,12 +658,10 @@ class _MapScreenState extends State<MapScreen> {
   // 앱의 실제 전환(바텀시트 슬라이드 등)으로 이어 붙여 영상을 만든다.
   // 여기서는 그 스틸 상태들을 결정적으로 만들어 준다.
 
-  /// 스틸 세트에서 쓰는 고정 필터(찾기 스토리: 서울·화요일·성인).
-  static const _stillPreset = ClubFilter(
-    regions: {'서울'},
-    days: {'화'},
-    targets: {'성인'},
-  );
+  /// 스틸 세트에서 쓰는 고정 필터(찾기 스토리: 서울·성인).
+  // 요일까지 걸면 결과가 1팀으로 줄어 지도에 핀 하나만 남는다 — 시연 영상에서
+  // "필터로 좁혔더니 지도가 비었다"로 보인다. 지역·대상만 걸어 여러 팀이 남게 한다.
+  static const _stillPreset = ClubFilter(regions: {'서울'}, targets: {'성인'});
 
   /// 스틸 전용 대상 클럽 — 프리셋에 걸리는 팀 우선, 없으면 급구→검증→첫 팀.
   Club? _stillClub() {
@@ -870,7 +876,14 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   /// 캡처 흐름 공용: n초 대기(위젯이 사라졌으면 중단).
-  Future<bool> _hold(double sec) async {
+  ///
+  /// [beat] 를 주면 대기 직전에 로그로 표시를 남긴다. 후반작업(edit_reels.sh)이
+  /// 자막을 붙일 지점을 여기서 가져간다. 예전엔 영상에서 장면 전환을 감지해
+  /// 추정했는데, 앱의 전환이 부드러워(시트 250ms 슬라이드) 점수가 낮게 나오고
+  /// 시트가 '열리는' 순간과 '화면이 바뀌는' 순간이 뒤섞여 자막이 엉뚱한 프레임에
+  /// 붙었다. 언제 무엇을 보여주는지는 앱이 가장 정확히 안다.
+  Future<bool> _hold(double sec, [String? beat]) async {
+    if (beat != null && kCaptureMode) debugPrint('CAPTURE_BEAT $beat');
     await Future<void>.delayed(Duration(milliseconds: (sec * 1000).round()));
     return mounted;
   }
@@ -886,13 +899,17 @@ class _MapScreenState extends State<MapScreen> {
 
   /// ① 찾기: 지도 → 필터(서울·화·성인) → 결과 → 클럽 상세 → 연락
   Future<void> _flowDiscover() async {
-    await _hold(3.5); // 지도 전경(전국 마커·클러스터)
+    // 3.5s: 이 구간에 얹히는 한국어 나레이션이 약 2.9초라 2.5s 로는 다음 줄과
+    // 겹쳤다. 화면이 짧은 게 원인이므로 문구를 깎는 대신 홀드를 늘린다.
+    await _hold(3.5, 'map'); // 지도 전경(전국 마커·클러스터)
     if (!mounted) return;
 
     // 필터 시트를 '이미 선택된' 상태로 띄운다 — 좌표 탭 없이 칩 선택이 보인다.
-    const preset = ClubFilter(regions: {'서울'}, days: {'화'}, targets: {'성인'});
+    // 스틸 세트와 같은 프리셋을 쓴다: 여기만 요일까지 걸려 있어 결과가 1팀으로
+    // 줄었고, 스틸 영상과 녹화 영상의 내용이 서로 달라 비교가 안 됐다.
+    const preset = _stillPreset;
     final sheet = showFilterSheet(context, preset);
-    await _hold(5); // 지역·요일·대상 칩을 읽을 시간
+    await _hold(4, 'filter'); // 지역·대상 칩을 읽을 시간
     if (!mounted) return;
     Navigator.of(context).pop(preset); // '적용하기' 상당
     final applied = await sheet;
@@ -905,7 +922,7 @@ class _MapScreenState extends State<MapScreen> {
       await _refreshMarkers();
       _fitToFilter();
     }
-    if (!await _hold(4)) return; // 좁혀진 결과 지도
+    if (!await _hold(3, 'result')) return; // 좁혀진 결과 지도
 
     // 결과 중 한 팀을 열어 일정·회비·위치를 보여준다.
     final c = _clubs.where(_filter.matches).isNotEmpty
@@ -913,7 +930,7 @@ class _MapScreenState extends State<MapScreen> {
         : (_clubs.isNotEmpty ? _clubs.first : null);
     if (c == null) return;
     await _focusAndShowClub(c);
-    if (!await _hold(6)) return; // 상세: 일정·회비·주소·버튼
+    if (!await _hold(4, 'detail')) return; // 상세: 일정·회비·주소·버튼
 
     // 필터 원복(다음 캡처 오염 방지)
     await _backToMap();
@@ -929,7 +946,7 @@ class _MapScreenState extends State<MapScreen> {
   Future<void> _flowSave(Club? c) async {
     if (c == null) return;
     await _focusAndShowClub(c);
-    if (!await _hold(4)) return; // 상세에서 시작
+    if (!await _hold(3, 'detail')) return; // 상세에서 시작
 
     // 찜(도시락 담기) — 실제 저장까지 수행해 도시락이 비지 않게.
     try {
@@ -948,12 +965,19 @@ class _MapScreenState extends State<MapScreen> {
         seeded++;
       }
     } catch (_) {}
-    if (!await _hold(1.5)) return;
+    // 서비스만 호출하면 화면에 아무 변화가 없어 '담았다'는 사실이 영상에 안 보인다.
+    // 사용자가 🍱 를 눌렀을 때와 같은 스낵바를 띄운다(detail_sheet 의 _toggle 과 동일).
+    if (!mounted) return;
+    _snack(t('lb_added'));
+    if (!await _hold(2.5, 'saved')) return;
 
     await _backToMap();
     if (!mounted) return;
     showLunchboxSheet(context);
-    if (!await _hold(9)) return; // 반찬칸 그리드 + 식단표 버튼까지 읽을 시간
+    if (!await _hold(4, 'lunchbox')) return; // 반찬칸 그리드
+    // 식단표 펼치기 — 시트를 닫았다 열지 않고 실제 버튼과 같은 확장 애니메이션.
+    lunchboxDietOpenSignal.value++;
+    if (!await _hold(4, 'diet')) return;
     await _backToMap();
   }
 
@@ -964,7 +988,7 @@ class _MapScreenState extends State<MapScreen> {
     } catch (_) {}
     if (!mounted) return;
     showProfileSheet(context);
-    if (!await _hold(5)) return; // 밥이름 카드·스탬프
+    if (!await _hold(3.5, 'profile')) return; // 밥이름 카드·스탬프
 
     await _backToMap();
     if (!mounted) return;
@@ -975,7 +999,7 @@ class _MapScreenState extends State<MapScreen> {
         MaterialPageRoute<void>(builder: (_) => const ShareImageScreen()),
       ),
     );
-    if (!await _hold(9)) return;
+    if (!await _hold(5, 'namecard')) return;
 
     await _backToMap();
     if (!mounted) return;
@@ -983,7 +1007,9 @@ class _MapScreenState extends State<MapScreen> {
     final c = _clubs.isNotEmpty ? _clubs.first : null;
     if (c == null) return;
     await _focusAndShowClub(c);
-    await _hold(2);
+    // 비트 없이 지나가면 명함 자막이 지도로 돌아온 뒤까지 걸린 채 남는다
+    // (실측: 6.5~16.0초 한 자막, 그중 7초는 화면이 이미 지도였다).
+    await _hold(2.5, 'club');
     if (!mounted) return;
     showShareMenu(
       context,
@@ -991,7 +1017,7 @@ class _MapScreenState extends State<MapScreen> {
       shareTitle: c.name,
       onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
     );
-    await _hold(6);
+    await _hold(4, 'share');
   }
 
   Future<void> _focusAndShowSpot(PickupSpot spot) async {
@@ -1099,7 +1125,20 @@ class _MapScreenState extends State<MapScreen> {
 
   void _snack(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    // 캡처 영상은 9:16 으로 잘려 화면 맨 아래(약 330px)가 빠진다. 기본 위치의
+    // 스낵바는 정확히 그 잘린 영역에 떠서 영상에는 아예 안 보인다 — 도시락에
+    // 담긴 사실이 화면에 드러나지 않았다. 캡처 빌드에서만 크롭 안쪽으로 띄운다.
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        behavior: kCaptureMode
+            ? SnackBarBehavior.floating
+            : SnackBarBehavior.fixed,
+        margin: kCaptureMode
+            ? const EdgeInsets.only(left: 24, right: 24, bottom: 180)
+            : null,
+      ),
+    );
   }
 
   Future<void> _refreshMarkers({bool fade = false}) async {
@@ -1333,6 +1372,27 @@ class _MapScreenState extends State<MapScreen> {
     }
     if (pts.isEmpty) return;
     try {
+      // 결과가 1곳이거나 아주 좁게 모여 있으면 fitBounds 가 최대 축척까지 확대한다.
+      // 그 배율에는 타일이 없어 지도가 통째로 빈 연녹색이 된다(축척 2m). 필터를
+      // 좁힐수록 지도가 사라지는 셈이라 실사용에서도 버그다 → 고정 축척으로 대체.
+      double minLat = pts.first.latitude, maxLat = minLat;
+      double minLng = pts.first.longitude, maxLng = minLng;
+      for (final p in pts) {
+        minLat = math.min(minLat, p.latitude);
+        maxLat = math.max(maxLat, p.latitude);
+        minLng = math.min(minLng, p.longitude);
+        maxLng = math.max(maxLng, p.longitude);
+      }
+      final span = math.max(maxLat - minLat, maxLng - minLng);
+      if (span < _minFitSpanDeg) {
+        _controller?.updateCamera(
+          NCameraUpdate.scrollAndZoomTo(
+            target: NLatLng((minLat + maxLat) / 2, (minLng + maxLng) / 2),
+            zoom: _focusZoom,
+          ),
+        );
+        return;
+      }
       final bounds = NLatLngBounds.from(pts);
       _controller?.updateCamera(
         NCameraUpdate.fitBounds(bounds, padding: const EdgeInsets.all(64)),
