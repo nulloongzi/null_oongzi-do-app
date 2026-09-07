@@ -47,6 +47,12 @@ CAP_Y="${CAP_Y:-290}"
 # 카드 폭: fit 방식에서 폰 화면은 1080 중 약 840px 이다. 936 이면 화면 테두리를
 # 넘어가 크림 여백 위로 삐져나온다 → 화면 안쪽에 들어오는 폭으로.
 CAP_W="${CAP_W:-780}"
+# 탭 표시(화면 녹화의 "여기를 눌렀다" 물결). 앱은 딥링크로 넘어가므로 실제 터치가
+# 없다 — 좌표는 taps.txt 에 스틸에서 잰 값으로 적어두고 후처리로 그린다.
+TAPS="${TAPS:-on}"           # on | off
+TAPS_FILE="${TAPS_FILE:-$HERE/taps.txt}"
+TAP_LEAD="${TAP_LEAD:-0.5}"  # 화면이 바뀌기 몇 초 전에 누르는가
+TAP_N=17                     # 물결 프레임 수(30fps 기준 약 0.57초)
 
 log()  { printf '\033[1;33m▶ %s\033[0m\n' "$*"; }
 warn() { printf '\033[0;35m! %s\033[0m\n' "$*" >&2; }
@@ -159,6 +165,41 @@ fit_narration() { # fit_narration <mp3> <시작> <끝> <라벨>
     }'
   fi
   rm -f "$f.fit.mp3"
+}
+
+# ── 탭 표시(물결) ────────────────────────────────────────────
+# 안드로이드의 "탭 표시"는 실제 터치가 있어야 그린다. 우리 디렉터는 딥링크로
+# 화면을 넘기므로 터치가 없다 → 같은 모양을 후처리로 얹는다.
+# 노란 링이 퍼지고 흰 점이 사라지는, 안드로이드 기본 표시와 같은 어법.
+make_ripple() {
+  local dir="$WORK/ripple"
+  [ -e "$dir/r_00.png" ] && { echo "$dir"; return 0; }
+  mkdir -p "$dir"
+  local i pf r ao ad size=240 c=120
+  for i in $(seq 0 $(( TAP_N - 1 ))); do
+    pf="$(awk -v i="$i" -v n="$TAP_N" 'BEGIN{printf "%.4f", i/(n-1)}')"
+    r="$(awk  -v p="$pf" 'BEGIN{printf "%d", 30 + 78*p}')"
+    ao="$(awk -v p="$pf" 'BEGIN{printf "%.2f", 0.95*(1-p)}')"
+    ad="$(awk -v p="$pf" 'BEGIN{printf "%.2f", 0.55*(1-p*0.75)}')"
+    convert -size ${size}x${size} xc:none \
+      -fill none -stroke "rgba(250,199,16,$ao)" -strokewidth 6 \
+        -draw "circle $c,$c $c,$(( c - r ))" \
+      -stroke "rgba(62,40,35,$ad)" -strokewidth 3 \
+      -fill "rgba(255,255,255,$ad)" \
+        -draw "circle $c,$c $c,$(( c - 28 ))" \
+      "$(printf "$dir/r_%02d.png" "$i")"
+  done
+  echo "$dir"
+}
+
+taps_for() { # taps_for <파일> <flow> → "앵커 x y" (주석·공백 제거)
+  awk -F'|' -v f="$2" '
+    /^[[:space:]]*#/ || NF<4 { next }
+    { a=$1; gsub(/[ \t]/,"",a); if (a!=f) next
+      k=$2; x=$3; y=$4; sub(/#.*/,"",y)
+      gsub(/[ \t]/,"",k); gsub(/[ \t]/,"",x); gsub(/[ \t]/,"",y)
+      if (k!="" && x!="" && y!="") print k, x, y }
+  ' "$1"
 }
 
 # ── 장면 전환 감지 ───────────────────────────────────────────
@@ -298,6 +339,35 @@ for flow in $FLOWS; do
     fi
     n=$((n+1))
   done
+
+  # ── 탭 표시 ────────────────────────────────────────────────
+  # 비트가 있어야 "언제"를 알 수 있다. 좌표는 taps.txt(스틸에서 잰 값),
+  # 폰 화면이 프레임 어디에 놓이는지는 frame.txt(정규화 단계가 기록).
+  ntap=0
+  if [ "$TAPS" = "on" ] && [ -s "$TAPS_FILE" ] && [ -s "$BEATS" ]; then
+    FRAME="$SRC_DIR/frame.txt"
+    if [ -s "$FRAME" ]; then
+      read -r FX0 FY0 FW FH FTY FTB < "$FRAME"
+    else
+      # 정규화 정보가 없으면 화면이 프레임을 꽉 채운다고 본다(예전 crop 산출물).
+      FX0=0; FY0=0; FW=$W; FH=$H; FTY=0; FTB=0
+    fi
+    RDIR="$(make_ripple)"
+    while read -r anchor tu tv; do
+      [ -n "${anchor:-}" ] || continue
+      bt="$(beat_at "$BEATS" "$anchor")"
+      [ -n "$bt" ] || continue
+      t0="$(awk -v b="$bt" -v l="$TAP_LEAD" 'BEGIN{v=b-l; if (v<0.25) v=0.25; printf "%.2f", v}')"
+      ox="$(awk -v x0="$FX0" -v w="$FW" -v u="$tu" 'BEGIN{printf "%d", x0 + u*w}')"
+      oy="$(awk -v y0="$FY0" -v h="$FH" -v v="$tv" -v ty="$FTY" -v tb="$FTB" \
+        'BEGIN{ d=1-ty-tb; if (d<=0) d=1; printf "%d", y0 + ((v-ty)/d)*h }')"
+      INPUTS+=(-framerate "$FPS" -i "$RDIR/r_%02d.png")
+      FC+="[${idx}:v]format=rgba,setpts=PTS-STARTPTS+${t0}/TB[tp${ntap}];"
+      FC+="${CUR}[tp${ntap}]overlay=$(( ox - 120 )):$(( oy - 120 )):eof_action=pass[v${idx}];"
+      CUR="[v${idx}]"; idx=$((idx+1)); ntap=$((ntap+1))
+    done < <(taps_for "$TAPS_FILE" "$flow")
+    [ "$ntap" -gt 0 ] && log "  탭 표시 ${ntap}곳"
+  fi
 
   FC+="${CUR}fps=$FPS,scale=$W:$H,setsar=1,format=yuv420p[body]"
 

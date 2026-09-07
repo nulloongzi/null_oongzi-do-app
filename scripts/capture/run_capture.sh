@@ -432,6 +432,21 @@ if [ "$INCLUDE_REELS" = "true" ] && want flows; then
       'BEGIN{printf "%d", int(w*oh/ih/2)*2}')"
     log "녹화 ${REC_W}x${REC_H} → 상태바/제스처바 제거 → ${FIT_W}x$(( OUT_H - 6 )) 로 축소 + 크림 여백 → ${OUT_W}x${OUT_H} (기기 $DEV_WH, 잘림 없음)"
   fi
+  # 폰 화면이 출력 프레임의 어디에 놓이는지 기록한다. 후반작업(edit_reels.sh)이
+  # 탭 표시를 그릴 때 "기기 화면 비율 → 출력 픽셀" 환산에 쓴다.
+  #   x0 y0 w h ty tb   (ty/tb = 위·아래로 잘라낸 비율)
+  write_frame_desc() {
+    mkdir -p "$FLOWS_DIR"
+    if [ "$FIT_MODE" = "crop" ]; then
+      awk -v cy="$CROP_Y" -v ch="$CROP_H" -v h="$REC_H" -v ow="$OUT_W" -v oh="$OUT_H" \
+        'BEGIN{ printf "0 0 %d %d %.6f %.6f\n", ow, oh, cy/h, (h-cy-ch)/h }' > "$FLOWS_DIR/frame.txt"
+    else
+      awk -v fw="$FIT_W" -v ow="$OUT_W" -v oh="$OUT_H" -v tt="$TRIM_T" -v tb="$TRIM_B" -v h="$REC_H" \
+        'BEGIN{ x0=int((ow-(fw+6))/2)+3; printf "%d 3 %d %d %.6f %.6f\n", x0, fw, oh-6, tt/h, tb/h }' > "$FLOWS_DIR/frame.txt"
+    fi
+  }
+  write_frame_desc
+  log "화면 배치: $(cat "$FLOWS_DIR/frame.txt" 2>/dev/null)"
 
   # 앱이 남긴 CAPTURE_BEAT 를 "녹화 시작 기준 초"로 바꿔 저장한다.
   # 후반작업(edit_reels.sh)이 자막을 이 지점에 붙인다 — 영상에서 장면 전환을

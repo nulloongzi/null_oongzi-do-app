@@ -48,6 +48,15 @@ for f in "$RAW"/flow_*_"${LANG_TAG}".mp4; do
     VF+="pad=iw+6:ih+6:3:3:color=0x3A2C26,pad=${OUT_W}:${OUT_H}:(ow-iw)/2:0:color=0xFFF8E1"
     say "$name: 상태바/제스처바만 제거 후 세로 맞춤 (잘림 없음)"
   fi
+  # 폰 화면이 출력 프레임의 어디에 놓이는지 기록(탭 표시 좌표 환산용).
+  if [ "$FIT_MODE" = "crop" ]; then
+    awk -v cy="${cy:-0}" -v ch="${ch:-0}" -v h="$H" -v ow="$OUT_W" -v oh="$OUT_H" \
+      'BEGIN{ printf "0 0 %d %d %.6f %.6f\n", ow, oh, cy/h, (h-cy-ch)/h }' > "$OUT/frame.txt"
+  else
+    awk -v w="$W" -v ih="$ih" -v oh="$(( OUT_H - 6 ))" -v ow="$OUT_W" -v tt="$tt" -v tb="$tb" -v h="$H" \
+      'BEGIN{ fw=int(w*oh/ih/2)*2; x0=int((ow-(fw+6))/2)+3;
+              printf "%d 3 %d %d %.6f %.6f\n", x0, fw, oh, tt/h, tb/h }' > "$OUT/frame.txt"
+  fi
 
   ffmpeg -y -loglevel error -i "$f" -vf "$VF" \
     -c:v libx264 -preset medium -profile:v high -crf 20 \
