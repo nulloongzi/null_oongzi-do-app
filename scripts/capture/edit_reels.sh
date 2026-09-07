@@ -192,13 +192,14 @@ make_ripple() {
   echo "$dir"
 }
 
-taps_for() { # taps_for <파일> <flow> → "앵커 x y" (주석·공백 제거)
+taps_for() { # taps_for <파일> <flow> → "앵커 x y 리드" (주석·공백 제거)
   awk -F'|' -v f="$2" '
     /^[[:space:]]*#/ || NF<4 { next }
     { a=$1; gsub(/[ \t]/,"",a); if (a!=f) next
       k=$2; x=$3; y=$4; sub(/#.*/,"",y)
       gsub(/[ \t]/,"",k); gsub(/[ \t]/,"",x); gsub(/[ \t]/,"",y)
-      if (k!="" && x!="" && y!="") print k, x, y }
+      L=$5; sub(/#.*/,"",L); gsub(/[ \t]/,"",L)
+      if (k!="" && x!="" && y!="") print k, x, y, (L==""?"-":L) }
   ' "$1"
 }
 
@@ -353,11 +354,13 @@ for flow in $FLOWS; do
       FX0=0; FY0=0; FW=$W; FH=$H; FTY=0; FTB=0
     fi
     RDIR="$(make_ripple)"
-    while read -r anchor tu tv; do
+    while read -r anchor tu tv tlead; do
       [ -n "${anchor:-}" ] || continue
       bt="$(beat_at "$BEATS" "$anchor")"
       [ -n "$bt" ] || continue
-      t0="$(awk -v b="$bt" -v l="$TAP_LEAD" 'BEGIN{v=b-l; if (v<0.25) v=0.25; printf "%.2f", v}')"
+      # 리드는 지점마다 다르다 — 누를 대상이 화면에서 언제 사라지는지가 다르기 때문.
+      [ "${tlead:--}" != "-" ] || tlead="$TAP_LEAD"
+      t0="$(awk -v b="$bt" -v l="$tlead" 'BEGIN{v=b-l; if (v<0.25) v=0.25; printf "%.2f", v}')"
       ox="$(awk -v x0="$FX0" -v w="$FW" -v u="$tu" 'BEGIN{printf "%d", x0 + u*w}')"
       oy="$(awk -v y0="$FY0" -v h="$FH" -v v="$tv" -v ty="$FTY" -v tb="$FTB" \
         'BEGIN{ d=1-ty-tb; if (d<=0) d=1; printf "%d", y0 + ((v-ty)/d)*h }')"
