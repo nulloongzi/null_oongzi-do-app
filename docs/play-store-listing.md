@@ -1,4 +1,6 @@
-# Play 스토어 등록 세트 (누룽지도 v2.0.0)
+# Play 스토어 등록 세트 (누룽지도)
+
+> 텍스트 자산은 v2.0.0 출시 때 쓴 것이 기준. 출시 노트만 릴리즈마다 갱신한다.
 
 Play Console → 앱 → **기본 스토어 등록정보**에 그대로 붙여넣는 자산 모음.
 - **업로드용 최종 스샷(카피 오버레이 합성본)**: CI 아티팩트 `nulloongzido-marketing-assets`의
@@ -58,7 +60,43 @@ Volleyball clubs across Korea on one map — pickup games, filters & more 🏐
 ```
 > ⚠️ 마지막 줄 "문의: (지원 이메일)" 은 Play Console의 **연락처 이메일** 필드에 넣으므로 본문에선 생략.
 
-### 출시 노트 (What's new · v2.0.0)
+### 출시 노트 (What's new · v2.5.0)
+
+> ⚠️ **프로덕션 최신은 versionCode 9 (2.3.0) 이다.** 2.4.0+10 은 AAB 를 만든 적이
+> 없어 스토어에 나간 적이 없다(Release AAB 워크플로 실행 이력으로 확인).
+> 즉 사용자는 **2.3.0 → 2.5.0 으로 건너뛴다** — 출시 노트는 2.5.0 변경분이 아니라
+> **2.3.0 이후 전부**를 담아야 한다. 특히 안치기는 통째로 처음 나가는 기능이다.
+
+```
+🏐 안치기: 라운드 배치 도구가 앱에 들어왔어요
+누가 어느 코트에 들어갈지 자동으로 짜드립니다. 로그인 없이 픽업 탭에서 바로.
+
+• 픽업 목록이 지도와 함께 보이는 시트로 바뀌었어요. 크루를 고르면 같은 화면이
+  그대로 상세로 넘어갑니다
+• 픽업 크루 상세에서 바로 길찾기 🚀
+• 팀·크루의 '최종 확인일'을 표시 — 오래된 정보는 확인 필요로 알려드려요
+• 잘못된 정보는 앱 안에서 바로 신고 (영업일 7일 이내 확인)
+• 팀 등록할 때 지도에서 위치를 찍으면 주소가 자동으로 채워집니다
+• 공유 카드 디자인 개선, 시간표 겹침 수정
+```
+
+<details><summary>이 릴리즈에 함께 나가는 미출시분 (2.3.0 이후)</summary>
+
+| PR | 내용 | 사용자에게 보이나 |
+|---|---|---|
+| #20 | 공유 카드 재디자인 · 시간표 겹침 수정 | ✅ |
+| #24 | 픽업 목록을 지도와 공존하는 드래그 시트로 재설계 | ✅ |
+| #25 | 픽업 시트 드래그 버벅임 제거 | ✅ (체감) |
+| #26 | 픽업 시트 최소(한 줄) 상태 제거 | ✅ |
+| #27 | **안치기 네이티브 이식 (2.4.0+10)** | ✅ 새 기능 |
+| #28 | 등록 폼 웹 패리티 — 주소 자동 채움·지오코딩 폴백·NSM 계측 | ✅ |
+| #29 | 픽업 상세를 목록 시트의 모드로 | ✅ |
+| #30 | 마케팅 캡처 파이프라인 | ❌ 내부 도구 |
+| #31 | 신고·데이터 신뢰도·픽업 길찾기 (2.5.0+11) | ✅ |
+
+</details>
+
+<details><summary>이전 출시 노트 (v2.0.0)</summary>
 ```
 누룽지도가 네이티브 앱으로 새로워졌어요! 🏐
 • 훨씬 부드러운 지도, 빠른 실행
@@ -69,6 +107,7 @@ Volleyball clubs across Korea on one map — pickup games, filters & more 🏐
 • 나만의 '밥이름' 닉네임
 지금 업데이트하고 더 가볍게 즐겨보세요!
 ```
+</details>
 
 ### ASO 키워드(설명에 자연 노출 권장)
 `배구` · `배구 동호회` · `배구 팀` · `픽업 게임` · `생활체육 배구` · `배구 모임` · `동호회 찾기` · `배구 지도`
@@ -112,23 +151,53 @@ Play는 **최소 2장, 최대 8장**. 아래 **7장 순서**(첫 3장이 목록 
 
 ---
 
-## 4. 업로드 체크리스트
+## 4. AAB 를 어디서 받나
+
+**로컬 빌드 산출물이 아니다.** 서명 키는 레포에 없고 GitHub Secrets 에만 있어서,
+`build/app/outputs/bundle/release/app-release.aab` 는 CI 러너 안에만 존재한다.
+로컬에서 `flutter build appbundle` 을 돌리면 `android/key.properties` 가 없어
+**서명 없는 AAB** 가 나오고 Play 가 거부한다.
+
+받는 경로:
+
+1. GitHub → Actions → **Release AAB** → 원하는 실행 열기
+2. 아래 **Artifacts** 의 `nulloongzido-release-aab` 다운로드 (zip)
+3. 압축을 풀면 `app-release.aab`
+
+> 아티팩트 보관 기한은 **14일**이다. 지났으면 워크플로를 다시 돌리면 된다
+> (`Run workflow`, main 기준). 같은 커밋이면 같은 versionCode 가 나오므로,
+> 이미 올린 버전이면 `build_number` 입력으로 올려서 빌드한다.
+
+업로드는 Play Console → 프로덕션 → 새 버전 만들기 → 드래그 업로드.
+출시명이 `11 (2.5.0)` 로 잡히는지 확인한다.
+
+## 5. 업로드 체크리스트
 - [ ] 앱 이름 / 간단·전체 설명 붙여넣기(위 텍스트)
 - [ ] 스크린샷 7장 업로드(1080×2400, 순서대로)
 - [x] 피처 그래픽 1024×500 확정 → `assets/store/feature-graphic-1024x500.png` 그대로 업로드
 - [ ] 앱 아이콘 512×512 확인
 - [ ] 카테고리: `스포츠` / 태그: 배구·생활체육
-- [ ] 연락처 이메일: `paulyoo999@gmail.com` (지원 메일 별도면 교체) / 개인정보처리방침 URL: 아래
+- [ ] 연락처 이메일: `paulyoo999@gmail.com` (지원 메일 별도면 교체)
+- [x] 개인정보처리방침 URL — 이미 새 주소로 저장돼 있음 (2026-09-07 확인)
 - [ ] What's new 붙여넣기
 - [ ] (심사 전) 데이터 안전 섹션·콘텐츠 등급 설문
 
 ### 연락처·정책 (Play Console → 매장 등록정보 & 앱 콘텐츠)
 - **연락처 이메일**: `paulyoo999@gmail.com`
   - 전체 설명 본문엔 이메일 미노출(위 §1 주의) — 이 필드에만 입력.
-- **개인정보처리방침 URL**: `https://nulloongzi.github.io/null_oongzi-do/privacy.html`
+- **개인정보처리방침 URL**: `https://do.nulloongzi.com/privacy.html`
+  - #22에서 커스텀 도메인(CNAME `do.nulloongzi.com`)으로 전환됨.
+    **Play Console 값은 이미 이 주소로 저장돼 있다(2026-09-07 확인).** 이 문서가
+    한동안 옛 `nulloongzi.github.io/...` 주소를 적어두고 있었을 뿐이다 —
+    문서가 낡았다고 실물도 낡은 건 아니라는 사례. `docs/external-surfaces.md` 참고.
+  - 함께 공개된 정책 문서: `/terms.html`(이용약관) · `/guidelines.html`(운영 기준) ·
+    `/data-deletion.html`(데이터 삭제).
   - `null_oongzi-do` 레포 루트 `privacy.html`(시행일 2026-07-28), GitHub Pages 배포.
   - 소셜 로그인 수집 항목(구글/카카오/네이버 식별자)과 Firebase 처리위탁 반영본.
   - 빈 템플릿이던 `privacy.md`는 제거됨(커밋 `2362796`) — 옛 `.md` URL은 쓰지 말 것.
 
-> 스샷/피처그래픽은 언제든 **push 한 번**(`[cap-release] [cap-full] [cap-reels]`)으로 최신 버전 자동 갱신.
+> 스샷/피처그래픽 갱신은 **GitHub Actions → Capture Assets → Run workflow**(수동 dispatch).
+> 릴리즈 세트는 `release` 입력을 켠다. `[cap-release]` 같은 커밋 메시지 마커는 더 이상
+> 동작하지 않는다 — #30에서 push 자동 트리거를 제거하고 dispatch 입력으로 옮겼다
+> (dispatch 이벤트엔 `head_commit`이 없어 마커 조건이 영영 false가 된다).
 > 피처 그래픽 소스: `assets/store/feature-graphic.html`(Chrome `--screenshot` 1024×500 렌더).

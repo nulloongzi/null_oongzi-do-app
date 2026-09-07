@@ -28,4 +28,20 @@ class GeocodingService {
       return null;
     }
   }
+
+  /// 좌표 → 주소(도로명 우선, 없으면 지번). 서버 Cloud Function(reverseGeocode) 호출.
+  /// 못 찾거나 오류면 null → 호출부는 주소칸을 비워두고 직접 입력에 맡긴다.
+  static Future<String?> reverseGeocode(double lat, double lng) async {
+    try {
+      final callable = FirebaseFunctions.instance.httpsCallable(
+        'reverseGeocode',
+      );
+      final res = await callable.call({'lat': lat, 'lng': lng});
+      final d = Map<String, dynamic>.from(res.data as Map);
+      final addr = (d['address'] as String?)?.trim() ?? '';
+      return addr.isEmpty ? null : addr;
+    } catch (_) {
+      return null;
+    }
+  }
 }

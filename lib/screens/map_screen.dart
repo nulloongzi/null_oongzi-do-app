@@ -26,6 +26,7 @@ import '../theme.dart';
 import 'detail_sheet.dart';
 import 'login_screen.dart';
 import 'pickup_form_screen.dart';
+import 'anchigi_screen.dart';
 import 'club_form_screen.dart';
 import 'lunchbox_screen.dart';
 import 'profile_screen.dart';
@@ -35,7 +36,7 @@ import '../widgets/filter_sheet.dart';
 import '../widgets/glass_surface.dart';
 import '../widgets/insta_embed.dart';
 import '../widgets/map_detail_panel.dart';
-import '../widgets/pickup_list_panel.dart';
+import '../widgets/pickup_list_sheet.dart';
 import '../widgets/share_menu.dart';
 import '../widgets/story_card.dart';
 
@@ -84,16 +85,16 @@ class _MapScreenState extends State<MapScreen> {
   List<Club> _clubs = [];
   List<PickupSpot> _spots = [];
   String _tab = 'clubs'; // 'clubs' | 'pickup'
+  // 픽업 목록 시트의 상세 모드 대상. null=목록. (상세는 별도 패널이 아니라 시트의 모드)
+  PickupSpot? _selectedSpot;
   bool _loading = true;
   String? _error;
   ClubFilter _filter = const ClubFilter(); // 동호회 필터/검색
   bool _pkEnglishOnly = false; // 픽업: English OK만
   String _pkRegion = ''; // 픽업: 지역 칩. '' = 전체
   String _pkLevel = ''; // 픽업: 레벨. '' = 전체
-  // 픽업: 지도/목록 토글. **기본은 목록** — 장소가 유동적인 크루는 좌표가 없어
-  // 지도에 마커가 안 뜬다. 지도를 기본으로 두면 그런 크루가 첫 화면에서
-  // 존재하지 않는 것처럼 보인다(안내 배너로만 알 수 있음).
-  bool _pickupListView = true;
+  // 픽업 목록은 지도와 공존하는 드래그 시트(PickupListSheet)로 상시 표시한다.
+  // 시트 높이/드래그 상태는 그 위젯이 자체 관리 → 드래그 시 MapScreen을 리빌드하지 않는다.
   bool _isAdmin = false; // 관리자(픽업 모더레이션 삭제)
   final _search = TextEditingController(); // 상단 검색바 (동호회=필터키워드 / 픽업=목록검색)
   final _deepLinks = DeepLinkService();
@@ -144,9 +145,10 @@ class _MapScreenState extends State<MapScreen> {
     keyword: _search.text,
   );
 
-  /// 현재 필터에서 좌표가 없어 지도에 못 뜨는 크루 수(목록에는 있음).
-  int get _spotsOffMap =>
-      _visibleSpots().where((s) => s.lat == null || s.lng == null).length;
+  /// 픽업 목록 시트 FAB의 하단 여백 — peek(42%) 시트 윗변 바로 위에 등록/내위치 FAB.
+  /// (시트를 42% 위로 확장하면 불투명 시트가 FAB을 덮으므로 위치는 고정.)
+  double _pkFabBottom(BuildContext context) =>
+      MediaQuery.of(context).size.height * 0.42 + 14;
 
   // 📍 내 위치로 이동(추적 follow). 권한 거부 시 무시.
   Future<void> _moveToMe() async {
@@ -231,13 +233,7 @@ class _MapScreenState extends State<MapScreen> {
       if (s != null && mounted) {
         setState(() => _tab = 'pickup');
         _refreshMarkers();
-        showSpotDetail(
-          context,
-          s,
-          currentUid: _repo.currentUid,
-          isAdmin: _isAdmin,
-          onChanged: _load,
-        );
+        _selectSpot(s);
       }
     }
   }
@@ -252,6 +248,18 @@ class _MapScreenState extends State<MapScreen> {
       setState(() {
         _clubs = results[0] as List<Club>;
         _spots = results[1] as List<PickupSpot>;
+        // 상세 모드 중 재로드(수정·삭제 후)면 같은 id의 최신 문서로 교체, 사라졌으면 목록으로
+        final sel = _selectedSpot;
+        if (sel != null) {
+          PickupSpot? fresh;
+          for (final x in _spots) {
+            if (x.id == sel.id) {
+              fresh = x;
+              break;
+            }
+          }
+          _selectedSpot = fresh;
+        }
         _loading = false;
       });
       _refreshMarkers();
@@ -557,10 +565,9 @@ class _MapScreenState extends State<MapScreen> {
         await _openFilter();
         break;
       case 'pickup':
-        // 목록 뷰로 — 지도만 찍으면 '픽업'인지 스토어에서 알아볼 수 없다.
         setState(() {
           _tab = 'pickup';
-          _pickupListView = true;
+          _selectedSpot = null;
         });
         _refreshMarkers();
         break;
@@ -1016,13 +1023,18 @@ class _MapScreenState extends State<MapScreen> {
   Future<void> _focusAndShowSpot(PickupSpot spot) async {
     await _centerOnPin(spot.lat, spot.lng);
     if (!mounted) return;
-    showSpotDetail(
-      context,
-      spot,
-      currentUid: _repo.currentUid,
-      isAdmin: _isAdmin,
-      onChanged: _load,
-    );
+    _selectSpot(spot);
+  }
+
+  // 목록 시트를 상세 모드로. view_pickup은 여기서 한 번만(본문 빌더는 리빌드마다 불림).
+  void _selectSpot(PickupSpot spot) {
+    Track.event('view_pickup', {'id': spot.id});
+    setState(() => _selectedSpot = spot);
+  }
+
+  void _closeSpot() {
+    if (_selectedSpot == null) return;
+    setState(() => _selectedSpot = null);
   }
 
   // 줌 변경 후: 데드밴드(히스테리시스)로 라벨 on/off 결정 → 넘나들면 in-place로 아이콘만 교체.
@@ -1299,6 +1311,7 @@ class _MapScreenState extends State<MapScreen> {
     setState(() {
       _tab = t;
       _reelPeek = null; // 탭 전환: 이전 탭의 오버레이 정리
+      _selectedSpot = null; // 픽업으로 돌아왔을 때 이전 상세가 아니라 목록부터
     });
     detailPanel.value = null; // 이전 탭 항목의 상세 패널 닫기
     Track.event('switch_tab', {'tab': t});
@@ -1306,6 +1319,14 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   // ＋등록: 활성 탭에 따라 픽업/동호회 폼. 등록 성공 시 데이터 재로딩→마커 갱신.
+  /// 안치기 화면 열기. 로컬 도구라 로그인 게이트가 없다.
+  void _openAnchigi() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AnchigiScreen()),
+    );
+  }
+
   Future<void> _openRegister() async {
     // 클럽 등록은 로그인 필수(웹과 동일). 픽업은 무로그인(익명) 허용.
     // 측정 파리티(웹 registration_login_gate): 미로그인 상태로 등록 시도한 신호
@@ -1460,14 +1481,6 @@ class _MapScreenState extends State<MapScreen> {
                   right: 0,
                   child: Center(child: _pickupToggle()),
                 ),
-              // 지도 뷰에서 좌표 없는 크루는 마커가 없다 → 목록으로 유도(없으면 존재를 모른다).
-              if (_tab == 'pickup' && !_pickupListView && _spotsOffMap > 0)
-                Positioned(
-                  top: 210,
-                  left: 24,
-                  right: 24,
-                  child: Center(child: _offMapHint(_spotsOffMap)),
-                ),
               // 동호회/픽업 탭 — 위 컨텍스트바가 있으면 122, 없으면 70.
               Positioned(
                 top: (_tab == 'pickup' || (_tab == 'clubs' && _hasUrgent))
@@ -1477,31 +1490,10 @@ class _MapScreenState extends State<MapScreen> {
                 right: 0,
                 child: Center(child: _tabPill()),
               ),
-              if (_tab == 'pickup' && _pickupListView)
-                Positioned(
-                  top: 166,
-                  left: 8,
-                  right: 8,
-                  bottom: 8,
-                  child: GlassSurface(
-                    color: const Color(0xF5FFFFFF), // 흰 0.96
-                    blur: 10,
-                    child: PickupListPanel(
-                      spots: _visibleSpots(),
-                      onTap: (s) => showSpotDetail(
-                        context,
-                        s,
-                        currentUid: _repo.currentUid,
-                        isAdmin: _isAdmin,
-                        onChanged: _load,
-                      ),
-                      onInstaTap: _openSpotInsta,
-                    ),
-                  ),
-                ),
               // 플로팅 FAB (design §2.4): 좌(도시락/프로필) · 우(등록/내위치)
-              // 픽업 목록뷰에선 패널과 겹치므로 숨김.
-              if (!(_tab == 'pickup' && _pickupListView)) ...[
+              // 픽업 탭: 도시락/프로필(로그인 기능)은 숨기고(웹 parity),
+              // 등록/내위치는 항상 노출하되 목록 시트 peek(42%) 위로 올린다.
+              if (_tab != 'pickup') ...[
                 Positioned(
                   left: 15,
                   bottom: 95,
@@ -1512,22 +1504,52 @@ class _MapScreenState extends State<MapScreen> {
                   bottom: 30,
                   child: _fab('🍚', t('fab_profile'), _openProfile),
                 ),
+              ] else
+                // 안치기: 픽업(번개) 탭에서만 여는 로컬 배치 도구. 로그인 불필요.
+                // 오른쪽 FAB과 같은 높이로 올려 목록 시트에 덮이지 않게 한다.
                 Positioned(
-                  right: 15,
-                  bottom: 95,
-                  child: _fab(
-                    '📝',
-                    t('fab_register'),
-                    _openRegister,
-                    bg: const Color(0xF2FAC710),
-                  ),
-                ), // 등록 = 브랜드 옐로
-                Positioned(
-                  right: 15,
-                  bottom: 30,
-                  child: _fab('📍', t('fab_my_location'), _moveToMe),
+                  left: 15,
+                  bottom: _pkFabBottom(context),
+                  child: _fab('🏐', t('ag_title'), _openAnchigi),
                 ),
-              ],
+              Positioned(
+                right: 15,
+                bottom: _tab == 'pickup' ? _pkFabBottom(context) + 62 : 95,
+                child: _fab(
+                  '📝',
+                  t('fab_register'),
+                  _openRegister,
+                  bg: const Color(0xF2FAC710),
+                ),
+              ), // 등록 = 브랜드 옐로
+              Positioned(
+                right: 15,
+                bottom: _tab == 'pickup' ? _pkFabBottom(context) : 30,
+                child: _fab('📍', t('fab_my_location'), _moveToMe),
+              ),
+              // 픽업 목록: 지도·마커와 공존하는 드래그 시트. Align 기반이라 시트 위쪽
+              // 터치는 지도로 통과되고, 드래그 상태는 위젯이 자체 관리(부드러움).
+              // FAB(먼저 그림)는 시트가 42% 위로 확장되면 단색 시트에 덮인다.
+              if (_tab == 'pickup')
+                Positioned.fill(
+                  child: PickupListSheet(
+                    spots: _visibleSpots(),
+                    onTap: _focusAndShowSpot,
+                    onInstaTap: _openSpotInsta,
+                    detailId: _selectedSpot?.id,
+                    detail: _selectedSpot == null
+                        ? null
+                        : spotDetailBody(
+                            context,
+                            _selectedSpot!,
+                            close: _closeSpot,
+                            currentUid: _repo.currentUid,
+                            isAdmin: _isAdmin,
+                            onChanged: _load,
+                          ),
+                    onBack: _closeSpot,
+                  ),
+                ),
               if (_error != null)
                 Positioned(bottom: 20, left: 90, right: 90, child: _errorBox()),
               // 상세 패널(비모달) — Stack의 일부라 상세에서 띄우는 모달(공유 등)이 그 위에 뜸.
@@ -1732,7 +1754,7 @@ class _MapScreenState extends State<MapScreen> {
     return _UrgentTicker(clubs: urgent, onTap: _focusAndShowClub);
   }
 
-  // 픽업 탭: 지도/목록 토글 알약
+  // 픽업 탭: 지역·레벨·공유 필터 바(목록은 상시 드래그 시트라 지도/목록 토글은 없앴다).
   Widget _pickupToggle() {
     return GlassSurface(
       radius: BorderRadius.circular(22),
@@ -1740,16 +1762,6 @@ class _MapScreenState extends State<MapScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _seg(
-            '🗺 ${t('map_view')}',
-            !_pickupListView,
-            () => setState(() => _pickupListView = false),
-          ),
-          _seg(
-            '☰ ${t('list_view')}',
-            _pickupListView,
-            () => setState(() => _pickupListView = true),
-          ),
           _regionMenu(),
           _levelMenu(),
           // 현재 필터 목록을 링크 하나로 — 외국인 DM 대응의 핵심 동선.
@@ -1814,29 +1826,17 @@ class _MapScreenState extends State<MapScreen> {
       'type': 'insta',
       'sport': s.sport,
     });
+    // NSM 전용 이벤트 — 웹 pickup-ui.js와 동일 스키마
+    Track.event('contact_click', {
+      'channel': 'instagram',
+      'id': s.id,
+      'source': 'pickup',
+    });
     final u = Uri.parse('https://instagram.com/$handle');
     if (await canLaunchUrl(u)) {
       await launchUrl(u, mode: LaunchMode.externalApplication);
     }
   }
-
-  // 좌표 없는 크루 안내 — 탭하면 목록 뷰로 전환.
-  Widget _offMapHint(int n) => BounceTap(
-    onTap: () => setState(() => _pickupListView = true),
-    child: GlassSurface(
-      radius: BorderRadius.circular(16),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Text(
-        t('pk_no_map_hint').replaceAll('{n}', '$n'),
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          fontSize: 12.5,
-          fontWeight: FontWeight.w700,
-          color: NurungjiColors.brown,
-        ),
-      ),
-    ),
-  );
 
   // 레벨 선택 — 외국인에게 "나 초보인데 가도 되나"가 핵심 질문이라 지역 다음으로 중요.
   Widget _levelMenu() {
@@ -1909,27 +1909,6 @@ class _MapScreenState extends State<MapScreen> {
       'english': _pkEnglishOnly,
     });
     await ShareService.osShare(url);
-  }
-
-  Widget _seg(String label, bool on, VoidCallback onTap) {
-    return BounceTap(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-        decoration: BoxDecoration(
-          color: on ? NurungjiColors.yellow : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontWeight: on ? FontWeight.w800 : FontWeight.w600,
-            color: NurungjiColors.dark,
-            fontSize: 13,
-          ),
-        ),
-      ),
-    );
   }
 
   Widget _errorBox() => Material(

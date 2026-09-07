@@ -3,6 +3,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 double? _toD(dynamic v) => v == null ? null : (v as num).toDouble();
 
+DateTime? _ts(dynamic v) =>
+    v is Timestamp ? v.toDate() : (v is DateTime ? v : null);
+
 // insta_reels(배열) 우선, 없으면 insta_reel(단일) 폴백 → 항상 List로.
 List<String> _reels(Map d) {
   final raw = d['insta_reels'];
@@ -46,6 +49,8 @@ class PickupSpot {
   final String? instaReel;
   final List<String> instaReels; // 멀티 릴스(없으면 [instaReel])
   final DateTime? expireAt; // 유효기간(B): 지나면 자동 숨김 + Firestore TTL. null=상시
+  // 최종 확인일 — 픽업은 타임스탬프가 문서 최상위에 있다(clubs 는 metadata 안).
+  final DateTime? lastVerifiedAt;
 
   PickupSpot({
     required this.id,
@@ -72,6 +77,7 @@ class PickupSpot {
     this.instaReel,
     this.instaReels = const [],
     this.expireAt,
+    this.lastVerifiedAt,
   });
 
   factory PickupSpot.fromDoc(DocumentSnapshot doc) {
@@ -102,6 +108,7 @@ class PickupSpot {
       instaReel: d['insta_reel'] as String?,
       instaReels: _reels(d),
       expireAt: (d['expire_at'] as Timestamp?)?.toDate(),
+      lastVerifiedAt: _ts(d['updated_at']) ?? _ts(d['created_at']),
     );
   }
 }

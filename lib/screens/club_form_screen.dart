@@ -1,5 +1,6 @@
 // club_form_screen.dart — 동호회(클럽) 등록/수정 폼. 웹 registration.js 포팅.
 // 로그인 필수(AuthGate가 보장). 좌표는 지도 피커로 직접 선택(지오코딩 불필요).
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
@@ -54,6 +55,7 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
   final _ownerEmail =
       TextEditingController(); // 관리자 전용: 소유자 재지정(웹 regOwnerEmail)
   bool _isAdminUser = false;
+  String? _ownerHint; // 관리자 힌트: 현재 소유자 닉네임(웹 reg_owner_hint)
   final List<TextEditingController> _reels = []; // 릴스 다중 입력(행마다 1개)
 
   final Set<String> _targets = {};
@@ -89,11 +91,9 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
     setState(() {
       _geocoding = false;
       if (r != null) {
+        // 좌표만 사용, 주소 입력값은 보존(웹 registration.js:407-408 대응)
         _lat = r.lat;
         _lng = r.lng;
-        if (r.roadAddress != null && r.roadAddress!.isNotEmpty) {
-          _address.text = r.roadAddress!;
-        }
       }
     });
     if (r != null) {
@@ -145,7 +145,10 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
     _repo
         .isAdmin()
         .then((v) {
-          if (mounted && v) setState(() => _isAdminUser = true);
+          if (mounted && v) {
+            setState(() => _isAdminUser = true);
+            if (_isEdit) _loadOwnerHint(); // 소유자 이메일 필드 힌트(관리자 전용)
+          }
         })
         .catchError((_) {});
     // 측정 파리티(웹 registration_open): 등록 폼 도달 = 퍼널 진입 신호
@@ -169,6 +172,28 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
       c.dispose();
     }
     super.dispose();
+  }
+
+  // 현재 소유자(registered_by)의 공개 users 문서에서 닉네임 조회 → 이메일 필드
+  // 힌트로 표시(웹 registration.js:212-229 placeholder 대응). 실패는 조용히 무시.
+  Future<void> _loadOwnerHint() async {
+    final uid = widget.editing?.registeredBy;
+    if (uid == null || uid.isEmpty) {
+      if (mounted) setState(() => _ownerHint = t('cf_owner_none'));
+      return;
+    }
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
+      final d = doc.data();
+      if (!mounted || d == null) return;
+      final nick = (d['full_nickname'] ?? d['nickname'] ?? uid).toString();
+      setState(() {
+        _ownerHint = t('cf_owner_current').replaceAll('{nick}', nick);
+      });
+    } catch (_) {}
   }
 
   void _snack(String msg) {
@@ -200,6 +225,18 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
         _lat = result.$1;
         _lng = result.$2;
       });
+      // 웹 coord2Address 대응: 찍은 좌표의 주소를 자동으로 채운다(이후 수정 가능).
+      // 프로그램적 대입은 onChanged를 안 타므로 방금 확정한 좌표가 무효화되지 않는다.
+      final before = _address.text;
+      final addr = await GeocodingService.reverseGeocode(result.$1, result.$2);
+      if (mounted && _address.text == before) {
+        if (addr != null) {
+          _address.text = addr;
+        } else if (before.trim().isEmpty) {
+          // 실패 + 주소칸 비어있음 → 기본 문구(웹 registration.js:305-309)
+          _address.text = t('f_map_loc');
+        }
+      }
     }
   }
 
@@ -222,7 +259,6 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
       });
       return _err(t('cf_req'));
     }
-    if (_lat == null || _lng == null) return _err(t('f_pick_loc'));
     // 길이 가드(웹과 동일 · permission-denied 예방)
     if (name.length > 60) return _err(t('cf_name_max'));
     if (target.length > 80) return _err(t('cf_target_max'));
@@ -245,15 +281,29 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
       if (s.isEmpty) return _err(t('f_link_invalid'));
       link = s;
     }
-    // 릴스/게시물(선택)
-    // 릴스(선택, 여러 개): 줄바꿈으로 구분, 각각 공개 permalink 검증
-    final reels = <String>[];
-    for (final c in _reels) {
-      final ln = c.text.trim();
-      if (ln.isEmpty) continue;
-      final s = Sanitize.instaPostUrl(ln);
-      if (s.isEmpty) return _err(t('f_reel_invalid'));
-      reels.add(s);
+    // 릴스(선택, 여러 개): 행 분해·permalink 검증·중복 제거는 collectReels가
+    // 일괄 처리(웹 registration.js:358-368 멀티 릴스 루프 대응)
+    final reels = Sanitize.collectReels(_reels.map((c) => c.text));
+    if (reels == null) return _err(t('f_reel_invalid'));
+
+    setState(() => _saving = true);
+    // 좌표 미확정이면 제출 시 주소 지오코딩 폴백(웹 registration.js:407-432).
+    // 성공해도 주소는 사용자 입력값 그대로 저장(roadAddress로 교체하지 않음).
+    if (_lat == null || _lng == null) {
+      final r = await GeocodingService.geocode(address);
+      if (!mounted) return;
+      if (r == null) {
+        Track.event('registration_geocode_fail');
+        setState(() => _saving = false);
+        _err(t('f_pick_loc'));
+        // 웹(:426-436)·앱의 주소검색 버튼과 동일: 에러만 두지 않고 피커를 연다.
+        await _pickLocation();
+        return;
+      }
+      setState(() {
+        _lat = r.lat;
+        _lng = r.lng;
+      });
     }
 
     final fields = <String, dynamic>{
@@ -269,17 +319,17 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
       'insta_reels': reels,
     };
 
-    setState(() => _saving = true);
     try {
       if (_isEdit) {
-        await _repo.updateClub(widget.editing!.id, fields);
-        // 관리자 전용: 이메일 → 소유자 재지정 (웹 adminReassignOwner 동일 호출)
+        // 관리자 전용: 소유자 재지정을 먼저 — 실패하면 저장 자체를 중단
+        // (웹 registration.js:456-476 재지정→update 순서와 동일)
         final ownerEmail = _ownerEmail.text.trim().toLowerCase();
         if (_isAdminUser && ownerEmail.isNotEmpty) {
           await FirebaseFunctions.instance
               .httpsCallable('adminReassignOwner')
               .call({'clubId': widget.editing!.id, 'email': ownerEmail});
         }
+        await _repo.updateClub(widget.editing!.id, fields);
       } else {
         await _repo.createClub(fields);
       }
@@ -289,7 +339,9 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
       Navigator.pop(context, true);
     } catch (e) {
       setState(() => _saving = false);
-      _err('$e');
+      // 저장 실패 현지화(웹 reg_save_err 대응): FirebaseException은 message 우선
+      final msg = e is FirebaseException ? (e.message ?? '$e') : '$e';
+      _err(t('cf_save_err') + msg);
     }
   }
 
@@ -306,6 +358,7 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SheetTitle(_isEdit ? t('cf_edit_title') : t('cf_title')),
+            _tipBanner(),
             if (_formError != null) _errorBanner(_formError!),
             _group(
               t('cf_name'),
@@ -382,7 +435,8 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
             if (_isAdminUser && _isEdit)
               _group(
                 t('cf_owner_email'),
-                _input(_ownerEmail, t('cf_owner_email_hint')),
+                // 힌트에 현재 소유자 닉네임(웹 reg_owner_hint placeholder 대응)
+                _input(_ownerEmail, _ownerHint ?? t('cf_owner_email_hint')),
               ),
             const SizedBox(height: 8),
             ElevatedButton(
@@ -399,6 +453,30 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
                   : Text(_isEdit ? t('save') : t('cf_submit')),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // 장소별 개별 등록 안내 배너(웹 index.html:291-293 노란 tip 배너 대응)
+  Widget _tipBanner() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0x1AFFC107), // rgba(255,193,7,.1)
+        border: const Border(
+          left: BorderSide(color: Color(0xFFFFC107), width: 3),
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        t('cf_tip'),
+        style: const TextStyle(
+          color: Color(0xFF555555),
+          fontSize: 13,
+          height: 1.4,
         ),
       ),
     );

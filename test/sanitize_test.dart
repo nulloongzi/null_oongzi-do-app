@@ -39,11 +39,34 @@ void main() {
       expect(Sanitize.filename(null), 'photo');
       expect(Sanitize.filename(''), 'photo');
     });
-    test('50자 초과 시 끝 50자(확장자 보존)', () {
-      final long = '${'a' * 60}.png';
+    test('연속 _ 압축 (웹 sanitizeFilename 동일)', () {
+      expect(Sanitize.filename('a  b.png'), 'a_b.png');
+      expect(Sanitize.filename('a/../b.png'), 'a_.._b.png');
+    });
+    test('80자 초과 시 확장자 보존하며 자르기', () {
+      final long = '${'a' * 100}.png';
       final out = Sanitize.filename(long);
-      expect(out.length, 50);
+      expect(out.length, 80);
       expect(out.endsWith('.png'), true);
+    });
+  });
+
+  group('Sanitize.collectReels', () {
+    test('정규화 + 중복 제거 + 행 내 다중 링크 분해', () {
+      final out = Sanitize.collectReels([
+        'https://www.instagram.com/reel/AbC123/',
+        'https://instagram.com/reels/AbC123/ https://www.instagram.com/p/Xyz9/',
+      ]);
+      expect(out, [
+        'https://www.instagram.com/reel/AbC123/',
+        'https://www.instagram.com/p/Xyz9/',
+      ]);
+    });
+    test('무효 토큰이 하나라도 있으면 null', () {
+      expect(Sanitize.collectReels(['https://example.com/x']), isNull);
+    });
+    test('빈 행은 무시', () {
+      expect(Sanitize.collectReels(['', '  ']), <String>[]);
     });
   });
 

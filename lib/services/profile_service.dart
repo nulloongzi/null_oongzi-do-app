@@ -78,7 +78,22 @@ class ProfileService {
     if (snap.exists && snap.data() != null) {
       return Profile.fromMap(snap.data()!);
     }
-    final rn = generate();
+    // 웹 auth.js와 동일: 중복이면 최대 10회 재생성, 그래도 겹치면 타임스탬프 뒷 4자리 부착
+    var rn = generate();
+    var unique = !await isDuplicate(rn.full);
+    for (var i = 1; !unique && i < 10; i++) {
+      rn = generate();
+      unique = !await isDuplicate(rn.full);
+    }
+    if (!unique) {
+      final ms = DateTime.now().millisecondsSinceEpoch.toString();
+      rn = RiceName(
+        rn.base,
+        rn.code,
+        '${rn.full}${ms.substring(ms.length - 4)}',
+        rn.color,
+      );
+    }
     await ref.set({
       'nickname': rn.base,
       'suffix': rn.code,
