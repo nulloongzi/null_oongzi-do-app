@@ -919,4 +919,12 @@ const Map<String, Map<String, String>> kStrings = {
     'ko': '전송에 실패했어요. 잠시 후 다시 시도해주세요.',
     'en': 'Sending failed. Please try again shortly.',
   },
+
+  // 포장하기 도시락 칸 라벨 — 웹 js/my-card.js 의 mc_* 와 같은 문구.
+  // 화면 UI 의 '밥을 담아주세요🍚' 에서 명령형만 뺐다(공유물은 남에게 가는 이미지다).
+  'mc_rice': {'ko': '밥 🍚', 'en': 'Rice 🍚'},
+  'mc_soup': {'ko': '국 🥘', 'en': 'Soup 🥘'},
+  'mc_side1': {'ko': '반찬1 🍳', 'en': 'Side 1 🍳'},
+  'mc_side2': {'ko': '반찬2 🥗', 'en': 'Side 2 🥗'},
+  'mc_side3': {'ko': '반찬3 🥢', 'en': 'Side 3 🥢'},
 };
