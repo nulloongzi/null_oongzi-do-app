@@ -402,15 +402,36 @@ if [ "$INCLUDE_REELS" = "true" ] && want flows; then
     REC_W=1080
     REC_H="$(awk -v h="$DEV_H" -v w="$DEV_W" 'BEGIN{printf "%d", int(h*1080/w/2)*2}')"
   fi
-  # 9:16 크롭: 위쪽(상태바·검색바)을 덜어내고 아래 상세시트 버튼까지 살린다.
-  # 기준값 390px 은 1080 폭에서의 값 — 다른 폭이면 비례로 환산한다.
-  CROP_H="$(awk -v w="$REC_W" 'BEGIN{printf "%d", int(w*16/9/2)*2}')"
-  CROP_Y="$(awk -v h="$REC_H" -v ch="$CROP_H" -v w="$REC_W" \
-    'BEGIN{y=int(390*w/1080); if (y+ch>h) y=h-ch; if (y<0) y=0; printf "%d", y}')"
+  # ── 9:16 정규화 ────────────────────────────────────────────
+  # 요즘 폰은 화면이 9:16 보다 훨씬 길다(갤럭시 Z 플립 6 = 1080x2640, 22:9).
+  # 여기서 9:16 창을 잘라내면 세로의 27%가 날아간다 — 실제로 검색바·티커·
+  # 도시락 헤더·데이터 신뢰도 행이 통째로 사라졌다. 화면 구석의 장식이 아니라
+  # "이게 무슨 화면인지" 알려주는 부분들이다.
+  #   fit(기본) — 화면 전체를 세로에 맞추고 좌우를 브랜드색으로 채운다.
+  #   crop      — 예전 방식(9:16 창을 잘라냄). 화면이 9:16 에 가까울 때만 쓸 만하다.
+  FIT_MODE="${FIT_MODE:-fit}"
+  OUT_W=1080; OUT_H=1920
+  # 상태바·제스처바만 덜어낸다(정보가 없는 영역). 1080 폭 기준값을 비례 환산.
+  TRIM_T="$(awk -v w="$REC_W" 'BEGIN{printf "%d", int(120*w/1080/2)*2}')"
+  TRIM_B="$(awk -v w="$REC_W" 'BEGIN{printf "%d", int(60*w/1080/2)*2}')"
+  INNER_H=$(( REC_H - TRIM_T - TRIM_B ))
   # 흐름은 길어(35~45s) 인코더 부하가 크다. 실기기는 대역폭 여유가 있어 8Mbps.
   FLOW_REC=(--size "${REC_W}x${REC_H}" --bit-rate 8000000)
-  FLOW_CROP="crop=${REC_W}:${CROP_H}:0:${CROP_Y},scale=1080:1920:flags=lanczos"
-  log "녹화 ${REC_W}x${REC_H} → 크롭 ${REC_W}x${CROP_H}@y=${CROP_Y} → 1080x1920 (기기 $DEV_WH)"
+  if [ "$FIT_MODE" = "crop" ]; then
+    CROP_H="$(awk -v w="$REC_W" 'BEGIN{printf "%d", int(w*16/9/2)*2}')"
+    CROP_Y="$(awk -v h="$REC_H" -v ch="$CROP_H" -v w="$REC_W" \
+      'BEGIN{y=int(390*w/1080); if (y+ch>h) y=h-ch; if (y<0) y=0; printf "%d", y}')"
+    FLOW_CROP="crop=${REC_W}:${CROP_H}:0:${CROP_Y},scale=${OUT_W}:${OUT_H}:flags=lanczos"
+    log "녹화 ${REC_W}x${REC_H} → 크롭 ${REC_W}x${CROP_H}@y=${CROP_Y} → ${OUT_W}x${OUT_H} (기기 $DEV_WH)"
+  else
+    # 화면을 세로에 맞춰 축소 → 다크 테두리 3px(스토어 스샷과 같은 처리) →
+    # 좌우를 크림색으로 채워 9:16 완성. 잘려나가는 UI 가 없다.
+    FLOW_CROP="crop=${REC_W}:${INNER_H}:0:${TRIM_T},scale=-2:$(( OUT_H - 6 )):flags=lanczos,"
+    FLOW_CROP+="pad=iw+6:ih+6:3:3:color=0x3A2C26,pad=${OUT_W}:${OUT_H}:(ow-iw)/2:0:color=0xFFF8E1"
+    FIT_W="$(awk -v w="$REC_W" -v ih="$INNER_H" -v oh="$(( OUT_H - 6 ))" \
+      'BEGIN{printf "%d", int(w*oh/ih/2)*2}')"
+    log "녹화 ${REC_W}x${REC_H} → 상태바/제스처바 제거 → ${FIT_W}x$(( OUT_H - 6 )) 로 축소 + 크림 여백 → ${OUT_W}x${OUT_H} (기기 $DEV_WH, 잘림 없음)"
+  fi
 
   # 앱이 남긴 CAPTURE_BEAT 를 "녹화 시작 기준 초"로 바꿔 저장한다.
   # 후반작업(edit_reels.sh)이 자막을 이 지점에 붙인다 — 영상에서 장면 전환을

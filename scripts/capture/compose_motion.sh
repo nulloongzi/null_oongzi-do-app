@@ -59,13 +59,30 @@ if [ -n "$_probe" ]; then
 else
   SRC_W=1080; SRC_H=2400
 fi
-# 크롭 창: 소스 폭 그대로, 높이는 9:16. 시작 y 는 비율로.
-CROP_H="$(awk -v w="$SRC_W" 'BEGIN{printf "%d", int(w*16/9/2)*2}')"
-CROP_Y="$(awk -v h="$SRC_H" -v ch="$CROP_H" -v w="$SRC_W" -v t="$CROP_TOP_AT_1080" \
-  'BEGIN{y=int(t*w/1080); if (y+ch>h) y=h-ch; if (y<0) y=0; printf "%d", y}')"
-# 소스 px → 출력 px 환산(시트 좌표 보정용)
-SCALE_Y="$(awk -v ch="$CROP_H" -v oh="$H" 'BEGIN{printf "%.6f", oh/ch}')"
-echo "▶ 소스 ${SRC_W}x${SRC_H} → 크롭 ${SRC_W}x${CROP_H}+0+${CROP_Y} → 출력 ${W}x${H}"
+# ── 9:16 정규화 ──────────────────────────────────────────────
+C_BG='#FFF8E1'      # 브랜드 크림(lib/theme.dart 의 AppTheme.bg)
+C_EDGE='#3A2C26'    # 화면 테두리(스토어 스샷과 같은 처리)
+# fit(기본): 화면 전체를 세로에 맞추고 좌우를 크림색으로 채운다. crop 은 세로가
+# 긴 폰에서 27%를 잘라내 검색바·도시락 헤더·데이터 신뢰도 행까지 날린다(실측).
+FIT_MODE="${FIT_MODE:-fit}"
+if [ "$FIT_MODE" = "crop" ]; then
+  CROP_H="$(awk -v w="$SRC_W" 'BEGIN{printf "%d", int(w*16/9/2)*2}')"
+  CROP_Y="$(awk -v h="$SRC_H" -v ch="$CROP_H" -v w="$SRC_W" -v t="$CROP_TOP_AT_1080" \
+    'BEGIN{y=int(t*w/1080); if (y+ch>h) y=h-ch; if (y<0) y=0; printf "%d", y}')"
+  SCALE_Y="$(awk -v ch="$CROP_H" -v oh="$H" 'BEGIN{printf "%.6f", oh/ch}')"
+  PAD_Y=0
+  echo "▶ 소스 ${SRC_W}x${SRC_H} → 크롭 ${SRC_W}x${CROP_H}+0+${CROP_Y} → 출력 ${W}x${H}"
+else
+  # 정보가 없는 상태바·제스처바만 덜어낸다(1080 폭 기준값을 비례 환산).
+  CROP_Y="$(awk -v w="$SRC_W" 'BEGIN{printf "%d", int(120*w/1080/2)*2}')"
+  TRIM_B="$(awk -v w="$SRC_W" 'BEGIN{printf "%d", int(60*w/1080/2)*2}')"
+  CROP_H=$(( SRC_H - CROP_Y - TRIM_B ))
+  INNER_H=$(( H - 6 ))                       # 테두리 3px 씩
+  SCALE_Y="$(awk -v ch="$CROP_H" -v oh="$INNER_H" 'BEGIN{printf "%.6f", oh/ch}')"
+  PAD_Y=3                                    # 위쪽 테두리만큼 내려감
+  FIT_W="$(awk -v w="$SRC_W" -v s="$SCALE_Y" 'BEGIN{printf "%d", int(w*s/2)*2}')"
+  echo "▶ 소스 ${SRC_W}x${SRC_H} → 상태바/제스처바 제거 → ${FIT_W}x${INNER_H} 축소 + 크림 여백 → ${W}x${H} (잘림 없음)"
+fi
 # x264 는 기본으로 코어 수의 1.5배까지 스레드를 띄우고, 스레드마다 1080x1920
 # 프레임 버퍼를 잡는다. 코어가 많고 RAM 이 적은 PC(20코어/8GB 등)에서는 이것만으로
 # 할당이 실패한다("malloc of size ... failed"). 화질·속도 손해는 거의 없으므로
@@ -82,8 +99,14 @@ prep() { # prep <name>
   local n="$1"
   [ -s "$WORK/$n.png" ] && return 0
   have "$n" || { warn "스틸 없음: $n"; return 1; }
-  convert "$STILLS/$n.png" -crop ${SRC_W}x${CROP_H}+0+${CROP_Y} +repage \
-    -resize ${W}x${H}! "$WORK/$n.png"
+  if [ "$FIT_MODE" = "crop" ]; then
+    convert "$STILLS/$n.png" -crop ${SRC_W}x${CROP_H}+0+${CROP_Y} +repage \
+      -resize ${W}x${H}! "$WORK/$n.png"
+  else
+    convert "$STILLS/$n.png" -crop ${SRC_W}x${CROP_H}+0+${CROP_Y} +repage \
+      -resize x$(( H - 6 )) -bordercolor "$C_EDGE" -border 3 \
+      -background "$C_BG" -gravity center -extent ${W}x${H} "$WORK/$n.png"
+  fi
 }
 
 # ── 좌표 자동 추출 ────────────────────────────────────────────
@@ -236,8 +259,8 @@ rect_of() { # rect_of <st_cmd> → 크롭 보정된 y (없으면 빈 값)
   v="$(awk -v k="$1" '$1==k {print $2}' "$RECTS" | tail -1)"
   [ -n "${v:-}" ] && [ "$v" != "-1" ] || return 0
   # 앱은 소스 화면 좌표로 준다 → 크롭만큼 빼고 출력 배율로 환산.
-  awk -v y="$v" -v c="$CROP_Y" -v s="$SCALE_Y" \
-    'BEGIN{ d=(y-c)*s; if (d<0) d=0; print int(d) }'
+  awk -v y="$v" -v c="$CROP_Y" -v s="$SCALE_Y" -v p="$PAD_Y" \
+    'BEGIN{ d=(y-c)*s+p; if (d<0) d=0; print int(d) }'
 }
 FT="$(rect_of st_filter_open)"; [ -n "$FT" ] || FT="$(diff_top 01_map 02_filter_open 2>/dev/null || true)"; FT="${FT:-620}"
 DT="$(rect_of st_club_sheet)"; [ -n "$DT" ] || DT="$(diff_top 05_club_bg 06_club_sheet 2>/dev/null || true)"; DT="${DT:-1180}"

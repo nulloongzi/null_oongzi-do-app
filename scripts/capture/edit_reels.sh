@@ -41,7 +41,12 @@ HOOK_D=1.6      # 훅 노출 시간
 OUTRO_D=2.2     # 아웃트로 카드 길이
 CAP_FADE=0.25   # 자막 페이드
 # 자막을 화면 위쪽에 둔다. 아래쪽은 앱의 바텀시트(핵심 콘텐츠)와 인스타 UI가 겹친다.
-CAP_Y=168
+# 다만 맨 위는 피한다 — 9:16 정규화가 fit 방식이 되면서 검색바·티커·탭이 모두
+# 화면에 남았고, 예전 위치(168)는 그것들을 덮는다. 지도 위쪽에 얹는다.
+CAP_Y="${CAP_Y:-290}"
+# 카드 폭: fit 방식에서 폰 화면은 1080 중 약 840px 이다. 936 이면 화면 테두리를
+# 넘어가 크림 여백 위로 삐져나온다 → 화면 안쪽에 들어오는 폭으로.
+CAP_W="${CAP_W:-780}"
 
 log()  { printf '\033[1;33m▶ %s\033[0m\n' "$*"; }
 warn() { printf '\033[0;35m! %s\033[0m\n' "$*" >&2; }
@@ -61,7 +66,7 @@ rm -rf "$WORK"; mkdir -p "$WORK" "$OUT_DIR"
 
 cap_card() { # cap_card <한글윗줄> <한글아랫줄> <영문> <출력>
   local l1="$1" l2="$2" en="$3" out="$4"
-  local cw=936 pad=38 hs=44 hb=62 he=32 th y
+  local cw="$CAP_W" pad=34 hs=40 hb=56 he=29 th y
   if [ -n "$l2" ]; then th=$(( pad*2 + hs + 14 + hb )); else th=$(( pad*2 + hb )); fi
   [ -n "$en" ] && th=$(( th + 16 + he ))
   convert -size ${cw}x${th} xc:none \
