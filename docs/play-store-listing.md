@@ -1,6 +1,10 @@
 # Play 스토어 등록 세트 (누룽지도)
 
-> 텍스트 자산은 v2.0.0 출시 때 쓴 것이 기준. 출시 노트만 릴리즈마다 갱신한다.
+> 텍스트 자산의 뼈대는 v2.0.0 출시 때 쓴 것. 출시 노트는 릴리즈마다 갱신하고,
+> 새 기능이 스토어 설명에 빠져 있으면 그때 함께 채운다(안치기가 그렇게 빠져 있었다).
+>
+> **이 문서의 문안이 정본이고, Play Console 값이 사본이다.** 둘이 어긋나면 콘솔을
+> 이 문서에 맞춘다 — 반대가 아니다. 어긋난 것이 발견되면 아래 §1.1 대조표에 남긴다.
 
 Play Console → 앱 → **기본 스토어 등록정보**에 그대로 붙여넣는 자산 모음.
 - **업로드용 최종 스샷(카피 오버레이 합성본)**: CI 아티팩트 `nulloongzido-marketing-assets`의
@@ -52,13 +56,81 @@ Volleyball clubs across Korea on one map — pickup games, filters & more 🏐
 ■ 밥이름 닉네임
 누룽지·주먹밥·비빔밥… 나만의 밥이름으로 재미있게.
 
+■ 안치기 — 라운드 자동 배치
+누가 어느 코트에 들어갈지 자동으로 짜드려요. 로그인 없이 픽업 탭에서 바로.
+
+■ 믿을 수 있는 정보
+팀·크루마다 '최종 확인일'을 표시하고, 틀린 정보는 앱 안에서 바로 신고.
+
 ■ 간편 공유
 카카오톡·인스타 스토리 카드로 우리 팀을 친구에게 한 번에.
 
-이제 네이티브 앱으로 지도는 더 부드럽고, 실행은 더 빠릅니다.
+네이티브 앱이라 지도는 부드럽고 실행은 빠릅니다.
 한국어·영어 지원. 지금 시작해보세요! 🏐
 ```
+- **EN**
+```
+🏐 Want to play volleyball in Korea — but don't know where to start?
+
+Nulloongzi-do puts volleyball clubs across Korea on a single map.
+From the team down your street to a pickup game you can join tonight.
+
+■ Find on the map
+Every club as a pin. Tap your neighbourhood and see who plays there.
+
+■ Filters that fit
+Narrow by region, weekday, and who plays (men / women / mixed).
+
+■ Pickup games
+No club membership needed. Join a game happening today or this week.
+
+■ Lunchbox (saved teams)
+Pack the teams you like into your Lunchbox and come back anytime.
+
+■ Rice-name nicknames
+Nurungji, Jumeokbap, Bibimbap… pick your own rice-name.
+
+■ Anchigi — automatic round draws
+Works out who plays on which court. Right in the Pickup tab, no sign-in.
+
+■ Information you can trust
+Every team shows when it was last verified, and you can report bad info in-app.
+
+■ Share in one tap
+Send your team to friends as a KakaoTalk or Instagram story card.
+
+English and Korean throughout. Start today! 🏐
+```
+> **EN 전체 설명은 KO 를 직역한 것이 아니다.** 영어 사용자는 '한국에서 배구를 어떻게
+> 시작하나'가 첫 질문이라 도입부를 그 각도로 잡았다. 나머지 항목은 KO 와 1:1 로 맞춘다 —
+> 한쪽에만 있는 기능이 생기면 다음 사람이 어느 쪽이 최신인지 알 수 없다.
+
 > ⚠️ 마지막 줄 "문의: (지원 이메일)" 은 Play Console의 **연락처 이메일** 필드에 넣으므로 본문에선 생략.
+
+### 1.1 콘솔 대조표 (2026-09-07 브라우저 점검 결과)
+
+콘솔 값이 위 정본과 어긋난 3건. **위 §1 블록을 그대로 덮어쓰면 셋 다 해소된다.**
+
+| # | 필드 | 콘솔에서 확인된 문제 | 조치 |
+|---|---|---|---|
+| 1 | 전체 설명 | 한 문장만 들어가 있음 — 기능 설명이 통째로 빠짐 | §1 「전체 설명」 KO 블록 전체 붙여넣기 |
+| 2 | 간단한 설명 | `배구플 땐` — 오타로 보이는 문구. **레포 어디에도 없는 콘솔 전용 텍스트**(양 레포 grep 확인)라 코드 수정으로는 안 고쳐진다 | §1 「간단한 설명」 KO 블록으로 교체 |
+| 3 | 앱 이름 | "픽업"이 빠져 있음 — 픽업이 정규 팀과 함께 두 축인데 이름에서 안 보인다 | `누룽지도: 배구 동호회·픽업 지도` (18자) |
+
+점검 3건 밖이지만 같은 필드를 손대며 함께 채운 것 (필요 없으면 빼도 된다):
+
+| 필드 | 무엇이 빠져 있었나 |
+|---|---|
+| 전체 설명 KO | **안치기**가 한 줄도 없었다 — 2.4.0 에 들어온 뒤 스토어 설명을 갱신하지 않았고, 이번 릴리즈로 사용자에게 처음 나가는 기능이다. '믿을 수 있는 정보'(최종 확인일·신고)도 함께 추가. |
+| 전체 설명 EN | 아예 없었다. 간단한 설명만 EN 이 있고 전체 설명은 KO 뿐이라 영어 등록정보가 반쪽이었다. i18n 이 비한국어 브라우저에 EN 을 기본으로 주는 제품인데 스토어에서 끊긴다. |
+
+> 2번은 원문을 확보하지 못했다(콘솔 화면으로만 확인). 어느 필드에 있었는지까지만
+> 기록하고, 문구 자체는 위 정본으로 통째 교체하는 방식으로 처리한다 — 부분 수정하려
+> 들면 또 다른 사본이 생긴다.
+
+**글자수 여유** (Play 상한 대비): 앱 이름 18/30 · 간단한 설명 KO 42/80 · EN 73/80 ·
+전체 설명 KO 562/4000 · EN 982/4000.
+**EN 간단한 설명은 여유가 7자뿐이다** — 여기만 손댈 때 상한을 다시 세어볼 것.
 
 ### 출시 노트 (What's new · v2.5.1)
 
@@ -182,7 +254,7 @@ Play는 **최소 2장, 최대 8장**. 아래 **7장 순서**(첫 3장이 목록 
 출시명이 `12 (2.5.1)` 로 잡히는지 확인한다 — 위 번호 이력대로 11 은 이미 썼다.
 
 ## 5. 업로드 체크리스트
-- [ ] 앱 이름 / 간단·전체 설명 붙여넣기(위 텍스트)
+- [ ] **앱 이름 / 간단·전체 설명 붙여넣기 — §1.1 대조표 3건이 여기서 해소된다**
 - [ ] 스크린샷 7장 업로드(1080×2400, 순서대로)
 - [x] 피처 그래픽 1024×500 확정 → `assets/store/feature-graphic-1024x500.png` 그대로 업로드
 - [ ] 앱 아이콘 512×512 확인
