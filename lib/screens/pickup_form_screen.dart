@@ -108,7 +108,15 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
         _lng = r.lng;
       }
     });
-    _snack(r != null ? t('f_addr_found') : t('f_addr_notfound'));
+    // 동호회 폼과 달리 장소명으로 찾아도 주소칸을 덮지 않는다 — 위 주석대로
+    // 픽업은 사람이 쓴 표현이 곧 정보다. 대신 무엇에 걸렸는지는 알려준다.
+    _snack(
+      r == null
+          ? t('f_addr_notfound')
+          : (r.matchedByPlaceName && r.placeName != null
+                ? '${r.placeName} ${t('f_addr_found')}'
+                : t('f_addr_found')),
+    );
   }
 
   List<ChipOption> get _sportOptions => [
