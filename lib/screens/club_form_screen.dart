@@ -91,13 +91,25 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
     setState(() {
       _geocoding = false;
       if (r != null) {
-        // 좌표만 사용, 주소 입력값은 보존(웹 registration.js:407-408 대응)
+        // 주소로 찾은 경우엔 입력값을 보존한다 — 사용자가 적은 주소가 더 정확할
+        // 수 있고, 정규화된 표기로 덮어쓰면 되레 낯설어진다(웹과 같은 방향).
+        //
+        // 다만 **장소 이름으로** 찾았다면 얘기가 다르다. '석관중' 은 주소가 아니라
+        // 이름이라, 그대로 두면 다른 사람에게 주소로 안 읽힌다. 이때만 실제
+        // 도로명으로 채운다(이후 직접 수정 가능).
         _lat = r.lat;
         _lng = r.lng;
+        if (r.matchedByPlaceName && (r.roadAddress ?? '').isNotEmpty) {
+          _address.text = r.roadAddress!;
+        }
       }
     });
     if (r != null) {
-      _snack(t('f_addr_found'));
+      _snack(
+        r.matchedByPlaceName && r.placeName != null
+            ? '${r.placeName} ${t('f_addr_found')}'
+            : t('f_addr_found'),
+      );
     } else {
       // 지오코딩 실패 → 하드 블록 대신 지도 피커로 폴백 유도(웹과 동일 방향).
       Track.event('registration_geocode_fail');

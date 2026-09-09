@@ -6,7 +6,22 @@ class GeoResult {
   final double lat;
   final double lng;
   final String? roadAddress;
-  GeoResult(this.lat, this.lng, this.roadAddress);
+
+  /// 'address' = 주소로 찾음 / 'place' = 장소 이름으로 찾음(서버 폴백).
+  /// 'place' 면 사용자가 주소가 아니라 **이름**('석관중')을 친 것이므로,
+  /// 호출부는 주소칸을 실제 도로명으로 채워준다.
+  final String? source;
+  final String? placeName;
+
+  GeoResult(
+    this.lat,
+    this.lng,
+    this.roadAddress, {
+    this.source,
+    this.placeName,
+  });
+
+  bool get matchedByPlaceName => source == 'place';
 }
 
 class GeocodingService {
@@ -23,7 +38,13 @@ class GeocodingService {
       final lat = (d['lat'] as num?)?.toDouble();
       final lng = (d['lng'] as num?)?.toDouble();
       if (lat == null || lng == null) return null;
-      return GeoResult(lat, lng, d['roadAddress'] as String?);
+      return GeoResult(
+        lat,
+        lng,
+        d['roadAddress'] as String?,
+        source: d['source'] as String?,
+        placeName: d['placeName'] as String?,
+      );
     } catch (_) {
       return null;
     }
