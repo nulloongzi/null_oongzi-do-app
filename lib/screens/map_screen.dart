@@ -107,6 +107,7 @@ class _MapScreenState extends State<MapScreen> {
     super.initState();
     _load();
     _deepLinks.start(_handleDeepLink);
+    focusMapRequest.addListener(_onFocusMapRequest);
     // 첫 로그인 시 밥이름 프로필 생성 (조용히, 실패 무시)
     final uid = _repo.currentUid;
     if (uid != null) {
@@ -116,6 +117,7 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   void dispose() {
+    focusMapRequest.removeListener(_onFocusMapRequest);
     detailPanel.value = null; // 화면 떠날 때 잔존 패널 정리
     _labelFadeTimer?.cancel();
     _search.dispose();
@@ -504,6 +506,14 @@ class _MapScreenState extends State<MapScreen> {
         );
       } catch (_) {}
     }
+  }
+
+  // 다른 화면(도시락통 등)이 "여기로 옮겨줘" 하고 남긴 요청 처리.
+  void _onFocusMapRequest() {
+    final r = focusMapRequest.value;
+    if (r == null || !mounted) return;
+    focusMapRequest.value = null; // 한 번 쓰고 비운다(같은 좌표 재요청도 먹히게)
+    _centerOnPin(r.lat, r.lng);
   }
 
   // 마커/티커 탭 → 핀을 보이는 영역 중앙으로 이동 + 상세 시트 오픈.
