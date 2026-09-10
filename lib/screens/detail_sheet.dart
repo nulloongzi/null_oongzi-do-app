@@ -924,6 +924,16 @@ Future<String?> _promptText(
 // 비모달(지도 조작 가능)은 MapDetailPanel(Align)이 그대로 유지. 한 번에 하나만.
 final ValueNotifier<Widget?> detailPanel = ValueNotifier<Widget?>(null);
 
+/// 지도를 특정 좌표로 옮겨달라는 요청. 지도를 가진 건 MapScreen 뿐인데,
+/// 도시락통처럼 **다른 라우트**에서도 팀 상세를 열 수 있어서 신호가 필요하다.
+///
+/// 마커 탭은 MapScreen 안에서 일어나 지도 이동과 상세 열기를 같이 했지만,
+/// 도시락통에서 연 상세는 시트만 뜨고 지도는 그대로였다 — 어느 동네 팀인지
+/// 보이지 않으니 상세의 절반이 죽어 있던 셈이다. detailPanel 과 같은 방식으로
+/// MapScreen 에 넘긴다.
+final ValueNotifier<({double lat, double lng})?> focusMapRequest =
+    ValueNotifier<({double lat, double lng})?>(null);
+
 void _showDetailSheet(
   BuildContext context,
   List<Widget> Function(VoidCallback close) content,

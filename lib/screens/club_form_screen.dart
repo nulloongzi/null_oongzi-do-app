@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import '../models/club.dart';
 import '../models/schedule_block.dart';
+import '../services/target_parse.dart';
 import '../services/data_repository.dart';
 import '../services/analytics.dart';
 import '../services/geocoding_service.dart';
@@ -145,12 +146,21 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
       _link.text = e.link ?? '';
       _lat = e.lat;
       _lng = e.lng;
-      // target 문자열 → 칩 부분일치 프리셀렉트 (잔여 표현은 메모 복원 불가 → 비움)
-      final tgt = e.target ?? '';
-      for (final o in _targetOptions) {
-        if (tgt.contains(o.value)) _targets.add(o.value);
-      }
+      // target 문자열 → 칩 + 기타 메모. 메모까지 되돌려야 한다 — 안 그러면
+      // 수정하고 저장하는 것만으로 괄호 안 내용이 소리 없이 지워진다.
+      final parts = parseTargetValue(e.target, [
+        for (final o in _targetOptions) o.value,
+      ]);
+      _targets.addAll(parts.chips);
+      _targetNote.text = parts.note;
+
+      // schedule_raw 가 없는 문서(구글시트 접수분)는 텍스트에서 되살린다.
+      // 없으면 상세엔 시간표가 보이는데 폼만 비어서, 사용자가 멀쩡한 시간을
+      // 처음부터 다시 입력해야 했다.
       _blocks.addAll(ScheduleBlock.groupFromRaw(e.scheduleRaw));
+      if (_blocks.isEmpty) {
+        _blocks.addAll(ScheduleBlock.groupFromText(e.schedule));
+      }
     }
     if (_blocks.isEmpty) _blocks.add(ScheduleBlock());
     if (_reels.isEmpty) _reels.add(TextEditingController()); // 최소 1행 노출
