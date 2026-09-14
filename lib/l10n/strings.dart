@@ -927,4 +927,72 @@ const Map<String, Map<String, String>> kStrings = {
   'mc_side1': {'ko': '반찬1 🍳', 'en': 'Side 1 🍳'},
   'mc_side2': {'ko': '반찬2 🥗', 'en': 'Side 2 🥗'},
   'mc_side3': {'ko': '반찬3 🥢', 'en': 'Side 3 🥢'},
+
+  // ── 팀 관리자 권한 (웹 i18n.js ad_* 와 같은 문구) ──
+  'ad_title': {'ko': '팀 관리자 신청', 'en': 'Request team admin'},
+  'ad_desc': {
+    'ko':
+        '관리자가 되면 이 팀 정보를 직접 고칠 수 있어요.\n본인이 이 팀 사람이라는 걸 알 수 있는 사진을 올려주세요.\n\n예) 팀 단톡방 화면 · 팀 유니폼 입고 찍은 사진 · 팀 인스타 계정 관리 화면\n※ 다른 분 이름이나 연락처는 가리고 올려주세요.',
+    'en':
+        'Admins can edit this team\'s information directly.\nUpload a photo showing that you belong to this team.\n\ne.g. your team group chat, you in the team uniform, the team\'s Instagram account screen\n※ Please mask other people\'s names and contact details.',
+  },
+  'ad_submit': {'ko': '관리자 신청하기', 'en': 'Submit request'},
+  'ad_apply_btn': {'ko': '🙋 이 팀 관리자 신청', 'en': '🙋 Request team admin'},
+  'ad_login_required': {
+    'ko': '관리자 신청은 로그인 후 가능합니다.',
+    'en': 'Please log in to request admin access.',
+  },
+  'ad_done': {
+    'ko': '관리자 신청이 접수되었습니다!\n확인 후 권한이 부여됩니다.',
+    'en': 'Request submitted!\nAccess is granted after review.',
+  },
+  'ad_error': {
+    'ko': '관리자 신청 중 오류가 발생했습니다: ',
+    'en': 'An error occurred during the request: ',
+  },
+  'ad_pending': {
+    'ko': '⏳ 관리자 신청을 확인하고 있습니다.',
+    'en': '⏳ Your admin request is under review.',
+  },
+  'ad_rejected': {
+    'ko': '❌ 관리자 신청이 받아들여지지 않았습니다',
+    'en': '❌ Admin request was not accepted',
+  },
+  'ad_reapply': {'ko': '🔄 다시 신청', 'en': '🔄 Apply again'},
+  'ad_full': {
+    'ko': '이 팀은 관리자가 이미 3명입니다.',
+    'en': 'This team already has 3 admins.',
+  },
+  'ad_count': {'ko': '관리자 {n}/3명', 'en': 'Admins {n}/3'},
+  'ad_leave': {'ko': '관리자에서 빠지기', 'en': 'Leave as admin'},
+  'ad_leave_confirm': {
+    'ko': '이 팀의 관리자에서 빠질까요?\n더 이상 팀 정보를 고칠 수 없게 됩니다.',
+    'en':
+        'Leave as an admin of this team?\nYou will no longer be able to edit its information.',
+  },
+  'ad_leave_done': {'ko': '관리자에서 빠졌습니다.', 'en': 'You are no longer an admin.'},
+  'ad_leave_error': {'ko': '처리 중 오류가 발생했습니다.', 'en': 'Something went wrong.'},
+
+  // ── 위치 공개 수준 ──
+  'reg_area_only': {
+    'ko': '대략적인 위치만 공개',
+    'en': 'Show approximate location only',
+  },
+  'reg_area_only_desc': {
+    'ko':
+        '지도에 정확한 핀 대신 동네 범위로 표시하고, 주소는 시·군·구까지만 보입니다. 체육관 이름과 상세 주소는 저장하지 않습니다. 학교나 공공 체육관을 빌려 쓰는 팀에 권합니다.',
+    'en':
+        'Shows a neighbourhood area instead of an exact pin, and the address only down to the district. The venue name and full address are not stored. Recommended for teams renting school or public gyms.',
+  },
+  'reg_area_label_fail': {
+    'ko': '이 주소로는 동네 범위를 만들 수 없습니다. 지도에서 위치를 찍어주세요.',
+    'en':
+        'Could not derive an area from this address. Please pick the location on the map.',
+  },
+  'cd_area_only': {'ko': '대략 위치', 'en': 'Approximate'},
+  'cd_area_only_note': {
+    'ko': '이 팀은 대략적인 위치만 공개합니다. 정확한 장소는 팀에 문의해주세요.',
+    'en':
+        'This team shares only an approximate location. Please contact them for the exact venue.',
+  },
 };

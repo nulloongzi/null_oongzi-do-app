@@ -13,6 +13,7 @@ import '../models/club.dart';
 import '../models/pickup_spot.dart';
 import '../services/analytics.dart';
 import '../services/data_repository.dart';
+import '../services/club_admin.dart';
 import '../services/club_filter.dart';
 import '../services/deep_link_service.dart';
 import '../services/profile_service.dart';
@@ -49,6 +50,7 @@ class _MarkerSpec {
   final bool urgent;
   final bool verified;
   final bool clusterable; // 급구 클럽=false(항상 표시), 그 외=true
+  final bool areaOnly; // 대략 위치만 공개 → 핀 대신 범위 원도 같이 그린다
   final VoidCallback onTap;
   const _MarkerSpec({
     required this.id,
@@ -58,6 +60,7 @@ class _MarkerSpec {
     required this.urgent,
     required this.verified,
     required this.clusterable,
+    this.areaOnly = false,
     required this.onTap,
   });
 }
@@ -1170,6 +1173,7 @@ class _MapScreenState extends State<MapScreen> {
             urgent: urgent,
             verified: club.isVerified,
             clusterable: !urgent, // 급구: 클러스터 제외(항상 표시)
+            areaOnly: isAreaOnly(club),
             onTap: () => _focusAndShowClub(club),
           ),
         );
@@ -1237,6 +1241,21 @@ class _MapScreenState extends State<MapScreen> {
       }
       markers.add(m);
       overlays.add(m);
+      // 대략 위치 팀: 핀 아래에 범위 원을 깔아 "이 점이 정확한 좌표는 아니다"를
+      // 눈으로 알게 한다. 좌표 자체는 저장 시점에 이미 뭉개져 있다 — 이 원은
+      // 가리는 장치가 아니라 그 사실을 알리는 표시다.
+      if (s.areaOnly) {
+        overlays.add(
+          NCircleOverlay(
+            id: 'area_${s.id}',
+            center: s.pos,
+            radius: kAreaCircleRadius,
+            color: const Color(0x26FFC107),
+            outlineColor: const Color(0x99FFA000),
+            outlineWidth: 2,
+          ),
+        );
+      }
     }
 
     // 4) 아이콘 빌드를 끝낸 뒤에 clear+add → 사라졌다 뜨는 끊김 최소화
