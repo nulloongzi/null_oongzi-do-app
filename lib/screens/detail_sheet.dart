@@ -1,5 +1,7 @@
 // detail_sheet.dart — P4 상세 바텀시트 (웹 club-detail / pickup-detail 과 동일한 톤/구성)
 // 칩·이번주 배너·정보행·링크버튼. 공유/릴스 임베드는 P4ب에서.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
@@ -7,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/club.dart';
 import '../models/pickup_spot.dart';
 import '../services/data_repository.dart';
+import '../services/deep_link_service.dart' show kCaptureMode;
 import '../services/i18n.dart';
 import '../services/lunchbox_service.dart';
 import '../services/share_service.dart';
@@ -779,6 +782,10 @@ Widget _urgentToggle(
   );
 }
 
+/// 캡처 시연용: '인증 신청'을 밖에서 누른다(값이 바뀌면 신청).
+/// 사용자가 누를 때와 같은 _apply() 를 탄다 — 사진 업로드와 요청 문서 생성까지 실제.
+final ValueNotifier<int> verifyDemoApply = ValueNotifier<int>(0);
+
 // 인증 신청/상태 영역(웹 verifyStatusArea 대응) — 소유자 & 미인증일 때만.
 // 최신 요청 조회: 이력 없음→신청 버튼 / 심사 중→안내 / 거절→사유+재신청.
 class _VerificationSection extends StatefulWidget {
@@ -798,6 +805,17 @@ class _VerificationSectionState extends State<_VerificationSection> {
     VerificationService().latestRequest(widget.club.id).then((r) {
       if (mounted && r != null) setState(() => _req = r);
     });
+    if (kCaptureMode) verifyDemoApply.addListener(_onDemoApply);
+  }
+
+  @override
+  void dispose() {
+    verifyDemoApply.removeListener(_onDemoApply);
+    super.dispose();
+  }
+
+  void _onDemoApply() {
+    if (mounted) unawaited(_apply());
   }
 
   Future<void> _apply() async {

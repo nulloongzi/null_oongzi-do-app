@@ -68,7 +68,7 @@ done
 
 # 풀 투어 재생성(있던 경우에만)
 TL="$OUT/.tour.txt"; : > "$TL"
-for x in discover save share; do
+for x in discover save share register; do
   [ -s "$OUT/${x}_${LANG_TAG}.mp4" ] && echo "file '${x}_${LANG_TAG}.mp4'" >> "$TL" || true
 done
 if [ -s "$TL" ]; then

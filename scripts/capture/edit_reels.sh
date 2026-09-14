@@ -232,7 +232,7 @@ beat_at() { # beat_at <beats파일> <라벨>
   awk -v l="$2" '$1==l {print $2; exit}' "$1"
 }
 
-FLOWS="${FLOWS:-discover save share}"
+FLOWS="${FLOWS:-discover save share register}"
 made=0
 for flow in $FLOWS; do
   SRC="$SRC_DIR/${flow}_${LANG_TAG}.mp4"

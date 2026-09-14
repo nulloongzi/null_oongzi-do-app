@@ -36,6 +36,7 @@ import '../widgets/filter_sheet.dart';
 import '../widgets/glass_surface.dart';
 import '../widgets/insta_embed.dart';
 import '../widgets/map_detail_panel.dart';
+import '../widgets/map_picker.dart' show mapPickerDemoConfirm;
 import '../widgets/pickup_list_sheet.dart';
 import '../widgets/share_menu.dart';
 import '../widgets/story_card.dart';
@@ -71,7 +72,7 @@ class MapScreen extends StatefulWidget {
 
 /// 마케팅 자산 자동 캡처 빌드 플래그(`--dart-define=CAPTURE_MODE=true`).
 /// 켜져 있을 때만 `?capture=` 딥링크가 화면을 결정적으로 이동한다(일반 릴리즈엔 무영향).
-const bool kCaptureMode = bool.fromEnvironment('CAPTURE_MODE');
+// kCaptureMode 는 services/deep_link_service.dart 에 있다(등록 폼·피커와 공유).
 
 /// GPU 없는 CI 에뮬(SwiftShader)용 완화 플래그.
 /// 고배율 타일이 오지 않고 카메라 이동 중 렌더가 깨져, 축척을 낮추고 fitBounds 를
@@ -649,6 +650,9 @@ class _MapScreenState extends State<MapScreen> {
       case 'flow_share':
         await _flowShare();
         break;
+      case 'flow_register':
+        await _flowRegister();
+        break;
     }
   }
 
@@ -1019,6 +1023,69 @@ class _MapScreenState extends State<MapScreen> {
     );
     await _hold(4, 'share');
   }
+
+  /// ④ 우리 팀 등록: 등록 폼 → 주소 2가지 방법 → 제출 → 인증 신청
+  ///
+  /// 주소는 앱에 있는 두 경로를 모두 보여준다. 시설·건물 이름 검색은 아직 없다
+  /// (geocodeAddress 는 네이버 Geocoding = 주소 전용).
+  ///   ① 직접 입력 → 🔍 검색으로 좌표 확정
+  ///   ② 지도에서 → 핀을 놓고 확정 → 주소가 역지오코딩으로 자동 입력
+  Future<void> _flowRegister() async {
+    await _closeOverlays();
+    if (!mounted) return;
+    await _hold(2, 'reg_open');
+
+    // 등록은 로그인 필수. 캡처 계정이 로그인돼 있지 않으면 시연이 성립하지 않는다.
+    if (_repo.currentUid == null) {
+      _snack(t('login_required'));
+      return;
+    }
+    final cam = await _controller?.getCameraPosition();
+    if (!mounted) return;
+    final center = cam?.target ?? const NLatLng(37.5559, 127.0838);
+    final saved = showClubFormSheet(context, initialCenter: center);
+    if (!await _hold(2, 'reg_form')) return;
+
+    _formStep('name');
+    if (!await _hold(3, 'reg_name')) return;
+    _formStep('target');
+    if (!await _hold(2, 'reg_target')) return;
+
+    _formStep('addr_type'); // ① 직접 입력
+    if (!await _hold(3.5, 'reg_addr_type')) return;
+    _formStep('addr_search');
+    if (!await _hold(3, 'reg_addr_search')) return;
+
+    _formStep('addr_map'); // ② 지도에서
+    if (!await _hold(3, 'reg_addr_map')) return;
+    mapPickerDemoConfirm.value++; // '이 위치로'
+    if (!await _hold(3, 'reg_addr_picked')) return;
+
+    _formStep('submit');
+    final created = await saved;
+    if (!mounted) return;
+    if (created == true) await _load();
+    if (!await _hold(2.5, 'reg_done')) return;
+
+    // 방금 만든 팀을 열어 인증을 신청한다(소유자 & 미인증이라 신청 버튼이 보인다).
+    if (!mounted) return;
+    final mine = _clubs.where((c) => c.name == _demoClubName);
+    if (mine.isEmpty) return;
+    await _focusAndShowClub(mine.first);
+    if (!await _hold(3, 'reg_verify')) return;
+    verifyDemoApply.value++;
+    await _hold(4, 'reg_verified');
+    await _backToMap();
+  }
+
+  /// 등록 폼 시연이 만드는 팀 이름 — 인증 단계에서 다시 찾을 때 쓴다.
+  /// club_form_screen 의 _demoStep('name') 과 같아야 한다.
+  static const _demoClubName = '누룽지 배구클럽';
+
+  int _demoSeq = 0;
+  // 같은 단계를 연달아 부를 수 있어야 해서 일련번호를 붙인다(ValueNotifier 는
+  // 같은 값이면 알리지 않는다).
+  void _formStep(String s) => clubFormDemo.value = '$s:${++_demoSeq}';
 
   Future<void> _focusAndShowSpot(PickupSpot spot) async {
     await _centerOnPin(spot.lat, spot.lng);

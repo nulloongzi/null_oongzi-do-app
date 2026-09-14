@@ -1,5 +1,7 @@
 // club_form_screen.dart — 동호회(클럽) 등록/수정 폼. 웹 registration.js 포팅.
 // 로그인 필수(AuthGate가 보장). 좌표는 지도 피커로 직접 선택(지오코딩 불필요).
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +9,7 @@ import 'package:flutter_naver_map/flutter_naver_map.dart';
 import '../models/club.dart';
 import '../models/schedule_block.dart';
 import '../services/data_repository.dart';
+import '../services/deep_link_service.dart' show kCaptureMode;
 import '../services/analytics.dart';
 import '../services/geocoding_service.dart';
 import '../services/i18n.dart';
@@ -17,6 +20,14 @@ import '../widgets/chip_select.dart';
 import '../widgets/map_picker.dart';
 import '../widgets/reel_editor.dart';
 import '../widgets/schedule_editor.dart';
+
+/// 캡처 시연용: 등록 폼을 밖에서 한 단계씩 진행시킨다.
+///
+/// 폼 상태는 private 이고 시연은 손으로 입력할 수 없다. 값만 밀어 넣는 게 아니라
+/// 사용자가 하는 것과 **같은 코드 경로**(_geocode·_pickLocation·_submit)를 부른다 —
+/// 그래야 영상에 나오는 게 실제 동작과 같다.
+/// 값은 "<단계>:<일련번호>" 로 준다. 같은 단계를 연달아 부를 수 있어야 해서다.
+final ValueNotifier<String> clubFormDemo = ValueNotifier<String>('');
 
 /// 동호회 등록/수정 폼: 풀스크린 라우트 대신 지도 위 모달 바텀시트(웹 등록 팝업 대응).
 /// 등록·수정 성공 시 true 반환.
@@ -153,10 +164,49 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
         .catchError((_) {});
     // 측정 파리티(웹 registration_open): 등록 폼 도달 = 퍼널 진입 신호
     Track.event('registration_open', {'mode': _isEdit ? 'edit' : 'create'});
+    if (kCaptureMode) clubFormDemo.addListener(_onDemo);
+  }
+
+  // ── 캡처 시연 ────────────────────────────────────────────────
+  void _onDemo() {
+    final v = clubFormDemo.value;
+    if (v.isEmpty) return;
+    unawaited(_demoStep(v.split(':').first));
+  }
+
+  /// 한 글자씩 넣어 '사람이 치는' 것처럼 보이게 한다. 값을 한 번에 꽂으면
+  /// 영상에서 글자가 순간이동해 합성한 티가 난다.
+  Future<void> _demoType(TextEditingController c, String text) async {
+    c.text = '';
+    for (var i = 0; i < text.length; i++) {
+      if (!mounted) return;
+      c.text = text.substring(0, i + 1);
+      c.selection = TextSelection.collapsed(offset: c.text.length);
+      await Future<void>.delayed(const Duration(milliseconds: 55));
+    }
+  }
+
+  Future<void> _demoStep(String step) async {
+    if (!mounted) return;
+    switch (step) {
+      case 'name':
+        await _demoType(_name, '누룽지 배구클럽');
+      case 'target':
+        if (mounted) setState(() => _targets.add('성인'));
+      case 'addr_type': // ① 직접 입력
+        await _demoType(_address, '서울 성북구 화랑로13길 144');
+      case 'addr_search': // ① 입력한 주소로 좌표 찾기
+        await _geocode();
+      case 'addr_map': // ② 지도에서 고르기(확정은 mapPickerDemoConfirm)
+        await _pickLocation();
+      case 'submit':
+        await _submit();
+    }
   }
 
   @override
   void dispose() {
+    clubFormDemo.removeListener(_onDemo);
     for (final c in [
       _name,
       _targetNote,

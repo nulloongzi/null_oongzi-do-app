@@ -522,10 +522,12 @@ if [ "$INCLUDE_REELS" = "true" ] && want flows; then
   flow discover flow_discover 19   # 지도 → 필터 → 결과 → 클럽 상세
   flow save     flow_save     20   # 상세 → 도시락 찜 → 반찬칸 → 식단표
   flow share    flow_share    22   # 밥이름 → 네임카드 → 공유
+  # 등록은 단계가 많다(이름·대상·주소 2가지·제출·인증). 길이는 첫 캡처 뒤 실측으로 줄인다.
+  flow register flow_register 42   # 등록 폼 → 주소 2가지 → 제출 → 인증 신청
 
   # 풀 투어: 3편 이어붙이기(편집 없이 바로 쓰는 앱 소개용).
   TOUR_LIST="$FLOWS_DIR/.tour.txt"; : > "$TOUR_LIST"
-  for n in discover save share; do
+  for n in discover save share register; do
     f="$FLOWS_DIR/${n}_${CAP_LANG}.mp4"
     [ -s "$f" ] && echo "file '$(basename "$f")'" >> "$TOUR_LIST" || true
   done
@@ -539,7 +541,7 @@ if [ "$INCLUDE_REELS" = "true" ] && want flows; then
 
   if [ "$FINGERPRINT" = "true" ]; then
   echo "===== FLOW FINGERPRINT ====="
-  for n in discover save share full_tour; do
+  for n in discover save share register full_tour; do
     flow_montage "$FLOWS_DIR/${n}_${CAP_LANG}.mp4" "flow_${n}"
   done
   echo "===== END FLOW FINGERPRINT ====="

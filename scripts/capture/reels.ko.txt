@@ -34,3 +34,14 @@ share|cap|namecard|도시락·시간표·QR|명함 한 장에|Clubs, schedule an
 share|cap|club|마음에 든 팀도|그대로 공유|Share a club page too|마음에 든 팀도 그대로 공유
 share|cap|share|인스타 스토리·카톡|바로 공유|Share straight to Instagram or KakaoTalk
 share|outro||누룽지도|do.nulloongzi.com|Volleyball club map for Korea
+
+register|hook||우리 팀은|지도에 없네?|Your club is not on the map yet?|우리 팀은 지도에 없네?
+register|cap|reg_form|우리 팀도 지도에|직접 올릴 수 있어요|Put your own club on the map
+register|cap|reg_name|팀 이름과 대상만|고르면 끝|Just the name and who it is for
+register|cap|reg_addr_type|주소는 직접 입력하거나||Type the address yourself
+register|cap|reg_addr_search|검색 한 번이면|위치 확정|One search pins the location
+register|cap|reg_addr_map|지도에서 바로|찍어도 돼요|Or just pick it on the map
+register|cap|reg_addr_picked|주소는 자동으로|채워져요|The address fills in by itself
+register|cap|reg_done|등록 완료||Registered
+register|cap|reg_verify|인증 신청까지|한 번에|Apply for verification in one tap
+register|outro||누룽지도|우리 팀 등록하기|Add your club today
