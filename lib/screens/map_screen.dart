@@ -1026,10 +1026,10 @@ class _MapScreenState extends State<MapScreen> {
 
   /// ④ 우리 팀 등록: 등록 폼 → 주소 2가지 방법 → 제출 → 인증 신청
   ///
-  /// 주소는 앱에 있는 두 경로를 모두 보여준다. 시설·건물 이름 검색은 아직 없다
-  /// (geocodeAddress 는 네이버 Geocoding = 주소 전용).
-  ///   ① 직접 입력 → 🔍 검색으로 좌표 확정
-  ///   ② 지도에서 → 핀을 놓고 확정 → 주소가 역지오코딩으로 자동 입력
+  /// 주소를 넣는 세 경로를 모두 보여준다.
+  ///   ① 주소 직접 입력 → 🔍 검색
+  ///   ② 시설 이름 → 같은 🔍 검색 (서버가 주소 0건이면 카카오 장소 검색으로 넘어간다)
+  ///   ③ 지도에서 → 핀을 놓고 확정 → 주소가 역지오코딩으로 자동 입력
   Future<void> _flowRegister() async {
     await _closeOverlays();
     if (!mounted) return;
@@ -1047,19 +1047,24 @@ class _MapScreenState extends State<MapScreen> {
     if (!await _hold(2, 'reg_form')) return;
 
     _formStep('name');
-    if (!await _hold(3, 'reg_name')) return;
+    if (!await _hold(2.5, 'reg_name')) return;
     _formStep('target');
-    if (!await _hold(2, 'reg_target')) return;
+    if (!await _hold(1.5, 'reg_target')) return;
 
-    _formStep('addr_type'); // ① 직접 입력
-    if (!await _hold(3.5, 'reg_addr_type')) return;
+    _formStep('addr_type'); // ① 주소 직접 입력
+    if (!await _hold(3, 'reg_addr_type')) return;
     _formStep('addr_search');
-    if (!await _hold(3, 'reg_addr_search')) return;
+    if (!await _hold(2.5, 'reg_addr_search')) return;
 
-    _formStep('addr_map'); // ② 지도에서
-    if (!await _hold(3, 'reg_addr_map')) return;
+    _formStep('addr_place'); // ② 시설 이름 — 같은 검색 버튼이 장소 검색으로 넘어간다
+    if (!await _hold(3, 'reg_addr_place')) return;
+    _formStep('addr_search');
+    if (!await _hold(2.5, 'reg_addr_place_hit')) return;
+
+    _formStep('addr_map'); // ③ 지도에서
+    if (!await _hold(2.5, 'reg_addr_map')) return;
     mapPickerDemoConfirm.value++; // '이 위치로'
-    if (!await _hold(3, 'reg_addr_picked')) return;
+    if (!await _hold(2.5, 'reg_addr_picked')) return;
 
     _formStep('submit');
     final created = await saved;

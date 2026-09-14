@@ -195,7 +195,9 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
         if (mounted) setState(() => _targets.add('성인'));
       case 'addr_type': // ① 직접 입력
         await _demoType(_address, '서울 성북구 화랑로13길 144');
-      case 'addr_search': // ① 입력한 주소로 좌표 찾기
+      case 'addr_place': // ② 시설 이름으로
+        await _demoType(_address, '잠실학생체육관');
+      case 'addr_search': // ①② 같은 버튼 — 서버가 주소 실패 시 장소 검색으로 넘어간다
         await _geocode();
       case 'addr_map': // ② 지도에서 고르기(확정은 mapPickerDemoConfirm)
         await _pickLocation();
