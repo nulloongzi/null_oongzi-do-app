@@ -6,6 +6,8 @@ import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/club.dart';
 import '../models/pickup_spot.dart';
+import '../services/club_admin.dart';
+import '../services/club_admin_service.dart';
 import '../services/data_repository.dart';
 import '../services/i18n.dart';
 import '../services/lunchbox_service.dart';
@@ -781,6 +783,235 @@ Widget _urgentToggle(
 
 // 인증 신청/상태 영역(웹 verifyStatusArea 대응) — 소유자 & 미인증일 때만.
 // 최신 요청 조회: 이력 없음→신청 버튼 / 심사 중→안내 / 거절→사유+재신청.
+// 팀 관리자 영역 — 관리자 수 / 빠지기(관리자일 때) / 신청·대기·재신청(아닐 때).
+// 웹 club-detail.js 의 #clubAdminArea 와 같은 구성.
+class _ClubAdminSection extends StatefulWidget {
+  final Club club;
+  final String? currentUid;
+  final Future<void> Function()? onChanged;
+  final VoidCallback close;
+  const _ClubAdminSection({
+    required this.club,
+    required this.currentUid,
+    required this.onChanged,
+    required this.close,
+  });
+
+  @override
+  State<_ClubAdminSection> createState() => _ClubAdminSectionState();
+}
+
+class _ClubAdminSectionState extends State<_ClubAdminSection> {
+  ({String status, String? reason})? _req;
+  bool _busy = false;
+
+  bool get _isAdmin =>
+      widget.currentUid != null &&
+      widget.club.admins.contains(widget.currentUid);
+
+  @override
+  void initState() {
+    super.initState();
+    // 관리자면 신청 이력을 볼 필요가 없다 — 쿼리도 아끼고 화면도 단순해진다.
+    if (!_isAdmin) {
+      ClubAdminService().latestRequest(widget.club.id).then((r) {
+        if (mounted && r != null) setState(() => _req = r);
+      });
+    }
+  }
+
+  void _toast(String msg) => ScaffoldMessenger.of(
+    context,
+  ).showSnackBar(SnackBar(content: Text(msg)));
+
+  Future<void> _apply() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    final err = await ClubAdminService().submit(widget.club);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (err == 'cancelled') return;
+    _toast(err ?? t('ad_done'));
+    if (err == null) setState(() => _req = (status: 'pending', reason: null));
+  }
+
+  Future<void> _leave() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        content: Text(t('ad_leave_confirm')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(t('mp_cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(t('ad_leave')),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted || _busy) return;
+    setState(() => _busy = true);
+    final err = await ClubAdminService().leave(widget.club.id);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    _toast(err ?? t('ad_leave_done'));
+    if (err != null) return;
+    // 빠진 뒤에는 이 시트의 수정 버튼이 더 이상 맞지 않다 — 닫고 목록을 새로 읽는다.
+    widget.close();
+    await widget.onChanged?.call();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final count = widget.club.admins.length;
+    final full = count >= kMaxClubAdmins;
+    final r = _req;
+
+    final Widget action;
+    if (_isAdmin) {
+      action = SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: _busy ? null : _leave,
+          icon: const Icon(Icons.logout, size: 18),
+          label: Text(t('ad_leave')),
+        ),
+      );
+    } else if (r != null && r.status == 'pending') {
+      action = _adminNotice(
+        const Color(0xFF2196F3),
+        const Color(0x1A2196F3),
+        Text(
+          t('ad_pending'),
+          style: const TextStyle(
+            fontSize: 13,
+            height: 1.5,
+            color: Color(0xFF1565C0),
+          ),
+        ),
+      );
+    } else if (r != null && r.status == 'rejected') {
+      action = Column(
+        children: [
+          _adminNotice(
+            const Color(0xFFF44336),
+            const Color(0x14F44336),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  t('ad_rejected'),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFFD32F2F),
+                  ),
+                ),
+                if (r.reason != null && r.reason!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    '${t('vf_reason')}${r.reason}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      height: 1.5,
+                      color: Color(0xFF555555),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (!full) _adminApplyBtn(t('ad_reapply')),
+        ],
+      );
+    } else if (full) {
+      // 정원이 찼으면 버튼을 주지 않는다. 눌러봐야 거절되고, 그 사이에
+      // 남의 이름이 찍힌 캡처만 저장소에 남는다.
+      action = Text(
+        t('ad_full'),
+        style: const TextStyle(fontSize: 13, color: Color(0xFF888888)),
+      );
+    } else {
+      action = _adminApplyBtn(t('ad_apply_btn'));
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            tf('ad_count', {'n': '$count'}),
+            style: const TextStyle(fontSize: 12.5, color: Color(0xFF888888)),
+          ),
+          const SizedBox(height: 8),
+          action,
+        ],
+      ),
+    );
+  }
+
+  Widget _adminApplyBtn(String label) => SizedBox(
+    width: double.infinity,
+    child: OutlinedButton.icon(
+      onPressed: _busy ? null : _apply,
+      icon: const Icon(Icons.person_add_alt, size: 18),
+      label: Text(label),
+    ),
+  );
+
+  Widget _adminNotice(Color border, Color bg, Widget child) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    decoration: BoxDecoration(
+      color: bg,
+      borderRadius: BorderRadius.circular(8),
+      border: Border(left: BorderSide(color: border, width: 3)),
+    ),
+    child: child,
+  );
+}
+
+// 대략 위치 팀 안내 — 주소가 시·군·구까지만 보이는 이유를 그 자리에서 말해준다.
+// 없으면 "주소가 왜 이렇게 짧지?" 로 끝나고, 팀에 연락해볼 생각을 못 한다.
+Widget _areaOnlyNote() => Padding(
+  padding: const EdgeInsets.only(top: 6),
+  child: Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        decoration: BoxDecoration(
+          color: const Color(0x1A607D8B),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          t('cd_area_only'),
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF546E7A),
+          ),
+        ),
+      ),
+      const SizedBox(width: 8),
+      Expanded(
+        child: Text(
+          t('cd_area_only_note'),
+          style: const TextStyle(
+            fontSize: 12,
+            height: 1.45,
+            color: Color(0xFF888888),
+          ),
+        ),
+      ),
+    ],
+  ),
+);
+
 class _VerificationSection extends StatefulWidget {
   final Club club;
   const _VerificationSection({required this.club});
@@ -1155,12 +1386,10 @@ void showClubDetail(
       .split(RegExp(r'[,\s]+'))
       .where((e) => e.isNotEmpty)
       .toList();
-  // 수정/삭제: 소유자 OR 관리자(문서 02 §7, 규칙도 동일).
-  final canModify =
-      (currentUid != null &&
-          c.registeredBy != null &&
-          c.registeredBy == currentUid) ||
-      isAdmin;
+  // 수정/삭제: 팀 관리자(admins, 최대 3명) OR 운영자.
+  // admins 가 비어 있으면 registered_by 한 명으로 폴백한다(Club._admins).
+  // 판정은 club_admin.dart 한 곳에만 두고 웹·서버 규칙과 맞춘다.
+  final canModify = canManageClub(c, currentUid, isOperator: isAdmin);
   // 일정 이벤트(요약·그리드 공용으로 1회 파싱)
   final clubEvents = (c.scheduleRaw != null && c.scheduleRaw!.isNotEmpty)
       ? eventsFromRaw(c.scheduleRaw)
@@ -1276,9 +1505,10 @@ void showClubDetail(
       // 5. 가격
       if (c.price != null && c.price!.isNotEmpty)
         _infoRow('💰', i18nPrice(c.price)),
-      // 6. 주소 텍스트(유지)
+      // 6. 주소 텍스트(유지) — 대략 위치 팀은 배지와 안내를 덧붙인다.
       if (c.address != null && c.address!.isNotEmpty)
         _infoRow('📍', c.address!),
+      if (isAreaOnly(c)) _areaOnlyNote(),
       // 7. 액션 줄: 주소복사 / 길찾기 / 공유 (컴팩트 3)
       Padding(
         padding: const EdgeInsets.only(top: 12),
@@ -1339,6 +1569,16 @@ void showClubDetail(
           children: [
             if (c.instaReels.isNotEmpty) _ReelsSection(reels: c.instaReels),
             if (canModify && !c.isVerified) _VerificationSection(club: c),
+            // 관리자 영역은 로그인한 사람 모두에게 보인다 — 관리자면 '빠지기',
+            // 아니면 '신청'. 인증 안 된 팀은 인증 신청이 곧 관리자 신청이라
+            // (승인 시 grantClubAdmin) 중복으로 묻지 않는다.
+            if (currentUid != null && c.isVerified)
+              _ClubAdminSection(
+                club: c,
+                currentUid: currentUid,
+                onChanged: onChanged,
+                close: close,
+              ),
             // 급구는 인증팀만(웹 정책 통일 · A10)
             if (canModify && c.isVerified)
               _urgentToggle(c, context, onChanged, close),

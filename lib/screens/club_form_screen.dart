@@ -7,6 +7,7 @@ import 'package:flutter_naver_map/flutter_naver_map.dart';
 import '../models/club.dart';
 import '../models/schedule_block.dart';
 import '../services/target_parse.dart';
+import '../services/club_admin.dart';
 import '../services/data_repository.dart';
 import '../services/analytics.dart';
 import '../services/geocoding_service.dart';
@@ -56,6 +57,7 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
   final _ownerEmail =
       TextEditingController(); // 관리자 전용: 소유자 재지정(웹 regOwnerEmail)
   bool _isAdminUser = false;
+  bool _areaOnly = false; // 대략적인 위치만 공개(location_precision: area)
   String? _ownerHint; // 관리자 힌트: 현재 소유자 닉네임(웹 reg_owner_hint)
   final List<TextEditingController> _reels = []; // 릴스 다중 입력(행마다 1개)
 
@@ -146,6 +148,7 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
       _link.text = e.link ?? '';
       _lat = e.lat;
       _lng = e.lng;
+      _areaOnly = isAreaOnly(e);
       // target 문자열 → 칩 + 기타 메모. 메모까지 되돌려야 한다 — 안 그러면
       // 수정하고 저장하는 것만으로 괄호 안 내용이 소리 없이 지워진다.
       final parts = parseTargetValue(e.target, [
@@ -328,11 +331,40 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
       });
     }
 
+    // ── 위치 공개 수준 ──
+    // '대략만'을 골랐으면 **여기서** 값을 뭉갠다. 화면에서만 흐리는 건 소용이
+    // 없다 — clubs 는 allow read: if true 라 Firestore 를 직접 읽으면 정확한
+    // 값이 그대로 나온다. 원본 주소는 기기 밖으로 나가지 않는다.
+    var saveLat = _lat;
+    var saveLng = _lng;
+    var saveAddress = address;
+    if (_areaOnly) {
+      saveLat = roundToAreaGrid(_lat);
+      saveLng = roundToAreaGrid(_lng);
+      var label = areaLabel(address);
+      if (label.isEmpty && saveLat != null && saveLng != null) {
+        // '하남종합운동장국민체육센터' 처럼 주소가 아예 없는 입력. 뭉갠 좌표를
+        // 거꾸로 물어 시·군·구를 얻는다.
+        label = areaLabel(await GeocodingService.reverseGeocode(
+          saveLat,
+          saveLng,
+        ));
+        if (!mounted) return;
+      }
+      if (label.isEmpty) {
+        // 라벨이 없다고 원문을 그대로 두면 흐리려던 게 무의미해진다 — 멈춘다.
+        setState(() => _saving = false);
+        return _err(t('reg_area_label_fail'));
+      }
+      saveAddress = label;
+    }
+
     final fields = <String, dynamic>{
       'name': name,
       'target': target,
-      'address': address,
-      'coordinates': {'lat': _lat, 'lng': _lng},
+      'address': saveAddress,
+      'coordinates': {'lat': saveLat, 'lng': saveLng},
+      'location_precision': _areaOnly ? 'area' : 'exact',
       'schedule': ScheduleBlock.toText(_blocks),
       'schedule_raw': ScheduleBlock.toRaw(_blocks),
       'price': price,
@@ -412,7 +444,13 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
             ),
             _group(
               t('cf_addr'),
-              _addressRow(invalid: _invalid.contains('address')),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _addressRow(invalid: _invalid.contains('address')),
+                  _areaOnlyRow(),
+                ],
+              ),
             ),
             // 선택 정보는 접기 섹션으로(체감 폼 길이 축소). 편집 시엔 펼쳐 시작.
             Theme(
@@ -557,6 +595,58 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
       ),
     );
   }
+
+  // 대략적인 위치만 공개 — 주소칸 바로 아래. 여기 말고 '선택 정보' 안으로
+  // 넣으면 접혀 있어서 못 보고 지나간다. 학교·공공 체육관을 빌려 쓰는 팀은
+  // 정확한 핀이 그대로 민원이 되기 때문에, 등록하는 그 자리에서 보여야 한다.
+  Widget _areaOnlyRow() => Padding(
+    padding: const EdgeInsets.only(top: 10),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: () => setState(() => _areaOnly = !_areaOnly),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 24,
+                height: 24,
+                child: Checkbox(
+                  value: _areaOnly,
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  onChanged: (v) => setState(() => _areaOnly = v ?? false),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  t('reg_area_only'),
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: NurungjiColors.brown,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (_areaOnly)
+          Padding(
+            padding: const EdgeInsets.only(left: 32, top: 2),
+            child: Text(
+              t('reg_area_only_desc'),
+              style: const TextStyle(
+                fontSize: 12,
+                height: 1.45,
+                color: Color(0xFF888888),
+              ),
+            ),
+          ),
+      ],
+    ),
+  );
 
   Widget _addressRow({bool invalid = false}) {
     final picked = _lat != null && _lng != null;
