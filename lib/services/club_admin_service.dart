@@ -46,7 +46,8 @@ class ClubAdminService {
         if (doc.data()['club_id'] != clubId) continue;
         final ts = doc.data()['requested_at'];
         final at = ts is Timestamp ? ts.toDate() : null;
-        if (latest == null || (at != null && (latestAt == null || at.isAfter(latestAt)))) {
+        if (latest == null ||
+            (at != null && (latestAt == null || at.isAfter(latestAt)))) {
           latest = doc;
           latestAt = at;
         }

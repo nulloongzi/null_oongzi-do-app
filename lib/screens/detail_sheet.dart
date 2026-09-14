@@ -820,9 +820,8 @@ class _ClubAdminSectionState extends State<_ClubAdminSection> {
     }
   }
 
-  void _toast(String msg) => ScaffoldMessenger.of(
-    context,
-  ).showSnackBar(SnackBar(content: Text(msg)));
+  void _toast(String msg) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
   Future<void> _apply() async {
     if (_busy) return;

@@ -971,10 +971,7 @@ const Map<String, Map<String, String>> kStrings = {
         'Leave as an admin of this team?\nYou will no longer be able to edit its information.',
   },
   'ad_leave_done': {'ko': '관리자에서 빠졌습니다.', 'en': 'You are no longer an admin.'},
-  'ad_leave_error': {
-    'ko': '처리 중 오류가 발생했습니다.',
-    'en': 'Something went wrong.',
-  },
+  'ad_leave_error': {'ko': '처리 중 오류가 발생했습니다.', 'en': 'Something went wrong.'},
 
   // ── 위치 공개 수준 ──
   'reg_area_only': {

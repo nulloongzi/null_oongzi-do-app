@@ -131,8 +131,11 @@ void main() {
     test('뭉갠 값은 서버 규칙(v*200 이 정수)을 만족한다', () {
       for (final v in [37.5665, 126.978, -0.0031, 33.4996, 128.12345]) {
         final r = roundToAreaGrid(v)!;
-        expect((r * 200 - (r * 200).round()).abs(), lessThan(1e-6),
-            reason: '$v → $r 이 격자에서 벗어나면 규칙이 저장을 거부한다');
+        expect(
+          (r * 200 - (r * 200).round()).abs(),
+          lessThan(1e-6),
+          reason: '$v → $r 이 격자에서 벗어나면 규칙이 저장을 거부한다',
+        );
       }
     });
 
@@ -168,7 +171,10 @@ void main() {
   group('isAreaOnly', () {
     test("location_precision 이 'area' 일 때만 true", () async {
       final area = await clubFrom({'name': 'A', 'location_precision': 'area'});
-      final exact = await clubFrom({'name': 'A', 'location_precision': 'exact'});
+      final exact = await clubFrom({
+        'name': 'A',
+        'location_precision': 'exact',
+      });
       // 필드가 없는 기존 문서는 지금까지처럼 정확히 보인다.
       final legacy = await clubFrom({'name': 'A'});
       expect(isAreaOnly(area), isTrue);

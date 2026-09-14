@@ -345,10 +345,9 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
       if (label.isEmpty && saveLat != null && saveLng != null) {
         // '하남종합운동장국민체육센터' 처럼 주소가 아예 없는 입력. 뭉갠 좌표를
         // 거꾸로 물어 시·군·구를 얻는다.
-        label = areaLabel(await GeocodingService.reverseGeocode(
-          saveLat,
-          saveLng,
-        ));
+        label = areaLabel(
+          await GeocodingService.reverseGeocode(saveLat, saveLng),
+        );
         if (!mounted) return;
       }
       if (label.isEmpty) {
