@@ -81,13 +81,17 @@ void main() {
     }
   });
 
-  test('피드형: 도시락통은 왼쪽, 시간표는 오른쪽에 겹치지 않게', () async {
+  // 피드 배치가 바뀌었다: 위 [네임카드 | 도시락통], 아래 시간표(전체 폭).
+  // 도시락통이 좁은 열에 갇히면 6열 그리드에서 팀 이름이 잘려서 위로 올렸다.
+  test('피드형: 위 [네임카드 | 도시락통], 아래 시간표가 겹치지 않게', () async {
     final l = MyCardPainter(_data(feed: true, filled: 5)).layout();
     expect(l.diet, isNot(Rect.zero));
-    expect(l.box.right, lessThanOrEqualTo(l.diet.left));
-    expect(l.box.top, l.diet.top);
-    expect(l.box.height, l.diet.height);
-    expect(l.box.top, greaterThanOrEqualTo(l.hero.bottom));
+    expect(l.hero.right, lessThanOrEqualTo(l.box.left)); // 상단 두 칸은 좌우
+    expect(l.hero.top, l.box.top);
+    expect(l.hero.height, l.box.height);
+    expect(l.diet.top, greaterThanOrEqualTo(l.box.bottom)); // 시간표는 그 아래
+    expect(l.diet.width, greaterThan(l.box.width)); // 전체 폭을 쓴다
+    expect(l.bottom, lessThanOrEqualTo(l.footTop)); // QR 을 덮지 않는다
   });
 
   test('스토리형: 시간표 없이 도시락통만, 가운데 정렬', () async {

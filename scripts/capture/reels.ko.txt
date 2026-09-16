@@ -41,9 +41,9 @@ register|cap|reg_name|팀 이름과 대상만|고르면 끝|Just the name and wh
 register|cap|reg_addr_type|주소는 직접 입력하거나||Type the address yourself
 register|cap|reg_addr_search|검색 한 번이면|위치 확정|One search pins the location
 register|cap|reg_addr_place|체육관·학교 이름으로도|찾을 수 있어요|Search by gym or school name too
-register|cap|reg_addr_place_hit|이름만 알아도|위치가 잡혀요|The name alone finds the spot
+register|cap|reg_addr_place_hit|이름만 써도|정확한 주소로|The name alone becomes a real address
 register|cap|reg_addr_map|지도에서 바로|찍어도 돼요|Or just pick it on the map
-register|cap|reg_addr_picked|주소는 자동으로|채워져요|The address fills in by itself
+register|cap|reg_addr_picked|핀을 놓으면 끝||Drop the pin and you are done
 register|cap|reg_done|등록 완료||Registered
 register|cap|reg_verify|인증 신청까지|한 번에|Apply for verification in one tap
 register|outro||누룽지도|우리 팀 등록하기|Add your club today

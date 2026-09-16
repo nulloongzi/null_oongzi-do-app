@@ -409,6 +409,12 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
     final nav = Navigator.of(context, rootNavigator: true);
     final uid = _repo.currentUid;
     nav.popUntil((r) => r.isFirst); // 도시락(+프로필 경유 시 그것까지) 닫기
+    // 마커 탭과 같은 대접을 해준다: 지도도 그 팀으로 옮긴다. 예전엔 시트만 뜨고
+    // 지도는 그대로여서 어느 동네 팀인지 알 수 없었다(웹은 openClubDetail 안에서
+    // 함께 처리하므로 원래 이 문제가 없다).
+    if (c.lat != null && c.lng != null) {
+      focusMapRequest.value = (lat: c.lat!, lng: c.lng!);
+    }
     showClubDetail(nav.context, c, currentUid: uid);
   }
 

@@ -86,19 +86,41 @@ List<SchedEvent> eventsFromRaw(List? raw) {
 }
 
 /// 텍스트 "월 19:00~22:00, 수 ..." / "토 14:00~17:00 / ..." → 이벤트.
-/// 세그먼트(,또는/)별로 시간 1개 + 그 안에 포함된 요일들.
+///
+/// 예전엔 쉼표·슬래시로 자른 뒤 조각마다 시간 1개를 잡았다. 그런데 요일을
+/// 쉼표로 나열한 표기(`월, 수, 금 19:00~22:00`)가 세 조각으로 찢어져 **금요일만**
+/// 시간을 갖고 나머지는 사라졌다. 구분자를 늘리거나 줄이는 걸로는 두 표기를
+/// 동시에 만족시킬 수 없다.
+///
+/// 그래서 시간을 기준으로 요일을 귀속시킨다(웹 parseScheduleText 와 같은 규칙):
+///  · 한 덩어리에 시간이 2개 이상이면, 각 시간 **바로 앞** 구간이 그 시간의 요일.
+///  · 시간이 하나뿐이면 덩어리 전체에서 요일을 찾는다 — 요일이 시간 뒤에 오는
+///    `19:00~22:00 월수금` 같은 예전 표기를 살리기 위해서다.
 List<SchedEvent> eventsFromText(String? text) {
   final out = <SchedEvent>[];
   if (text == null || text.trim().isEmpty) return out;
   final timeReg = RegExp(r'(\d{1,2}):(\d{2})\s*[~-]\s*(\d{1,2}):(\d{2})');
-  for (final seg in text.split(RegExp(r'[,/]'))) {
-    final m = timeReg.firstMatch(seg);
-    if (m == null) continue;
+
+  void emit(String daySource, RegExpMatch m) {
     final s = int.parse(m.group(1)!) + int.parse(m.group(2)!) / 60.0;
     final e = int.parse(m.group(3)!) + int.parse(m.group(4)!) / 60.0;
-    if (e <= s) continue;
+    if (e <= s) return;
     for (final d in scheduleDays) {
-      if (seg.contains(d)) out.add(SchedEvent(d, s, e));
+      if (daySource.contains(d)) out.add(SchedEvent(d, s, e));
+    }
+  }
+
+  for (final seg in text.split('/')) {
+    final ms = timeReg.allMatches(seg).toList();
+    if (ms.isEmpty) continue;
+    if (ms.length == 1) {
+      emit(seg, ms.first);
+      continue;
+    }
+    var prevEnd = 0;
+    for (final m in ms) {
+      emit(seg.substring(prevEnd, m.start), m);
+      prevEnd = m.end;
     }
   }
   return out;
