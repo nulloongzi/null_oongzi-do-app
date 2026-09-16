@@ -1041,7 +1041,11 @@ class _MapScreenState extends State<MapScreen> {
 
   // 목록 시트를 상세 모드로. view_pickup은 여기서 한 번만(본문 빌더는 리빌드마다 불림).
   void _selectSpot(PickupSpot spot) {
-    Track.event('view_pickup', {'id': spot.id});
+    // has_reel(1/0): 릴스 유무별 전환 비교용(웹 pickup-detail.js와 동일 스키마).
+    Track.event('view_pickup', {
+      'id': spot.id,
+      'has_reel': spot.instaReels.isNotEmpty ? 1 : 0,
+    });
     setState(() => _selectedSpot = spot);
   }
 
@@ -1854,6 +1858,7 @@ class _MapScreenState extends State<MapScreen> {
       'id': s.id,
       'type': 'insta',
       'sport': s.sport,
+      'has_reel': s.instaReels.isNotEmpty ? 1 : 0,
     });
     // NSM 전용 이벤트 — 웹 pickup-ui.js와 동일 스키마
     Track.event('contact_click', {

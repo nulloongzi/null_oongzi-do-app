@@ -300,7 +300,14 @@ class _CuratedNote extends StatelessWidget {
 // 릴스 섹션: 첫 릴스는 항상 표시(피로감↓), 2개 이상이면 '더 보기' 드롭다운으로 나머지.
 class _ReelsSection extends StatefulWidget {
   final List<String> reels;
-  const _ReelsSection({required this.reels});
+  // reel_play 계측용: 어느 팀/스팟의 몇 번째 릴스를 열었는지.
+  final String source; // 'club' | 'pickup'
+  final String id;
+  const _ReelsSection({
+    required this.reels,
+    required this.source,
+    required this.id,
+  });
 
   @override
   State<_ReelsSection> createState() => _ReelsSectionState();
@@ -317,7 +324,13 @@ class _ReelsSectionState extends State<_ReelsSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _LazyReel(url: reels.first), // 포스터 카드 → 탭하면 인라인 재생(스크롤 매끄럽게)
+        // 포스터 카드 → 탭하면 인라인 재생(스크롤 매끄럽게)
+        _LazyReel(
+          url: reels.first,
+          source: widget.source,
+          id: widget.id,
+          index: 0,
+        ),
         if (more > 0)
           BounceTap(
             onTap: () => setState(() => _open = !_open),
@@ -352,7 +365,13 @@ class _ReelsSectionState extends State<_ReelsSection> {
             ),
           ),
         if (_open)
-          for (final u in reels.skip(1)) _LazyReel(url: u),
+          for (var i = 1; i < reels.length; i++)
+            _LazyReel(
+              url: reels[i],
+              source: widget.source,
+              id: widget.id,
+              index: i,
+            ),
       ],
     );
   }
@@ -362,7 +381,15 @@ class _ReelsSectionState extends State<_ReelsSection> {
 // 스크롤 경로에서 플랫폼뷰(WebView)를 걷어내 버벅임 제거(자동재생 대신 탭재생).
 class _LazyReel extends StatefulWidget {
   final String url;
-  const _LazyReel({required this.url});
+  final String source;
+  final String id;
+  final int index;
+  const _LazyReel({
+    required this.url,
+    required this.source,
+    required this.id,
+    required this.index,
+  });
 
   @override
   State<_LazyReel> createState() => _LazyReelState();
@@ -377,7 +404,17 @@ class _LazyReelState extends State<_LazyReel> {
     return Padding(
       padding: const EdgeInsets.only(top: 14),
       child: BounceTap(
-        onTap: () => setState(() => _play = true),
+        onTap: () {
+          // 릴스 재생 탭 = reel_play. view_*/…_contact의 has_reel과 묶어
+          // "릴스가 물꼬에 도움이 되는가"를 본다(웹 insta-embed.js와 동일 스키마).
+          Track.event('reel_play', {
+            'source': widget.source,
+            'id': widget.id,
+            'index': widget.index,
+            'poster': 'generic',
+          });
+          setState(() => _play = true);
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
           decoration: BoxDecoration(
@@ -1277,6 +1314,7 @@ List<Widget> _spotDetailChildren(
                   'id': s.id,
                   'type': 'directions',
                   'sport': s.sport,
+                  'has_reel': s.instaReels.isNotEmpty ? 1 : 0,
                 });
                 // NSM 전용 이벤트 — source로 동호회/픽업을 분리 집계한다
                 Track.event('get_directions', {'id': s.id, 'source': 'pickup'});
@@ -1297,6 +1335,7 @@ List<Widget> _spotDetailChildren(
           'id': s.id,
           'type': 'insta',
           'sport': s.sport,
+          'has_reel': s.instaReels.isNotEmpty ? 1 : 0,
         });
         // NSM 전용 이벤트 — 웹 pickup-detail.js와 동일 스키마
         Track.event('contact_click', {
@@ -1312,6 +1351,7 @@ List<Widget> _spotDetailChildren(
           'id': s.id,
           'type': 'link',
           'sport': s.sport,
+          'has_reel': s.instaReels.isNotEmpty ? 1 : 0,
         });
         // NSM 전용 이벤트 — 단톡 링크도 연락 전환이므로 channel:'link'로 집계
         Track.event('contact_click', {
@@ -1348,7 +1388,8 @@ List<Widget> _spotDetailChildren(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (s.instaReels.isNotEmpty) _ReelsSection(reels: s.instaReels),
+          if (s.instaReels.isNotEmpty)
+            _ReelsSection(reels: s.instaReels, source: 'pickup', id: s.id),
           if (canModify)
             _modifyRow(
               onEdit: () async {
@@ -1380,7 +1421,12 @@ void showClubDetail(
   bool isAdmin = false,
   Future<void> Function()? onChanged,
 }) {
-  Track.event('view_club', {'club_id': c.id, 'club_name': c.name});
+  // has_reel(1/0): 릴스 유무별 view→contact 전환 비교용(웹 club-detail.js와 동일 스키마).
+  Track.event('view_club', {
+    'club_id': c.id,
+    'club_name': c.name,
+    'has_reel': c.instaReels.isNotEmpty ? 1 : 0,
+  });
   final tags = (c.target ?? '')
       .split(RegExp(r'[,\s]+'))
       .where((e) => e.isNotEmpty)
@@ -1426,7 +1472,11 @@ void showClubDetail(
           Expanded(child: Text(c.name, style: _titleStyle)),
           if (c.insta != null && c.insta!.isNotEmpty)
             _instaIcon(() {
-              Track.event('club_contact', {'type': 'insta', 'club_id': c.id});
+              Track.event('club_contact', {
+                'type': 'insta',
+                'club_id': c.id,
+                'has_reel': c.instaReels.isNotEmpty ? 1 : 0,
+              });
               // NSM 전용 이벤트 — 웹 club-detail.js와 동일 스키마로 병행 발화
               Track.event('contact_click', {
                 'channel': 'instagram',
@@ -1437,7 +1487,11 @@ void showClubDetail(
             }),
           if (c.link != null && c.link!.isNotEmpty)
             _homeIcon(() {
-              Track.event('club_contact', {'type': 'link', 'club_id': c.id});
+              Track.event('club_contact', {
+                'type': 'link',
+                'club_id': c.id,
+                'has_reel': c.instaReels.isNotEmpty ? 1 : 0,
+              });
               // NSM 전용 이벤트 — 홈페이지 링크도 연락 전환으로 집계
               Track.event('contact_click', {
                 'channel': 'link',
@@ -1529,6 +1583,7 @@ void showClubDetail(
                   Track.event('club_contact', {
                     'type': 'directions',
                     'club_id': c.id,
+                    'has_reel': c.instaReels.isNotEmpty ? 1 : 0,
                   });
                   // NSM(주당 길찾기 클릭) 전용 이벤트 — 웹과 동일 스키마
                   Track.event('get_directions', {
@@ -1566,7 +1621,8 @@ void showClubDetail(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (c.instaReels.isNotEmpty) _ReelsSection(reels: c.instaReels),
+            if (c.instaReels.isNotEmpty)
+              _ReelsSection(reels: c.instaReels, source: 'club', id: c.id),
             if (canModify && !c.isVerified) _VerificationSection(club: c),
             // 관리자 영역은 로그인한 사람 모두에게 보인다 — 관리자면 '빠지기',
             // 아니면 '신청'. 인증 안 된 팀은 인증 신청이 곧 관리자 신청이라
