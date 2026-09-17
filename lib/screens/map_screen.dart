@@ -1094,9 +1094,13 @@ class _MapScreenState extends State<MapScreen> {
     final mine = _clubs.where((c) => c.name == _demoClubName);
     if (mine.isEmpty) return;
     await _focusAndShowClub(mine.first);
-    if (!await _hold(3, 'reg_verify')) return;
+    if (!await _hold(2, 'reg_detail')) return;
+    // 인증 영역은 _ExpandReveal 안이라 펼쳐야 보인다. 접힌 채로 신청하면
+    // 자막은 인증을 말하는데 화면에는 아무 일도 안 일어난다.
+    detailPanelDemoExpand.value++;
+    if (!await _hold(2.5, 'reg_verify')) return;
     verifyDemoApply.value++;
-    await _hold(4, 'reg_verified');
+    await _hold(3.5, 'reg_verified');
     await _backToMap();
   }
 

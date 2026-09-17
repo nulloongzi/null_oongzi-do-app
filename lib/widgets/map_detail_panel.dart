@@ -7,6 +7,7 @@
 // (요약↔그리드)와 펼침 힌트가 이 비율에 연동된다(웹 interpolateMorph 대응).
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
+import '../services/deep_link_service.dart' show kCaptureMode;
 import '../services/i18n.dart';
 
 /// 패널의 펼침 비율과 토글을 본문(시간표 morph 등)에 전달하는 스코프.
@@ -32,6 +33,11 @@ class DetailPanelScope extends InheritedWidget {
 /// 마케팅 시연 영상 합성기가 시트 슬라이드업을 정확한 위치로 재현하는 데 쓴다.
 /// (패널은 화면을 채우는 Align 안에 있어 렌더박스 상단을 재면 항상 0 이 나온다.)
 final ValueNotifier<double> detailPanelTop = ValueNotifier<double>(-1);
+
+/// 캡처 시연용: 패널을 펼친다(peek → expand). 핸들을 끌거나 본문을 탭했을 때와
+/// 같은 경로다. 인증 신청·릴스는 _ExpandReveal 안에 있어 펼치지 않으면 화면에
+/// 아예 나타나지 않는다 — 자막은 인증을 말하는데 아무 일도 안 일어나 보였다.
+final ValueNotifier<int> detailPanelDemoExpand = ValueNotifier<int>(0);
 
 class MapDetailPanel extends StatefulWidget {
   final Widget child; // 스크롤될 상세 본문
@@ -100,7 +106,22 @@ class _MapDetailPanelState extends State<MapDetailPanel> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    if (kCaptureMode) detailPanelDemoExpand.addListener(_onDemoExpand);
+  }
+
+  void _onDemoExpand() {
+    if (!mounted || !_ready) return;
+    setState(() {
+      _dragging = false;
+      _apply(_expanded);
+    });
+  }
+
+  @override
   void dispose() {
+    detailPanelDemoExpand.removeListener(_onDemoExpand);
     _expand.dispose();
     detailPanelTop.value = -1; // 패널이 사라지면 좌표도 무효화
     super.dispose();
