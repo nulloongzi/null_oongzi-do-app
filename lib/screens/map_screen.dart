@@ -1108,12 +1108,14 @@ class _MapScreenState extends State<MapScreen> {
     // 인증 영역은 _ExpandReveal 안이라 펼쳐야 보인다. 접힌 채로 신청하면
     // 자막은 인증을 말하는데 화면에는 아무 일도 안 일어난다.
     detailPanelDemoExpand.value++;
-    if (!await _hold(2.5, 'reg_verify')) return;
+    if (!await _hold(1.5, 'reg_verify')) return;
     verifyDemoApply.value++;
-    // 사진 업로드 + 요청 문서 생성이 끝나야 '심사 중' 안내로 바뀐다. 3.5초로는
-    // 모자라서 지난 캡처에선 신청 버튼 그대로인 화면 위에 '인증 배지가 붙어요'
-    // 자막만 4초 흘렀다 — 영상에서 인증 단계가 통째로 죽어 있던 셈이다.
-    await _hold(6, 'reg_verified');
+    // 업로드가 끝나야 '심사 중' 안내로 바뀐다. 고정 대기로는 못 맞춘다 —
+    // 6초를 줘도 응답이 5.5초에 와서 지도로 돌아간 뒤에야 스낵바가 떴다.
+    // 기다리는 동안 화면에는 '사진 올리는 중…' 스피너가 돌고 있다.
+    await _awaitBump(verifyDemoDone);
+    if (!mounted) return;
+    await _hold(3.5, 'reg_verified');
     await _backToMap();
   }
 
@@ -1125,6 +1127,25 @@ class _MapScreenState extends State<MapScreen> {
   /// 알 수 없고, 고정 대기로 넘어가면 늦게 도착한 결과가 다음 단계의 입력을
   /// 덮어쓴다(실측: 지오코딩 5초 vs 대기 2.5초 → 시설 이름이 지워졌다).
   /// 응답이 끝내 안 오면 timeout 후 진행한다 — 시연이 멈추는 것보단 낫다.
+  /// 카운터가 올라갈 때까지 기다린다(타임아웃이면 그냥 진행).
+  Future<void> _awaitBump(ValueNotifier<int> n, {double timeout = 20}) async {
+    final start = n.value;
+    final done = Completer<void>();
+    void listener() {
+      if (n.value != start && !done.isCompleted) done.complete();
+    }
+
+    n.addListener(listener);
+    try {
+      await done.future.timeout(
+        Duration(milliseconds: (timeout * 1000).round()),
+        onTimeout: () {},
+      );
+    } finally {
+      n.removeListener(listener);
+    }
+  }
+
   Future<void> _awaitStep(String step, {double timeout = 15}) async {
     final done = Completer<void>();
     void listener() {

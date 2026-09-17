@@ -718,6 +718,11 @@ Widget _urgentToggle(
 /// 사용자가 누를 때와 같은 _apply() 를 탄다 — 사진 업로드와 요청 문서 생성까지 실제.
 final ValueNotifier<int> verifyDemoApply = ValueNotifier<int>(0);
 
+/// 캡처 시연용: 인증 신청이 실제로 끝난 시각(성공·실패 무관). 업로드는 몇 초가
+/// 걸릴지 알 수 없어 고정 대기로는 못 맞춘다 — 실측 5.5초, 6초 홀드로도 모자라
+/// '심사 중' 안내가 뜨기 전에 지도로 돌아갔다.
+final ValueNotifier<int> verifyDemoDone = ValueNotifier<int>(0);
+
 // 인증 신청/상태 영역(웹 verifyStatusArea 대응) — 소유자 & 미인증일 때만.
 // 최신 요청 조회: 이력 없음→신청 버튼 / 심사 중→안내 / 거절→사유+재신청.
 // 팀 관리자 영역 — 관리자 수 / 빠지기(관리자일 때) / 신청·대기·재신청(아닐 때).
@@ -988,6 +993,7 @@ class _VerificationSectionState extends State<_VerificationSection> {
       clubId: widget.club.id,
       clubName: widget.club.name,
     );
+    if (kCaptureMode) verifyDemoDone.value++;
     if (!mounted) return;
     setState(() => _busy = false);
     if (err == 'cancelled') return;

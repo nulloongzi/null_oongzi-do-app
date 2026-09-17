@@ -96,6 +96,7 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
   // 걸린다. 대신 key 를 바꿔 initiallyExpanded 로 다시 만든다(시연 전용 경로).
   bool _demoOptionalOpen = false;
   final GlobalKey _optionalKey = GlobalKey();
+  final GlobalKey _schedKey = GlobalKey();
   final GlobalKey _priceKey = GlobalKey();
   final GlobalKey _submitKey = GlobalKey();
 
@@ -266,6 +267,9 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
           await _demoScrollTo(_optionalKey, 0.02);
         }
       case 'schedule': // 요일 칩을 하나씩 — 한 번에 꽂으면 합성한 티가 난다
+        // 섹션 맨 위로 붙여 놓으면 요일 칩이 자막 띠(화면 위 14~27%) 뒤로
+        // 숨는다 — 실측: '체크 두 번' 자막이 정작 체크되는 칩을 가렸다.
+        await _demoScrollTo(_schedKey, 0.5);
         if (_blocks.isEmpty) _blocks.add(ScheduleBlock());
         final b = _blocks.first;
         for (final d in ['화', '목']) {
@@ -597,11 +601,14 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
                 ),
                 children: [
                   const SizedBox(height: 8),
-                  _group(
-                    t('cf_sched'),
-                    ScheduleEditor(
-                      blocks: _blocks,
-                      onChanged: () => setState(() {}),
+                  KeyedSubtree(
+                    key: _schedKey,
+                    child: _group(
+                      t('cf_sched'),
+                      ScheduleEditor(
+                        blocks: _blocks,
+                        onChanged: () => setState(() {}),
+                      ),
                     ),
                   ),
                   KeyedSubtree(

@@ -39,6 +39,8 @@ register|reg_form|0.885|0.845|1.0  # 오른쪽 아래 등록(연필) 버튼
 register|reg_addr_type|0.279|0.758|-2.3       # '주소로 검색' — ① 주소
 register|reg_addr_place|0.279|0.758|-2.3      # '주소로 검색' — ② 시설 이름
 register|reg_addr_place_hit|0.736|0.758|-1.8  # '지도에서'
-register|reg_optional|0.920|0.876|0.8         # '추가 정보 입력 (선택)' 펼치기
-register|reg_price|0.504|0.947|-2.5          # '등록하기' — 선택 정보를 채운 뒤라
+register|reg_optional|0.920|0.876|1.3         # '추가 정보 입력 (선택)' 펼치기
+                                             # 리드 0.8 로는 이미 펼쳐지고 스크롤까지
+                                             # 끝난 화면에 물결이 떠 엉뚱한 줄을 가리켰다
+register|reg_price|0.504|0.947|-2.0          # '등록하기' — 선택 정보를 채운 뒤라
                                              # reg_addr_picked 가 아니라 reg_price 기준
