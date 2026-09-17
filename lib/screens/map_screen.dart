@@ -1083,6 +1083,16 @@ class _MapScreenState extends State<MapScreen> {
     await _awaitStep('addr_map'); // 피커가 닫히고 주소가 채워질 때까지
     if (!await _hold(2.5, 'reg_addr_picked')) return;
 
+    // 선택 정보(일정·회비). discover 영상이 '일정·회비·위치까지 한눈에'를 파는데
+    // 등록 영상이 필수 항목만 채우면 두 편이 어긋나고, 시연으로 만든 팀도
+    // 운동 시간 없는 껍데기로 지도에 남는다.
+    await _formStepDone('optional');
+    if (!await _hold(1.5, 'reg_optional')) return;
+    await _formStepDone('schedule');
+    if (!await _hold(2, 'reg_schedule')) return;
+    await _formStepDone('price');
+    if (!await _hold(2, 'reg_price')) return;
+
     _formStep('submit');
     final created = await saved;
     if (!mounted) return;

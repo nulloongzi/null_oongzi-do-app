@@ -44,6 +44,8 @@ register|cap|reg_addr_place|몰라도 괜찮아요|체육관 이름으로|Don't 
 register|cap|reg_addr_place_hit|이름이|주소가 됩니다|The name becomes a real address
 register|cap|reg_addr_map|그것도 애매하면|지도에서 찍기|Still unsure? Pick it on the map
 register|cap|reg_addr_picked|핀 하나면 끝||One pin and you are done
+register|cap|reg_schedule|운동 요일과 시간은|체크 두 번|Practice days — two taps
+register|cap|reg_price|회비까지 적어두면|문의가 줄어요|Add the dues, answer fewer DMs
 register|cap|reg_done|등록 완료||Registered
 register|cap|reg_verify|인증까지|한 번에|Verification in one tap
 register|cap|reg_verified|심사 후|인증 배지가 붙어요|A verified badge after review

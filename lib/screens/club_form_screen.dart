@@ -91,6 +91,14 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
   String? _formError;
   final Set<String> _invalid = {};
 
+  // 캡처 시연: '선택 정보' 접힘 섹션을 코드로 펼치기 위한 상태/앵커.
+  // ExpansionTileController 는 현재 stable 에서 deprecated 라 --fatal-infos 게이트에
+  // 걸린다. 대신 key 를 바꿔 initiallyExpanded 로 다시 만든다(시연 전용 경로).
+  bool _demoOptionalOpen = false;
+  final GlobalKey _optionalKey = GlobalKey();
+  final GlobalKey _priceKey = GlobalKey();
+  final GlobalKey _submitKey = GlobalKey();
+
   bool get _isEdit => widget.editing != null;
 
   // 검증 실패를 스낵바 대신 폼 상단 배너로 표시(웹 showRegError 대응).
@@ -218,6 +226,19 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
     }
   }
 
+  /// 시연 중 앵커 위젯이 화면에 들어오도록 스크롤한다. SingleChildScrollView 에
+  /// 컨트롤러가 없어도 가장 가까운 Scrollable 을 찾아 준다.
+  Future<void> _demoScrollTo(GlobalKey k, double alignment) async {
+    final ctx = k.currentContext;
+    if (ctx == null) return;
+    await Scrollable.ensureVisible(
+      ctx,
+      duration: const Duration(milliseconds: 420),
+      curve: Curves.easeOut,
+      alignment: alignment,
+    );
+  }
+
   Future<void> _demoStep(String step) async {
     if (!mounted) return;
     switch (step) {
@@ -237,7 +258,32 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
         await _geocode();
       case 'addr_map': // ② 지도에서 고르기(확정은 mapPickerDemoConfirm)
         await _pickLocation();
+      case 'optional': // 선택 정보 펼치기
+        if (!_demoOptionalOpen) {
+          setState(() => _demoOptionalOpen = true);
+          // 새 key 로 다시 만들어진 뒤에야 앵커가 레이아웃된다.
+          await Future<void>.delayed(const Duration(milliseconds: 260));
+          await _demoScrollTo(_optionalKey, 0.02);
+        }
+      case 'schedule': // 요일 칩을 하나씩 — 한 번에 꽂으면 합성한 티가 난다
+        if (_blocks.isEmpty) _blocks.add(ScheduleBlock());
+        final b = _blocks.first;
+        for (final d in ['화', '목']) {
+          if (!mounted) return;
+          final picked = {...b.days, d};
+          final next = ScheduleBlock.dayOrder.where(picked.contains).toList();
+          setState(() => b.days = next);
+          await Future<void>.delayed(const Duration(milliseconds: 420));
+        }
+      case 'price':
+        await _demoScrollTo(_priceKey, 0.45);
+        await _demoType(_price, '월 3만원 / 게스트 1만원');
       case 'submit':
+        // 선택 정보를 펼친 뒤엔 등록 버튼이 화면 밖이다. 스크롤해 놓지 않으면
+        // 영상에서 '누른 적 없는데 폼이 닫히는' 장면이 된다(탭 표시도 헛돈다).
+        await _demoScrollTo(_submitKey, 1);
+        await Future<void>.delayed(const Duration(milliseconds: 150));
+        if (!mounted) return;
         await _submit();
     }
     clubFormDemoDone.value = '$step:${DateTime.now().microsecondsSinceEpoch}';
@@ -530,11 +576,14 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
             ),
             // 선택 정보는 접기 섹션으로(체감 폼 길이 축소). 편집 시엔 펼쳐 시작.
             Theme(
+              key: _optionalKey,
               data: Theme.of(
                 context,
               ).copyWith(dividerColor: Colors.transparent),
               child: ExpansionTile(
-                initiallyExpanded: _isEdit,
+                // 시연이 펼칠 때 key 가 바뀌어 initiallyExpanded 가 다시 먹는다.
+                key: ValueKey('cf_optional_$_demoOptionalOpen'),
+                initiallyExpanded: _isEdit || _demoOptionalOpen,
                 tilePadding: EdgeInsets.zero,
                 childrenPadding: EdgeInsets.zero,
                 expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
@@ -555,7 +604,13 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
                       onChanged: () => setState(() {}),
                     ),
                   ),
-                  _group(t('cf_price'), _input(_price, t('cf_price_hint'))),
+                  KeyedSubtree(
+                    key: _priceKey,
+                    child: _group(
+                      t('cf_price'),
+                      _input(_price, t('cf_price_hint')),
+                    ),
+                  ),
                   _group(t('cf_insta'), _input(_insta, t('cf_insta_hint'))),
                   _group(
                     t('f_reel_label'),
@@ -576,6 +631,7 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
               ),
             const SizedBox(height: 8),
             ElevatedButton(
+              key: _submitKey,
               onPressed: _saving ? null : _submit,
               child: _saving
                   ? const SizedBox(
