@@ -35,8 +35,8 @@ share|cap|club|마음에 든 팀도|그대로 공유|Share a club page too|마�
 share|cap|share|인스타 스토리·카톡|바로 공유|Share straight to Instagram or KakaoTalk
 share|outro||누룽지도|do.nulloongzi.com|Volleyball club map for Korea
 
-register|hook||주소 몰라도|팀 등록돼요|You do not need the address|주소 몰라도 팀 등록돼요
-register|cap|reg_form|우리 팀도 지도에|직접 올려요|Put your club on the map yourself
+register|hook||우리 팀은|아직 지도에 없네?|Your club is not on the map yet?|우리 팀은 아직 지도에 없네?
+register|cap|reg_form|직접 올릴 수 있어요|주소 몰라도|You can add it — no address needed
 register|cap|reg_name|이름과 대상만|고르면 절반 끝|Name and who it is for — half done
 register|cap|reg_addr_type|주소를 알면|그대로 입력|Know the address? Just type it
 register|cap|reg_addr_search|검색 한 번으로|위치 확정|One search pins the location
