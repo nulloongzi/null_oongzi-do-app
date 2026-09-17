@@ -67,4 +67,13 @@ class Sanitize {
     if (type == 'reels') type = 'reel';
     return 'https://www.instagram.com/$type/${m.group(2)}/';
   }
+
+  /// 릴스/게시물 URL → shortcode (insta_reel_covers 맵 키). 무효면 null.
+  /// 웹 insta-embed.js 의 reelCodeFromUrl · Cloud Function 과 같은 규칙.
+  static String? instaReelCode(String? v) {
+    final s = instaPostUrl(v);
+    if (s.isEmpty) return null;
+    final m = RegExp(r'/(?:p|reel|tv)/([A-Za-z0-9_-]+)/$').firstMatch(s);
+    return m?.group(1);
+  }
 }

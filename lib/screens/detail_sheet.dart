@@ -17,8 +17,9 @@ import '../services/schedule_parse.dart';
 import '../services/verification_service.dart';
 import '../theme.dart';
 import '../services/analytics.dart';
+import '../services/sanitize.dart';
 import '../widgets/bounce_tap.dart';
-import '../widgets/insta_embed.dart';
+import '../widgets/reel_card.dart';
 import '../widgets/schedule_timetable.dart';
 import '../widgets/share_menu.dart';
 import '../widgets/story_card.dart';
@@ -298,9 +299,19 @@ class _CuratedNote extends StatelessWidget {
 }
 
 // 릴스 섹션: 첫 릴스는 항상 표시(피로감↓), 2개 이상이면 '더 보기' 드롭다운으로 나머지.
+// 카드는 ReelCard(커버 → 탭하면 인스타). covers: insta_reel_covers(code→URL).
 class _ReelsSection extends StatefulWidget {
   final List<String> reels;
-  const _ReelsSection({required this.reels});
+  final Map<String, String> covers;
+  // reel_play 계측용: 어느 팀/스팟의 몇 번째 릴스를 열었는지.
+  final String source; // 'club' | 'pickup'
+  final String id;
+  const _ReelsSection({
+    required this.reels,
+    required this.covers,
+    required this.source,
+    required this.id,
+  });
 
   @override
   State<_ReelsSection> createState() => _ReelsSectionState();
@@ -317,7 +328,7 @@ class _ReelsSectionState extends State<_ReelsSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _LazyReel(url: reels.first), // 포스터 카드 → 탭하면 인라인 재생(스크롤 매끄럽게)
+        _card(reels.first, 0),
         if (more > 0)
           BounceTap(
             onTap: () => setState(() => _open = !_open),
@@ -352,99 +363,18 @@ class _ReelsSectionState extends State<_ReelsSection> {
             ),
           ),
         if (_open)
-          for (final u in reels.skip(1)) _LazyReel(url: u),
+          for (var i = 1; i < reels.length; i++) _card(reels[i], i),
       ],
     );
   }
-}
 
-// 릴스 지연 로딩: 기본은 가벼운 포스터 카드만 → 탭하면 그때 InstaEmbed(WebView) 인라인 생성.
-// 스크롤 경로에서 플랫폼뷰(WebView)를 걷어내 버벅임 제거(자동재생 대신 탭재생).
-class _LazyReel extends StatefulWidget {
-  final String url;
-  const _LazyReel({required this.url});
-
-  @override
-  State<_LazyReel> createState() => _LazyReelState();
-}
-
-class _LazyReelState extends State<_LazyReel> {
-  bool _play = false;
-
-  @override
-  Widget build(BuildContext context) {
-    if (_play) return InstaEmbed(url: widget.url); // 탭 후에만 실제 임베드
-    return Padding(
-      padding: const EdgeInsets.only(top: 14),
-      child: BounceTap(
-        onTap: () => setState(() => _play = true),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0x1A000000)),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(13),
-                  gradient: const LinearGradient(
-                    begin: Alignment.bottomLeft,
-                    end: Alignment.topRight,
-                    colors: [
-                      Color(0xFFFEDA75),
-                      Color(0xFFFA7E1E),
-                      Color(0xFFD62976),
-                      Color(0xFF962FBF),
-                      Color(0xFF4F5BD5),
-                    ],
-                  ),
-                ),
-                child: const Icon(
-                  Icons.play_arrow_rounded,
-                  color: Colors.white,
-                  size: 32,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      t('insta_reel_title'),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 14.5,
-                        color: NurungjiColors.dark,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      t('reel_tap_play'),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: NurungjiColors.brown,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(
-                Icons.play_circle_outline,
-                size: 20,
-                color: NurungjiColors.brown,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  Widget _card(String url, int index) => ReelCard(
+    url: url,
+    cover: widget.covers[Sanitize.instaReelCode(url) ?? ''],
+    source: widget.source,
+    id: widget.id,
+    index: index,
+  );
 }
 
 // 🍱 북마크 토글 (웹 #btnBookmark): 타이틀 우측. 담김=진하게/안 담김=흐리게, 탭=추가/해제.
@@ -1277,6 +1207,7 @@ List<Widget> _spotDetailChildren(
                   'id': s.id,
                   'type': 'directions',
                   'sport': s.sport,
+                  'has_reel': s.instaReels.isNotEmpty ? 1 : 0,
                 });
                 // NSM 전용 이벤트 — source로 동호회/픽업을 분리 집계한다
                 Track.event('get_directions', {'id': s.id, 'source': 'pickup'});
@@ -1297,6 +1228,7 @@ List<Widget> _spotDetailChildren(
           'id': s.id,
           'type': 'insta',
           'sport': s.sport,
+          'has_reel': s.instaReels.isNotEmpty ? 1 : 0,
         });
         // NSM 전용 이벤트 — 웹 pickup-detail.js와 동일 스키마
         Track.event('contact_click', {
@@ -1312,6 +1244,7 @@ List<Widget> _spotDetailChildren(
           'id': s.id,
           'type': 'link',
           'sport': s.sport,
+          'has_reel': s.instaReels.isNotEmpty ? 1 : 0,
         });
         // NSM 전용 이벤트 — 단톡 링크도 연락 전환이므로 channel:'link'로 집계
         Track.event('contact_click', {
@@ -1348,7 +1281,13 @@ List<Widget> _spotDetailChildren(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (s.instaReels.isNotEmpty) _ReelsSection(reels: s.instaReels),
+          if (s.instaReels.isNotEmpty)
+            _ReelsSection(
+              reels: s.instaReels,
+              covers: s.instaReelCovers,
+              source: 'pickup',
+              id: s.id,
+            ),
           if (canModify)
             _modifyRow(
               onEdit: () async {
@@ -1380,7 +1319,12 @@ void showClubDetail(
   bool isAdmin = false,
   Future<void> Function()? onChanged,
 }) {
-  Track.event('view_club', {'club_id': c.id, 'club_name': c.name});
+  // has_reel(1/0): 릴스 유무별 view→contact 전환 비교용(웹 club-detail.js와 동일 스키마).
+  Track.event('view_club', {
+    'club_id': c.id,
+    'club_name': c.name,
+    'has_reel': c.instaReels.isNotEmpty ? 1 : 0,
+  });
   final tags = (c.target ?? '')
       .split(RegExp(r'[,\s]+'))
       .where((e) => e.isNotEmpty)
@@ -1426,7 +1370,11 @@ void showClubDetail(
           Expanded(child: Text(c.name, style: _titleStyle)),
           if (c.insta != null && c.insta!.isNotEmpty)
             _instaIcon(() {
-              Track.event('club_contact', {'type': 'insta', 'club_id': c.id});
+              Track.event('club_contact', {
+                'type': 'insta',
+                'club_id': c.id,
+                'has_reel': c.instaReels.isNotEmpty ? 1 : 0,
+              });
               // NSM 전용 이벤트 — 웹 club-detail.js와 동일 스키마로 병행 발화
               Track.event('contact_click', {
                 'channel': 'instagram',
@@ -1437,7 +1385,11 @@ void showClubDetail(
             }),
           if (c.link != null && c.link!.isNotEmpty)
             _homeIcon(() {
-              Track.event('club_contact', {'type': 'link', 'club_id': c.id});
+              Track.event('club_contact', {
+                'type': 'link',
+                'club_id': c.id,
+                'has_reel': c.instaReels.isNotEmpty ? 1 : 0,
+              });
               // NSM 전용 이벤트 — 홈페이지 링크도 연락 전환으로 집계
               Track.event('contact_click', {
                 'channel': 'link',
@@ -1529,6 +1481,7 @@ void showClubDetail(
                   Track.event('club_contact', {
                     'type': 'directions',
                     'club_id': c.id,
+                    'has_reel': c.instaReels.isNotEmpty ? 1 : 0,
                   });
                   // NSM(주당 길찾기 클릭) 전용 이벤트 — 웹과 동일 스키마
                   Track.event('get_directions', {
@@ -1566,7 +1519,13 @@ void showClubDetail(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (c.instaReels.isNotEmpty) _ReelsSection(reels: c.instaReels),
+            if (c.instaReels.isNotEmpty)
+              _ReelsSection(
+                reels: c.instaReels,
+                covers: c.instaReelCovers,
+                source: 'club',
+                id: c.id,
+              ),
             if (canModify && !c.isVerified) _VerificationSection(club: c),
             // 관리자 영역은 로그인한 사람 모두에게 보인다 — 관리자면 '빠지기',
             // 아니면 '신청'. 인증 안 된 팀은 인증 신청이 곧 관리자 신청이라
