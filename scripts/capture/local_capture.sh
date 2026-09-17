@@ -101,7 +101,23 @@ if [ -z "${SKIP_BUILD:-}" ]; then
 fi
 [ -f "$APK_OUT" ] || die "APK 가 없습니다: $APK_OUT (SKIP_BUILD 를 빼고 다시 실행)"
 say "설치…"
-adb install -r -g "$APK_OUT" >/dev/null 2>&1 || adb install -r "$APK_OUT" >/dev/null
+# 설치 실패를 삼키지 않는다. 특히 서명 불일치는 원인·해결이 명확한데 예전엔
+# 메시지 없이 죽어서 왜 멈췄는지 알 수 없었다.
+INSTALL_LOG="$(adb install -r -g "$APK_OUT" 2>&1)" || INSTALL_LOG="$(adb install -r "$APK_OUT" 2>&1)" || true
+if ! echo "$INSTALL_LOG" | grep -q "Success"; then
+  echo "$INSTALL_LOG" >&2
+  if echo "$INSTALL_LOG" | grep -q "INSTALL_FAILED_UPDATE_INCOMPATIBLE\|signatures do not match"; then
+    printf '\033[1;31m✗ 서명이 달라 덮어쓸 수 없습니다.\033[0m\n' >&2
+    echo "  폰에 플레이스토어 버전(릴리스 서명)이 깔려 있고, 이 APK 는 디버그 서명입니다." >&2
+    echo "  기존 앱을 지우고 다시 하세요 — **앱 데이터가 함께 지워집니다**:" >&2
+    echo "" >&2
+    echo "    adb uninstall $(grep -o 'com\.[a-z.]*' <<<"${APP_ID:-com.nulloongzi.nulloongzido}" | head -1)" >&2
+    echo "" >&2
+    echo "  지운 뒤 이 스크립트를 다시 실행하고, **폰에서 앱에 로그인한 다음**" >&2
+    echo "  캡처를 돌리세요(등록 흐름은 로그인이 필요합니다)." >&2
+  fi
+  die "APK 설치 실패"
+fi
 
 # ── 캡처 ─────────────────────────────────────────────────────
 # 기본은 깨끗한 산출물(부분 실패가 이전 런 결과와 섞이지 않게).
