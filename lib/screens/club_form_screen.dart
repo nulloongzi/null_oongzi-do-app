@@ -97,7 +97,6 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
   bool _demoOptionalOpen = false;
   final GlobalKey _optionalKey = GlobalKey();
   final GlobalKey _schedKey = GlobalKey();
-  final GlobalKey _priceKey = GlobalKey();
   final GlobalKey _submitKey = GlobalKey();
 
   bool get _isEdit => widget.editing != null;
@@ -280,12 +279,18 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
           await Future<void>.delayed(const Duration(milliseconds: 420));
         }
       case 'price':
-        await _demoScrollTo(_priceKey, 0.45);
+        // 스크롤하지 않는다. schedule 단계가 잡아 놓은 위치에서 회비 칸이
+        // 이미 화면 안이고, 여기서 더 내리면 방금 켠 요일 칩이 자막 띠 뒤로
+        // 도로 숨는다(실측: '체크 두 번' 자막의 마지막 1.7초).
         await _demoType(_price, '월 3만원 / 게스트 1만원');
       case 'submit':
         // 선택 정보를 펼친 뒤엔 등록 버튼이 화면 밖이다. 스크롤해 놓지 않으면
         // 영상에서 '누른 적 없는데 폼이 닫히는' 장면이 된다(탭 표시도 헛돈다).
         await _demoScrollTo(_submitKey, 1);
+        // 탭 표시를 앞 비트에서 역산하면 스크롤에 걸린 시간만큼 어긋난다
+        // (실측: 물결이 아직 화면 밖인 버튼 자리에 떴다). 누르는 순간을
+        // 앱이 직접 찍어서 탭 표시가 그 비트에 그대로 붙게 한다.
+        if (kCaptureMode) debugPrint('CAPTURE_BEAT reg_tap_submit');
         await Future<void>.delayed(const Duration(milliseconds: 150));
         if (!mounted) return;
         await _submit();
@@ -611,13 +616,7 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
                       ),
                     ),
                   ),
-                  KeyedSubtree(
-                    key: _priceKey,
-                    child: _group(
-                      t('cf_price'),
-                      _input(_price, t('cf_price_hint')),
-                    ),
-                  ),
+                  _group(t('cf_price'), _input(_price, t('cf_price_hint'))),
                   _group(t('cf_insta'), _input(_insta, t('cf_insta_hint'))),
                   _group(
                     t('f_reel_label'),
