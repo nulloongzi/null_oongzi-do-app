@@ -463,8 +463,17 @@ if [ "$INCLUDE_REELS" = "true" ] && want flows; then
     log "  비트 $(wc -l < "$2" 2>/dev/null || echo 0)개: $(tr '\n' ' ' < "$2" 2>/dev/null)"
   }
 
+  # 한 흐름만 다시 찍기: ONLY_FLOWS="register" 처럼 공백으로 나열한다.
+  # 흐름마다 지도 콜드 안착 24초가 붙어서, 등록만 손볼 때 넷 다 찍으면
+  # 매번 4분쯤을 그냥 버린다.
   flow() { # flow <name> <capture_cmd> <secs>
     local name="$1" cmd="$2" secs="$3"
+    if [ -n "${ONLY_FLOWS:-}" ]; then
+      case " $ONLY_FLOWS " in
+        *" $name "*) ;;
+        *) return 0 ;;
+      esac
+    fi
     local dev="/sdcard/flow_${name}.mp4"
     local rawout="$RAW/flow_${name}_${CAP_LANG}.mp4"
     local out="$FLOWS_DIR/${name}_${CAP_LANG}.mp4" d t0

@@ -14,6 +14,8 @@
 #   MODE=video  scripts/capture/local_capture.sh    # 흐름 영상만
 #   MODE=all    scripts/capture/local_capture.sh    # + 스토어 스샷 9장(약 5분 추가)
 #   SKIP_BUILD=1 scripts/capture/local_capture.sh   # APK 재빌드 없이 기존 것 사용
+#   MODE=video ONLY_FLOWS=register KEEP_OUT=1 scripts/capture/local_capture.sh
+#                                                   # 한 흐름만 다시 찍기(나머지는 그대로)
 #   KEEP_OUT=1   scripts/capture/local_capture.sh   # 기존 산출물 유지(중단 후 이어서)
 #
 # 필요한 것: adb(Android SDK) · flutter · ffmpeg · imagemagick
