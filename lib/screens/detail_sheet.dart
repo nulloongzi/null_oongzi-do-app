@@ -958,6 +958,9 @@ class _VerificationSection extends StatefulWidget {
 
 class _VerificationSectionState extends State<_VerificationSection> {
   ({String status, String? reason})? _req;
+  // 사진 업로드 중. 누르고 나서 응답이 올 때까지 버튼이 그대로라 눌린 건지
+  // 알 수 없었다(실측: 캡처 영상에서 신청 후 4초간 화면이 정지).
+  bool _busy = false;
 
   @override
   void initState() {
@@ -979,11 +982,15 @@ class _VerificationSectionState extends State<_VerificationSection> {
   }
 
   Future<void> _apply() async {
+    if (_busy) return;
+    setState(() => _busy = true);
     final err = await VerificationService().submit(
       clubId: widget.club.id,
       clubName: widget.club.name,
     );
-    if (err == 'cancelled' || !mounted) return;
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (err == 'cancelled') return;
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(err ?? t('verify_done'))));
@@ -993,9 +1000,15 @@ class _VerificationSectionState extends State<_VerificationSection> {
   Widget _applyBtn(String label) => SizedBox(
     width: double.infinity,
     child: OutlinedButton.icon(
-      onPressed: _apply,
-      icon: const Icon(Icons.verified_outlined, size: 18),
-      label: Text(label),
+      onPressed: _busy ? null : _apply,
+      icon: _busy
+          ? const SizedBox(
+              height: 18,
+              width: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.verified_outlined, size: 18),
+      label: Text(_busy ? t('vf_submitting') : label),
     ),
   );
 

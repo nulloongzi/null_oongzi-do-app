@@ -1110,7 +1110,10 @@ class _MapScreenState extends State<MapScreen> {
     detailPanelDemoExpand.value++;
     if (!await _hold(2.5, 'reg_verify')) return;
     verifyDemoApply.value++;
-    await _hold(3.5, 'reg_verified');
+    // 사진 업로드 + 요청 문서 생성이 끝나야 '심사 중' 안내로 바뀐다. 3.5초로는
+    // 모자라서 지난 캡처에선 신청 버튼 그대로인 화면 위에 '인증 배지가 붙어요'
+    // 자막만 4초 흘렀다 — 영상에서 인증 단계가 통째로 죽어 있던 셈이다.
+    await _hold(6, 'reg_verified');
     await _backToMap();
   }
 

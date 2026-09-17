@@ -523,8 +523,10 @@ if [ "$INCLUDE_REELS" = "true" ] && want flows; then
   flow save     flow_save     20   # 상세 → 도시락 찜 → 반찬칸 → 식단표
   flow share    flow_share    22   # 밥이름 → 네임카드 → 공유
   # 등록은 단계가 많다(이름·대상·주소 2가지·제출·인증). 길이는 첫 캡처 뒤 실측으로 줄인다.
-  flow register flow_register 62   # 등록 폼 → 주소 3가지 → 일정·회비 → 제출 → 인증 신청
-                                   # 지오코딩·저장 응답을 실제로 기다리므로 길이가 변한다
+  flow register flow_register 70   # 등록 폼 → 주소 3가지 → 일정·회비 → 제출 → 인증 신청
+                                   # 지오코딩·저장 응답을 실제로 기다리므로 길이가 변한다.
+                                   # 넉넉히 잡고, 남는 꼬리는 edit_reels 가 마지막
+                                   # 비트 기준으로 잘라낸다.
 
   # 풀 투어: 3편 이어붙이기(편집 없이 바로 쓰는 앱 소개용).
   TOUR_LIST="$FLOWS_DIR/.tour.txt"; : > "$TOUR_LIST"

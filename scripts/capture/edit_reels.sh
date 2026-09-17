@@ -277,11 +277,26 @@ for flow in $FLOWS; do
       done
     fi
   fi
+  # ── 꼬리 잘라내기 ──────────────────────────────────────────
+  # 녹화 길이는 네트워크 대기(지오코딩·업로드) 때문에 넉넉히 잡을 수밖에 없다.
+  # 남는 만큼은 정지된 지도가 이어지는 죽은 화면이라, 마지막 비트 + 여유만 남긴다.
+  # 여유는 마지막 _hold() 보다 길게 잡아야 끝을 자르지 않는다(현재 최대 6s:
+  # register 의 reg_verified — 업로드 응답을 기다린다).
+  if [ -s "$BEATS" ] && [ "$SRC_OF_TIMING" = "비트" ]; then
+    LAST="$(awk '{ if ($2+0 > m) m = $2+0 } END { printf "%.2f", m }' "$BEATS")"
+    CAPPED="$(awk -v l="$LAST" -v p="${TAIL_PAD:-7.0}" -v d="$DUR" \
+      'BEGIN { if (l <= 0) exit; c = int(l + p + 0.999); print (c < d ? c : d) }')"
+    if [ -n "$CAPPED" ] && [ "$CAPPED" -gt 0 ] && [ "$CAPPED" -lt "$DUR" ]; then
+      log "  꼬리 ${DUR}s → ${CAPPED}s (마지막 비트 ${LAST}s)"
+      DUR="$CAPPED"
+    fi
+  fi
+
   BOUNDS+=("$DUR")
   log "  자막 타이밍($SRC_OF_TIMING): ${BOUNDS[*]}"
 
   # ── 오버레이 입력 굽기 ─────────────────────────────────────
-  INPUTS=(-i "$SRC")
+  INPUTS=(-t "$DUR" -i "$SRC")
   FC=""; CUR="[0:v]"
   idx=1
   NAR_T=(); NAR_F=(); NAR_CUR=0   # 나레이션 (시작초, 파일) + 다음 시작 가능 시각

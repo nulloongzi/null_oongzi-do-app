@@ -133,6 +133,7 @@ const Map<String, Map<String, String>> kStrings = {
     'ko': '인증 신청 완료! 검토 후 반영돼요',
     'en': 'Verification requested! Pending review',
   },
+  'vf_submitting': {'ko': '사진 올리는 중…', 'en': 'Uploading photo…'},
   'vf_pending': {
     'ko': '⏳ 인증 심사 중입니다. 관리자 확인 후 인증 배지가 부여됩니다.',
     'en': '⏳ Verification under review. A badge is granted after admin review.',
