@@ -1060,24 +1060,27 @@ class _MapScreenState extends State<MapScreen> {
     final saved = showClubFormSheet(context, initialCenter: center);
     if (!await _hold(2, 'reg_form')) return;
 
-    _formStep('name');
+    await _formStepDone('name');
     if (!await _hold(2.5, 'reg_name')) return;
-    _formStep('target');
+    await _formStepDone('target');
     if (!await _hold(1.5, 'reg_target')) return;
 
-    _formStep('addr_type'); // ① 주소 직접 입력
-    if (!await _hold(3, 'reg_addr_type')) return;
-    _formStep('addr_search');
-    if (!await _hold(2.5, 'reg_addr_search')) return;
+    await _formStepDone('addr_type'); // ① 주소 직접 입력
+    if (!await _hold(2.5, 'reg_addr_type')) return;
+    await _formStepDone('addr_search'); // 응답이 올 때까지 기다린다
+    if (!await _hold(2, 'reg_addr_search')) return;
 
-    _formStep('addr_place'); // ② 시설 이름 — 같은 검색 버튼이 장소 검색으로 넘어간다
-    if (!await _hold(3, 'reg_addr_place')) return;
-    _formStep('addr_search');
-    if (!await _hold(2.5, 'reg_addr_place_hit')) return;
+    // ② 시설 이름 — 같은 검색 버튼이 서버에서 장소 검색으로 넘어간다.
+    await _formStepDone('addr_place');
+    if (!await _hold(2.5, 'reg_addr_place')) return;
+    await _formStepDone('addr_search');
+    if (!await _hold(2, 'reg_addr_place_hit')) return;
 
-    _formStep('addr_map'); // ③ 지도에서
+    // ③ 지도에서 — 피커는 확정 전까지 끝나지 않으므로 여기선 기다리지 않는다.
+    _formStep('addr_map');
     if (!await _hold(2.5, 'reg_addr_map')) return;
     mapPickerDemoConfirm.value++; // '이 위치로'
+    await _awaitStep('addr_map'); // 피커가 닫히고 주소가 채워질 때까지
     if (!await _hold(2.5, 'reg_addr_picked')) return;
 
     _formStep('submit');
@@ -1100,6 +1103,37 @@ class _MapScreenState extends State<MapScreen> {
   /// 등록 폼 시연이 만드는 팀 이름 — 인증 단계에서 다시 찾을 때 쓴다.
   /// club_form_screen 의 _demoStep('name') 과 같아야 한다.
   static const _demoClubName = '누룽지 배구클럽';
+
+  /// 단계가 끝날 때까지 기다린다. 지오코딩·저장은 네트워크라 몇 초가 걸릴지
+  /// 알 수 없고, 고정 대기로 넘어가면 늦게 도착한 결과가 다음 단계의 입력을
+  /// 덮어쓴다(실측: 지오코딩 5초 vs 대기 2.5초 → 시설 이름이 지워졌다).
+  /// 응답이 끝내 안 오면 timeout 후 진행한다 — 시연이 멈추는 것보단 낫다.
+  Future<void> _awaitStep(String step, {double timeout = 15}) async {
+    final done = Completer<void>();
+    void listener() {
+      if (clubFormDemoDone.value.split(':').first == step &&
+          !done.isCompleted) {
+        done.complete();
+      }
+    }
+
+    clubFormDemoDone.addListener(listener);
+    try {
+      await done.future.timeout(
+        Duration(milliseconds: (timeout * 1000).round()),
+        onTimeout: () {},
+      );
+    } finally {
+      clubFormDemoDone.removeListener(listener);
+    }
+  }
+
+  /// 단계를 시작하고 끝날 때까지 기다린다.
+  Future<void> _formStepDone(String s) async {
+    final wait = _awaitStep(s);
+    _formStep(s);
+    await wait;
+  }
 
   int _demoSeq = 0;
   // 같은 단계를 연달아 부를 수 있어야 해서 일련번호를 붙인다(ValueNotifier 는

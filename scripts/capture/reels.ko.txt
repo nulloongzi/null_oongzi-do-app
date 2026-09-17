@@ -46,4 +46,5 @@ register|cap|reg_addr_map|그것도 애매하면|지도에서 찍기|Still unsur
 register|cap|reg_addr_picked|핀 하나면 끝||One pin and you are done
 register|cap|reg_done|등록 완료||Registered
 register|cap|reg_verify|인증까지|한 번에|Verification in one tap
+register|cap|reg_verified|심사 후|인증 배지가 붙어요|A verified badge after review
 register|outro||누룽지도|우리 팀 등록하기|Add your club today

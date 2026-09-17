@@ -31,6 +31,13 @@ import '../widgets/schedule_editor.dart';
 /// 값은 "<단계>:<일련번호>" 로 준다. 같은 단계를 연달아 부를 수 있어야 해서다.
 final ValueNotifier<String> clubFormDemo = ValueNotifier<String>('');
 
+/// 방금 끝난 단계를 시연 쪽에 알린다("<단계>:<일련번호>").
+///
+/// 지오코딩·저장은 네트워크라 고정 대기로는 못 맞춘다. 실측에서 첫 지오코딩이
+/// 5초 걸렸는데 3초만 기다렸더니, 늦게 도착한 결과가 그 사이에 입력한 시설
+/// 이름을 덮어써서 ② 단계가 통째로 사라졌다. 기다릴 것은 시간이 아니라 완료다.
+final ValueNotifier<String> clubFormDemoDone = ValueNotifier<String>('');
+
 /// 동호회 등록/수정 폼: 풀스크린 라우트 대신 지도 위 모달 바텀시트(웹 등록 팝업 대응).
 /// 등록·수정 성공 시 true 반환.
 Future<bool?> showClubFormSheet(
@@ -219,7 +226,11 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
       case 'target':
         if (mounted) setState(() => _targets.add('성인'));
       case 'addr_type': // ① 직접 입력
-        await _demoType(_address, '서울 성북구 화랑로13길 144');
+        // 폼 힌트에 적힌 예시 주소 — 지오코딩이 확실히 잡는다. 앞서 쓰던
+        // '서울 성북구 화랑로13길 144' 는 네이버가 0건을 돌려줘 장소 검색으로
+        // 넘어갔고, 스낵바에 체육관 이름이 떠서 '주소를 그대로 입력' 자막과
+        // 어긋났다(①과 ②의 구분이 무너진다).
+        await _demoType(_address, '서울 송파구 올림픽로 424');
       case 'addr_place': // ② 시설 이름으로
         await _demoType(_address, '잠실학생체육관');
       case 'addr_search': // ①② 같은 버튼 — 서버가 주소 실패 시 장소 검색으로 넘어간다
@@ -229,6 +240,7 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
       case 'submit':
         await _submit();
     }
+    clubFormDemoDone.value = '$step:${DateTime.now().microsecondsSinceEpoch}';
   }
 
   @override
