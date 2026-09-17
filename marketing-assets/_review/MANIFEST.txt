@@ -1,11 +1,11 @@
-# 캡처 원본 목록 (2026-09-17 16:36)
+# 캡처 원본 목록 (2026-09-17 16:56)
 기기: SM-F741N / Physical size: 1080x2640
 
 2400742	/c/Users/user/null_oongzi-do-app/marketing-assets/motion/discover_ko.mp4
 4407411	/c/Users/user/null_oongzi-do-app/marketing-assets/motion/full_tour_ko.mp4
 944015	/c/Users/user/null_oongzi-do-app/marketing-assets/motion/save_ko.mp4
 1064388	/c/Users/user/null_oongzi-do-app/marketing-assets/motion/share_ko.mp4
-4810821	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/register_body.mp4
+4977597	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/register_body.mp4
 22144	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/register_c0.png
 17614	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/register_c1.png
 9457	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/register_c10.png
@@ -40,19 +40,19 @@
 13893	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/ripple/r_15.png
 6155	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/ripple/r_16.png
 3754558	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/final/discover_ko.mp4
-4799252	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/final/register_ko.mp4
+5017658	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/final/register_ko.mp4
 2826033	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/final/save_ko.mp4
 3752462	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/final/share_ko.mp4
 2453373	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/flows/discover_ko.mp4
-10027193	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/flows/full_tour_ko.mp4
-3121126	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/flows/register_ko.mp4
+10076077	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/flows/full_tour_ko.mp4
+3169928	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/flows/register_ko.mp4
 1778615	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/flows/save_ko.mp4
 2675709	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/flows/share_ko.mp4
 14509371	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/raw/flow_discover_ko.mp4
-44820626	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/raw/flow_register_ko.mp4
+51598334	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/raw/flow_register_ko.mp4
 14019499	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/raw/flow_save_ko.mp4
 16903972	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/raw/flow_share_ko.mp4
-1819520	/c/Users/user/null_oongzi-do-app/marketing-assets/screens/play_01_map_ko.png
+1819116	/c/Users/user/null_oongzi-do-app/marketing-assets/screens/play_01_map_ko.png
 1818806	/c/Users/user/null_oongzi-do-app/marketing-assets/stills/01_map.png
 356499	/c/Users/user/null_oongzi-do-app/marketing-assets/stills/02_filter_open.png
 356963	/c/Users/user/null_oongzi-do-app/marketing-assets/stills/03_filter_set.png
