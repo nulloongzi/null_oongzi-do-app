@@ -12,6 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/club.dart';
 import '../models/pickup_spot.dart';
 import '../services/analytics.dart';
+import '../services/sanitize.dart';
 import '../services/data_repository.dart';
 import '../services/club_admin.dart';
 import '../services/club_filter.dart';
@@ -35,7 +36,7 @@ import 'share_image_screen.dart';
 import '../widgets/bounce_tap.dart';
 import '../widgets/filter_sheet.dart';
 import '../widgets/glass_surface.dart';
-import '../widgets/insta_embed.dart';
+import '../widgets/reel_card.dart';
 import '../widgets/map_detail_panel.dart';
 import '../widgets/map_picker.dart' show mapPickerDemoConfirm;
 import '../widgets/pickup_list_sheet.dart';
@@ -1113,7 +1114,11 @@ class _MapScreenState extends State<MapScreen> {
 
   // 목록 시트를 상세 모드로. view_pickup은 여기서 한 번만(본문 빌더는 리빌드마다 불림).
   void _selectSpot(PickupSpot spot) {
-    Track.event('view_pickup', {'id': spot.id});
+    // has_reel(1/0): 릴스 유무별 전환 비교용(웹 pickup-detail.js와 동일 스키마).
+    Track.event('view_pickup', {
+      'id': spot.id,
+      'has_reel': spot.instaReels.isNotEmpty ? 1 : 0,
+    });
     setState(() => _selectedSpot = spot);
   }
 
@@ -1172,6 +1177,8 @@ class _MapScreenState extends State<MapScreen> {
 
     String? title;
     String? reel;
+    String? cover;
+    String? peekId;
     bool urgent = false;
     double best = double.infinity;
     if (_tab == 'clubs') {
@@ -1182,6 +1189,8 @@ class _MapScreenState extends State<MapScreen> {
           best = d;
           title = club.name;
           reel = club.instaReels.isNotEmpty ? club.instaReels.first : null;
+          cover = club.instaReelCovers[Sanitize.instaReelCode(reel) ?? ''];
+          peekId = club.id;
           urgent = club.isUrgent && (club.urgentMsg?.isNotEmpty ?? false);
         }
       }
@@ -1193,6 +1202,8 @@ class _MapScreenState extends State<MapScreen> {
           best = d;
           title = spot.title;
           reel = spot.instaReels.isNotEmpty ? spot.instaReels.first : null;
+          cover = spot.instaReelCovers[Sanitize.instaReelCode(reel) ?? ''];
+          peekId = spot.id;
           urgent = false;
         }
       }
@@ -1204,7 +1215,13 @@ class _MapScreenState extends State<MapScreen> {
     }
     Track.event('reel_peek', {'tab': _tab});
     setState(
-      () => _reelPeek = _ReelPeek(title: title!, reel: reel!, urgent: urgent),
+      () => _reelPeek = _ReelPeek(
+        title: title!,
+        reel: reel!,
+        cover: cover,
+        id: peekId ?? '',
+        urgent: urgent,
+      ),
     );
   }
 
@@ -1926,6 +1943,7 @@ class _MapScreenState extends State<MapScreen> {
       'id': s.id,
       'type': 'insta',
       'sport': s.sport,
+      'has_reel': s.instaReels.isNotEmpty ? 1 : 0,
     });
     // NSM 전용 이벤트 — 웹 pickup-ui.js와 동일 스키마
     Track.event('contact_click', {
@@ -2128,16 +2146,20 @@ class _UrgentTickerState extends State<_UrgentTicker> {
 class _ReelPeek {
   final String title;
   final String reel;
+  final String? cover; // 정지 커버(없으면 제네릭 카드)
+  final String id; // reel_play 계측용
   final bool urgent;
   const _ReelPeek({
     required this.title,
     required this.reel,
+    required this.cover,
+    required this.id,
     required this.urgent,
   });
 }
 
-// 배경 블러 + 릴스 크게 — 인스타 피드 '꾹 누르면 릴스' 느낌. 바깥 탭/✕ → 닫힘.
-// 진입 시 스크림(블러+딤)만 애니메이션(웹뷰는 플랫폼뷰라 Transform/Opacity 미적용).
+// 배경 블러 + 릴스 커버 크게 — 인스타 피드 '꾹 누르면 릴스' 느낌. 바깥 탭/✕ → 닫힘.
+// 진입 시 스크림(블러+딤)만 애니메이션.
 class _ReelPeekOverlay extends StatefulWidget {
   final _ReelPeek data;
   final VoidCallback onClose;
@@ -2242,11 +2264,16 @@ class _ReelPeekOverlayState extends State<_ReelPeekOverlay>
                 ],
               ),
             ),
-            // 릴스 임베드(탭하면 인라인/인스타 재생)
+            // 릴스 커버 카드(탭하면 인스타)
             Flexible(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(12, 0, 12, 2),
-                child: InstaEmbed(url: d.reel),
+                child: ReelCard(
+                  url: d.reel,
+                  cover: d.cover,
+                  source: 'peek',
+                  id: d.id,
+                ),
               ),
             ),
             // 닫기/재생 힌트

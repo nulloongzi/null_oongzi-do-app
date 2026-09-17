@@ -221,12 +221,12 @@ const Map<String, Map<String, String>> kStrings = {
     'en': '📷 Instagram reel · post',
   },
   'insta_reel_open': {'ko': '탭하면 인스타그램에서 봐요', 'en': 'Tap to view on Instagram'},
-  'reel_tap_play': {'ko': '탭하면 여기서 재생', 'en': 'Tap to play here'},
+  'insta_view': {'ko': 'Instagram에서 보기', 'en': 'View on Instagram'},
   'reels_more_label': {'ko': '릴스 더 보기', 'en': 'More reels'},
   'reels_hide': {'ko': '릴스 접기', 'en': 'Hide reels'},
   'reel_peek_hint': {
-    'ko': '탭하면 재생 · 바깥을 누르면 닫기',
-    'en': 'Tap to play · tap outside to close',
+    'ko': '탭하면 인스타에서 보기 · 바깥을 누르면 닫기',
+    'en': 'Tap to view on Instagram · tap outside to close',
   },
   'reel_peek_none': {
     'ko': '이 팀은 아직 릴스가 없어요',

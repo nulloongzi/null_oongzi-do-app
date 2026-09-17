@@ -93,4 +93,28 @@ void main() {
       expect(Sanitize.instaPostUrl(null), '');
     });
   });
+
+  group('Sanitize.instaReelCode', () {
+    test('reel/reels/p/tv → shortcode (커버 맵 키), 쿼리·유저네임 무시', () {
+      expect(
+        Sanitize.instaReelCode(
+          'https://www.instagram.com/reel/ABC-1_x/?igsh=1',
+        ),
+        'ABC-1_x',
+      );
+      expect(Sanitize.instaReelCode('https://instagram.com/reels/XYZ/'), 'XYZ');
+      expect(
+        Sanitize.instaReelCode('https://www.instagram.com/null_oongzi/p/P0/'),
+        'P0',
+      );
+    });
+    test('무효/프로필/null → null', () {
+      expect(
+        Sanitize.instaReelCode('https://www.instagram.com/null_oongzi/'),
+        null,
+      );
+      expect(Sanitize.instaReelCode('https://evil.com/reel/ABC/'), null);
+      expect(Sanitize.instaReelCode(null), null);
+    });
+  });
 }

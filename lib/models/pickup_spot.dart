@@ -21,6 +21,17 @@ List<String> _reels(Map d) {
   return const [];
 }
 
+// insta_reel_covers(맵) → code→URL. 문자열 값만 받는다(스키마 변형 방어).
+Map<String, String> _reelCovers(Map d) {
+  final raw = d['insta_reel_covers'];
+  if (raw is! Map) return const {};
+  final out = <String, String>{};
+  raw.forEach((k, v) {
+    if (k is String && v is String && v.trim().isNotEmpty) out[k] = v;
+  });
+  return out;
+}
+
 class PickupSpot {
   final String id;
   final String? ownerUid; // 소유자(수정/삭제 권한)
@@ -48,6 +59,8 @@ class PickupSpot {
   final String? notes;
   final String? instaReel;
   final List<String> instaReels; // 멀티 릴스(없으면 [instaReel])
+  // 릴스 shortcode → 우리 Storage 의 정지 커버 URL(Cloud Function insta-cover.js 가 채움)
+  final Map<String, String> instaReelCovers;
   final DateTime? expireAt; // 유효기간(B): 지나면 자동 숨김 + Firestore TTL. null=상시
   // 최종 확인일 — 픽업은 타임스탬프가 문서 최상위에 있다(clubs 는 metadata 안).
   final DateTime? lastVerifiedAt;
@@ -76,6 +89,7 @@ class PickupSpot {
     this.notes,
     this.instaReel,
     this.instaReels = const [],
+    this.instaReelCovers = const {},
     this.expireAt,
     this.lastVerifiedAt,
   });
@@ -107,6 +121,7 @@ class PickupSpot {
       notes: d['notes'] as String?,
       instaReel: d['insta_reel'] as String?,
       instaReels: _reels(d),
+      instaReelCovers: _reelCovers(d),
       expireAt: (d['expire_at'] as Timestamp?)?.toDate(),
       lastVerifiedAt: _ts(d['updated_at']) ?? _ts(d['created_at']),
     );
