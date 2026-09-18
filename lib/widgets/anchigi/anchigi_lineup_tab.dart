@@ -32,6 +32,9 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
   /// 뽑은 뒤 뽑기 버튼 위치로 돌아오기 위한 앵커(맨 위로 튀지 않게).
   final _drawKey = GlobalKey();
 
+  /// 코트 보기에서 지금 보고 있는 경기 번호.
+  int _gameTab = 0;
+
   AnchigiStore get s => widget.store;
 
   /// 진단 사유를 사람이 읽는 문장으로.
@@ -66,9 +69,28 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
     };
   }
 
+  /// 지금 시각이 어느 경기에 해당하는지. 없으면 -1.
+  int _currentGameIndex(int rnd, int n) {
+    final now = DateTime.now();
+    final mins = now.hour * 60 + now.minute;
+    for (var i = 0; i < n; i++) {
+      if (mins >= s.schedule.gameStartMin(rnd, i, s.nGames) &&
+          mins < s.schedule.gameEndMin(rnd, i, s.nGames)) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
   Future<void> _draw() async {
     await s.draw();
     if (!mounted) return;
+    final cur = s.current;
+    if (cur != null) {
+      // 뽑으면 지금 시각의 경기로 맞춘다.
+      final now = _currentGameIndex(cur.round, cur.games.length);
+      setState(() => _gameTab = now >= 0 ? now : 0);
+    }
     // 결과가 길어도 뽑기 버튼이 보이는 자리로 되돌린다.
     final ctx = _drawKey.currentContext;
     if (ctx != null && ctx.mounted) {
@@ -104,8 +126,22 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
     final failed = s.failure.isNotEmpty;
     final diag = failed ? s.failure : s.diagnosis;
 
+    return Column(
+      children: [
+        Expanded(child: _scroll(cur, failed, diag)),
+        // 다시 뽑기 · 확정은 화면 아래 고정 — 코트를 끝까지 내리지 않아도 누를 수 있게.
+        if (cur != null) _actionBar(),
+      ],
+    );
+  }
+
+  Widget _scroll(
+    RoundResult? cur,
+    bool failed,
+    List<InfeasibleReason> diag,
+  ) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 40),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
       children: [
         // 결과가 있으면 설정을 접어 결과를 위로 올린다.
         _scheduleCard(open: cur == null),
@@ -770,62 +806,114 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
       if (noC) AgMessage(t('ag_no_c_core')),
       _timeline(cur.round, cur.games),
       _viewToggle(),
-      for (var gi = 0; gi < cur.games.length; gi++)
-        _gameCard(cur.round, gi, cur.games[gi], cur.sport),
-      AgCard(
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: s.drawing ? null : _draw,
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                    ),
-                    child: Text(
-                      '🎲 ${t('ag_again')}',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: s.commit,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                    ),
-                    child: Text(
-                      t('ag_confirm_next'),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              t('ag_confirm_hint'),
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 11,
-                height: 1.5,
-                fontWeight: FontWeight.w600,
-                color: NurungjiColors.brown,
-              ),
-            ),
-          ],
+      // 간단히 보기는 한 경기가 두어 줄이라 세 경기를 한눈에 둔다.
+      if (s.compact)
+        for (var gi = 0; gi < cur.games.length; gi++)
+          _gameCard(cur.round, gi, cur.games[gi], cur.sport)
+      // 코트는 한 장이 길어서 한 경기씩 본다 — 현장에서 필요한 건 지금 뛰는 경기다.
+      else ...[
+        _gameSelector(cur),
+        _gameCard(
+          cur.round,
+          _gameTab.clamp(0, cur.games.length - 1),
+          cur.games[_gameTab.clamp(0, cur.games.length - 1)],
+          cur.sport,
+        ),
+      ],
+      Padding(
+        padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
+        child: Text(
+          t('ag_confirm_hint'),
+          style: const TextStyle(
+            fontSize: 11,
+            height: 1.5,
+            fontWeight: FontWeight.w600,
+            color: NurungjiColors.brown,
+          ),
         ),
       ),
     ];
+  }
+
+  /// 경기 선택 — 지금 뛰는 경기에 표시를 붙인다.
+  Widget _gameSelector(RoundResult cur) {
+    final nowIdx = _currentGameIndex(cur.round, cur.games.length);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 11),
+      child: Row(
+        children: [
+          for (var gi = 0; gi < cur.games.length; gi++) ...[
+            Expanded(
+              child: GestureDetector(
+                onTap: () => setState(() => _gameTab = gi),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: _gameTab == gi
+                        ? NurungjiColors.dark
+                        : NurungjiColors.chipBg,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            '${gi + 1}${t('ag_game_word')}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: _gameTab == gi
+                                  ? Colors.white
+                                  : NurungjiColors.chipFg,
+                            ),
+                          ),
+                          if (gi == nowIdx) ...[
+                            const SizedBox(width: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 1,
+                              ),
+                              decoration: BoxDecoration(
+                                color: NurungjiColors.urgent,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                t('ag_now_word'),
+                                style: const TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      Text(
+                        formatTime(
+                          s.schedule.gameStartMin(cur.round, gi, s.nGames),
+                        ),
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: _gameTab == gi
+                              ? Colors.white.withValues(alpha: .8)
+                              : NurungjiColors.brown,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (gi != cur.games.length - 1) const SizedBox(width: 6),
+          ],
+        ],
+      ),
+    );
   }
 
   /// 코트로 볼지 목록으로 볼지 — 현장에서 자주 누르는 토글이라 결과 바로 위에 둔다.
@@ -847,19 +935,61 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
     ),
   );
 
-  Widget _timeline(int rnd, List<GameResult> games) => AgCard(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          t('ag_timeline'),
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w800,
-            color: NurungjiColors.dark,
+  /// 화면 아래 고정되는 다시 뽑기 · 확정.
+  Widget _actionBar() => Container(
+    padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+    decoration: const BoxDecoration(
+      color: NurungjiColors.light,
+      border: Border(top: BorderSide(color: Color(0x22000000))),
+    ),
+    child: SafeArea(
+      top: false,
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: s.drawing ? null : _draw,
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 13),
+              ),
+              child: Text(
+                '🎲 ${t('ag_again')}',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
+          const SizedBox(width: 8),
+          Expanded(
+            child: ElevatedButton(
+              onPressed: s.commit,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 13),
+              ),
+              child: Text(
+                t('ag_confirm_next'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Widget _timeline(int rnd, List<GameResult> games) => AgFoldCard(
+    title: t('ag_timeline'),
+    trailing:
+        '${formatTime(s.schedule.gameStartMin(rnd, 0, s.nGames))}–'
+        '${formatTime(s.schedule.gameEndMin(rnd, games.length - 1, s.nGames))}',
+    initiallyExpanded: false,
+    children: [
         _tlRow(
           '${s.schedule.start}–${s.schedule.warmup}',
           t('ag_warmup'),
@@ -879,8 +1009,7 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
             t('ag_rest_word'),
             dim: true,
           ),
-      ],
-    ),
+    ],
   );
 
   Widget _tlRow(
@@ -1148,8 +1277,8 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
       for (var i = 0; i < rounds.length; i++)
         AgFoldCard(
           title: '${rounds[i].round}${t('ag_past_round_suf')}',
-          // 가장 최근 라운드만 펼쳐 둔다.
-          initiallyExpanded: i == 0,
+          // 지금 라운드가 화면을 차지해야 하니 지난 라운드는 전부 접어 둔다.
+          initiallyExpanded: false,
           children: [
             for (var gi = 0; gi < rounds[i].games.length; gi++)
               _gameCard(

@@ -935,6 +935,7 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_bulk_added': {'ko': '{n}명 추가했습니다.', 'en': 'Added {n}.'},
 
   // 보기 전환
+  'ag_now_word': {'ko': '지금', 'en': 'now'},
   'ag_compact_court': {'ko': '코트', 'en': 'Court'},
   'ag_compact_list': {'ko': '간단히', 'en': 'Compact'},
 

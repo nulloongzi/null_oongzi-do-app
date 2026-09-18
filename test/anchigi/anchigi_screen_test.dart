@@ -172,8 +172,34 @@ void main() {
     expect(find.text(t('ag_timeline')), findsOneWidget);
     expect(find.text(t('ag_confirm_next')), findsOneWidget);
     expect(find.textContaining(t('ag_again')), findsOneWidget);
-    // 3경기 코트가 그려진다.
-    expect(find.byType(AnchigiCourt), findsNWidgets(3));
+    // 코트는 한 경기씩 본다 — 경기 탭 셋에 코트는 하나.
+    expect(find.byType(AnchigiCourt), findsOneWidget);
+    expect(find.textContaining('1${t('ag_game_word')}'), findsWidgets);
+    expect(find.textContaining('3${t('ag_game_word')}'), findsWidgets);
+  });
+
+  testWidgets('경기 탭을 누르면 그 경기 코트로 바뀐다', (tester) async {
+    seedRoster(12);
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    await drawAndWait(tester);
+
+    // 2경기 탭으로.
+    await tester.tap(find.text('2${t('ag_game_word')}').last);
+    await tester.pumpAndSettle();
+    expect(find.byType(AnchigiCourt), findsOneWidget);
+  });
+
+  testWidgets('간단히 보기는 세 경기를 한눈에 둔다', (tester) async {
+    seedRoster(12);
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    await drawAndWait(tester);
+
+    await tester.tap(find.text(t('ag_compact_list')));
+    await tester.pumpAndSettle();
+    expect(find.byType(AnchigiLineupList), findsNWidgets(3));
+    expect(find.byType(AnchigiCourt), findsNothing);
   });
 
   testWidgets('확정하면 라운드가 넘어가고 기록에 쌓인다', (tester) async {
