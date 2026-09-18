@@ -761,6 +761,168 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_pos_MB': {'ko': '센터', 'en': 'Middle'},
   'ag_pos_Li': {'ko': '리베로', 'en': 'Libero'},
 
+  // 9인제 자리 — 코트 칸 이름이 곧 포지션.
+  'ag_pos_FL': {'ko': '전위 왼쪽', 'en': 'Front left'},
+  'ag_pos_FC': {'ko': '전위 가운데', 'en': 'Front center'},
+  'ag_pos_FR': {'ko': '전위 오른쪽', 'en': 'Front right'},
+  'ag_pos_CL': {'ko': '중위 왼쪽', 'en': 'Mid left'},
+  'ag_pos_CC': {'ko': '중위 가운데', 'en': 'Mid center'},
+  'ag_pos_CR': {'ko': '중위 오른쪽', 'en': 'Mid right'},
+  'ag_pos_BL': {'ko': '후위 왼쪽', 'en': 'Back left'},
+  'ag_pos_BC': {'ko': '후위 가운데', 'en': 'Back center'},
+  'ag_pos_BR': {'ko': '후위 오른쪽', 'en': 'Back right'},
+
+  // 칩처럼 좁은 자리에 쓰는 짧은 이름(6인제는 코드가 이미 짧아 그대로).
+  'ag_posx_S': {'ko': '세터', 'en': 'S'},
+  'ag_posx_OP': {'ko': '라이트', 'en': 'OP'},
+  'ag_posx_OH': {'ko': '레프트', 'en': 'OH'},
+  'ag_posx_MB': {'ko': '센터', 'en': 'MB'},
+  'ag_posx_Li': {'ko': '리베로', 'en': 'Li'},
+  'ag_posx_FL': {'ko': '전좌', 'en': 'FL'},
+  'ag_posx_FC': {'ko': '전중', 'en': 'FC'},
+  'ag_posx_FR': {'ko': '전우', 'en': 'FR'},
+  'ag_posx_CL': {'ko': '중좌', 'en': 'CL'},
+  'ag_posx_CC': {'ko': '중중', 'en': 'CC'},
+  'ag_posx_CR': {'ko': '중우', 'en': 'CR'},
+  'ag_posx_BL': {'ko': '후좌', 'en': 'BL'},
+  'ag_posx_BC': {'ko': '후중', 'en': 'BC'},
+  'ag_posx_BR': {'ko': '후우', 'en': 'BR'},
+
+  // 종목
+  'ag_sport_title': {'ko': '종목', 'en': 'Format'},
+  'ag_sport_v6': {'ko': '6인제', 'en': '6-a-side'},
+  'ag_sport_v6_sub': {'ko': '로테이션 · 대각', 'en': 'rotation · diagonals'},
+  'ag_sport_v9': {'ko': '9인제', 'en': '9-a-side'},
+  'ag_sport_v9_sub': {'ko': '자리 고정 3×3', 'en': 'fixed 3×3 seats'},
+
+  // 배치 우선순위
+  'ag_prio_title': {'ko': '배치 우선순위', 'en': 'Lineup priority'},
+  'ag_prio_custom': {'ko': '맞춘 자리 우선', 'en': 'Set seats first'},
+  'ag_prio_custom_sub': {'ko': '고정 · 주 자리부터', 'en': 'pins · main seats'},
+  'ag_prio_variety': {'ko': '다양성 우선', 'en': 'Variety first'},
+  'ag_prio_variety_sub': {'ko': '안 해본 자리부터', 'en': 'unplayed seats first'},
+  'ag_prio_hint': {
+    'ko':
+        '맞춘 자리 우선은 고정(📌)해 둔 자리와 각자 고른 주 자리를 먼저 지킵니다. '
+            '사람에게 등급을 매기는 게 아니라, 진행하는 사람이 자리를 직접 지정하는 것입니다.',
+    'en':
+        '"Set seats first" keeps pinned (📌) seats and each player\'s main seat '
+            'as much as possible. It is not a skill grade — the organizer picks the seats.',
+  },
+  'ag_adv_title': {'ko': '고급 설정', 'en': 'Advanced'},
+  'ag_flex_title': {'ko': '실험 자리(팀당)', 'en': 'Open slots (per team)'},
+  'ag_flex_hint': {
+    'ko': '주 자리가 아닌 사람이 설 수 있는 자리 수입니다. 0이면 전원 주 자리로만 짭니다.',
+    'en':
+        'How many players may stand off their main seat. 0 means main seats only.',
+  },
+
+  // 고정(핀)
+  'ag_pin_on_title': {'ko': '고정 해제', 'en': 'Unpin'},
+  'ag_pin_off_title': {'ko': '주 자리로 고정', 'en': 'Pin to main seat'},
+  'ag_pin_team_any': {'ko': '팀 자동', 'en': 'Auto'},
+  'ag_pin_hint': {
+    'ko':
+        '📌 를 누르면 그 사람은 주 자리에만 섭니다. 옆 칸에서 A · B · C 코어도 지정할 수 있어요'
+            '(A · B · C 고정 모드).',
+    'en':
+        'Tap 📌 and that player only takes their main seat. The box next to it '
+            'pins them to an A · B · C core (A · B · C mode).',
+  },
+  'ag_pin_relaxed': {
+    'ko': '고정(📌)을 전부 지키면 배치가 안 나와서, 이번 라운드는 고정을 풀고 짰습니다.',
+    'en':
+        'Pins (📌) could not all be kept, so this round was drawn without them.',
+  },
+
+  // 빈 자리 · 인원 부족
+  'ag_need_label': {'ko': '필요', 'en': 'needed'},
+  'ag_needs_title': {'ko': '비는 자리', 'en': 'Open seats'},
+  'ag_shortage_note': {
+    'ko': '지금 인원으로는 자리가 빕니다. 그래도 배치는 뽑고 빈 자리를 (필요)로 표시합니다 — '
+        '어떤 자리를 더 구해야 하는지 보이라고요.',
+    'en':
+        'There aren\'t enough players for every seat. The lineup is still drawn and '
+            'empty seats are marked (needed), so you can see what to recruit.',
+  },
+  'ag_abc_fallback': {
+    'ko': 'A · B · C 는 참석이 팀 인원의 2~3배일 때만 됩니다. 이번 라운드는 자유 편성으로 짰습니다.',
+    'en':
+        'A · B · C needs 2×–3× a team size. This round was drawn as a free draft instead.',
+  },
+  'ag_ok_done_need': {
+    'ko': '채울 수 있는 자리는 다 채웠고, 사람이 없는 자리는 (필요)로 남겼습니다.',
+    'en': 'Every fillable seat is filled; the rest are left as (needed).',
+  },
+
+  // 명단
+  'ag_flex_badge': {'ko': '어디든', 'en': 'anywhere'},
+  'ag_flex_player_hint': {
+    'ko': '자리를 하나도 안 고르면 어디든 설 수 있는 사람으로 봅니다. 급할 땐 이름만 넣고 시작하세요.',
+    'en':
+        'A player with no seat picked is treated as able to play anywhere. '
+            'In a hurry, just add names and go.',
+  },
+  'ag_bulk_add': {'ko': '여러 명 한 번에', 'en': 'Add several'},
+  'ag_bulk_ph': {
+    'ko': '이름을 줄바꿈이나 쉼표로 구분해 붙여넣기',
+    'en': 'Paste names separated by new lines or commas',
+  },
+  'ag_bulk_btn': {'ko': '한 번에 추가', 'en': 'Add all'},
+  'ag_bulk_added': {'ko': '{n}명 추가했습니다.', 'en': 'Added {n}.'},
+
+  // 보기 전환
+  'ag_compact_court': {'ko': '코트', 'en': 'Court'},
+  'ag_compact_list': {'ko': '간단히', 'en': 'Compact'},
+
+  // 9인제 구성
+  'ag_tpl_v9': {'ko': '9인제 정규', 'en': '9-a-side'},
+  'ag_tpl_v9_desc': {
+    'ko': '전 · 중 · 후위 3자리씩',
+    'en': '3 seats each in front · middle · back',
+  },
+
+  // 모임 보관 · 백업
+  'ag_meet_title': {'ko': '지난 모임', 'en': 'Past meetups'},
+  'ag_meet_none': {'ko': '보관한 모임이 없습니다.', 'en': 'No meetups archived yet.'},
+  'ag_meet_archive': {
+    'ko': '이번 모임 보관하고 새로 시작',
+    'en': 'Archive this meetup · start fresh',
+  },
+  'ag_meet_archive_confirm': {
+    'ko': '이번 모임 기록을 보관하고 1R부터 새로 시작합니다. 명단은 그대로 남습니다.',
+    'en': 'Archive this meetup\'s record and restart from R1. The roster stays.',
+  },
+  'ag_meet_archive_empty': {
+    'ko': '보관할 기록이 없습니다. 라운드를 확정한 뒤에 눌러주세요.',
+    'en': 'Nothing to archive yet — confirm a round first.',
+  },
+  'ag_meet_rounds_suf': {'ko': '개 라운드', 'en': ' rounds'},
+  'ag_meet_del_confirm': {
+    'ko': '이 모임 기록을 지울까요?',
+    'en': 'Delete this archived meetup?',
+  },
+  'ag_meet_hint': {
+    'ko': '모임을 보관해 두면 누적 기록은 새로 시작하고, 지난 모임은 여기 남습니다.',
+    'en':
+        'Archiving resets the cumulative record while keeping the meetup here.',
+  },
+  'ag_backup_title': {'ko': '백업', 'en': 'Backup'},
+  'ag_backup_export': {'ko': '내보내기', 'en': 'Export'},
+  'ag_backup_import': {'ko': '불러오기', 'en': 'Import'},
+  'ag_backup_import_hint': {
+    'ko': '내보낸 JSON 을 붙여넣으세요. 지금 명단 · 기록은 사라집니다.',
+    'en': 'Paste exported JSON. This replaces the current roster and record.',
+  },
+  'ag_backup_bad': {'ko': '읽을 수 없는 내용입니다.', 'en': 'Could not read that.'},
+  'ag_backup_done': {'ko': '불러왔습니다.', 'en': 'Imported.'},
+  'ag_backup_hint': {
+    'ko': '기기를 바꾸기 전에 내보내 두세요. 불러오면 지금 내용은 사라집니다.',
+    'en':
+        'Export before switching devices. Importing replaces what you have now.',
+  },
+  'ag_cancel': {'ko': '취소', 'en': 'Cancel'},
+
   // 진단 (뽑기 불가 사유)
   'ag_dg_short': {
     'ko': '지금 설정으로는 한 경기에 {mc}명이 필요합니다. 참석 {n}명 — {gap}명 부족합니다.',
@@ -791,6 +953,76 @@ const Map<String, Map<String, String>> kStrings = {
 
   // 설명 탭
   'ag_help_h1': {'ko': '배치가 정해지는 순서', 'en': 'How lineups are decided'},
+  'ag_help_1sport': {
+    'ko':
+        '먼저 종목을 고릅니다. 6인제는 로테이션이 있어 자리가 역할(세터 · 레프트…)이고, '
+            '9인제는 로테이션이 없어 코트의 아홉 자리(전 · 중 · 후위 × 좌 · 중 · 우)가 곧 포지션입니다.',
+    'en':
+        'Pick the format first. 6-a-side rotates, so seats are roles (setter, outside…); '
+            '9-a-side does not rotate, so the nine court seats are the positions.',
+  },
+  'ag_help_1pin': {
+    'ko':
+        '고정(📌)을 가장 먼저 지킵니다. 고정한 사람은 주 자리에만 서고, 팀을 지정했으면 그 코어로 갑니다. '
+            '다 지킬 수 없으면 고정을 풀고 뽑은 뒤 그 사실을 알려 줍니다.',
+    'en':
+        'Pins (📌) are kept first: a pinned player only takes their main seat, and a pinned '
+            'team sends them to that core. If they cannot all be kept, the round is drawn without them and says so.',
+  },
+  'ag_help_1need': {
+    'ko':
+        '인원이 모자라면 못 뽑는다고 막지 않고, 못 채운 자리를 (필요)로 비워 둡니다 — '
+            '어떤 자리를 더 구해야 하는지 보이라고요.',
+    'en':
+        'If there are not enough players, unfillable seats are left as (needed) instead of '
+            'refusing to draw — so you can see what to recruit.',
+  },
+  'ag_help_h4': {
+    'ko': '우선순위 — 맞춘 자리 vs 다양성',
+    'en': 'Priority: set seats vs variety',
+  },
+  'ag_help_4a': {
+    'ko':
+        '맞춘 자리 우선은 고정과 각자 고른 주 자리를 지켜 게임이 매끄럽게 굴러가게 합니다. '
+            '다양성 우선은 아직 안 해본 자리를 먼저 나눠 줍니다.',
+    'en':
+        '"Set seats first" keeps pins and each player\'s own main seat so games run smoothly. '
+            '"Variety first" hands out seats people have not played yet.',
+  },
+  'ag_help_4b': {
+    'ko':
+        '둘 다 실력 등급이 아닙니다. 주 · 가능 · 도전은 본인이 고르는 것이고, 고정은 진행하는 사람이 '
+            '지정하는 것입니다 — 사람에게 순위를 매기지 않습니다.',
+    'en':
+        'Neither is a skill grade. Tiers are what each player picks for themselves, and pins are '
+            'what the organizer sets — nobody is ranked.',
+  },
+  'ag_help_4c': {
+    'ko':
+        '실험 자리(고급 설정)는 팀당 몇 명까지 주 자리가 아닌 자리에 설 수 있는지입니다. '
+            '0이면 전원 주 자리로만 짜고, 그걸로 안 되면 자동으로 한 칸씩 열립니다.',
+    'en':
+        'Open slots (Advanced) is how many players per team may stand off their main seat. '
+            '0 means main seats only; it opens up automatically if a lineup is otherwise impossible.',
+  },
+  'ag_help_q5': {'ko': '인원이 모자라면 어떻게 되나?', 'en': 'Not enough people — what happens?'},
+  'ag_help_a5': {
+    'ko':
+        '그래도 뽑습니다. 못 채운 자리가 (필요)로 자리 이름과 함께 뜨니, 세터가 필요한지 센터가 '
+            '필요한지 보고 단톡방에 올리면 됩니다.',
+    'en':
+        'It still draws. Empty seats show as (needed) with the seat name, so you know what to '
+            'ask the group chat for.',
+  },
+  'ag_help_q6': {'ko': '다음 모임은?', 'en': 'Next meetup?'},
+  'ag_help_a6': {
+    'ko':
+        '기록 탭에서 이번 모임을 보관하면 누적 기록은 1R부터 다시 시작하고 지난 모임은 목록에 남습니다. '
+            '기기를 바꾸기 전에는 백업 내보내기를 하세요.',
+    'en':
+        'On the Record tab, archive this meetup: the cumulative record restarts while the meetup '
+            'stays in the list. Export a backup before changing devices.',
+  },
   'ag_help_1a': {
     'ko': '참석자 중 경기가 끝나기 전에 퇴장하는 사람을 그 경기에서 뺍니다.',
     'en':
@@ -798,9 +1030,9 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'ag_help_1b': {
     'ko':
-        'A · B · C 고정 — 라운드 시작에 세 팀 코어를 정합니다. A · B는 팀 인원만큼 꽉 채우고 남는 사람이 C 코어가 됩니다. 경기는 A vs B → B vs C → C vs A 순서이고, 코어는 자기 팀 경기에 반드시 출전합니다. 모자란 자리는 그 경기에 안 뛰는 팀에서 차출합니다.',
+        'A · B · C 고정 — 라운드 시작에 세 팀 코어를 정합니다. 경기는 A vs B → B vs C → C vs A 순서이고, 코어는 자기 팀 경기에 반드시 출전합니다. 모자란 자리는 안 뛰는 팀에서 차출합니다. 참석이 팀 인원의 2~3배여야 하고, 그보다 적으면 자유 편성으로 내려갑니다.',
     'en':
-        'A · B · C fixed — three team cores are set at round start. A · B fill up to team size, the rest become the C core. Games run A vs B → B vs C → C vs A, and cores always play their own team\'s game. Missing spots are borrowed from the team sitting out.',
+        'A · B · C fixed — three team cores are set at round start. Games run A vs B → B vs C → C vs A, and cores always play their own team\'s game. Missing spots are borrowed from the team sitting out. It needs attendance of 2×–3× a team size; below that it falls back to a free draft.',
   },
   'ag_help_1c': {
     'ko': '자유 편성 — 경기마다 참석자 전원 중에서 두 팀을 새로 짭니다.',
@@ -809,9 +1041,10 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'ag_help_1d': {
     'ko':
-        '모든 자리가 그 사람의 가능 포지션 안이어야 하고, 팀마다 세터 1명 · 대각(S↔OP, OH↔OH, MB↔Li) 구성을 만족해야 합니다.',
+        '모든 자리가 그 사람의 가능 자리 안이어야 합니다. 6인제는 여기에 더해 팀마다 세터 1명 · '
+            '대각(S↔OP, OH↔OH, MB↔Li)을 맞춥니다. 자리를 하나도 안 고른 사람은 어디든 설 수 있는 사람으로 봅니다.',
     'en':
-        'Every slot must be within a player\'s eligible positions, and each team needs one setter with a valid diagonal (S↔OP, OH↔OH, MB↔Li).',
+        'Every seat must be within a player\'s eligible seats; 6-a-side also needs one setter per team with a valid diagonal (S↔OP, OH↔OH, MB↔Li). A player with no seat picked can play anywhere.',
   },
   'ag_help_1e': {
     'ko': '조건을 만족하는 배치를 여러 개 뽑아 아래 공정성 점수가 가장 좋은 것을 고릅니다.',
@@ -829,9 +1062,9 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'ag_help_2a': {'ko': '출전 횟수가 적을수록 먼저.', 'en': 'Fewer games played → sooner.'},
   'ag_help_2b': {
-    'ko': '대기 횟수가 많을수록 먼저. 연속 대기는 벌점이 큽니다.',
+    'ko': '대기 횟수가 많을수록 먼저. 특히 연달아 두 번 쉬지 않게 큰 벌점을 겁니다.',
     'en':
-        'More times benched → sooner. Consecutive benching is penalized heavily.',
+        'More times benched → sooner, and being benched twice in a row is penalized hard.',
   },
   'ag_help_2c': {
     'ko':

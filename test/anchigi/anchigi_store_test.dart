@@ -1,5 +1,6 @@
 // 저장소 검증 — 저장/복원 왕복, 티어 순환 규칙, 확정·초기화 흐름.
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nulloongzido/models/anchigi/anchigi_constants.dart';
 import 'package:nulloongzido/models/anchigi/anchigi_round.dart';
 import 'package:nulloongzido/services/anchigi/anchigi_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,7 +21,7 @@ void main() {
       s.addPlayer('가나', {'S': 'main', 'OH': 'sub'});
       s.addPlayer('다라', {'MB': 'main'});
       s.setMode('free');
-      s.setFeel('mix');
+      s.setPrio('variety');
       s.setNGames(4);
       s.setSchedule(warmup: '13:30', perGame: 20, rest: 5);
       s.statOf(s.players.first.id).play = 7;
@@ -32,7 +33,7 @@ void main() {
       expect(back.players.map((p) => p.name), ['가나', '다라']);
       expect(back.players.first.tier, {'S': 'main', 'OH': 'sub'});
       expect(back.mode, 'free');
-      expect(back.feel, 'mix');
+      expect(back.prio, 'variety');
       expect(back.nGames, 4);
       expect(back.schedule.warmup, '13:30');
       expect(back.schedule.perGame, 20);
@@ -45,38 +46,64 @@ void main() {
       expect(s.players, isEmpty);
       expect(s.round, 1);
       expect(s.mode, 'abc');
-      expect(s.feel, 'real');
+      expect(s.prio, 'custom');
+      expect(s.sport, 'v6');
       expect(s.nGames, 3);
-      expect(s.allowed, ['mb2', 'mb1li', 'mb2li']);
+      expect(s.allowed, ['mb2', 'mb1li', 'mb2li', 'v9']);
       expect(s.schedule.warmup, '14:00');
     });
 
     test('망가진 값은 기본값으로 되돌린다', () async {
       SharedPreferences.setMockInitialValues({
-        'anchigi.feel.v1': '"없는값"',
+        'anchigi.prio.v1': '"없는값"',
         'anchigi.mode.v1': '"엉뚱"',
         'anchigi.ngames.v1': '99',
         'anchigi.players.v1': '{잘못된 JSON',
       });
       final s = AnchigiStore();
       await s.load();
-      expect(s.feel, 'real');
+      expect(s.prio, 'custom');
       expect(s.mode, 'abc');
       expect(s.nGames, 3);
       expect(s.players, isEmpty);
     });
   });
 
-  group('포지션 티어 순환', () {
-    test('없음 → 주(첫 포지션) → 제거 불가', () async {
+  group('예전 저장본', () {
+    test('게임 성격 4단계는 우선순위 + 실험 자리로 옮겨온다', () async {
+      SharedPreferences.setMockInitialValues({'anchigi.feel.v1': '"mix"'});
+      final s = AnchigiStore();
+      await s.load();
+      expect(s.prio, 'variety');
+      expect(s.flexSlots, 2);
+    });
+
+    test('경쟁(comp)은 맞춘 자리 우선 + 실험 자리 0', () async {
+      SharedPreferences.setMockInitialValues({'anchigi.feel.v1': '"comp"'});
+      final s = AnchigiStore();
+      await s.load();
+      expect(s.prio, 'custom');
+      expect(s.flexSlotsEffective, 0);
+    });
+  });
+
+  group('자리 티어 순환', () {
+    test('자리를 안 고르면 어디든 — 첫 클릭이 주 자리가 된다', () async {
       final s = await freshStore();
       s.addPlayer('테스트', {});
       final id = s.players.first.id;
-      // 포지션 없이 추가하면 S가 주로 강제된다.
-      expect(s.players.first.tier, {'S': 'main'});
-      // 마지막 하나뿐인 포지션은 지울 수 없다.
-      s.cycleTier(id, 'S');
-      expect(s.players.first.tier, {'S': 'main'});
+      // 예전엔 S가 자동으로 박혔다. 지금은 '어디든'으로 들어간다.
+      expect(s.players.first.tier, isEmpty);
+      expect(s.players.first.isFlex, isTrue);
+      expect(s.players.first.pos, kPosBySport['v6']);
+
+      s.cycleTier(id, 'MB');
+      expect(s.players.first.tier, {'MB': 'main'});
+      expect(s.players.first.isFlex, isFalse);
+      // 마지막 자리까지 지우면 다시 '어디든'.
+      s.cycleTier(id, 'MB');
+      expect(s.players.first.tier, isEmpty);
+      expect(s.players.first.isFlex, isTrue);
     });
 
     test('주가 이미 있으면 다음 포지션은 가능부터', () async {
@@ -133,28 +160,58 @@ void main() {
         round: 1,
         games: [],
         mode: 'abc',
-        feel: 'real',
+        prio: 'real',
         budget: 0,
       );
-      s.setFeel('mix');
+      s.setPrio('mix');
       expect(s.current, isNull);
     });
 
-    test('마지막 템플릿은 끌 수 없다', () async {
+    test('이 종목의 마지막 구성은 끌 수 없다', () async {
       final s = await freshStore();
       s.toggleTemplate('mb2li');
       s.toggleTemplate('mb1li');
-      expect(s.allowed, ['mb2']);
+      expect(s.allowed, ['mb2', 'v9']);
       s.toggleTemplate('mb2');
-      expect(s.allowed, ['mb2'], reason: '하나 남으면 유지돼야 함');
+      expect(s.allowed, ['mb2', 'v9'], reason: '6인제에 하나 남으면 유지돼야 함');
     });
 
-    test('템플릿을 다시 켜면 원래 순서로 들어간다', () async {
+    test('구성을 다시 켜면 원래 순서로 들어간다', () async {
       final s = await freshStore();
       s.toggleTemplate('mb2');
-      expect(s.allowed, ['mb1li', 'mb2li']);
+      expect(s.allowed, ['mb1li', 'mb2li', 'v9']);
       s.toggleTemplate('mb2');
-      expect(s.allowed, ['mb2', 'mb1li', 'mb2li']);
+      expect(s.allowed, ['mb2', 'mb1li', 'mb2li', 'v9']);
+    });
+
+    test('종목을 바꾸면 명단의 가능 자리도 따라간다', () async {
+      final s = await freshStore();
+      s.addPlayer('가', {'S': 'main'});
+      expect(s.players.first.pos, ['S']);
+      s.setSport('v9');
+      // 9인제 자리를 안 골랐으니 '어디든'.
+      expect(s.players.first.isFlex, isTrue);
+      expect(s.players.first.pos, kPosBySport['v9']);
+      s.setSport('v6');
+      expect(s.players.first.pos, ['S']);
+    });
+
+    test('고정(📌)은 주 자리에 걸리고 다시 누르면 풀린다', () async {
+      final s = await freshStore();
+      s.addPlayer('가', {'S': 'main', 'OH': 'sub'});
+      final id = s.players.first.id;
+      s.togglePin(id);
+      expect(s.players.first.pinned, 'S');
+      s.togglePin(id);
+      expect(s.players.first.pinned, isNull);
+    });
+
+    test('여러 명 한 번에 — 줄바꿈·쉼표로 끊어 넣는다', () async {
+      final s = await freshStore();
+      final n = s.addPlayers('가영, 나윤\n다온 \n\n라임');
+      expect(n, 4);
+      expect(s.players.map((p) => p.name), ['가영', '나윤', '다온', '라임']);
+      expect(s.players.every((p) => p.isFlex), isTrue);
     });
   });
 
@@ -168,7 +225,7 @@ void main() {
       s.current = RoundResult(
         round: 1,
         mode: 'abc',
-        feel: 'real',
+        prio: 'real',
         budget: 0,
         games: [
           GameResult(
@@ -250,6 +307,36 @@ void main() {
       final s = await freshStore();
       s.addPlayer('가', {'S': 'main'});
       expect(s.diagnosis.first.kind, 'short');
+      expect(s.shortHanded, isTrue);
+    });
+
+    test('모임을 보관하면 기록만 새로 시작한다', () async {
+      final s = await freshStore();
+      s.addPlayer('가', {'S': 'main'});
+      s.statOf(s.players.first.id).play = 3;
+      s.round = 4;
+
+      expect(s.archiveMeet(), isTrue);
+      expect(s.meets.length, 1);
+      expect(s.meets.first.rounds, 3);
+      expect(s.stat, isEmpty);
+      expect(s.round, 1);
+      expect(s.players.length, 1, reason: '명단은 유지돼야 함');
+    });
+
+    test('백업을 내보내고 다시 불러온다', () async {
+      final s = await freshStore();
+      s.addPlayer('가', {'S': 'main'});
+      s.setPrio('variety');
+      s.statOf(s.players.first.id).play = 2;
+      final dump = s.exportJson();
+
+      final other = await freshStore();
+      expect(other.importJson(dump), isTrue);
+      expect(other.players.map((p) => p.name), ['가']);
+      expect(other.prio, 'variety');
+      expect(other.stat.values.first.play, 2);
+      expect(other.importJson('{잘못된'), isFalse);
     });
   });
 }

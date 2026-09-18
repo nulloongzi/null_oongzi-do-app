@@ -1,7 +1,10 @@
 // anchigi_court.dart — 한 경기의 코트 시각화. 원본 anchigi.html의 toZones/sideHTML 포팅.
-// 두 팀이 네트를 사이에 두고 마주 보도록 아래 팀은 존 배열을 뒤집는다.
+// 두 팀이 네트를 사이에 두고 마주 보도록 아래 팀은 자리 배열을 뒤집는다.
+// 6인제는 로테이션이 있어 역할(세터·레프트…)을 존 번호에 앉히고,
+// 9인제는 로테이션이 없어 코트 아홉 칸이 곧 자리 이름이다.
 import 'package:flutter/material.dart';
 
+import '../../models/anchigi/anchigi_constants.dart';
 import '../../models/anchigi/anchigi_round.dart';
 import '../../services/i18n.dart';
 import '../../theme.dart';
@@ -16,14 +19,26 @@ const List<List<int>> _botRows = [
   [5, 6, 1],
 ];
 
-/// 포지션별 색(웹 .pos.S 등과 같은 역할).
+/// 자리별 색(웹 .pos.S 등과 같은 역할). 9인제는 전·중·후위 줄로 묶는다.
 const Map<String, Color> _posColor = {
   'S': Color(0xFF6A5ACD),
   'OP': Color(0xFFE07A5F),
   'OH': Color(0xFF3D9970),
   'MB': Color(0xFF2C7BE5),
   'Li': Color(0xFFD4A017),
+  'FL': Color(0xFFE07A5F),
+  'FC': Color(0xFFE07A5F),
+  'FR': Color(0xFFE07A5F),
+  'CL': Color(0xFF3D9970),
+  'CC': Color(0xFF3D9970),
+  'CR': Color(0xFF3D9970),
+  'BL': Color(0xFF2C7BE5),
+  'BC': Color(0xFF2C7BE5),
+  'BR': Color(0xFF2C7BE5),
 };
+
+/// 코트 한 칸. 비어 있으면 [pl] 이 null, 사람이 없어 비운 자리면 pl.empty.
+typedef _Cell = ({String label, SlotAssign? pl});
 
 /// 존 번호 → 배치된 사람. 7인(센터2+리베로1)이면 리베로는 코트 밖.
 ({Map<int, SlotAssign> zones, SlotAssign? libero}) _toZones(
@@ -67,12 +82,16 @@ class AnchigiCourt extends StatelessWidget {
   final String? picked;
   final ValueChanged<String>? onPick;
 
+  /// 이 경기를 뽑았을 때의 종목.
+  final String sport;
+
   const AnchigiCourt({
     super.key,
     required this.game,
     this.teamCores,
     this.picked,
     this.onPick,
+    this.sport = 'v6',
   });
 
   bool _isBorrowed(int teamIdx, String id) {
@@ -84,7 +103,7 @@ class AnchigiCourt extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(
     children: [
-      _side(0, _topRows),
+      _side(0, true),
       // 네트.
       Container(
         height: 3,
@@ -94,14 +113,46 @@ class AnchigiCourt extends StatelessWidget {
           borderRadius: BorderRadius.circular(2),
         ),
       ),
-      _side(1, _botRows),
+      _side(1, false),
     ],
   );
 
-  Widget _side(int teamIdx, List<List<int>> rows) {
-    final lineup = game.teams[teamIdx];
+  /// 이 팀의 코트 칸을 줄 단위로 만든다.
+  ({List<List<_Cell>> rows, SlotAssign? libero}) _layout(
+    List<SlotAssign> lineup,
+    bool top,
+  ) {
+    if (sport == 'v9') {
+      final by = <String, SlotAssign>{for (final p in lineup) p.pos: p};
+      final rows = top ? kV9TopRows : kV9BotRows;
+      return (
+        rows: [
+          for (final row in rows)
+            [for (final seat in row) (label: t('ag_posx_$seat'), pl: by[seat])],
+        ],
+        libero: null,
+      );
+    }
     final r = _toZones(lineup);
+    final rows = top ? _topRows : _botRows;
+    return (
+      rows: [
+        for (final row in rows)
+          [
+            for (final zn in row)
+              (label: '${t('ag_court_zone_short')}$zn', pl: r.zones[zn]),
+          ],
+      ],
+      libero: r.libero,
+    );
+  }
+
+  Widget _side(int teamIdx, bool top) {
+    final lineup = game.teams[teamIdx];
+    final l = _layout(lineup, top);
     final name = teamIdx < game.names.length ? game.names[teamIdx] : '?';
+    // 비운 자리는 인원으로 세지 않는다.
+    final filled = lineup.where((x) => !x.empty).length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -121,7 +172,7 @@ class AnchigiCourt extends StatelessWidget {
                 ),
               ),
               Text(
-                '${lineup.length}${t('ag_people')}',
+                '$filled${t('ag_people')}',
                 style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
@@ -131,24 +182,24 @@ class AnchigiCourt extends StatelessWidget {
             ],
           ),
         ),
-        for (final row in rows)
+        for (final row in l.rows)
           Padding(
             padding: const EdgeInsets.only(bottom: 6),
             child: Row(
               children: [
-                for (final zn in row) ...[
-                  Expanded(child: _cell(teamIdx, zn, r.zones[zn])),
-                  if (zn != row.last) const SizedBox(width: 6),
+                for (var i = 0; i < row.length; i++) ...[
+                  Expanded(child: _cell(teamIdx, row[i].label, row[i].pl)),
+                  if (i != row.length - 1) const SizedBox(width: 6),
                 ],
               ],
             ),
           ),
-        if (r.libero != null)
+        if (l.libero != null)
           Padding(
             padding: const EdgeInsets.only(top: 2),
             child: Row(
               children: [
-                Flexible(child: _cell(teamIdx, null, r.libero)),
+                Flexible(child: _cell(teamIdx, l.libero!.pos, l.libero)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -167,7 +218,7 @@ class AnchigiCourt extends StatelessWidget {
     );
   }
 
-  Widget _cell(int teamIdx, int? zone, SlotAssign? pl) {
+  Widget _cell(int teamIdx, String label, SlotAssign? pl) {
     if (pl == null) {
       return Container(
         height: 58,
@@ -177,9 +228,50 @@ class AnchigiCourt extends StatelessWidget {
         ),
       );
     }
+    final color = _posColor[pl.pos] ?? NurungjiColors.brown;
+
+    // 사람이 없어 비운 자리 — 어떤 자리를 구해야 하는지 여기서 읽힌다.
+    if (pl.empty) {
+      return Container(
+        height: 58,
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+        decoration: BoxDecoration(
+          color: NurungjiColors.urgent.withValues(alpha: .06),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: NurungjiColors.urgent.withValues(alpha: .55),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                color: NurungjiColors.brown,
+              ),
+            ),
+            Text(
+              '(${t('ag_need_label')})',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: NurungjiColors.urgent,
+              ),
+            ),
+            _posBadge(pl.pos, color),
+          ],
+        ),
+      );
+    }
+
     final hl = picked != null && picked == pl.id;
     final borrowed = _isBorrowed(teamIdx, pl.id);
-    final color = _posColor[pl.pos] ?? NurungjiColors.brown;
 
     return GestureDetector(
       onTap: onPick == null ? null : () => onPick!(pl.id),
@@ -201,7 +293,7 @@ class AnchigiCourt extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              zone == null ? pl.pos : '${t('ag_court_zone_short')}$zone',
+              label,
               style: const TextStyle(
                 fontSize: 9,
                 fontWeight: FontWeight.w700,
@@ -220,24 +312,7 @@ class AnchigiCourt extends StatelessWidget {
             ),
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 5,
-                    vertical: 1,
-                  ),
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(5),
-                  ),
-                  child: Text(
-                    pl.pos,
-                    style: const TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
+                _posBadge(pl.pos, color),
                 if (borrowed) ...[
                   const SizedBox(width: 3),
                   Flexible(
@@ -256,6 +331,118 @@ class AnchigiCourt extends StatelessWidget {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _posBadge(String pos, Color color) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+    decoration: BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(5),
+    ),
+    child: Text(
+      t('ag_posx_$pos'),
+      style: const TextStyle(
+        fontSize: 9,
+        fontWeight: FontWeight.w900,
+        color: Colors.white,
+      ),
+    ),
+  );
+}
+
+/// 간단히 보기 — 코트 그림 대신 '자리 · 사람' 한 줄.
+class AnchigiLineupList extends StatelessWidget {
+  final GameResult game;
+  final List<List<PlayerRef>>? teamCores;
+  final String? picked;
+  final ValueChanged<String>? onPick;
+
+  const AnchigiLineupList({
+    super.key,
+    required this.game,
+    this.teamCores,
+    this.picked,
+    this.onPick,
+  });
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      for (var ti = 0; ti < game.teams.length; ti++)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 7),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0x22000000)),
+            ),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: NurungjiColors.dark,
+                    borderRadius: BorderRadius.circular(7),
+                  ),
+                  child: Text(
+                    '${t('ag_team_word')} ${ti < game.names.length ? game.names[ti] : '?'}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                for (final pl in game.teams[ti]) _slot(ti, pl),
+              ],
+            ),
+          ),
+        ),
+    ],
+  );
+
+  Widget _slot(int ti, SlotAssign pl) {
+    final label = t('ag_posx_${pl.pos}');
+    if (pl.empty) {
+      return Text(
+        '$label (${t('ag_need_label')})',
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: NurungjiColors.urgent,
+        ),
+      );
+    }
+    final borrowed =
+        teamCores != null && !teamCores![ti].any((x) => x.id == pl.id);
+    final hl = picked != null && picked == pl.id;
+    return GestureDetector(
+      onTap: onPick == null ? null : () => onPick!(pl.id),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: hl ? NurungjiColors.yellow : Colors.transparent,
+          borderRadius: BorderRadius.circular(7),
+        ),
+        child: Text(
+          '$label · ${pl.name}${borrowed ? ' (${t('ag_borrowed')})' : ''}',
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: NurungjiColors.dark,
+          ),
         ),
       ),
     );

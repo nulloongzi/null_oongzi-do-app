@@ -24,7 +24,9 @@ List<AnchigiPlayer> roster(int n) =>
 SolveRequest req(
   List<AnchigiPlayer> present, {
   String mode = 'abc',
-  String feel = 'real',
+  String prio = 'custom',
+  String sport = 'v6',
+  int? flexSlots,
   int nGames = 3,
   List<String>? allowed,
   Map<String, AnchigiStat>? stat,
@@ -36,7 +38,9 @@ SolveRequest req(
   round: round,
   nGames: nGames,
   mode: mode,
-  feel: feel,
+  prio: prio,
+  sport: sport,
+  flexSlots: flexSlots,
   allowed: allowed ?? ['mb2', 'mb1li', 'mb2li'],
   schedule: schedule ?? AnchigiSchedule(),
 );
@@ -47,8 +51,9 @@ void expectPositionsValid(RoundResult r, List<AnchigiPlayer> pool) {
   for (final g in r.games) {
     for (final team in g.teams) {
       for (final a in team) {
+        if (a.empty) continue;
         expect(
-          byId[a.id]!.tier.containsKey(a.pos),
+          byId[a.id]!.pos.contains(a.pos),
           isTrue,
           reason: '${a.name}은(는) ${a.pos}를 볼 수 없음',
         );
@@ -157,11 +162,149 @@ void main() {
       }
     });
 
-    test('참석 인원이 2T~3T 밖이면 배치 불가', () {
+    test('참석 인원이 2T~3T 밖이면 자유 편성으로 내려간다', () {
       // 6인 템플릿만 허용 → 12~18명. 19명은 범위 밖.
       final solver = AnchigiSolver(req(roster(19), allowed: ['mb2']));
       expect(solver.diagnose().any((d) => d.kind == 'abc'), isTrue);
-      expect(solver.solveRound(), isNull);
+      final r = solver.solveRound();
+      // 못 뽑는다고 막는 대신, 자유 편성으로 짜고 그 사실을 남긴다.
+      expect(r, isNotNull);
+      expect(r!.abcFellBack, isTrue);
+      expect(r.mode, 'free');
+    });
+  });
+
+  group('인원이 모자랄 때', () {
+    test('9명이어도 뽑히고 못 채운 자리는 (필요)로 남는다', () {
+      final pool = roster(9);
+      final r = AnchigiSolver(req(pool, mode: 'free')).solveRound();
+      expect(r, isNotNull);
+      expect(r!.hasNeed, isTrue);
+      for (final g in r.games) {
+        final all = [...g.teams[0], ...g.teams[1]];
+        final empties = all.where((x) => x.empty).toList();
+        expect(empties, isNotEmpty);
+        // 온 사람은 전원 코트에 선다.
+        expect(all.length - empties.length, 9);
+        // 빈자리 목록과 코트의 빈 칸이 일치해야 한다.
+        expect(
+          [...g.need[0], ...g.need[1]]..sort(),
+          empties.map((x) => x.pos).toList()..sort(),
+        );
+        // 한쪽 팀만 텅 비지 않게 나눈다.
+        expect((g.need[0].length - g.need[1].length).abs(), lessThanOrEqualTo(2));
+      }
+      expectPositionsValid(r, pool);
+    });
+
+    test('아무도 못 서는 자리는 비운다 — 리베로 가능자가 없어도 뽑힌다', () {
+      final pool = List.generate(
+        12,
+        (i) => p('P$i', {'S': 'sub', 'OP': 'sub', 'OH': 'sub', 'MB': 'sub'}),
+      );
+      final r = AnchigiSolver(
+        req(pool, mode: 'free', allowed: ['mb1li']),
+      ).solveRound();
+      expect(r, isNotNull);
+      expect(r!.games.first.need.expand((x) => x), contains('Li'));
+      expectPositionsValid(r, pool);
+    });
+  });
+
+  group('9인제', () {
+    test('18명이면 아홉 자리씩 채운다', () {
+      final pool = List.generate(18, (i) => p('P$i', {}));
+      final r = AnchigiSolver(
+        req(pool, mode: 'free', sport: 'v9', allowed: ['v9']),
+      ).solveRound();
+      expect(r, isNotNull);
+      for (final g in r!.games) {
+        for (final team in g.teams) {
+          expect(team.length, 9);
+          expect(
+            team.map((x) => x.pos).toList()..sort(),
+            kPosBySport['v9']!.toList()..sort(),
+            reason: '아홉 자리가 겹치지 않아야 한다',
+          );
+        }
+      }
+      expect(r.hasNeed, isFalse);
+    });
+
+    test('12명이면 여섯 자리를 (필요)로 남긴다', () {
+      final pool = List.generate(12, (i) => p('P$i', {}));
+      final r = AnchigiSolver(
+        req(pool, mode: 'free', sport: 'v9', allowed: ['v9']),
+      ).solveRound();
+      expect(r, isNotNull);
+      for (final g in r!.games) {
+        final all = [...g.teams[0], ...g.teams[1]];
+        expect(all.where((x) => x.empty).length, 6);
+      }
+    });
+  });
+
+  group('고정(핀)', () {
+    test('자리를 고정하면 그 자리에만 선다', () {
+      final pool = roster(12);
+      pool[0].tier
+        ..clear()
+        ..addAll({'S': 'main', 'OH': 'sub'});
+      pool[0].pin['v6'] = 'S';
+      final r = AnchigiSolver(req(pool, mode: 'free')).solveRound();
+      expect(r, isNotNull);
+      var seen = 0;
+      for (final g in r!.games) {
+        for (final team in g.teams) {
+          for (final a in team) {
+            if (a.id == pool[0].id) {
+              seen++;
+              expect(a.pos, 'S');
+            }
+          }
+        }
+      }
+      expect(seen, greaterThan(0), reason: '고정한 사람은 실제로 뛰어야 한다');
+    });
+
+    test('팀을 고정하면 그 코어로 간다', () {
+      final pool = roster(14);
+      pool[0].pinTeam = 2; // C 코어
+      final r = AnchigiSolver(req(pool)).solveRound();
+      expect(r, isNotNull);
+      expect(
+        r!.games.first.cores![2].any((x) => x.id == pool[0].id),
+        isTrue,
+      );
+    });
+
+    test('고정을 다 지킬 수 없으면 풀고 뽑되 그 사실을 남긴다', () {
+      // 열두 명 전원을 세터 자리에 고정 → 지킬 수 없다.
+      final pool = List.generate(
+        12,
+        (i) => p('P$i', {'S': 'main', 'OH': 'sub'})..pin['v6'] = 'S',
+      );
+      final r = AnchigiSolver(req(pool, mode: 'free')).solveRound();
+      expect(r, isNotNull, reason: '고정을 풀어서라도 배치는 나와야 한다');
+      expect(r!.pinsRelaxed, isTrue);
+    });
+  });
+
+  group('연속 대기', () {
+    test('13명 3경기에서 같은 사람이 두 번 쉬지 않는다', () {
+      final pool = roster(13);
+      final r = AnchigiSolver(req(pool, mode: 'free')).solveRound();
+      expect(r, isNotNull);
+      final benched = [
+        for (final g in r!.games) ...g.bench.map((b) => b.id),
+      ];
+      // 13명·3경기면 구성에 따라 대기가 없는 경기도 있다(6+7=13).
+      // 중요한 건 같은 사람이 연달아 쉬지 않는 것.
+      expect(
+        benched.toSet().length,
+        benched.length,
+        reason: '한 사람이 한 라운드에 두 번 쉬면 안 된다',
+      );
     });
   });
 
@@ -194,7 +337,9 @@ void main() {
       final d = solver.diagnose();
       expect(d.first.kind, 'short');
       expect(d.first.params['n'], '9');
-      expect(solver.solveRound(), isNull);
+      expect(solver.shortHanded(), isTrue);
+      // 진단이 나와도 뽑기 자체를 막지는 않는다(빈 자리로 보여준다).
+      expect(solver.solveRound(), isNotNull);
     });
   });
 
@@ -224,9 +369,9 @@ void main() {
   });
 
   group('예산(비주 포지션) 제약', () {
-    test('comp 모드는 주 포지션만으로 채워지면 비주 0명', () {
-      // 모두가 전 포지션 main이므로 comp(budget 0)로 충분.
-      final r = AnchigiSolver(req(roster(12), feel: 'comp')).solveRound();
+    test('실험 자리 0이면 주 자리만으로 채워진다', () {
+      // 모두가 전 자리 main이므로 실험 자리 0으로 충분.
+      final r = AnchigiSolver(req(roster(12), flexSlots: 0)).solveRound();
       expect(r, isNotNull);
       expect(r!.budget, 0);
       for (final g in r.games) {
@@ -250,12 +395,12 @@ void main() {
           }),
         );
       }
-      final solver = AnchigiSolver(req(pool, feel: 'comp', allowed: ['mb2']));
+      final solver = AnchigiSolver(req(pool, flexSlots: 0, allowed: ['mb2']));
       final r = solver.solveRound();
       expect(r, isNotNull);
       // mb2는 팀당 MB가 2자리 → 팀당 비주 2명 필요 → 예산이 2까지 올라간다.
       expect(r!.budget, greaterThanOrEqualTo(2));
-      expect(r.budget, greaterThan(kFeel['comp']!.budget));
+      expect(r.budget, greaterThan(0));
     });
   });
 

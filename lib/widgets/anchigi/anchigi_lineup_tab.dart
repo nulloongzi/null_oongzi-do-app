@@ -100,7 +100,9 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
     if (s.players.isEmpty) return _onboarding();
 
     final cur = s.current;
-    final diag = s.failure.isNotEmpty ? s.failure : s.diagnosis;
+    // 뽑기가 아예 실패한 경우만 오류, 인원이 모자란 것은 안내로 보여준다.
+    final failed = s.failure.isNotEmpty;
+    final diag = failed ? s.failure : s.diagnosis;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 40),
@@ -108,8 +110,13 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
         // 결과가 있으면 설정을 접어 결과를 위로 올린다.
         _scheduleCard(open: cur == null),
         _settingsCard(open: cur == null),
-        if (diag.isNotEmpty)
-          AgMessage(diag.map(_reasonText).join('\n\n'), kind: AgMsgKind.err),
+        if (failed)
+          AgMessage(diag.map(_reasonText).join('\n\n'), kind: AgMsgKind.err)
+        else if (s.shortHanded)
+          AgMessage(
+            '${t('ag_shortage_note')}'
+            '${diag.isEmpty ? '' : '\n\n${diag.map(_reasonText).join('\n\n')}'}',
+          ),
         _drawCard(),
         if (cur != null) ..._result(cur),
         if (s.pastRounds.isNotEmpty) ..._past(),
@@ -371,11 +378,28 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
 
   Widget _settingsCard({required bool open}) {
     final (lo, hi) = s.benchRange;
+    final tplList = templatesOfSport(s.sport);
     return AgFoldCard(
       title: t('ag_card_settings'),
-      trailing: '${t('ag_feel_${s.feel}')} · ${s.nGames}${t('ag_game_word')}',
+      trailing:
+          '${t('ag_sport_${s.sport}')} · '
+          '${t(s.prio == 'variety' ? 'ag_prio_variety' : 'ag_prio_custom')}',
       initiallyExpanded: open,
       children: [
+        _label(t('ag_sport_title')),
+        AgSegmented(
+          options: [
+            for (final sp in kSports)
+              (
+                value: sp,
+                label: t('ag_sport_$sp'),
+                sub: t('ag_sport_${sp}_sub'),
+              ),
+          ],
+          selected: s.sport,
+          onChanged: s.setSport,
+        ),
+        const SizedBox(height: 14),
         AgSegmented(
           options: [
             (value: 'abc', label: t('ag_mode_abc'), sub: t('ag_mode_abc_sub')),
@@ -389,115 +413,65 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
           onChanged: s.setMode,
         ),
         const SizedBox(height: 14),
-        Text(
-          t('ag_feel_title'),
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-            color: NurungjiColors.dark,
-          ),
-        ),
-        const SizedBox(height: 6),
+        _label(t('ag_prio_title')),
         AgSegmented(
           options: [
-            for (final f in kFeels)
-              (value: f, label: t('ag_feel_$f'), sub: t('ag_feel_${f}_sub')),
+            (
+              value: 'custom',
+              label: t('ag_prio_custom'),
+              sub: t('ag_prio_custom_sub'),
+            ),
+            (
+              value: 'variety',
+              label: t('ag_prio_variety'),
+              sub: t('ag_prio_variety_sub'),
+            ),
           ],
-          selected: s.feel,
-          onChanged: s.setFeel,
+          selected: s.prio,
+          onChanged: s.setPrio,
         ),
         const SizedBox(height: 6),
-        Text(
-          t('ag_feel_hint'),
-          style: const TextStyle(
-            fontSize: 11,
-            height: 1.5,
-            fontWeight: FontWeight.w600,
-            color: NurungjiColors.brown,
-          ),
-        ),
+        _hint(t('ag_prio_hint')),
         const SizedBox(height: 14),
-        Row(
+        // 자주 만지지 않는 것들은 한 겹 내린다 — 설정 카드가 길어지지 않게.
+        AgFoldCard(
+          title: t('ag_adv_title'),
+          trailing:
+              '${t('ag_flex_title')} ${s.flexSlotsEffective} · '
+              '${s.nGames}${t('ag_game_word')}',
+          initiallyExpanded: false,
           children: [
-            Text(
-              t('ag_tpl_title'),
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: NurungjiColors.dark,
-              ),
+            _label(t('ag_flex_title')),
+            _pickRow(
+              values: const [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+              selected: s.flexSlotsEffective,
+              onTap: s.setFlexSlots,
             ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                t('ag_tpl_hint'),
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: NurungjiColors.brown,
-                ),
-              ),
+            const SizedBox(height: 6),
+            _hint(t('ag_flex_hint')),
+            const SizedBox(height: 14),
+            _label(t('ag_games_count')),
+            _pickRow(
+              values: const [1, 2, 3, 4, 5, 6],
+              selected: s.nGames,
+              onTap: s.setNGames,
             ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            for (final tpl in kTemplates) ...[
-              Expanded(child: _tplChip(tpl)),
-              if (tpl != kTemplates.last) const SizedBox(width: 6),
-            ],
-          ],
-        ),
-        const SizedBox(height: 14),
-        Row(
-          children: [
-            Text(
-              t('ag_games_count'),
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: NurungjiColors.dark,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Row(
+            if (tplList.length > 1) ...[
+              const SizedBox(height: 14),
+              _label(t('ag_tpl_title')),
+              const SizedBox(height: 6),
+              Row(
                 children: [
-                  for (var n = 1; n <= 6; n++) ...[
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => s.setNGames(n),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 7),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: s.nGames == n
-                                ? NurungjiColors.yellow
-                                : NurungjiColors.chipBg,
-                            borderRadius: BorderRadius.circular(9),
-                          ),
-                          child: Text(
-                            '$n',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              color: s.nGames == n
-                                  ? NurungjiColors.dark
-                                  : NurungjiColors.chipFg,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (n != 6) const SizedBox(width: 4),
+                  for (final tpl in tplList) ...[
+                    Expanded(child: _tplChip(tpl)),
+                    if (tpl != tplList.last) const SizedBox(width: 6),
                   ],
                 ],
               ),
-            ),
+            ],
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 4),
         Row(
           children: [
             AgStatChip(
@@ -516,6 +490,66 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
       ],
     );
   }
+
+  Widget _label(String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+        color: NurungjiColors.dark,
+      ),
+    ),
+  );
+
+  Widget _hint(String text) => Text(
+    text,
+    style: const TextStyle(
+      fontSize: 11,
+      height: 1.5,
+      fontWeight: FontWeight.w600,
+      color: NurungjiColors.brown,
+    ),
+  );
+
+  /// 숫자 하나를 고르는 칩 줄(실험 자리 · 경기 수).
+  Widget _pickRow({
+    required List<int> values,
+    required int selected,
+    required ValueChanged<int> onTap,
+  }) => Row(
+    children: [
+      for (var i = 0; i < values.length; i++) ...[
+        Expanded(
+          child: GestureDetector(
+            onTap: () => onTap(values[i]),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 7),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: selected == values[i]
+                    ? NurungjiColors.yellow
+                    : NurungjiColors.chipBg,
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: Text(
+                '${values[i]}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: selected == values[i]
+                      ? NurungjiColors.dark
+                      : NurungjiColors.chipFg,
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (i != values.length - 1) const SizedBox(width: 4),
+      ],
+    ],
+  );
 
   Widget _tplChip(AnchigiTemplate tpl) {
     final on = s.allowed.contains(tpl.id);
@@ -621,16 +655,19 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
   // ── 결과 ──────────────────────────────────────────────────────────────────
 
   List<Widget> _result(RoundResult cur) {
-    final relaxed = cur.budget > feelOf(cur.feel).budget;
+    final relaxed = cur.budget > cur.flexAsked;
     final cores = cur.games.first.cores;
     final noC = cores != null && cores[2].isEmpty;
 
     return [
       AgMessage(
         '✓ ${tf('ag_ok_done', {'r': '${cur.round}'})} — '
-        '${cur.mode == 'abc' ? t('ag_ok_abc') : t('ag_ok_free')}',
+        '${cur.mode == 'abc' ? t('ag_ok_abc') : t('ag_ok_free')}'
+        '${cur.hasNeed ? '\n${t('ag_ok_done_need')}' : ''}',
         kind: AgMsgKind.ok,
       ),
+      if (cur.abcFellBack) AgMessage(t('ag_abc_fallback')),
+      if (cur.pinsRelaxed) AgMessage(t('ag_pin_relaxed')),
       if (relaxed) AgMessage(tf('ag_relaxed', {'n': '${cur.budget}'})),
       if (cores != null)
         AgMessage(
@@ -666,8 +703,9 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
         ),
       if (noC) AgMessage(t('ag_no_c_core')),
       _timeline(cur.round, cur.games),
+      _viewToggle(),
       for (var gi = 0; gi < cur.games.length; gi++)
-        _gameCard(cur.round, gi, cur.games[gi]),
+        _gameCard(cur.round, gi, cur.games[gi], cur.sport),
       AgCard(
         child: Column(
           children: [
@@ -723,6 +761,25 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
       ),
     ];
   }
+
+  /// 코트로 볼지 목록으로 볼지 — 현장에서 자주 누르는 토글이라 결과 바로 위에 둔다.
+  Widget _viewToggle() => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Align(
+      alignment: Alignment.centerRight,
+      child: SizedBox(
+        width: 190,
+        child: AgSegmented(
+          options: [
+            (value: 'court', label: t('ag_compact_court'), sub: null),
+            (value: 'list', label: t('ag_compact_list'), sub: null),
+          ],
+          selected: s.compact ? 'list' : 'court',
+          onChanged: (v) => s.setCompact(v == 'list'),
+        ),
+      ),
+    ),
+  );
 
   Widget _timeline(int rnd, List<GameResult> games) => AgCard(
     child: Column(
@@ -798,7 +855,7 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
     ),
   );
 
-  Widget _gameCard(int rnd, int gi, GameResult g) {
+  Widget _gameCard(int rnd, int gi, GameResult g, String sport) {
     // ABC 모드에서 이 경기의 두 팀에 해당하는 코어를 골라 차출 표시에 쓴다.
     final pair = kPairs[gi % 3];
     final teamCores = g.cores == null
@@ -841,12 +898,21 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
             ],
           ),
           const SizedBox(height: 10),
-          AnchigiCourt(
-            game: g,
-            teamCores: teamCores,
-            picked: s.picked,
-            onPick: s.pick,
-          ),
+          if (s.compact)
+            AnchigiLineupList(
+              game: g,
+              teamCores: teamCores,
+              picked: s.picked,
+              onPick: s.pick,
+            )
+          else
+            AnchigiCourt(
+              game: g,
+              teamCores: teamCores,
+              picked: s.picked,
+              onPick: s.pick,
+              sport: sport,
+            ),
           const SizedBox(height: 10),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -902,6 +968,54 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
               ),
             ],
           ),
+          if (g.hasNeed) ...[
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${t('ag_needs_title')}  ',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: NurungjiColors.urgent,
+                  ),
+                ),
+                Expanded(
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      for (final seat in [...g.need[0], ...g.need[1]])
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: NurungjiColors.urgent.withValues(alpha: .08),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: NurungjiColors.urgent.withValues(
+                                alpha: .4,
+                              ),
+                            ),
+                          ),
+                          child: Text(
+                            t('ag_posx_$seat'),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: NurungjiColors.urgent,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -946,7 +1060,12 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
           initiallyExpanded: i == 0,
           children: [
             for (var gi = 0; gi < rounds[i].games.length; gi++)
-              _gameCard(rounds[i].round, gi, rounds[i].games[gi]),
+              _gameCard(
+                rounds[i].round,
+                gi,
+                rounds[i].games[gi],
+                rounds[i].sport,
+              ),
           ],
         ),
     ];

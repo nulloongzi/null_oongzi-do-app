@@ -29,7 +29,11 @@ class SolveRequest {
   final int round;
   final int nGames;
   final String mode;
-  final String feel;
+  final String prio;
+  final String sport;
+
+  /// 팀당 실험 자리 수. null이면 우선순위의 기본값.
+  final int? flexSlots;
   final List<String> allowed;
   final AnchigiSchedule schedule;
 
@@ -39,7 +43,9 @@ class SolveRequest {
     required this.round,
     required this.nGames,
     required this.mode,
-    required this.feel,
+    required this.prio,
+    this.sport = 'v6',
+    this.flexSlots,
     required this.allowed,
     required this.schedule,
   });
@@ -53,9 +59,15 @@ RoundResult? solveRoundIsolate(SolveRequest req) =>
 class _Snap {
   int play;
   int bench;
+
+  /// 이번 라운드 안에서 연달아 대기한 횟수. 뛰면 0으로 돌아간다.
+  int bstreak;
   final bool early;
   final Map<String, int> fit;
   final Map<String, int> pos;
+
+  /// 고정(📌)한 자리. 없으면 null.
+  final String? pin;
 
   _Snap({
     required this.play,
@@ -63,7 +75,8 @@ class _Snap {
     required this.early,
     required this.fit,
     required this.pos,
-  });
+    this.pin,
+  }) : bstreak = 0;
 }
 
 /// 스냅샷 전체(원본 sc + sc.__avgPlay).
@@ -91,7 +104,10 @@ class _Assign {
   final String pos;
   final int team;
 
-  const _Assign(this.id, this.name, this.pos, this.team);
+  /// 사람이 없어 비워 둔 자리.
+  final bool empty;
+
+  const _Assign(this.id, this.name, this.pos, this.team, {this.empty = false});
 }
 
 class AnchigiSolver {
@@ -100,13 +116,22 @@ class AnchigiSolver {
   final int round;
   final int nGames;
   final String mode;
-  final String feel;
+  final String prio;
+  final String sport;
+  final int? flexSlots;
   final List<String> allowed;
   final AnchigiSchedule schedule;
   final Random _rnd = Random();
 
   /// 이번 뽑기에서 실제로 쓴 비주 예산(완화 여부 판단용).
   int usedBudget = 0;
+
+  /// 고정(📌)을 지키는 중인지. 다 지킬 수 없을 때만 false 가 된다.
+  bool _pinsOn = true;
+
+  /// 이번 뽑기에서 고정을 풀었는지 / A · B · C 를 포기했는지.
+  bool pinsRelaxed = false;
+  bool abcFellBack = false;
 
   /// ABC 모드 코어 배정 결과(원본의 p.core 대체).
   Map<String, int> _coreOf = {};
@@ -117,21 +142,34 @@ class AnchigiSolver {
       round = req.round,
       nGames = req.nGames,
       mode = req.mode,
-      feel = req.feel,
+      prio = req.prio,
+      sport = req.sport,
+      flexSlots = req.flexSlots,
       allowed = req.allowed,
-      schedule = req.schedule;
+      schedule = req.schedule {
+    // 자리 판정이 종목을 따라가도록 맞춰 둔다(스토어가 이미 맞췄어도 안전하게).
+    for (final p in present) {
+      p.sport = sport;
+    }
+  }
 
-  FeelWeights get _f => feelOf(feel);
+  PrioWeights get _f => prioOf(prio);
 
-  int get _budStart => min(_f.budget, kMaxBudget);
+  List<String> get _seats => posOfSport(sport);
+
+  int get _budStart {
+    final v = flexSlots ?? _f.flex;
+    return max(0, min(v, kMaxBudget));
+  }
 
   AnchigiStat _st(String id) => stat[id] ?? AnchigiStat();
 
   // ── 템플릿 ────────────────────────────────────────────────────────────────
 
   List<AnchigiTemplate> _tpls() {
-    final r = kTemplates.where((t) => allowed.contains(t.id)).toList();
-    return r.isEmpty ? [kTemplates[0]] : r;
+    final mine = templatesOfSport(sport);
+    final r = mine.where((t) => allowed.contains(t.id)).toList();
+    return r.isEmpty ? [mine.first] : r;
   }
 
   List<int> _sizes() {
@@ -170,8 +208,9 @@ class AnchigiSolver {
         play: s.play,
         bench: s.bench,
         early: _isEarly(p),
-        fit: {for (final q in kPos) q: p.fitOf(q)},
-        pos: {for (final q in kPos) q: s.pos[q] ?? 0},
+        fit: {for (final q in _seats) q: p.fitOf(q)},
+        pos: {for (final q in _seats) q: s.pos[q] ?? 0},
+        pin: _pinsOn ? p.pinned : null,
       );
       sum += s.play;
     }
@@ -199,13 +238,15 @@ class AnchigiSolver {
     // 적합도: 주 자리면 0, 가능이면 fitW, 도전이면 2×fitW.
     c += (2 - (s.fit[pos] ?? 0)) * f.fitW;
     // 포지션 선택지가 적은 사람일수록 비용이 낮아 먼저 자리를 잡는다.
-    c -= (kPos.length - nOpt) * 1.0;
+    c -= (_seats.length - nOpt) * 1.0;
     if (s.early) c -= kEarlySlotBonus;
+    // 고정한 자리면 크게 깎아, 그 사람이 실제로 그 자리에 들어가게 한다.
+    if (s.pin != null && s.pin == pos) c -= kPinSlotBonus;
     if (nOpt > 1) {
       final cnt = s.pos[pos] ?? 0;
       c += cnt * f.varietyW;
-      // 센터는 반복 부담이 커서 한 번 더 가중(원본과 동일).
-      if (pos == 'MB') c += (s.pos['MB'] ?? 0) * f.varietyW;
+      // 6인제 센터는 한 팀에 두 자리라 같은 사람이 연달아 걸리기 쉽다.
+      if (pos == 'MB' && sport == 'v6') c += (s.pos['MB'] ?? 0) * f.varietyW;
       if (cnt == 0) c -= f.newBonus;
     }
     if (pos == 'S' && nOpt == 1 && s.play >= sc.avgPlay + kSetterOveruseN) {
@@ -219,7 +260,9 @@ class AnchigiSolver {
     final s = sc.byId[id]!;
     return (avgPlay - s.play) * 3.5 +
         s.bench * 4.0 +
-        (s.early ? kEarlyBenchPenalty : 0.0);
+        s.bstreak * kBenchStreakPenalty +
+        (s.early ? kEarlyBenchPenalty : 0.0) +
+        (s.pin != null ? kPinSlotBonus : 0.0);
   }
 
   /// 배치 하나를 완성된 경기 결과로. 대기 비용과 팀 균형까지 합산한다.
@@ -230,16 +273,26 @@ class AnchigiSolver {
     List<String> teamNames,
   ) {
     final teams = <List<SlotAssign>>[[], []];
+    final need = <List<String>>[[], []];
     final used = <String>{};
     final capOf = {for (final q in pool) q.id: q.pos.length};
     var cost = 0.0;
 
     for (final a in assign) {
       if (a == null) continue;
+      if (a.empty) {
+        // 사람이 없어 비운 자리 — 코트에 '(필요)' 로 남는다.
+        teams[a.team].add(SlotAssign.needed(a.pos));
+        need[a.team].add(a.pos);
+        cost += kEmptySlotCost;
+        continue;
+      }
       teams[a.team].add(SlotAssign(id: a.id, name: a.name, pos: a.pos));
       used.add(a.id);
       cost += _slotCost(a.id, a.pos, sc, capOf[a.id] ?? 1);
     }
+    // 빈자리는 두 팀에 고르게 — 한쪽만 텅 빈 코트를 막는다.
+    cost += (need[0].length - need[1].length).abs() * kEmptySlotCost * 0.5;
 
     final bench = pool
         .where((q) => !used.contains(q.id))
@@ -261,7 +314,7 @@ class AnchigiSolver {
     final nOn = [0, 0];
     final nonMain = [0, 0];
     for (final a in assign) {
-      if (a == null) continue;
+      if (a == null || a.empty) continue;
       final fv = sc.byId[a.id]!.fit[a.pos] ?? 0;
       fitSum[a.team] += fv;
       nOn[a.team]++;
@@ -280,7 +333,19 @@ class AnchigiSolver {
       cost: cost,
       fitGap: gap,
       nonMain: nonMain,
+      need: need,
     );
+  }
+
+  /// 비워 둘 수 있는 자리 수.
+  /// (1) 사람이 자리 수보다 모자란 만큼 (2) 아무도 설 수 없는 자리 수.
+  int _emptyAllowance(List<AnchigiPlayer> pool, List<_Slot> slots) {
+    final deficit = max(0, slots.length - pool.length);
+    var impossible = 0;
+    for (final sl in slots) {
+      if (!pool.any((p) => p.pos.contains(sl.pos))) impossible++;
+    }
+    return deficit + impossible;
   }
 
   // ── 탐색 ──────────────────────────────────────────────────────────────────
@@ -302,8 +367,9 @@ class AnchigiSolver {
     List<_Slot> slots,
     List<Set<String>>? must,
     int nodeCap,
-    int? slotBudget,
-  ) {
+    int? slotBudget, [
+    int maxEmpty = 0,
+  ]) {
     final n = slots.length;
     final used = <String>{};
     final assign = List<_Assign?>.filled(n, null);
@@ -312,6 +378,7 @@ class AnchigiSolver {
     final need = [0, 0];
     final nm = [0, 0];
     final maxNM = slotBudget ?? 99;
+    var emptyLeft = maxEmpty;
 
     for (final s in slots) {
       left[s.team]++;
@@ -328,9 +395,12 @@ class AnchigiSolver {
 
     bool ok(AnchigiPlayer p, _Slot sl) {
       if (used.contains(p.id)) return false;
-      if (!p.tier.containsKey(sl.pos)) return false;
+      if (!p.pos.contains(sl.pos)) return false;
       if (sl.allow != null && !sl.allow!.contains(_coreOf[p.id])) return false;
       if (must != null && must[1 - sl.team].contains(p.id)) return false;
+      // 고정(📌)한 사람은 고정한 자리에만 선다.
+      final pn = sc.byId[p.id]?.pin;
+      if (pn != null && pn != sl.pos) return false;
       if (p.tierOf(sl.pos) != 'main' && nm[sl.team] >= maxNM) return false;
       return true;
     }
@@ -347,19 +417,43 @@ class AnchigiSolver {
       // MRV: 채울 수 있는 후보가 가장 적은 자리부터.
       var bi = -1;
       List<AnchigiPlayer>? bc;
+      var ties = 0;
       for (var k = 0; k < n; k++) {
         if (assign[k] != null) continue;
         final c = <AnchigiPlayer>[];
         for (final q in pool) {
           if (ok(q, slots[k])) c.add(q);
         }
+        // 후보 수가 같은 자리끼리는 고르게 무작위로 고른다(저수지 표집).
+        // 앞에서부터 차례로 고르면 팀 A 자리가 먼저 차서, 인원이 모자랄 때
+        // 빈자리가 한쪽 팀에만 몰린다.
         if (bc == null || c.length < bc.length) {
           bi = k;
           bc = c;
+          ties = 1;
+        } else if (c.length == bc.length) {
+          ties++;
+          if (_rnd.nextDouble() * ties < 1) {
+            bi = k;
+            bc = c;
+          }
         }
         if (c.isEmpty) break;
       }
-      if (bc == null || bc.isEmpty) return false;
+      if (bc == null) return false;
+      if (bc.isEmpty) {
+        // 이 자리를 볼 사람이 없다 — 비워 둘 여유가 있으면 '(필요)' 로 남긴다.
+        if (emptyLeft <= 0) return false;
+        final etm = slots[bi].team;
+        emptyLeft--;
+        left[etm]--;
+        assign[bi] = _Assign('', '', slots[bi].pos, etm, empty: true);
+        if (bt(depth + 1)) return true;
+        emptyLeft++;
+        left[etm]++;
+        assign[bi] = null;
+        return false;
+      }
 
       // 싼 후보부터, 다만 매번 다른 결과가 나오도록 난수를 섞는다.
       final slot = slots[bi];
@@ -410,7 +504,7 @@ class AnchigiSolver {
     bool bt(int i) {
       if (i == ms.length) return true;
       for (var k = 0; k < slots.length; k++) {
-        if (used[k] || !ms[i].tier.containsKey(slots[k])) continue;
+        if (used[k] || !ms[i].pos.contains(slots[k])) continue;
         used[k] = true;
         if (bt(i + 1)) return true;
         used[k] = false;
@@ -433,6 +527,8 @@ class AnchigiSolver {
     if (n < 2 * t || n > 3 * t) return null;
     return [t, t, n - 2 * t];
   }
+
+  int? _pinTeamOf(AnchigiPlayer p) => _pinsOn ? p.pinTeam : null;
 
   List<List<AnchigiPlayer>>? _makeCores(
     List<AnchigiPlayer> pool,
@@ -466,6 +562,10 @@ class AnchigiSolver {
             )
             .toList()
           ..sort((a, b) {
+            // 팀을 지정(📌)해 둔 사람부터 — 뒤로 밀리면 자리가 없어 실패한다.
+            final ap = _pinTeamOf(a.p) == null ? 1 : 0;
+            final bp = _pinTeamOf(b.p) == null ? 1 : 0;
+            if (ap != bp) return ap - bp;
             if (a.over != b.over) return a.over - b.over;
             if (a.flex != b.flex) return a.flex - b.flex;
             return a.jit.compareTo(b.jit);
@@ -476,11 +576,14 @@ class AnchigiSolver {
 
     for (final e in byFlex) {
       final p = e.p;
+      final want = _pinTeamOf(p);
       final order =
           [0, 1, 2]
               .where(
                 (c) =>
-                    cores[c].length < szs[c] && _coreFits([...cores[c], p], t),
+                    (want == null || c == want) &&
+                    cores[c].length < szs[c] &&
+                    _coreFits([...cores[c], p], t),
               )
               .map(
                 (c) => (
@@ -514,6 +617,7 @@ class AnchigiSolver {
     int gi,
     int tries,
     int bud,
+    bool allowEmpty,
   ) {
     final pr = kPairs[gi % 3];
     final x = pr[0], y = pr[1], z = pr[2];
@@ -531,17 +635,13 @@ class AnchigiSolver {
     // 각 팀은 자기 코어 + 쉬는 코어(Z)에서만 차출한다.
     final allowA = [x, z], allowB = [y, z];
 
+    int allowOf(List<_Slot> sl) => allowEmpty ? _emptyAllowance(pool, sl) : 0;
+
     GameResult? probe;
     for (var i = 0; i < opts.length && probe == null; i++) {
       for (var j = 0; j < opts.length && probe == null; j++) {
-        final as = _search(
-          pool,
-          sc,
-          _mkSlots(opts[i], opts[j], allowA, allowB),
-          must,
-          6000,
-          bud,
-        );
+        final sl = _mkSlots(opts[i], opts[j], allowA, allowB);
+        final as = _search(pool, sc, sl, must, 6000, bud, allowOf(sl));
         if (as != null) probe = _finish(pool, sc, as, names);
       }
     }
@@ -553,14 +653,8 @@ class AnchigiSolver {
     for (var i = 0; i < n; i++) {
       final a = opts[_rnd.nextInt(opts.length)];
       final b = opts[_rnd.nextInt(opts.length)];
-      final as = _search(
-        pool,
-        sc,
-        _mkSlots(a, b, allowA, allowB),
-        must,
-        3000,
-        bud,
-      );
+      final sl = _mkSlots(a, b, allowA, allowB);
+      final as = _search(pool, sc, sl, must, 3000, bud, allowOf(sl));
       if (as == null) continue;
       final r = _finish(pool, sc, as, names);
       if (r.cost < best.cost) best = r;
@@ -572,21 +666,23 @@ class AnchigiSolver {
     final opts = _tpls();
     GameResult? probe;
     var bud = _budStart;
-    for (; bud <= kMaxBudget && probe == null; bud++) {
-      for (var i = 0; i < opts.length && probe == null; i++) {
-        for (var j = 0; j < opts.length && probe == null; j++) {
-          if (opts[i].size + opts[j].size > pool.length) continue;
-          final as = _search(
-            pool,
-            sc,
-            _mkSlots(opts[i], opts[j]),
-            null,
-            20000,
-            bud,
-          );
-          if (as != null) {
-            probe = _finish(pool, sc, as, ['A', 'B']);
-            usedBudget = bud;
+    var allow = 0;
+    // 1차는 자리를 다 채우는 배치만 본다. 그래도 안 되면(인원 부족 등)
+    // 2차에서 모자란 자리를 비워 둔 배치를 허용한다.
+    for (var pass = 0; pass < 2 && probe == null; pass++) {
+      for (bud = _budStart; bud <= kMaxBudget && probe == null; bud++) {
+        for (var i = 0; i < opts.length && probe == null; i++) {
+          for (var j = 0; j < opts.length && probe == null; j++) {
+            if (pass == 0 && opts[i].size + opts[j].size > pool.length) {
+              continue;
+            }
+            final sl = _mkSlots(opts[i], opts[j]);
+            allow = pass == 0 ? 0 : _emptyAllowance(pool, sl);
+            final as = _search(pool, sc, sl, null, 20000, bud, allow);
+            if (as != null) {
+              probe = _finish(pool, sc, as, ['A', 'B']);
+              usedBudget = bud;
+            }
           }
         }
       }
@@ -599,8 +695,17 @@ class AnchigiSolver {
     for (var i = 0; i < n; i++) {
       final a = opts[_rnd.nextInt(opts.length)];
       final b = opts[_rnd.nextInt(opts.length)];
-      if (a.size + b.size > pool.length) continue;
-      final as = _search(pool, sc, _mkSlots(a, b), null, 3000, bud);
+      final sl = _mkSlots(a, b);
+      if (allow == 0 && a.size + b.size > pool.length) continue;
+      final as = _search(
+        pool,
+        sc,
+        sl,
+        null,
+        3000,
+        bud,
+        allow == 0 ? 0 : _emptyAllowance(pool, sl),
+      );
       if (as == null) continue;
       final r = _finish(pool, sc, as, ['A', 'B']);
       if (r.cost < best.cost) best = r;
@@ -608,9 +713,34 @@ class AnchigiSolver {
     return best;
   }
 
+  /// 한 경기를 마친 뒤 라운드 안의 누적치를 갱신한다.
+  /// 연속 대기(bstreak)는 여기서만 오르내린다 — 뛰면 0으로 돌아간다.
+  void _applyGame(_Sc sc, GameResult g) {
+    for (final team in g.teams) {
+      for (final a in team) {
+        if (a.empty) continue;
+        final snap = sc.byId[a.id]!;
+        snap.play++;
+        snap.pos[a.pos] = (snap.pos[a.pos] ?? 0) + 1;
+        snap.bstreak = 0;
+      }
+    }
+    for (final b in g.bench) {
+      final snap = sc.byId[b.id]!;
+      snap.bench++;
+      snap.bstreak++;
+    }
+    _refreshAvg(sc);
+  }
+
   // ── 라운드 풀이 ───────────────────────────────────────────────────────────
 
-  List<GameResult>? _runRoundABC(int t, bool quality, int bud) {
+  List<GameResult>? _runRoundABC(
+    int t,
+    bool quality,
+    int bud,
+    bool allowEmpty,
+  ) {
     final szs = _coreSizes(present.length, t);
     if (szs == null) return null;
     final cores = _makeCores(present, szs, t);
@@ -632,7 +762,7 @@ class AnchigiSolver {
     for (var i = 0; i < nGames; i++) {
       final avail = _availForGame(present, round, i);
       final availIds = avail.map((p) => p.id).toSet();
-      final g = _solveGameABC(avail, sc, t, i, quality ? 20 : 0, bud);
+      final g = _solveGameABC(avail, sc, t, i, quality ? 20 : 0, bud, allowEmpty);
       if (g == null) return null;
 
       games.add(
@@ -645,17 +775,7 @@ class AnchigiSolver {
         ),
       );
 
-      for (final team in g.teams) {
-        for (final a in team) {
-          final s = sc.byId[a.id]!;
-          s.play++;
-          s.pos[a.pos] = (s.pos[a.pos] ?? 0) + 1;
-        }
-      }
-      for (final b in g.bench) {
-        sc.byId[b.id]!.bench++;
-      }
-      _refreshAvg(sc);
+      _applyGame(sc, g);
     }
     return games;
   }
@@ -667,17 +787,20 @@ class AnchigiSolver {
     if (szList.isEmpty) return null;
 
     List<GameResult>? found;
-    var bestT = 0, bestBud = 0;
+    var bestT = 0, bestBud = 0, bestPass = 0;
     // 예산 완화는 최후의 수단 — 각 예산에서 코어를 80번 다시 짜본 뒤에야 올린다.
-    for (var bud = _budStart; bud <= kMaxBudget && found == null; bud++) {
-      for (var i = 0; i < 80 && found == null; i++) {
-        final t = szList[_rnd.nextInt(szList.length)];
-        final r = _runRoundABC(t, false, bud);
-        if (r != null) {
-          found = r;
-          bestT = t;
-          bestBud = bud;
-          usedBudget = bud;
+    for (var pass = 0; pass < 2 && found == null; pass++) {
+      for (var bud = _budStart; bud <= kMaxBudget && found == null; bud++) {
+        for (var i = 0; i < 80 && found == null; i++) {
+          final t = szList[_rnd.nextInt(szList.length)];
+          final r = _runRoundABC(t, false, bud, pass == 1);
+          if (r != null) {
+            found = r;
+            bestT = t;
+            bestBud = bud;
+            bestPass = pass;
+            usedBudget = bud;
+          }
         }
       }
     }
@@ -686,7 +809,7 @@ class AnchigiSolver {
     var best = found;
     var bestCost = _totalCost(found);
     for (var k = 0; k < 6; k++) {
-      final r = _runRoundABC(bestT, true, bestBud);
+      final r = _runRoundABC(bestT, true, bestBud, bestPass == 1);
       if (r != null && _totalCost(r) < bestCost) {
         best = r;
         bestCost = _totalCost(r);
@@ -696,8 +819,10 @@ class AnchigiSolver {
       round: round,
       games: best,
       mode: mode,
-      feel: feel,
+      prio: prio,
+      sport: sport,
       budget: usedBudget,
+      flexAsked: _budStart,
       teamSize: bestT,
     );
   }
@@ -723,17 +848,7 @@ class AnchigiSolver {
         ),
       );
 
-      for (final team in g.teams) {
-        for (final a in team) {
-          final s = sc.byId[a.id]!;
-          s.play++;
-          s.pos[a.pos] = (s.pos[a.pos] ?? 0) + 1;
-        }
-      }
-      for (final b in g.bench) {
-        sc.byId[b.id]!.bench++;
-      }
-      _refreshAvg(sc);
+      _applyGame(sc, g);
     }
 
     usedBudget = maxBud;
@@ -741,16 +856,56 @@ class AnchigiSolver {
       round: round,
       games: games,
       mode: mode,
-      feel: feel,
+      prio: prio,
+      sport: sport,
       budget: maxBud,
+      flexAsked: _budStart,
     );
   }
 
   double _totalCost(List<GameResult> gs) => gs.fold(0.0, (s, g) => s + g.cost);
 
   RoundResult? solveRound() {
-    if (quickInfeasible() != null) return null;
-    return mode == 'abc' ? _solveRoundABC() : _solveRoundFree();
+    if (present.isEmpty) return null;
+    pinsRelaxed = false;
+    abcFellBack = false;
+
+    var r = _solveOnce();
+    if (r == null) {
+      // 고정(📌)을 다 지키면 답이 없을 수 있다. 마지막에 고정을 풀고 한 번 더.
+      final anyPin = present.any((p) => p.pinned != null || p.pinTeam != null);
+      if (!anyPin) return null;
+      _pinsOn = false;
+      r = _solveOnce();
+      _pinsOn = true;
+      if (r == null) return null;
+      pinsRelaxed = true;
+    }
+    return r.copyWith(
+      pinsRelaxed: pinsRelaxed,
+      abcFellBack: abcFellBack,
+      mode: abcFellBack ? 'free' : mode,
+    );
+  }
+
+  RoundResult? _solveOnce() {
+    if (mode != 'abc') return _solveRoundFree();
+    final r = _solveRoundABC();
+    if (r != null) return r;
+    // A · B · C 는 팀 인원의 2~3배가 필요하다. 인원이 그에 못 미치면
+    // 못 뽑는다고 막는 대신 자유 편성으로 돌려 빈자리를 보여준다.
+    final f = _solveRoundFree();
+    if (f != null) abcFellBack = true;
+    return f;
+  }
+
+  /// 자리가 빌 것 같은 상황인지 — 막는 판단이 아니라 미리 알려주는 판단이다.
+  bool shortHanded() {
+    if (present.isEmpty) return false;
+    if (present.length < minCourt()) return true;
+    return _tpls().every(
+      (t) => t.slots.any((p) => !present.any((q) => q.pos.contains(p))),
+    );
   }
 
   // ── 사전 진단 ─────────────────────────────────────────────────────────────
@@ -775,13 +930,8 @@ class AnchigiSolver {
 
   int minCourt() => _sizes().first * 2;
 
-  /// 뽑기 전에 명백히 불가능한 조건을 걸러낸다. 가능하면 null.
-  InfeasibleReason? quickInfeasible() {
-    final reasons = diagnose();
-    return reasons.isEmpty ? null : reasons.first;
-  }
-
-  /// 불가능한 이유를 모두. 가능하면 빈 목록.
+  /// 인원·자리가 모자란 이유를 모두. 넉넉하면 빈 목록.
+  /// 이제 뽑기를 막지 않고 '이런 자리가 빈다'는 안내로만 쓴다.
   List<InfeasibleReason> diagnose() {
     final out = <InfeasibleReason>[];
     final n = present.length;
@@ -794,7 +944,7 @@ class AnchigiSolver {
     }
     final bench = n - mc;
 
-    for (final p in kPos) {
+    for (final p in _seats) {
       final onlyList = present
           .where((q) => q.pos.length == 1 && q.pos[0] == p)
           .toList();
@@ -812,10 +962,10 @@ class AnchigiSolver {
       }
     }
 
-    for (final p in kPos) {
+    for (final p in _seats) {
       final mins = _minSlotFor(p);
       if (mins == 0) continue;
-      final able = present.where((q) => q.tier.containsKey(p)).length;
+      final able = present.where((q) => q.pos.contains(p)).length;
       if (able < mins) {
         out.add(
           InfeasibleReason('few', {'pos': p, 'able': '$able', 'min': '$mins'}),

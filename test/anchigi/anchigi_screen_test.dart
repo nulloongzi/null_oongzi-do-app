@@ -11,8 +11,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 Widget app() => MaterialApp(theme: AppTheme.light, home: const AnchigiScreen());
 
-/// 전 포지션 가능한 선수 n명을 저장소에 미리 넣어 둔다.
-/// (추가 폼으로 넣으면 포지션이 세터 하나뿐이라 배치가 안 된다)
+/// 전 자리 가능한 선수 n명을 저장소에 미리 넣어 둔다.
+/// (자리를 안 고르면 '어디든'이라 배치는 되지만, 티어별 동작을 보려면 명시가 낫다)
 void seedRoster(int n) {
   final players = [
     for (var i = 0; i < n; i++)
@@ -211,10 +211,72 @@ void main() {
     // 결과가 있으면 설정 카드가 접혀 있으므로 펼쳐서 바꾼다.
     await tester.tap(find.text(t('ag_card_settings')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(t('ag_feel_mix')));
+    await tester.tap(find.text(t('ag_prio_variety')));
     await tester.pumpAndSettle();
 
     expect(find.text(t('ag_confirm_next')), findsNothing);
+  });
+
+  testWidgets('9인제로 바꾸면 코트가 아홉 자리로 바뀐다', (tester) async {
+    seedRoster(18);
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(t('ag_sport_v9')));
+    await tester.pumpAndSettle();
+    await drawAndWait(tester);
+
+    // 9인제 자리 이름이 코트에 보인다.
+    expect(find.text(t('ag_posx_CC')), findsWidgets);
+    // 빈 자리 없이 다 찼다.
+    expect(find.textContaining('(${t('ag_need_label')})'), findsNothing);
+  });
+
+  testWidgets('인원이 모자라도 뽑히고 빈 자리가 (필요)로 보인다', (tester) async {
+    seedRoster(9);
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+
+    // 막지 않고 안내만 띄운다.
+    expect(find.textContaining(t('ag_shortage_note')), findsOneWidget);
+
+    await drawAndWait(tester);
+    expect(find.textContaining('(${t('ag_need_label')})'), findsWidgets);
+    expect(find.textContaining(t('ag_needs_title')), findsWidgets);
+  });
+
+  testWidgets('간단히 보기로 바꾸면 코트 대신 목록이 나온다', (tester) async {
+    seedRoster(12);
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    await drawAndWait(tester);
+
+    expect(find.byType(AnchigiCourt), findsWidgets);
+    await tester.tap(find.text(t('ag_compact_list')));
+    await tester.pumpAndSettle();
+    expect(find.byType(AnchigiCourt), findsNothing);
+    expect(find.byType(AnchigiLineupList), findsWidgets);
+  });
+
+  testWidgets('명단에서 자리를 고르고 고정할 수 있다', (tester) async {
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(t('ag_tab_roster')));
+    await tester.pumpAndSettle();
+
+    await addPlayer(tester, '누룽');
+    // 자리를 안 골랐으니 '어디든'.
+    expect(find.text(t('ag_flex_badge')), findsOneWidget);
+
+    // 명단 행의 세터 칩을 눌러 주 자리로(추가 폼 칩이 아니라 첫 번째).
+    await tester.tap(find.text(t('ag_posx_S')).first);
+    await tester.pumpAndSettle();
+    expect(find.text(t('ag_flex_badge')), findsNothing);
+
+    // 📌 로 고정하면 자리 이름이 붙는다.
+    await tester.tap(find.text('📌'));
+    await tester.pumpAndSettle();
+    expect(find.text('📌 ${t('ag_posx_S')}'), findsOneWidget);
   });
 
   testWidgets('기록 탭은 확정 전에는 비어 있다', (tester) async {
