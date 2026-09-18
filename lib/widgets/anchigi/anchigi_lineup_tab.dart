@@ -135,11 +135,7 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
     );
   }
 
-  Widget _scroll(
-    RoundResult? cur,
-    bool failed,
-    List<InfeasibleReason> diag,
-  ) {
+  Widget _scroll(RoundResult? cur, bool failed, List<InfeasibleReason> diag) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
       children: [
@@ -990,25 +986,25 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
         '${formatTime(s.schedule.gameEndMin(rnd, games.length - 1, s.nGames))}',
     initiallyExpanded: false,
     children: [
+      _tlRow(
+        '${s.schedule.start}–${s.schedule.warmup}',
+        t('ag_warmup'),
+        dim: true,
+      ),
+      for (var gi = 0; gi < games.length; gi++)
         _tlRow(
-          '${s.schedule.start}–${s.schedule.warmup}',
-          t('ag_warmup'),
+          '${formatTime(s.schedule.gameStartMin(rnd, gi, s.nGames))}'
+              '–${formatTime(s.schedule.gameEndMin(rnd, gi, s.nGames))}',
+          '${gi + 1}${t('ag_game_word')}'
+              '${games[gi].left.isEmpty ? '' : '   ${games[gi].left.map((l) => l.name).join(', ')} ${t('ag_leave_word')}'}',
+          warn: games[gi].left.isNotEmpty,
+        ),
+      if (s.schedule.rest > 0 && rnd < s.maxRounds)
+        _tlRow(
+          '${s.schedule.rest}${t('ag_min')}',
+          t('ag_rest_word'),
           dim: true,
         ),
-        for (var gi = 0; gi < games.length; gi++)
-          _tlRow(
-            '${formatTime(s.schedule.gameStartMin(rnd, gi, s.nGames))}'
-                '–${formatTime(s.schedule.gameEndMin(rnd, gi, s.nGames))}',
-            '${gi + 1}${t('ag_game_word')}'
-                '${games[gi].left.isEmpty ? '' : '   ${games[gi].left.map((l) => l.name).join(', ')} ${t('ag_leave_word')}'}',
-            warn: games[gi].left.isNotEmpty,
-          ),
-        if (s.schedule.rest > 0 && rnd < s.maxRounds)
-          _tlRow(
-            '${s.schedule.rest}${t('ag_min')}',
-            t('ag_rest_word'),
-            dim: true,
-          ),
     ],
   );
 

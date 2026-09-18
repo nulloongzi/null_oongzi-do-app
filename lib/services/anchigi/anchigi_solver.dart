@@ -176,6 +176,9 @@ class AnchigiSolver {
 
   List<String> get _seats => posOfSport(sport);
 
+  /// 이 종목에서 '세터' 자리를 가리키는 키.
+  String get _setterKey => sport == 'v9' ? 'S9' : 'S';
+
   int get _budStart {
     final v = flexSlots ?? _f.flex;
     return max(0, min(v, kMaxBudget));
@@ -268,7 +271,9 @@ class AnchigiSolver {
       if (pos == 'MB' && sport == 'v6') c += (s.pos['MB'] ?? 0) * f.varietyW;
       if (cnt == 0) c -= f.newBonus;
     }
-    if (pos == 'S' && nOpt == 1 && s.play >= sc.avgPlay + kSetterOveruseN) {
+    if (pos == _setterKey &&
+        nOpt == 1 &&
+        s.play >= sc.avgPlay + kSetterOveruseN) {
       // 세터 전용인데 많이 뛰었으면 다른 사람이 세터를 볼 여지를 준다.
       c += (s.play - sc.avgPlay) * 3.0;
     }
@@ -374,16 +379,37 @@ class AnchigiSolver {
     );
   }
 
-  /// 비워 둘 수 있는 자리 수.
-  /// (1) 사람이 자리 수보다 모자란 만큼 (2) 아무도 설 수 없는 자리 수.
-  int _emptyAllowance(List<AnchigiPlayer> pool, List<_Slot> slots) {
-    final deficit = max(0, slots.length - pool.length);
-    var impossible = 0;
-    for (final sl in slots) {
-      if (!pool.any((p) => p.pos.contains(sl.pos))) impossible++;
+  /// 이 인원으로 최대 몇 자리까지 채울 수 있나 — 이분 매칭.
+  /// 티어 · 예산 · 고정은 보지 않는다. '가능 자리'만으로 따진다.
+  int _maxFillable(List<AnchigiPlayer> pool, List<_Slot> slots) {
+    final matchOf = List<int?>.filled(slots.length, null);
+    var n = 0;
+
+    bool tryFill(int pi, Set<int> seen) {
+      for (var k = 0; k < slots.length; k++) {
+        if (seen.contains(k)) continue;
+        if (!pool[pi].pos.contains(slots[k].pos)) continue;
+        seen.add(k);
+        final held = matchOf[k];
+        if (held == null || tryFill(held, seen)) {
+          matchOf[k] = pi;
+          return true;
+        }
+      }
+      return false;
     }
-    return deficit + impossible;
+
+    for (var i = 0; i < pool.length; i++) {
+      if (tryFill(i, <int>{})) n++;
+    }
+    return n;
   }
+
+  /// 비워 둘 수 있는 자리 수 = 아무리 잘 배치해도 못 채우는 자리 수.
+  /// 인원이 모자란 경우뿐 아니라 '그 자리를 볼 사람이 자리 수보다 적은' 경우도
+  /// 여기서 잡힌다(세터 가능자가 한 명인데 코트에 세터 자리가 둘인 경우 등).
+  int _emptyAllowance(List<AnchigiPlayer> pool, List<_Slot> slots) =>
+      slots.length - _maxFillable(pool, slots);
 
   // ── 탐색 ──────────────────────────────────────────────────────────────────
 
@@ -484,7 +510,14 @@ class AnchigiSolver {
         final etm = slots[bi].team;
         emptyLeft--;
         left[etm]--;
-        assign[bi] = _Assign('', '', slots[bi].pos, etm, slots[bi].def, empty: true);
+        assign[bi] = _Assign(
+          '',
+          '',
+          slots[bi].pos,
+          etm,
+          slots[bi].def,
+          empty: true,
+        );
         if (bt(depth + 1)) return true;
         emptyLeft++;
         left[etm]++;
@@ -581,7 +614,7 @@ class AnchigiSolver {
     bool overusedSetter(AnchigiPlayer p) {
       final ps = p.pos;
       return ps.length == 1 &&
-          ps[0] == 'S' &&
+          ps[0] == _setterKey &&
           _st(p.id).play >= avgP + kSetterOveruseN;
     }
 
@@ -719,7 +752,13 @@ class AnchigiSolver {
             allow = pass == 0 ? 0 : _emptyAllowance(pool, sl);
             final as = _search(pool, sc, sl, null, 20000, bud, allow);
             if (as != null) {
-              probe = _finish(pool, sc, as, ['A', 'B'], [opts[i].id, opts[j].id]);
+              probe = _finish(
+                pool,
+                sc,
+                as,
+                ['A', 'B'],
+                [opts[i].id, opts[j].id],
+              );
               usedBudget = bud;
             }
           }
@@ -801,7 +840,15 @@ class AnchigiSolver {
     for (var i = 0; i < nGames; i++) {
       final avail = _availForGame(present, round, i);
       final availIds = avail.map((p) => p.id).toSet();
-      final g = _solveGameABC(avail, sc, t, i, quality ? 20 : 0, bud, allowEmpty);
+      final g = _solveGameABC(
+        avail,
+        sc,
+        t,
+        i,
+        quality ? 20 : 0,
+        bud,
+        allowEmpty,
+      );
       if (g == null) return null;
 
       games.add(
@@ -910,18 +957,34 @@ class AnchigiSolver {
     if (present.isEmpty) return null;
     pinsRelaxed = false;
     abcFellBack = false;
+    final anyPin = present.any((p) => p.pinned != null || p.pinTeam != null);
 
-    var r = _solveOnce();
-    if (r == null) {
-      // 고정(📌)을 다 지키면 답이 없을 수 있다. 마지막에 고정을 풀고 한 번 더.
-      final anyPin = present.any((p) => p.pinned != null || p.pinTeam != null);
-      if (!anyPin) return null;
+    // 1) 고른 모드 그대로, 고정을 지켜서.
+    var r = _attempt();
+
+    // 2) 고정(📌)을 다 지키면 답이 없을 수 있다 — 풀고 같은 모드로 한 번 더.
+    //    (A · B · C 를 포기하기 전에 이걸 먼저 본다. 고정 때문에 막힌 건데
+    //     자유 편성으로 내려가면 엉뚱한 안내가 나간다.)
+    if (r == null && anyPin) {
       _pinsOn = false;
-      r = _solveOnce();
+      r = _attempt();
       _pinsOn = true;
-      if (r == null) return null;
-      pinsRelaxed = true;
+      if (r != null) pinsRelaxed = true;
     }
+
+    // 3) 그래도 안 되면 자유 편성으로. A · B · C 는 팀 인원의 2~3배가 필요하다.
+    if (r == null && mode == 'abc') {
+      r = _solveRoundFree();
+      if (r == null && anyPin) {
+        _pinsOn = false;
+        r = _solveRoundFree();
+        _pinsOn = true;
+        if (r != null) pinsRelaxed = true;
+      }
+      if (r != null) abcFellBack = true;
+    }
+    if (r == null) return null;
+
     return r.copyWith(
       pinsRelaxed: pinsRelaxed,
       abcFellBack: abcFellBack,
@@ -929,24 +992,20 @@ class AnchigiSolver {
     );
   }
 
-  RoundResult? _solveOnce() {
-    if (mode != 'abc') return _solveRoundFree();
-    final r = _solveRoundABC();
-    if (r != null) return r;
-    // A · B · C 는 팀 인원의 2~3배가 필요하다. 인원이 그에 못 미치면
-    // 못 뽑는다고 막는 대신 자유 편성으로 돌려 빈자리를 보여준다.
-    final f = _solveRoundFree();
-    if (f != null) abcFellBack = true;
-    return f;
-  }
+  RoundResult? _attempt() =>
+      mode == 'abc' ? _solveRoundABC() : _solveRoundFree();
 
   /// 자리가 빌 것 같은 상황인지 — 막는 판단이 아니라 미리 알려주는 판단이다.
   bool shortHanded() {
     if (present.isEmpty) return false;
-    if (present.length < minCourt()) return true;
-    return _tpls().every(
-      (t) => t.slots.any((sl) => !present.any((q) => q.pos.contains(sl.role))),
-    );
+    final ts = _tpls();
+    // 한 조합이라도 자리를 다 채울 수 있으면 부족하지 않다.
+    for (final a in ts) {
+      for (final b in ts) {
+        if (_emptyAllowance(present, _mkSlots(a, b)) == 0) return false;
+      }
+    }
+    return true;
   }
 
   // ── 사전 진단 ─────────────────────────────────────────────────────────────

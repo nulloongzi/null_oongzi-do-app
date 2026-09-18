@@ -38,9 +38,17 @@ const Map<String, Color> _posColor = {
 typedef _Cell = ({String label, SlotAssign? pl});
 
 /// 존 번호 → 배치된 사람. 존을 안 싣던 시절의 기록용 폴백.
-Map<int, SlotAssign> _legacyZones(List<SlotAssign> lineup) {
+/// 센터 2 + 리베로 1(7인)이면 리베로는 코트 밖이라 존을 차지하지 않는다 —
+/// 그냥 6번에 넣으면 후위 센터를 덮어써 한 명이 사라진다.
+({Map<int, SlotAssign> zones, SlotAssign? off}) _legacyZones(
+  List<SlotAssign> lineup,
+) {
   final z = <int, SlotAssign>{};
   final ohs = [2, 5], mbs = [3, 6];
+  SlotAssign? off;
+  final split =
+      lineup.where((x) => x.pos == 'MB').length == 2 &&
+      lineup.where((x) => x.pos == 'Li').length == 1;
   for (final p in lineup) {
     switch (p.pos) {
       case 'S':
@@ -52,10 +60,14 @@ Map<int, SlotAssign> _legacyZones(List<SlotAssign> lineup) {
       case 'MB':
         if (mbs.isNotEmpty) z[mbs.removeAt(0)] = p;
       case 'Li':
-        z[6] = p;
+        if (split) {
+          off = p;
+        } else {
+          z[6] = p;
+        }
     }
   }
-  return z;
+  return (zones: z, off: off);
 }
 
 class AnchigiCourt extends StatelessWidget {
@@ -149,8 +161,17 @@ class AnchigiCourt extends StatelessWidget {
       return (rows: rows, off: off);
     }
 
-    var byZone = <int, SlotAssign>{for (final x in on) if (x.zone != 0) x.zone: x};
-    if (byZone.isEmpty) byZone = _legacyZones(on);
+    var byZone = <int, SlotAssign>{
+      for (final x in on)
+        if (x.zone != 0) x.zone: x,
+    };
+    var offAll = off;
+    if (byZone.isEmpty) {
+      // 존을 안 싣던 시절의 기록.
+      final legacy = _legacyZones(on);
+      byZone = legacy.zones;
+      if (legacy.off != null) offAll = [...off, legacy.off!];
+    }
     final order = top ? _topRows : _botRows;
     return (
       rows: [
@@ -165,7 +186,7 @@ class AnchigiCourt extends StatelessWidget {
               ),
           ],
       ],
-      off: off,
+      off: offAll,
     );
   }
 

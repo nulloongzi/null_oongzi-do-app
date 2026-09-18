@@ -339,6 +339,48 @@ void main() {
       expect(s.players.length, 1, reason: '명단은 유지돼야 함');
     });
 
+    test('껐던 구성은 다시 켜지지 않는다', () async {
+      // 새 구성을 아는 저장본(6-2 를 꺼 둔 상태)은 그대로 읽어야 한다.
+      SharedPreferences.setMockInitialValues({
+        'anchigi.tpl.v1': '["mb2","mb1li","mb2li","v9q1","v9q2","v9q3"]',
+      });
+      final s = AnchigiStore();
+      await s.load();
+      expect(s.allowed, isNot(contains('mb2x62')));
+    });
+
+    test('5-1 구성만 있던 예전 저장본에는 새 구성을 켜 준다', () async {
+      SharedPreferences.setMockInitialValues({
+        'anchigi.tpl.v1': '["mb2","mb1li","mb2li"]',
+      });
+      final s = AnchigiStore();
+      await s.load();
+      expect(s.allowed, contains('mb2x62'));
+      expect(s.allowed, contains('v9q2'));
+    });
+
+    test('한 종목의 주 자리를 올려도 다른 종목 주 자리는 그대로', () async {
+      final s = await freshStore();
+      s.addPlayer('가', {'S': 'main', 'OH': 'sub', 'QK': 'main', 'CH': 'sub'});
+      final id = s.players.first.id;
+      s.setSport('v9');
+      s.promoteTier(id, 'CH');
+
+      expect(s.players.first.tier['CH'], 'main');
+      expect(s.players.first.tier['QK'], 'sub');
+      expect(s.players.first.tier['S'], 'main', reason: '6인제 주 자리는 그대로여야 한다');
+    });
+
+    test('망가진 백업은 지금 명단을 건드리지 않는다', () async {
+      final s = await freshStore();
+      s.addPlayer('가', {'S': 'main'});
+      // players 는 배열이지만 그 안이 깨진 백업.
+      final bad = '{"players":[{"id":1}],"stat":{}}';
+      expect(s.importJson(bad), isFalse);
+      expect(s.players.length, 1, reason: '실패하면 원래 명단이 남아야 한다');
+      expect(s.players.first.name, '가');
+    });
+
     test('백업을 내보내고 다시 불러온다', () async {
       final s = await freshStore();
       s.addPlayer('가', {'S': 'main'});

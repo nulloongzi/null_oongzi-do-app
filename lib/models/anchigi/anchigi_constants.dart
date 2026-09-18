@@ -18,14 +18,24 @@ const List<String> kPos = ['S', 'OP', 'OH', 'MB', 'Li'];
 
 /// 두 종목 자리를 합친 목록. 기록(stat)은 이 키로 한 벌만 쌓는다.
 const List<String> kAllPos = [
-  'S', 'OP', 'OH', 'MB', 'Li',
-  'S9', 'QK', 'L9', 'R9', 'CH', 'BK',
+  'S',
+  'OP',
+  'OH',
+  'MB',
+  'Li',
+  'S9',
+  'QK',
+  'L9',
+  'R9',
+  'CH',
+  'BK',
 ];
 
 /// 6인제 전술. 5-1은 세터 한 명, 6-2는 세터 둘(전위 세터는 라이트 자리).
 const List<String> kTactics = ['5-1', '6-2'];
 
-List<String> posOfSport(String sport) => kPosBySport[sport] ?? kPosBySport['v6']!;
+List<String> posOfSport(String sport) =>
+    kPosBySport[sport] ?? kPosBySport['v6']!;
 
 /// 티어: 주(main) / 가능(sub) / 도전(want).
 const List<String> kTiers = ['main', 'sub', 'want'];
@@ -336,4 +346,3 @@ const List<List<int>> kTopRows = [
   [1, 6, 5],
   [2, 3, 4],
 ];
-

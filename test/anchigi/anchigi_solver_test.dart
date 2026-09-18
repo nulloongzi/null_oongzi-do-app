@@ -194,7 +194,10 @@ void main() {
           empties.map((x) => x.pos).toList()..sort(),
         );
         // 한쪽 팀만 텅 비지 않게 나눈다.
-        expect((g.need[0].length - g.need[1].length).abs(), lessThanOrEqualTo(2));
+        expect(
+          (g.need[0].length - g.need[1].length).abs(),
+          lessThanOrEqualTo(2),
+        );
       }
       expectPositionsValid(r, pool);
     });
@@ -210,6 +213,78 @@ void main() {
       expect(r, isNotNull);
       expect(r!.games.first.need.expand((x) => x), contains('Li'));
       expectPositionsValid(r, pool);
+    });
+  });
+
+  group('검수에서 나온 것들', () {
+    test('자리를 볼 사람이 자리 수보다 적어도 뽑히고 (필요)로 남는다', () {
+      // 18명 중 세터를 볼 사람은 한 명인데 코트에는 세터 자리가 둘(팀당 하나)
+      final pool = [
+        p('S0', {'S9': 'main'}),
+        for (var i = 1; i < 18; i++)
+          p('P$i', {
+            'QK': 'main',
+            'L9': 'sub',
+            'R9': 'sub',
+            'CH': 'sub',
+            'BK': 'sub',
+          }),
+      ];
+      final solver = AnchigiSolver(
+        req(pool, mode: 'free', sport: 'v9', allowed: ['v9q1']),
+      );
+      expect(solver.shortHanded(), isTrue, reason: '미리 알려줘야 한다');
+      final r = solver.solveRound();
+      expect(r, isNotNull, reason: '막지 말고 뽑아야 한다');
+      for (final g in r!.games) {
+        expect([...g.need[0], ...g.need[1]], contains('S9'));
+      }
+    });
+
+    test('고정 때문에 A · B · C 가 막히면 고정을 풀지, 자유 편성으로 내려가지 않는다', () {
+      // 12명 · 6인 팀이면 C 코어가 0명이라 C 로 지정한 사람은 들어갈 자리가 없다.
+      final pool = roster(12);
+      pool[0].pinTeam = 2;
+      final solver = AnchigiSolver(req(pool, allowed: ['mb2']));
+      final r = solver.solveRound();
+      expect(r, isNotNull, reason: '배치는 나와야 한다');
+      expect(solver.pinsRelaxed, isTrue, reason: '고정을 풀었다고 알려야 한다');
+      expect(solver.abcFellBack, isFalse, reason: 'A · B · C 를 포기할 일이 아니다');
+      expect(r!.games.first.cores, isNotNull);
+    });
+
+    test('9인제 세터 전용도 과출전하면 자리를 열어 준다', () {
+      // 세터를 볼 수 있는 사람 셋(S0 는 세터 전용이고 많이 뛴 상태) + 대기가 생기는 인원.
+      final pool = [
+        p('S0', {'S9': 'main'}),
+        p('S1', {'S9': 'main', 'QK': 'sub', 'BK': 'sub'}),
+        p('S2', {'S9': 'sub', 'CH': 'main', 'BK': 'sub'}),
+        for (var i = 3; i < 21; i++)
+          p('P$i', {
+            'QK': 'main',
+            'L9': 'sub',
+            'R9': 'sub',
+            'CH': 'sub',
+            'BK': 'sub',
+          }),
+      ];
+      final r = AnchigiSolver(
+        req(
+          pool,
+          mode: 'free',
+          sport: 'v9',
+          allowed: ['v9q1'],
+          stat: {'id_S0': AnchigiStat(play: 6)},
+        ),
+      ).solveRound();
+      expect(r, isNotNull);
+      var played = 0;
+      for (final g in r!.games) {
+        for (final team in g.teams) {
+          if (team.any((x) => x.id == 'id_S0')) played++;
+        }
+      }
+      expect(played, lessThan(3), reason: '많이 뛴 세터 전용은 한 번은 쉬어야 한다');
     });
   });
 
@@ -237,9 +312,9 @@ void main() {
     });
 
     test('포메이션마다 속공 수가 1 · 2 · 3 으로 갈린다', () {
-      final counts = templatesOfSport('v9')
-          .map((t) => t.slots.where((sl) => sl.role == 'QK').length)
-          .toList();
+      final counts = templatesOfSport(
+        'v9',
+      ).map((t) => t.slots.where((sl) => sl.role == 'QK').length).toList();
       expect(counts, [1, 2, 3]);
       expect(templatesOfSport('v9').map((t) => t.rows), [
         [2, 4, 3],
@@ -325,10 +400,7 @@ void main() {
       pool[0].pinTeam = 2; // C 코어
       final r = AnchigiSolver(req(pool)).solveRound();
       expect(r, isNotNull);
-      expect(
-        r!.games.first.cores![2].any((x) => x.id == pool[0].id),
-        isTrue,
-      );
+      expect(r!.games.first.cores![2].any((x) => x.id == pool[0].id), isTrue);
     });
 
     test('고정을 다 지킬 수 없으면 풀고 뽑되 그 사실을 남긴다', () {
@@ -348,9 +420,7 @@ void main() {
       final pool = roster(13);
       final r = AnchigiSolver(req(pool, mode: 'free')).solveRound();
       expect(r, isNotNull);
-      final benched = [
-        for (final g in r!.games) ...g.bench.map((b) => b.id),
-      ];
+      final benched = [for (final g in r!.games) ...g.bench.map((b) => b.id)];
       // 13명·3경기면 구성에 따라 대기가 없는 경기도 있다(6+7=13).
       // 중요한 건 같은 사람이 연달아 쉬지 않는 것.
       expect(

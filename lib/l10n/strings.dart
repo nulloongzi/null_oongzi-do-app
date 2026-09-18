@@ -813,10 +813,10 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_tactic_hint': {
     'ko':
         '5-1 은 세터 한 명이 여섯 자리를 다 돌고, 6-2 는 세터 둘이 후위에서 번갈아 토스합니다. '
-            '6-2 의 전위 세터는 라이트 자리에서 공격합니다.',
+        '6-2 의 전위 세터는 라이트 자리에서 공격합니다.',
     'en':
         'In 5-1 one setter runs all six rotations; in 6-2 two setters take turns setting '
-            'from the back row, and the front-row setter attacks from the right.',
+        'from the back row, and the front-row setter attacks from the right.',
   },
 
   // 9인제 포메이션
@@ -867,10 +867,10 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_prio_hint': {
     'ko':
         '맞춘 자리 우선은 고정(📌)해 둔 자리와 각자 고른 주 자리를 먼저 지킵니다. '
-            '사람에게 등급을 매기는 게 아니라, 진행하는 사람이 자리를 직접 지정하는 것입니다.',
+        '사람에게 등급을 매기는 게 아니라, 진행하는 사람이 자리를 직접 지정하는 것입니다.',
     'en':
         '"Set seats first" keeps pinned (📌) seats and each player\'s main seat '
-            'as much as possible. It is not a skill grade — the organizer picks the seats.',
+        'as much as possible. It is not a skill grade — the organizer picks the seats.',
   },
   'ag_adv_title': {'ko': '고급 설정', 'en': 'Advanced'},
   'ag_flex_title': {'ko': '실험 자리(팀당)', 'en': 'Open slots (per team)'},
@@ -887,10 +887,10 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_pin_hint': {
     'ko':
         '📌 를 누르면 그 사람은 주 자리에만 섭니다. 옆 칸에서 A · B · C 코어도 지정할 수 있어요'
-            '(A · B · C 고정 모드).',
+        '(A · B · C 고정 모드).',
     'en':
         'Tap 📌 and that player only takes their main seat. The box next to it '
-            'pins them to an A · B · C core (A · B · C mode).',
+        'pins them to an A · B · C core (A · B · C mode).',
   },
   'ag_pin_relaxed': {
     'ko': '고정(📌)을 전부 지키면 배치가 안 나와서, 이번 라운드는 고정을 풀고 짰습니다.',
@@ -902,11 +902,12 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_need_label': {'ko': '필요', 'en': 'needed'},
   'ag_needs_title': {'ko': '비는 자리', 'en': 'Open seats'},
   'ag_shortage_note': {
-    'ko': '지금 인원으로는 자리가 빕니다. 그래도 배치는 뽑고 빈 자리를 (필요)로 표시합니다 — '
+    'ko':
+        '지금 인원으로는 자리가 빕니다. 그래도 배치는 뽑고 빈 자리를 (필요)로 표시합니다 — '
         '어떤 자리를 더 구해야 하는지 보이라고요.',
     'en':
         'There aren\'t enough players for every seat. The lineup is still drawn and '
-            'empty seats are marked (needed), so you can see what to recruit.',
+        'empty seats are marked (needed), so you can see what to recruit.',
   },
   'ag_abc_fallback': {
     'ko': 'A · B · C 는 참석이 팀 인원의 2~3배일 때만 됩니다. 이번 라운드는 자유 편성으로 짰습니다.',
@@ -924,7 +925,7 @@ const Map<String, Map<String, String>> kStrings = {
     'ko': '자리를 하나도 안 고르면 어디든 설 수 있는 사람으로 봅니다. 급할 땐 이름만 넣고 시작하세요.',
     'en':
         'A player with no seat picked is treated as able to play anywhere. '
-            'In a hurry, just add names and go.',
+        'In a hurry, just add names and go.',
   },
   'ag_bulk_add': {'ko': '여러 명 한 번에', 'en': 'Add several'},
   'ag_bulk_ph': {
@@ -950,7 +951,8 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'ag_meet_archive_confirm': {
     'ko': '이번 모임 기록을 보관하고 1R부터 새로 시작합니다. 명단은 그대로 남습니다.',
-    'en': 'Archive this meetup\'s record and restart from R1. The roster stays.',
+    'en':
+        'Archive this meetup\'s record and restart from R1. The roster stays.',
   },
   'ag_meet_archive_empty': {
     'ko': '보관할 기록이 없습니다. 라운드를 확정한 뒤에 눌러주세요.',
@@ -1015,28 +1017,28 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_help_1sport': {
     'ko':
         '먼저 종목을 고릅니다. 6인제는 로테이션이 있어 존(1~6)으로 서고, 5-1(세터 1) 과 '
-            '6-2(세터 2 · 전위 세터는 라이트)로 갈립니다. 9인제는 로테이션이 없고 속공 수로 '
-            '리시브 줄이 갈립니다 — 속공 1명이면 2-4-3, 2명이면 3-4-2, 3명이면 4-3-2. '
-            '명단에서는 역할 6종(세터 · 속공 · 레프트 · 라이트 · 차 · 백)만 고르면 됩니다.',
+        '6-2(세터 2 · 전위 세터는 라이트)로 갈립니다. 9인제는 로테이션이 없고 속공 수로 '
+        '리시브 줄이 갈립니다 — 속공 1명이면 2-4-3, 2명이면 3-4-2, 3명이면 4-3-2. '
+        '명단에서는 역할 6종(세터 · 속공 · 레프트 · 라이트 · 차 · 백)만 고르면 됩니다.',
     'en':
         'Pick the format first. 6-a-side rotates through zones 1–6 and splits into 5-1 and 6-2; '
-            '9-a-side does not rotate, and the number of quicks decides the receive rows.',
+        '9-a-side does not rotate, and the number of quicks decides the receive rows.',
   },
   'ag_help_1pin': {
     'ko':
         '고정(📌)을 가장 먼저 지킵니다. 고정한 사람은 주 자리에만 서고, 팀을 지정했으면 그 코어로 갑니다. '
-            '다 지킬 수 없으면 고정을 풀고 뽑은 뒤 그 사실을 알려 줍니다.',
+        '다 지킬 수 없으면 고정을 풀고 뽑은 뒤 그 사실을 알려 줍니다.',
     'en':
         'Pins (📌) are kept first: a pinned player only takes their main seat, and a pinned '
-            'team sends them to that core. If they cannot all be kept, the round is drawn without them and says so.',
+        'team sends them to that core. If they cannot all be kept, the round is drawn without them and says so.',
   },
   'ag_help_1need': {
     'ko':
         '인원이 모자라면 못 뽑는다고 막지 않고, 못 채운 자리를 (필요)로 비워 둡니다 — '
-            '어떤 자리를 더 구해야 하는지 보이라고요.',
+        '어떤 자리를 더 구해야 하는지 보이라고요.',
     'en':
         'If there are not enough players, unfillable seats are left as (needed) instead of '
-            'refusing to draw — so you can see what to recruit.',
+        'refusing to draw — so you can see what to recruit.',
   },
   'ag_help_h4': {
     'ko': '우선순위 — 맞춘 자리 vs 다양성',
@@ -1045,44 +1047,47 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_help_4a': {
     'ko':
         '맞춘 자리 우선은 고정과 각자 고른 주 자리를 지켜 게임이 매끄럽게 굴러가게 합니다. '
-            '다양성 우선은 아직 안 해본 자리를 먼저 나눠 줍니다.',
+        '다양성 우선은 아직 안 해본 자리를 먼저 나눠 줍니다.',
     'en':
         '"Set seats first" keeps pins and each player\'s own main seat so games run smoothly. '
-            '"Variety first" hands out seats people have not played yet.',
+        '"Variety first" hands out seats people have not played yet.',
   },
   'ag_help_4b': {
     'ko':
         '둘 다 실력 등급이 아닙니다. 주 · 가능 · 도전은 본인이 고르는 것이고, 고정은 진행하는 사람이 '
-            '지정하는 것입니다 — 사람에게 순위를 매기지 않습니다.',
+        '지정하는 것입니다 — 사람에게 순위를 매기지 않습니다.',
     'en':
         'Neither is a skill grade. Tiers are what each player picks for themselves, and pins are '
-            'what the organizer sets — nobody is ranked.',
+        'what the organizer sets — nobody is ranked.',
   },
   'ag_help_4c': {
     'ko':
         '실험 자리(고급 설정)는 팀당 몇 명까지 주 자리가 아닌 자리에 설 수 있는지입니다. '
-            '0이면 전원 주 자리로만 짜고, 그걸로 안 되면 자동으로 한 칸씩 열립니다.',
+        '0이면 전원 주 자리로만 짜고, 그걸로 안 되면 자동으로 한 칸씩 열립니다.',
     'en':
         'Open slots (Advanced) is how many players per team may stand off their main seat. '
-            '0 means main seats only; it opens up automatically if a lineup is otherwise impossible.',
+        '0 means main seats only; it opens up automatically if a lineup is otherwise impossible.',
   },
-  'ag_help_q5': {'ko': '인원이 모자라면 어떻게 되나?', 'en': 'Not enough people — what happens?'},
+  'ag_help_q5': {
+    'ko': '인원이 모자라면 어떻게 되나?',
+    'en': 'Not enough people — what happens?',
+  },
   'ag_help_a5': {
     'ko':
         '그래도 뽑습니다. 못 채운 자리가 (필요)로 자리 이름과 함께 뜨니, 세터가 필요한지 센터가 '
-            '필요한지 보고 단톡방에 올리면 됩니다.',
+        '필요한지 보고 단톡방에 올리면 됩니다.',
     'en':
         'It still draws. Empty seats show as (needed) with the seat name, so you know what to '
-            'ask the group chat for.',
+        'ask the group chat for.',
   },
   'ag_help_q6': {'ko': '다음 모임은?', 'en': 'Next meetup?'},
   'ag_help_a6': {
     'ko':
         '기록 탭에서 이번 모임을 보관하면 누적 기록은 1R부터 다시 시작하고 지난 모임은 목록에 남습니다. '
-            '기기를 바꾸기 전에는 백업 내보내기를 하세요.',
+        '기기를 바꾸기 전에는 백업 내보내기를 하세요.',
     'en':
         'On the Record tab, archive this meetup: the cumulative record restarts while the meetup '
-            'stays in the list. Export a backup before changing devices.',
+        'stays in the list. Export a backup before changing devices.',
   },
   'ag_help_1a': {
     'ko': '참석자 중 경기가 끝나기 전에 퇴장하는 사람을 그 경기에서 뺍니다.',
@@ -1103,7 +1108,7 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_help_1d': {
     'ko':
         '모든 자리가 그 사람의 가능 자리 안이어야 합니다. 6인제는 여기에 더해 팀마다 세터 1명 · '
-            '대각(S↔OP, OH↔OH, MB↔Li)을 맞춥니다. 자리를 하나도 안 고른 사람은 어디든 설 수 있는 사람으로 봅니다.',
+        '대각(S↔OP, OH↔OH, MB↔Li)을 맞춥니다. 자리를 하나도 안 고른 사람은 어디든 설 수 있는 사람으로 봅니다.',
     'en':
         'Every seat must be within a player\'s eligible seats; 6-a-side also needs one setter per team with a valid diagonal (S↔OP, OH↔OH, MB↔Li). A player with no seat picked can play anywhere.',
   },

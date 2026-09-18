@@ -338,10 +338,10 @@ class _AnchigiRosterTabState extends State<AnchigiRosterTab> {
     );
   }
 
-  /// 자리 칩 하나의 폭 — 6인제는 다섯 칸, 9인제는 좁게 접어 세 줄.
+  /// 자리 칩 하나의 폭 — 6인제는 다섯 칸(자리 5), 9인제는 세 칸씩 두 줄(역할 6).
   double _chipWidth(BuildContext context) {
     final w = MediaQuery.of(context).size.width - 28 - 24;
-    final per = s.sport == 'v9' ? 5 : 5;
+    final per = s.sport == 'v9' ? 3 : 5;
     return (w - (per - 1) * 5) / per;
   }
 

@@ -184,10 +184,14 @@ class AnchigiStore extends ChangeNotifier {
       final l = (v as List).map((e) => e as String).toList();
       return l.isEmpty ? allIds : l;
     });
-    // 예전 저장본에는 새 구성(6-2 · 9인제 포메이션)이 없다 — 켜 둔 채로 시작한다.
+    // 5-1 구성만 들어 있는 저장본은 새 구성(6-2 · 9인제)을 아직 모르는 것이다.
+    // 그때만 켜 준다 — 사용자가 끈 구성을 매번 되살리면 안 된다.
     const legacy = ['mb2', 'mb1li', 'mb2li'];
-    for (final id in allIds) {
-      if (!allowed.contains(id) && !legacy.contains(id)) allowed.add(id);
+    final knowsNew = allowed.any((id) => !legacy.contains(id));
+    if (!knowsNew) {
+      for (final id in allIds) {
+        if (!allowed.contains(id)) allowed.add(id);
+      }
     }
     schedule = read(
       'schedule',
@@ -489,7 +493,10 @@ class AnchigiStore extends ChangeNotifier {
   void promoteTier(String id, String pos) {
     final p = players.firstWhere((q) => q.id == id);
     if (p.rawTier(pos) == null || p.rawTier(pos) == 'main') return;
-    p.tier.updateAll((k, v) => v == 'main' ? 'sub' : v);
+    // 이 종목 자리만 내린다 — 다른 종목의 주 자리는 건드리지 않는다.
+    for (final q in seats) {
+      if (p.tier[q] == 'main') p.tier[q] = 'sub';
+    }
     p.tier[pos] = 'main';
     _invalidate();
     _commitChange();
@@ -541,12 +548,7 @@ class AnchigiStore extends ChangeNotifier {
       }
     }
     pastRounds.add(
-      PastRound(
-        round: c.round,
-        games: c.games,
-        mode: c.mode,
-        sport: c.sport,
-      ),
+      PastRound(round: c.round, games: c.games, mode: c.mode, sport: c.sport),
     );
     round++;
     current = null;
@@ -616,11 +618,13 @@ class AnchigiStore extends ChangeNotifier {
       'flex': flexSlots,
       'tpl': allowed,
       'ngames': nGames,
+      'compact': compact,
       'schedule': schedule.toJson(),
     },
   });
 
   /// 백업 JSON 을 그대로 덮어쓴다. 읽을 수 없으면 false.
+  /// 먼저 전부 읽어 본 뒤에 바꾼다 — 중간에 터져 반쯤 덮어쓰면 안 된다.
   bool importJson(String raw) {
     Map<String, dynamic> d;
     try {
@@ -632,41 +636,53 @@ class AnchigiStore extends ChangeNotifier {
     }
     if (d['players'] is! List) return false;
 
-    final sg = d['settings'] is Map
-        ? Map<String, dynamic>.from(d['settings'] as Map)
-        : <String, dynamic>{};
+    final List<AnchigiPlayer> newPlayers;
+    final newStat = <String, AnchigiStat>{};
+    final List<PastRound> newPast;
+    final List<AnchigiMeet> newMeets;
+    Map<String, dynamic> sg;
+    try {
+      sg = d['settings'] is Map
+          ? Map<String, dynamic>.from(d['settings'] as Map)
+          : <String, dynamic>{};
+      newPlayers = (d['players'] as List)
+          .map(
+            (e) => AnchigiPlayer.fromJson(Map<String, dynamic>.from(e as Map)),
+          )
+          .toList();
+      if (d['stat'] is Map) {
+        (d['stat'] as Map).forEach((k, v) {
+          if (k is String && v is Map) {
+            newStat[k] = AnchigiStat.fromJson(Map<String, dynamic>.from(v));
+          }
+        });
+      }
+      newPast = (d['past'] as List? ?? [])
+          .map((e) => PastRound.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
+      newMeets = (d['meets'] as List? ?? [])
+          .map((e) => AnchigiMeet.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
+    } catch (_) {
+      return false;
+    }
+
     if (kSports.contains(sg['sport'])) sport = sg['sport'] as String;
     if (kTactics.contains(sg['tactic'])) tactic = sg['tactic'] as String;
-
-    players = (d['players'] as List)
-        .map((e) => AnchigiPlayer.fromJson(Map<String, dynamic>.from(e as Map)))
-        .toList();
-    stat = {};
-    if (d['stat'] is Map) {
-      (d['stat'] as Map).forEach((k, v) {
-        if (k is String && v is Map) {
-          stat[k] = AnchigiStat.fromJson(Map<String, dynamic>.from(v));
-        }
-      });
-    }
+    players = newPlayers;
+    stat = newStat;
     round = (d['round'] as num?)?.toInt() ?? 1;
-    pastRounds = (d['past'] as List? ?? [])
-        .map((e) => PastRound.fromJson(Map<String, dynamic>.from(e as Map)))
-        .toList();
-    meets = (d['meets'] as List? ?? [])
-        .map((e) => AnchigiMeet.fromJson(Map<String, dynamic>.from(e as Map)))
-        .toList();
+    pastRounds = newPast;
+    meets = newMeets;
 
     final m = sg['mode'];
     if (m == 'abc' || m == 'free') mode = m as String;
     if (kPrios.contains(sg['prio'])) prio = sg['prio'] as String;
     flexSlots = (sg['flex'] as num?)?.toInt();
+    if (sg['compact'] is bool) compact = sg['compact'] as bool;
     final tpl = sg['tpl'];
     if (tpl is List && tpl.isNotEmpty) {
       allowed = tpl.map((e) => e.toString()).toList();
-      for (final t in kTemplates) {
-        if (!allowed.contains(t.id) && t.sport == 'v9') allowed.add(t.id);
-      }
     }
     final ng = (sg['ngames'] as num?)?.toInt();
     if (ng != null && ng >= 1 && ng <= 6) nGames = ng;
