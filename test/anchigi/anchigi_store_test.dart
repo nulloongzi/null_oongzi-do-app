@@ -48,8 +48,9 @@ void main() {
       expect(s.mode, 'abc');
       expect(s.prio, 'custom');
       expect(s.sport, 'v6');
+      expect(s.tactic, '5-1');
+      expect(s.allowed, [for (final t in kTemplates) t.id]);
       expect(s.nGames, 3);
-      expect(s.allowed, ['mb2', 'mb1li', 'mb2li', 'v9']);
       expect(s.schedule.warmup, '14:00');
     });
 
@@ -167,21 +168,35 @@ void main() {
       expect(s.current, isNull);
     });
 
-    test('이 종목의 마지막 구성은 끌 수 없다', () async {
+    test('이 종목 · 전술의 마지막 구성은 끌 수 없다', () async {
       final s = await freshStore();
       s.toggleTemplate('mb2li');
       s.toggleTemplate('mb1li');
-      expect(s.allowed, ['mb2', 'v9']);
+      expect(s.allowed, isNot(contains('mb1li')));
+      expect(s.allowed, contains('mb2'));
       s.toggleTemplate('mb2');
-      expect(s.allowed, ['mb2', 'v9'], reason: '6인제에 하나 남으면 유지돼야 함');
+      expect(s.allowed, contains('mb2'), reason: '5-1 에 하나 남으면 유지돼야 함');
     });
 
     test('구성을 다시 켜면 원래 순서로 들어간다', () async {
       final s = await freshStore();
       s.toggleTemplate('mb2');
-      expect(s.allowed, ['mb1li', 'mb2li', 'v9']);
+      expect(s.allowed, isNot(contains('mb2')));
       s.toggleTemplate('mb2');
-      expect(s.allowed, ['mb2', 'mb1li', 'mb2li', 'v9']);
+      expect(
+        s.allowed.indexOf('mb2') < s.allowed.indexOf('mb1li'),
+        isTrue,
+        reason: 'kTemplates 순서를 지켜야 표시가 흔들리지 않는다',
+      );
+    });
+
+    test('전술을 바꾸면 그 전술의 구성만 쓴다', () async {
+      final s = await freshStore();
+      expect(s.templates.every((t) => t.tactic == '5-1'), isTrue);
+      s.setTactic('6-2');
+      expect(s.templates.every((t) => t.tactic == '6-2'), isTrue);
+      // 6-2 는 코트에 세터가 둘이다.
+      expect(s.templates.first.slots.where((sl) => sl.role == 'S').length, 2);
     });
 
     test('종목을 바꾸면 명단의 가능 자리도 따라간다', () async {

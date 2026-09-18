@@ -26,6 +26,7 @@ SolveRequest req(
   String mode = 'abc',
   String prio = 'custom',
   String sport = 'v6',
+  String tactic = '5-1',
   int? flexSlots,
   int nGames = 3,
   List<String>? allowed,
@@ -40,6 +41,7 @@ SolveRequest req(
   mode: mode,
   prio: prio,
   sport: sport,
+  tactic: tactic,
   flexSlots: flexSlots,
   allowed: allowed ?? ['mb2', 'mb1li', 'mb2li'],
   schedule: schedule ?? AnchigiSchedule(),
@@ -77,7 +79,7 @@ void expectNoDuplicates(RoundResult r) {
 void expectTeamsMatchTemplate(RoundResult r, List<String> allowed) {
   final want = kTemplates
       .where((t) => allowed.contains(t.id))
-      .map((t) => (t.slots.toList()..sort()).join(','))
+      .map((t) => (t.slots.map((sl) => sl.role).toList()..sort()).join(','))
       .toSet();
   for (final g in r.games) {
     for (final team in g.teams) {
@@ -212,34 +214,85 @@ void main() {
   });
 
   group('9인제', () {
-    test('18명이면 아홉 자리씩 채운다', () {
+    test('18명이면 포메이션 아홉 자리를 채운다', () {
       final pool = List.generate(18, (i) => p('P$i', {}));
       final r = AnchigiSolver(
-        req(pool, mode: 'free', sport: 'v9', allowed: ['v9']),
+        req(pool, mode: 'free', sport: 'v9', allowed: ['v9q2']),
       ).solveRound();
       expect(r, isNotNull);
       for (final g in r!.games) {
-        for (final team in g.teams) {
-          expect(team.length, 9);
+        for (var ti = 0; ti < g.teams.length; ti++) {
+          expect(g.teams[ti].length, 9);
+          final tpl = templateById(g.tpls![ti]);
+          expect(tpl, isNotNull, reason: '어떤 포메이션으로 짰는지 남아야 한다');
+          // 자리 구성이 포메이션 정의와 같아야 한다(속공 수 · 줄 인원).
           expect(
-            team.map((x) => x.pos).toList()..sort(),
-            kPosBySport['v9']!.toList()..sort(),
-            reason: '아홉 자리가 겹치지 않아야 한다',
+            g.teams[ti].map((x) => x.pos).toList(),
+            tpl!.slots.map((sl) => sl.role).toList(),
           );
+          expect(tpl.rows!.fold<int>(0, (a, b) => a + b), 9);
         }
       }
       expect(r.hasNeed, isFalse);
     });
 
+    test('포메이션마다 속공 수가 1 · 2 · 3 으로 갈린다', () {
+      final counts = templatesOfSport('v9')
+          .map((t) => t.slots.where((sl) => sl.role == 'QK').length)
+          .toList();
+      expect(counts, [1, 2, 3]);
+      expect(templatesOfSport('v9').map((t) => t.rows), [
+        [2, 4, 3],
+        [3, 4, 2],
+        [4, 3, 2],
+      ]);
+    });
+
     test('12명이면 여섯 자리를 (필요)로 남긴다', () {
       final pool = List.generate(12, (i) => p('P$i', {}));
       final r = AnchigiSolver(
-        req(pool, mode: 'free', sport: 'v9', allowed: ['v9']),
+        req(pool, mode: 'free', sport: 'v9', allowed: ['v9q1']),
       ).solveRound();
       expect(r, isNotNull);
       for (final g in r!.games) {
         final all = [...g.teams[0], ...g.teams[1]];
         expect(all.where((x) => x.empty).length, 6);
+      }
+    });
+  });
+
+  group('6인제 전술', () {
+    test('5-1 은 코트에 세터가 한 명', () {
+      final r = AnchigiSolver(req(roster(12), mode: 'free')).solveRound();
+      expect(r, isNotNull);
+      for (final g in r!.games) {
+        for (final team in g.teams) {
+          expect(team.where((x) => x.pos == 'S').length, 1);
+        }
+      }
+    });
+
+    test('6-2 는 코트에 세터가 두 명 — 하나는 라이트(존 4) 자리', () {
+      final r = AnchigiSolver(
+        req(roster(12), mode: 'free', tactic: '6-2', allowed: ['mb2x62']),
+      ).solveRound();
+      expect(r, isNotNull, reason: '6-2 로도 배치가 나와야 한다');
+      for (final g in r!.games) {
+        for (final team in g.teams) {
+          final setters = team.where((x) => x.pos == 'S').toList();
+          expect(setters.length, 2);
+          expect(setters.map((x) => x.zone).toList()..sort(), [1, 4]);
+        }
+      }
+    });
+
+    test('한 존에 두 명이 서지 않는다', () {
+      final r = AnchigiSolver(req(roster(12), mode: 'free')).solveRound();
+      for (final g in r!.games) {
+        for (final team in g.teams) {
+          final zones = team.where((x) => !x.off).map((x) => x.zone).toList();
+          expect(zones.toSet().length, zones.length);
+        }
       }
     });
   });

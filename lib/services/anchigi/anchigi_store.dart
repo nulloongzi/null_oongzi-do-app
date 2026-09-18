@@ -31,13 +31,16 @@ class AnchigiStore extends ChangeNotifier {
   /// 종목: 'v6' | 'v9'.
   String sport = 'v6';
 
+  /// 6인제 전술: '5-1'(세터 1) | '6-2'(세터 2, 전위 세터는 라이트).
+  String tactic = '5-1';
+
   /// 보관해 둔 지난 모임.
   List<AnchigiMeet> meets = [];
 
   /// 결과를 코트 대신 목록으로 볼지.
   bool compact = false;
 
-  List<String> allowed = ['mb2', 'mb1li', 'mb2li', 'v9'];
+  List<String> allowed = [for (final t in kTemplates) t.id];
   AnchigiSchedule schedule = AnchigiSchedule();
 
   /// 아직 확정하지 않은 뽑기 결과. 설정을 건드리면 폐기된다.
@@ -62,9 +65,9 @@ class AnchigiStore extends ChangeNotifier {
 
   AnchigiStat statOf(String id) => stat[id] ??= AnchigiStat();
 
-  /// 이 종목에서 허용된 구성(비면 그 종목 첫 구성으로 폴백).
+  /// 이 종목 · 전술에서 허용된 구성(비면 첫 구성으로 폴백).
   List<AnchigiTemplate> get templates {
-    final mine = templatesOfSport(sport);
+    final mine = templatesOfSport(sport, tactic);
     final r = mine.where((t) => allowed.contains(t.id)).toList();
     return r.isEmpty ? [mine.first] : r;
   }
@@ -102,6 +105,7 @@ class AnchigiStore extends ChangeNotifier {
     mode: mode,
     prio: prio,
     sport: sport,
+    tactic: tactic,
     flexSlots: flexSlots,
     allowed: List<String>.from(allowed),
     schedule: schedule.copy(),
@@ -154,6 +158,8 @@ class AnchigiStore extends ChangeNotifier {
     mode = read('mode', 'abc', (v) => v as String);
     sport = read('sport', 'v6', (v) => v as String);
     if (!kSports.contains(sport)) sport = 'v6';
+    tactic = read('tactic', '5-1', (v) => v as String);
+    if (!kTactics.contains(tactic)) tactic = '5-1';
     compact = read('compact', false, (v) => v as bool);
     meets = read('meets', <AnchigiMeet>[], (v) {
       return (v as List)
@@ -173,12 +179,16 @@ class AnchigiStore extends ChangeNotifier {
       prio = rawPrio;
     }
 
-    allowed = read('tpl', ['mb2', 'mb1li', 'mb2li', 'v9'], (v) {
+    final allIds = [for (final t in kTemplates) t.id];
+    allowed = read('tpl', allIds, (v) {
       final l = (v as List).map((e) => e as String).toList();
-      return l.isEmpty ? ['mb2', 'mb1li', 'mb2li', 'v9'] : l;
+      return l.isEmpty ? allIds : l;
     });
-    // 9인제 구성은 하나뿐이라 항상 켜 둔다(예전 저장본에는 없다).
-    if (!allowed.contains('v9')) allowed = [...allowed, 'v9'];
+    // 예전 저장본에는 새 구성(6-2 · 9인제 포메이션)이 없다 — 켜 둔 채로 시작한다.
+    const legacy = ['mb2', 'mb1li', 'mb2li'];
+    for (final id in allIds) {
+      if (!allowed.contains(id) && !legacy.contains(id)) allowed.add(id);
+    }
     schedule = read(
       'schedule',
       AnchigiSchedule(),
@@ -215,6 +225,7 @@ class AnchigiStore extends ChangeNotifier {
     await sp.setString(_key('prio'), jsonEncode(prio));
     await sp.setString(_key('flex'), jsonEncode(flexSlots));
     await sp.setString(_key('sport'), jsonEncode(sport));
+    await sp.setString(_key('tactic'), jsonEncode(tactic));
     await sp.setString(_key('compact'), jsonEncode(compact));
     await sp.setString(
       _key('meets'),
@@ -274,6 +285,14 @@ class AnchigiStore extends ChangeNotifier {
     _commitChange();
   }
 
+  /// 6인제 전술 전환(5-1 ↔ 6-2).
+  void setTactic(String v) {
+    if (tactic == v || !kTactics.contains(v)) return;
+    tactic = v;
+    _invalidate();
+    _commitChange();
+  }
+
   void setCompact(bool v) {
     if (compact == v) return;
     compact = v;
@@ -301,11 +320,12 @@ class AnchigiStore extends ChangeNotifier {
     _commitChange();
   }
 
-  /// 구성 토글. 이 종목에서 마지막 하나 남은 구성은 끌 수 없다.
+  /// 구성 토글. 이 종목 · 전술에서 마지막 하나 남은 구성은 끌 수 없다.
   void toggleTemplate(String id) {
     if (allowed.contains(id)) {
       final onNow = templatesOfSport(
         sport,
+        tactic,
       ).where((t) => allowed.contains(t.id)).length;
       if (onNow <= 1) return;
       allowed = allowed.where((t) => t != id).toList();
@@ -590,6 +610,7 @@ class AnchigiStore extends ChangeNotifier {
     'meets': meets.map((m) => m.toJson()).toList(),
     'settings': {
       'sport': sport,
+      'tactic': tactic,
       'mode': mode,
       'prio': prio,
       'flex': flexSlots,
@@ -615,6 +636,7 @@ class AnchigiStore extends ChangeNotifier {
         ? Map<String, dynamic>.from(d['settings'] as Map)
         : <String, dynamic>{};
     if (kSports.contains(sg['sport'])) sport = sg['sport'] as String;
+    if (kTactics.contains(sg['tactic'])) tactic = sg['tactic'] as String;
 
     players = (d['players'] as List)
         .map((e) => AnchigiPlayer.fromJson(Map<String, dynamic>.from(e as Map)))
@@ -642,7 +664,9 @@ class AnchigiStore extends ChangeNotifier {
     final tpl = sg['tpl'];
     if (tpl is List && tpl.isNotEmpty) {
       allowed = tpl.map((e) => e.toString()).toList();
-      if (!allowed.contains('v9')) allowed = [...allowed, 'v9'];
+      for (final t in kTemplates) {
+        if (!allowed.contains(t.id) && t.sport == 'v9') allowed.add(t.id);
+      }
     }
     final ng = (sg['ngames'] as num?)?.toInt();
     if (ng != null && ng >= 1 && ng <= 6) nGames = ng;

@@ -6,22 +6,47 @@
 class SlotAssign {
   final String id;
   final String name;
+
+  /// 역할 키(S · OH · QK · CH …).
   final String pos;
+
+  /// 6인제 존(1~6). 9인제는 0.
+  final int zone;
+
+  /// 자리 고유 이름의 i18n 키(9인제, 6-2 전위 세터). 없으면 빈 문자열.
+  final String label;
+
+  /// 코트 밖에서 교대하는 자리(6인제 리베로).
+  final bool off;
+
   final bool empty;
 
   const SlotAssign({
     required this.id,
     required this.name,
     required this.pos,
+    this.zone = 0,
+    this.label = '',
+    this.off = false,
     this.empty = false,
   });
 
-  const SlotAssign.needed(this.pos) : id = '', name = '', empty = true;
+  const SlotAssign.needed(
+    this.pos, {
+    this.zone = 0,
+    this.label = '',
+    this.off = false,
+  }) : id = '',
+       name = '',
+       empty = true;
 
   Map<String, dynamic> toJson() => {
     'id': id,
     'n': name,
     'p': pos,
+    if (zone != 0) 'z': zone,
+    if (label.isNotEmpty) 'l': label,
+    if (off) 'o': true,
     if (empty) 'e': true,
   };
 
@@ -29,6 +54,9 @@ class SlotAssign {
     id: j['id'] as String? ?? '',
     name: j['n'] as String? ?? '',
     pos: j['p'] as String? ?? '',
+    zone: (j['z'] as num?)?.toInt() ?? 0,
+    label: j['l'] as String? ?? '',
+    off: j['o'] as bool? ?? false,
     empty: j['e'] as bool? ?? false,
   );
 }
@@ -72,6 +100,9 @@ class GameResult {
   /// 팀별로 사람이 없어 비워 둔 자리 목록.
   final List<List<String>> need;
 
+  /// 팀별로 어떤 구성으로 짰는지(코트를 그리려면 필요하다).
+  final List<String>? tpls;
+
   const GameResult({
     required this.teams,
     required this.names,
@@ -82,6 +113,7 @@ class GameResult {
     this.left = const [],
     this.cores,
     this.need = const [[], []],
+    this.tpls,
   });
 
   /// 이 경기에 비는 자리가 있는지.
@@ -98,6 +130,7 @@ class GameResult {
         left: left ?? this.left,
         cores: cores ?? this.cores,
         need: need,
+        tpls: tpls,
       );
 
   Map<String, dynamic> toJson() => {
@@ -109,6 +142,7 @@ class GameResult {
     'nonMain': nonMain,
     'left': left.map((l) => l.toJson()).toList(),
     if (hasNeed) 'need': need,
+    if (tpls != null) 'tpls': tpls,
     if (cores != null)
       'cores': cores!.map((c) => c.map((p) => p.toJson()).toList()).toList(),
   };
@@ -136,6 +170,9 @@ class GameResult {
           .map((e) => (e as num).toInt())
           .toList(),
       left: refs(j['left']),
+      tpls: j['tpls'] == null
+          ? null
+          : (j['tpls'] as List).map((e) => e as String).toList(),
       need: j['need'] == null
           ? const [[], []]
           : (j['need'] as List)
@@ -155,6 +192,9 @@ class RoundResult {
   final String mode;
   final String prio;
   final String sport;
+
+  /// 6인제 전술('5-1'|'6-2'). 9인제는 빈 문자열.
+  final String tactic;
 
   /// 실제로 사용된 비주 예산(요청한 실험 자리보다 크면 완화된 것).
   final int budget;
@@ -177,6 +217,7 @@ class RoundResult {
     required this.mode,
     required this.prio,
     this.sport = 'v6',
+    this.tactic = '5-1',
     required this.budget,
     this.flexAsked = 0,
     this.teamSize,
@@ -196,6 +237,7 @@ class RoundResult {
         mode: mode ?? this.mode,
         prio: prio,
         sport: sport,
+        tactic: tactic,
         budget: budget,
         flexAsked: flexAsked,
         teamSize: teamSize,

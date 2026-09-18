@@ -217,19 +217,36 @@ void main() {
     expect(find.text(t('ag_confirm_next')), findsNothing);
   });
 
-  testWidgets('9인제로 바꾸면 코트가 아홉 자리로 바뀐다', (tester) async {
+  testWidgets('9인제로 바꾸면 포메이션 자리로 바뀐다', (tester) async {
     seedRoster(18);
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
 
     await tester.tap(find.text(t('ag_sport_v9')));
     await tester.pumpAndSettle();
-    await drawAndWait(tester);
+    // 포메이션 셋이 다 보인다(속공 1 · 2 · 3).
+    expect(find.text(t('ag_tpl_q1')), findsOneWidget);
+    expect(find.text(t('ag_tpl_q2')), findsOneWidget);
+    expect(find.text(t('ag_tpl_q3')), findsOneWidget);
 
+    await drawAndWait(tester);
     // 9인제 자리 이름이 코트에 보인다.
-    expect(find.text(t('ag_posx_CC')), findsWidgets);
+    expect(find.text(t('ag_seat_s9')), findsWidgets);
     // 빈 자리 없이 다 찼다.
     expect(find.textContaining('(${t('ag_need_label')})'), findsNothing);
+  });
+
+  testWidgets('6인제 6-2 로 바꾸면 코트에 세터가 둘', (tester) async {
+    seedRoster(12);
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(t('ag_tactic_62')));
+    await tester.pumpAndSettle();
+    await drawAndWait(tester);
+
+    // 전위 세터는 '존 4 · 세터 · 라이트' 로 표시된다.
+    expect(find.textContaining(t('ag_seat_s_front')), findsWidgets);
   });
 
   testWidgets('인원이 모자라도 뽑히고 빈 자리가 (필요)로 보인다', (tester) async {

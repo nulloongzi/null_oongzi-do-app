@@ -1,7 +1,7 @@
 // anchigi_court.dart — 한 경기의 코트 시각화. 원본 anchigi.html의 toZones/sideHTML 포팅.
 // 두 팀이 네트를 사이에 두고 마주 보도록 아래 팀은 자리 배열을 뒤집는다.
-// 6인제는 로테이션이 있어 역할(세터·레프트…)을 존 번호에 앉히고,
-// 9인제는 로테이션이 없어 코트 아홉 칸이 곧 자리 이름이다.
+// 6인제는 로테이션이 있어 존(1~6)으로 서고, 9인제는 로테이션이 없어
+// 속공 수에 따른 포메이션의 줄 인원(2-4-3 · 3-4-2 · 4-3-2)대로 선다.
 import 'package:flutter/material.dart';
 
 import '../../models/anchigi/anchigi_constants.dart';
@@ -19,39 +19,28 @@ const List<List<int>> _botRows = [
   [5, 6, 1],
 ];
 
-/// 자리별 색(웹 .pos.S 등과 같은 역할). 9인제는 전·중·후위 줄로 묶는다.
+/// 역할별 색(웹 .pos.S 등과 같은 역할).
 const Map<String, Color> _posColor = {
   'S': Color(0xFF6A5ACD),
   'OP': Color(0xFFE07A5F),
   'OH': Color(0xFF3D9970),
   'MB': Color(0xFF2C7BE5),
   'Li': Color(0xFFD4A017),
-  'FL': Color(0xFFE07A5F),
-  'FC': Color(0xFFE07A5F),
-  'FR': Color(0xFFE07A5F),
-  'CL': Color(0xFF3D9970),
-  'CC': Color(0xFF3D9970),
-  'CR': Color(0xFF3D9970),
-  'BL': Color(0xFF2C7BE5),
-  'BC': Color(0xFF2C7BE5),
-  'BR': Color(0xFF2C7BE5),
+  'S9': Color(0xFF6A5ACD),
+  'QK': Color(0xFF2C7BE5),
+  'L9': Color(0xFF3D9970),
+  'R9': Color(0xFFE07A5F),
+  'CH': Color(0xFF5C6BC0),
+  'BK': Color(0xFFD4A017),
 };
 
 /// 코트 한 칸. 비어 있으면 [pl] 이 null, 사람이 없어 비운 자리면 pl.empty.
 typedef _Cell = ({String label, SlotAssign? pl});
 
-/// 존 번호 → 배치된 사람. 7인(센터2+리베로1)이면 리베로는 코트 밖.
-({Map<int, SlotAssign> zones, SlotAssign? libero}) _toZones(
-  List<SlotAssign> lineup,
-) {
+/// 존 번호 → 배치된 사람. 존을 안 싣던 시절의 기록용 폴백.
+Map<int, SlotAssign> _legacyZones(List<SlotAssign> lineup) {
   final z = <int, SlotAssign>{};
   final ohs = [2, 5], mbs = [3, 6];
-  SlotAssign? libero;
-  final nMb = lineup.where((x) => x.pos == 'MB').length;
-  final nLi = lineup.where((x) => x.pos == 'Li').length;
-  // 센터 2 + 리베로 1이면 리베로가 후위 센터와 교대하므로 코트 밖에 표시한다.
-  final split = nMb == 2 && nLi == 1;
-
   for (final p in lineup) {
     switch (p.pos) {
       case 'S':
@@ -63,14 +52,10 @@ typedef _Cell = ({String label, SlotAssign? pl});
       case 'MB':
         if (mbs.isNotEmpty) z[mbs.removeAt(0)] = p;
       case 'Li':
-        if (split) {
-          libero = p;
-        } else {
-          z[6] = p;
-        }
+        z[6] = p;
     }
   }
-  return (zones: z, libero: libero);
+  return z;
 }
 
 class AnchigiCourt extends StatelessWidget {
@@ -93,6 +78,13 @@ class AnchigiCourt extends StatelessWidget {
     this.onPick,
     this.sport = 'v6',
   });
+
+  /// 이 팀을 어떤 구성으로 짰는지.
+  AnchigiTemplate? _tplOf(int teamIdx) {
+    final ids = game.tpls;
+    if (ids == null || teamIdx >= ids.length) return null;
+    return templateById(ids[teamIdx]);
+  }
 
   bool _isBorrowed(int teamIdx, String id) {
     final cores = teamCores;
@@ -117,39 +109,69 @@ class AnchigiCourt extends StatelessWidget {
     ],
   );
 
+  /// 코트 칸 머리에 붙는 작은 글씨 — 자리 이름이 있으면 그걸, 없으면 존 번호.
+  String _seatLabel(SlotAssign x) {
+    if (x.label.isNotEmpty && x.zone != 0) {
+      return '${t('ag_court_zone_short')}${x.zone} · ${t(x.label)}';
+    }
+    if (x.label.isNotEmpty) return t(x.label);
+    if (x.zone != 0) return '${t('ag_court_zone_short')}${x.zone}';
+    return t('ag_posx_${x.pos}');
+  }
+
   /// 이 팀의 코트 칸을 줄 단위로 만든다.
-  ({List<List<_Cell>> rows, SlotAssign? libero}) _layout(
+  /// 6인제는 존(1~6)으로 두 줄, 9인제는 포메이션의 줄 인원대로 세 줄.
+  ({List<List<_Cell>> rows, List<SlotAssign> off}) _layout(
     List<SlotAssign> lineup,
     bool top,
+    int teamIdx,
   ) {
+    final off = lineup.where((x) => x.off).toList();
+    final on = lineup.where((x) => !x.off).toList();
+
     if (sport == 'v9') {
-      final by = <String, SlotAssign>{for (final p in lineup) p.pos: p};
-      final rows = top ? kV9TopRows : kV9BotRows;
-      return (
-        rows: [
-          for (final row in rows)
-            [for (final seat in row) (label: t('ag_posx_$seat'), pl: by[seat])],
-        ],
-        libero: null,
-      );
+      final tpl = _tplOf(teamIdx);
+      final lens = (tpl?.rows != null && tpl!.slots.length == lineup.length)
+          ? tpl.rows!
+          : [for (var i = 0; i < on.length; i += 3) 3];
+      var rows = <List<_Cell>>[];
+      var i = 0;
+      for (final n in lens) {
+        final take = on.skip(i).take(n).toList();
+        if (take.isEmpty) break;
+        rows.add([for (final x in take) (label: _seatLabel(x), pl: x)]);
+        i += n;
+      }
+      // 위쪽 팀은 네트가 아래라 뒷줄부터 그리고, 좌우도 뒤집힌다.
+      if (top) {
+        rows = rows.reversed.map((r) => r.reversed.toList()).toList();
+      }
+      return (rows: rows, off: off);
     }
-    final r = _toZones(lineup);
-    final rows = top ? _topRows : _botRows;
+
+    var byZone = <int, SlotAssign>{for (final x in on) if (x.zone != 0) x.zone: x};
+    if (byZone.isEmpty) byZone = _legacyZones(on);
+    final order = top ? _topRows : _botRows;
     return (
       rows: [
-        for (final row in rows)
+        for (final row in order)
           [
             for (final zn in row)
-              (label: '${t('ag_court_zone_short')}$zn', pl: r.zones[zn]),
+              (
+                label: byZone[zn] == null
+                    ? '${t('ag_court_zone_short')}$zn'
+                    : _seatLabel(byZone[zn]!),
+                pl: byZone[zn],
+              ),
           ],
       ],
-      libero: r.libero,
+      off: off,
     );
   }
 
   Widget _side(int teamIdx, bool top) {
     final lineup = game.teams[teamIdx];
-    final l = _layout(lineup, top);
+    final l = _layout(lineup, top, teamIdx);
     final name = teamIdx < game.names.length ? game.names[teamIdx] : '?';
     // 비운 자리는 인원으로 세지 않는다.
     final filled = lineup.where((x) => !x.empty).length;
@@ -194,12 +216,13 @@ class AnchigiCourt extends StatelessWidget {
               ],
             ),
           ),
-        if (l.libero != null)
+        // 코트 밖에서 교대하는 자리(6인제 리베로).
+        for (final o in l.off)
           Padding(
             padding: const EdgeInsets.only(top: 2),
             child: Row(
               children: [
-                Flexible(child: _cell(teamIdx, l.libero!.pos, l.libero)),
+                Flexible(child: _cell(teamIdx, _seatLabel(o), o)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -414,7 +437,7 @@ class AnchigiLineupList extends StatelessWidget {
   );
 
   Widget _slot(int ti, SlotAssign pl) {
-    final label = t('ag_posx_${pl.pos}');
+    final label = pl.label.isNotEmpty ? t(pl.label) : t('ag_posx_${pl.pos}');
     if (pl.empty) {
       return Text(
         '$label (${t('ag_need_label')})',

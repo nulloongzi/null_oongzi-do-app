@@ -32,6 +32,9 @@ class SolveRequest {
   final String prio;
   final String sport;
 
+  /// 6인제 전술('5-1'|'6-2').
+  final String tactic;
+
   /// 팀당 실험 자리 수. null이면 우선순위의 기본값.
   final int? flexSlots;
   final List<String> allowed;
@@ -45,6 +48,7 @@ class SolveRequest {
     required this.mode,
     required this.prio,
     this.sport = 'v6',
+    this.tactic = '5-1',
     this.flexSlots,
     required this.allowed,
     required this.schedule,
@@ -90,12 +94,17 @@ class _Sc {
 /// 채워야 할 자리 하나.
 class _Slot {
   final int team;
+
+  /// 이 자리에 필요한 역할.
   final String pos;
 
   /// 이 자리에 들어올 수 있는 코어 번호. null이면 제한 없음.
   final List<int>? allow;
 
-  const _Slot(this.team, this.pos, this.allow);
+  /// 코트에서 이 자리가 어디인지(존 · 이름 · 코트 밖).
+  final SeatSlot def;
+
+  const _Slot(this.team, this.pos, this.allow, this.def);
 }
 
 class _Assign {
@@ -103,11 +112,19 @@ class _Assign {
   final String name;
   final String pos;
   final int team;
+  final SeatSlot def;
 
   /// 사람이 없어 비워 둔 자리.
   final bool empty;
 
-  const _Assign(this.id, this.name, this.pos, this.team, {this.empty = false});
+  const _Assign(
+    this.id,
+    this.name,
+    this.pos,
+    this.team,
+    this.def, {
+    this.empty = false,
+  });
 }
 
 class AnchigiSolver {
@@ -118,6 +135,7 @@ class AnchigiSolver {
   final String mode;
   final String prio;
   final String sport;
+  final String tactic;
   final int? flexSlots;
   final List<String> allowed;
   final AnchigiSchedule schedule;
@@ -144,6 +162,7 @@ class AnchigiSolver {
       mode = req.mode,
       prio = req.prio,
       sport = req.sport,
+      tactic = req.tactic,
       flexSlots = req.flexSlots,
       allowed = req.allowed,
       schedule = req.schedule {
@@ -167,7 +186,7 @@ class AnchigiSolver {
   // ── 템플릿 ────────────────────────────────────────────────────────────────
 
   List<AnchigiTemplate> _tpls() {
-    final mine = templatesOfSport(sport);
+    final mine = templatesOfSport(sport, tactic);
     final r = mine.where((t) => allowed.contains(t.id)).toList();
     return r.isEmpty ? [mine.first] : r;
   }
@@ -270,8 +289,9 @@ class AnchigiSolver {
     List<AnchigiPlayer> pool,
     _Sc sc,
     List<_Assign?> assign,
-    List<String> teamNames,
-  ) {
+    List<String> teamNames, [
+    List<String>? tplIds,
+  ]) {
     final teams = <List<SlotAssign>>[[], []];
     final need = <List<String>>[[], []];
     final used = <String>{};
@@ -282,12 +302,28 @@ class AnchigiSolver {
       if (a == null) continue;
       if (a.empty) {
         // 사람이 없어 비운 자리 — 코트에 '(필요)' 로 남는다.
-        teams[a.team].add(SlotAssign.needed(a.pos));
+        teams[a.team].add(
+          SlotAssign.needed(
+            a.pos,
+            zone: a.def.zone,
+            label: a.def.label,
+            off: a.def.off,
+          ),
+        );
         need[a.team].add(a.pos);
         cost += kEmptySlotCost;
         continue;
       }
-      teams[a.team].add(SlotAssign(id: a.id, name: a.name, pos: a.pos));
+      teams[a.team].add(
+        SlotAssign(
+          id: a.id,
+          name: a.name,
+          pos: a.pos,
+          zone: a.def.zone,
+          label: a.def.label,
+          off: a.def.off,
+        ),
+      );
       used.add(a.id);
       cost += _slotCost(a.id, a.pos, sc, capOf[a.id] ?? 1);
     }
@@ -334,6 +370,7 @@ class AnchigiSolver {
       fitGap: gap,
       nonMain: nonMain,
       need: need,
+      tpls: tplIds,
     );
   }
 
@@ -356,8 +393,8 @@ class AnchigiSolver {
     List<int>? allowA,
     List<int>? allowB,
   ]) => [
-    for (final p in a.slots) _Slot(0, p, allowA),
-    for (final p in b.slots) _Slot(1, p, allowB),
+    for (final d in a.slots) _Slot(0, d.role, allowA, d),
+    for (final d in b.slots) _Slot(1, d.role, allowB, d),
   ];
 
   /// MRV 백트래킹. 해를 못 찾거나 노드 한도를 넘으면 null.
@@ -447,7 +484,7 @@ class AnchigiSolver {
         final etm = slots[bi].team;
         emptyLeft--;
         left[etm]--;
-        assign[bi] = _Assign('', '', slots[bi].pos, etm, empty: true);
+        assign[bi] = _Assign('', '', slots[bi].pos, etm, slots[bi].def, empty: true);
         if (bt(depth + 1)) return true;
         emptyLeft++;
         left[etm]++;
@@ -475,7 +512,7 @@ class AnchigiSolver {
         final p = e.p;
         final isNM = p.tierOf(slot.pos) != 'main';
         used.add(p.id);
-        assign[bi] = _Assign(p.id, p.name, slot.pos, tm);
+        assign[bi] = _Assign(p.id, p.name, slot.pos, tm, slot.def);
         left[tm]--;
         if (must != null && must[tm].contains(p.id)) need[tm]--;
         if (isNM) nm[tm]++;
@@ -504,7 +541,7 @@ class AnchigiSolver {
     bool bt(int i) {
       if (i == ms.length) return true;
       for (var k = 0; k < slots.length; k++) {
-        if (used[k] || !ms[i].pos.contains(slots[k])) continue;
+        if (used[k] || !ms[i].pos.contains(slots[k].role)) continue;
         used[k] = true;
         if (bt(i + 1)) return true;
         used[k] = false;
@@ -642,7 +679,9 @@ class AnchigiSolver {
       for (var j = 0; j < opts.length && probe == null; j++) {
         final sl = _mkSlots(opts[i], opts[j], allowA, allowB);
         final as = _search(pool, sc, sl, must, 6000, bud, allowOf(sl));
-        if (as != null) probe = _finish(pool, sc, as, names);
+        if (as != null) {
+          probe = _finish(pool, sc, as, names, [opts[i].id, opts[j].id]);
+        }
       }
     }
     if (probe == null) return null;
@@ -656,7 +695,7 @@ class AnchigiSolver {
       final sl = _mkSlots(a, b, allowA, allowB);
       final as = _search(pool, sc, sl, must, 3000, bud, allowOf(sl));
       if (as == null) continue;
-      final r = _finish(pool, sc, as, names);
+      final r = _finish(pool, sc, as, names, [a.id, b.id]);
       if (r.cost < best.cost) best = r;
     }
     return best;
@@ -680,7 +719,7 @@ class AnchigiSolver {
             allow = pass == 0 ? 0 : _emptyAllowance(pool, sl);
             final as = _search(pool, sc, sl, null, 20000, bud, allow);
             if (as != null) {
-              probe = _finish(pool, sc, as, ['A', 'B']);
+              probe = _finish(pool, sc, as, ['A', 'B'], [opts[i].id, opts[j].id]);
               usedBudget = bud;
             }
           }
@@ -707,7 +746,7 @@ class AnchigiSolver {
         allow == 0 ? 0 : _emptyAllowance(pool, sl),
       );
       if (as == null) continue;
-      final r = _finish(pool, sc, as, ['A', 'B']);
+      final r = _finish(pool, sc, as, ['A', 'B'], [a.id, b.id]);
       if (r.cost < best.cost) best = r;
     }
     return best;
@@ -821,6 +860,7 @@ class AnchigiSolver {
       mode: mode,
       prio: prio,
       sport: sport,
+      tactic: tactic,
       budget: usedBudget,
       flexAsked: _budStart,
       teamSize: bestT,
@@ -858,6 +898,7 @@ class AnchigiSolver {
       mode: mode,
       prio: prio,
       sport: sport,
+      tactic: tactic,
       budget: maxBud,
       flexAsked: _budStart,
     );
@@ -904,7 +945,7 @@ class AnchigiSolver {
     if (present.isEmpty) return false;
     if (present.length < minCourt()) return true;
     return _tpls().every(
-      (t) => t.slots.any((p) => !present.any((q) => q.pos.contains(p))),
+      (t) => t.slots.any((sl) => !present.any((q) => q.pos.contains(sl.role))),
     );
   }
 
@@ -913,7 +954,7 @@ class AnchigiSolver {
   int _maxSlotFor(String p) {
     var m = 0;
     for (final t in _tpls()) {
-      final c = t.slots.where((s) => s == p).length * 2;
+      final c = t.slots.where((s) => s.role == p).length * 2;
       if (c > m) m = c;
     }
     return m;
@@ -922,7 +963,7 @@ class AnchigiSolver {
   int _minSlotFor(String p) {
     int? m;
     for (final t in _tpls()) {
-      final c = t.slots.where((s) => s == p).length * 2;
+      final c = t.slots.where((s) => s.role == p).length * 2;
       if (m == null || c < m) m = c;
     }
     return m ?? 0;

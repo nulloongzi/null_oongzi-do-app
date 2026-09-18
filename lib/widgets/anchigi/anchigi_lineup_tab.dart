@@ -378,11 +378,12 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
 
   Widget _settingsCard({required bool open}) {
     final (lo, hi) = s.benchRange;
-    final tplList = templatesOfSport(s.sport);
+    final tplList = templatesOfSport(s.sport, s.tactic);
     return AgFoldCard(
       title: t('ag_card_settings'),
       trailing:
-          '${t('ag_sport_${s.sport}')} · '
+          '${t('ag_sport_${s.sport}')}'
+          '${s.sport == 'v6' ? ' ${s.tactic}' : ''} · '
           '${t(s.prio == 'variety' ? 'ag_prio_variety' : 'ag_prio_custom')}',
       initiallyExpanded: open,
       children: [
@@ -399,6 +400,32 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
           selected: s.sport,
           onChanged: s.setSport,
         ),
+        const SizedBox(height: 14),
+        // 6인제는 전술로, 9인제는 속공 수(포메이션)로 자리 구성이 갈린다.
+        if (s.sport == 'v6') ...[
+          _label(t('ag_tactic_title')),
+          AgSegmented(
+            options: [
+              for (final tc in kTactics)
+                (
+                  value: tc,
+                  label: t('ag_tactic_${tc.replaceAll('-', '')}'),
+                  sub: t('ag_tactic_${tc.replaceAll('-', '')}_sub'),
+                ),
+            ],
+            selected: s.tactic,
+            onChanged: s.setTactic,
+          ),
+          const SizedBox(height: 6),
+          _hint(t('ag_tactic_hint')),
+        ] else ...[
+          _label(t('ag_form_title')),
+          for (final tpl in templatesOfSport('v9')) ...[
+            _formChip(tpl),
+            const SizedBox(height: 6),
+          ],
+          _hint(t('ag_form_hint')),
+        ],
         const SizedBox(height: 14),
         AgSegmented(
           options: [
@@ -456,7 +483,7 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
               selected: s.nGames,
               onTap: s.setNGames,
             ),
-            if (tplList.length > 1) ...[
+            if (s.sport == 'v6' && tplList.length > 1) ...[
               const SizedBox(height: 14),
               _label(t('ag_tpl_title')),
               const SizedBox(height: 6),
@@ -550,6 +577,45 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
       ],
     ],
   );
+
+  /// 9인제 포메이션 한 줄(여러 개 켜 두면 그중에서 골라 쓴다).
+  Widget _formChip(AnchigiTemplate tpl) {
+    final on = s.allowed.contains(tpl.id);
+    return GestureDetector(
+      onTap: () => s.toggleTemplate(tpl.id),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 12),
+        decoration: BoxDecoration(
+          color: on ? NurungjiColors.yellow : NurungjiColors.chipBg,
+          borderRadius: BorderRadius.circular(11),
+        ),
+        child: Row(
+          children: [
+            Text(
+              t(tpl.labelKey),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: on ? NurungjiColors.dark : NurungjiColors.chipFg,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              t(tpl.descKey),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: on
+                    ? NurungjiColors.dark.withValues(alpha: .7)
+                    : NurungjiColors.brown,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _tplChip(AnchigiTemplate tpl) {
     final on = s.allowed.contains(tpl.id);
@@ -855,6 +921,20 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
     ),
   );
 
+  /// 이 경기에 쓰인 포메이션의 수비 전환 메모(속공 2 · 3).
+  String _noteOf(GameResult g) {
+    final ids = g.tpls;
+    if (ids == null) return '';
+    final notes = <String>[];
+    for (final id in ids) {
+      final tpl = templateById(id);
+      if (tpl == null || tpl.noteKey.isEmpty) continue;
+      final n = t(tpl.noteKey);
+      if (!notes.contains(n)) notes.add(n);
+    }
+    return notes.join('\n');
+  }
+
   Widget _gameCard(int rnd, int gi, GameResult g, String sport) {
     // ABC 모드에서 이 경기의 두 팀에 해당하는 코어를 골라 차출 표시에 쓴다.
     final pair = kPairs[gi % 3];
@@ -968,6 +1048,18 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
               ),
             ],
           ),
+          if (_noteOf(g).isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              '↔ ${_noteOf(g)}',
+              style: const TextStyle(
+                fontSize: 11,
+                height: 1.5,
+                fontWeight: FontWeight.w600,
+                color: NurungjiColors.brown,
+              ),
+            ),
+          ],
           if (g.hasNeed) ...[
             const SizedBox(height: 8),
             Row(

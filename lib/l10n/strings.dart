@@ -761,16 +761,13 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_pos_MB': {'ko': '센터', 'en': 'Middle'},
   'ag_pos_Li': {'ko': '리베로', 'en': 'Libero'},
 
-  // 9인제 자리 — 코트 칸 이름이 곧 포지션.
-  'ag_pos_FL': {'ko': '전위 왼쪽', 'en': 'Front left'},
-  'ag_pos_FC': {'ko': '전위 가운데', 'en': 'Front center'},
-  'ag_pos_FR': {'ko': '전위 오른쪽', 'en': 'Front right'},
-  'ag_pos_CL': {'ko': '중위 왼쪽', 'en': 'Mid left'},
-  'ag_pos_CC': {'ko': '중위 가운데', 'en': 'Mid center'},
-  'ag_pos_CR': {'ko': '중위 오른쪽', 'en': 'Mid right'},
-  'ag_pos_BL': {'ko': '후위 왼쪽', 'en': 'Back left'},
-  'ag_pos_BC': {'ko': '후위 가운데', 'en': 'Back center'},
-  'ag_pos_BR': {'ko': '후위 오른쪽', 'en': 'Back right'},
+  // 9인제 역할 — 명단에서는 이 여섯 가지만 고른다.
+  'ag_pos_S9': {'ko': '세터', 'en': 'Setter'},
+  'ag_pos_QK': {'ko': '속공', 'en': 'Quick'},
+  'ag_pos_L9': {'ko': '레프트', 'en': 'Left'},
+  'ag_pos_R9': {'ko': '라이트', 'en': 'Right'},
+  'ag_pos_CH': {'ko': '차', 'en': 'Mid'},
+  'ag_pos_BK': {'ko': '백', 'en': 'Back'},
 
   // 칩처럼 좁은 자리에 쓰는 짧은 이름(6인제는 코드가 이미 짧아 그대로).
   'ag_posx_S': {'ko': '세터', 'en': 'S'},
@@ -778,22 +775,88 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_posx_OH': {'ko': '레프트', 'en': 'OH'},
   'ag_posx_MB': {'ko': '센터', 'en': 'MB'},
   'ag_posx_Li': {'ko': '리베로', 'en': 'Li'},
-  'ag_posx_FL': {'ko': '전좌', 'en': 'FL'},
-  'ag_posx_FC': {'ko': '전중', 'en': 'FC'},
-  'ag_posx_FR': {'ko': '전우', 'en': 'FR'},
-  'ag_posx_CL': {'ko': '중좌', 'en': 'CL'},
-  'ag_posx_CC': {'ko': '중중', 'en': 'CC'},
-  'ag_posx_CR': {'ko': '중우', 'en': 'CR'},
-  'ag_posx_BL': {'ko': '후좌', 'en': 'BL'},
-  'ag_posx_BC': {'ko': '후중', 'en': 'BC'},
-  'ag_posx_BR': {'ko': '후우', 'en': 'BR'},
+  'ag_posx_S9': {'ko': '세터', 'en': 'Setter'},
+  'ag_posx_QK': {'ko': '속공', 'en': 'Quick'},
+  'ag_posx_L9': {'ko': '레프트', 'en': 'Left'},
+  'ag_posx_R9': {'ko': '라이트', 'en': 'Right'},
+  'ag_posx_CH': {'ko': '차', 'en': 'Mid'},
+  'ag_posx_BK': {'ko': '백', 'en': 'Back'},
+
+  // 9인제 자리 이름 — 포메이션마다 다르다(코트에만 표시).
+  'ag_seat_s9': {'ko': '세터', 'en': 'Setter'},
+  'ag_seat_qk': {'ko': '속공', 'en': 'Quick'},
+  'ag_seat_fqk': {'ko': '앞속공', 'en': 'Front quick'},
+  'ag_seat_bqk': {'ko': '빽속공', 'en': 'Back quick'},
+  'ag_seat_qa': {'ko': '앞A', 'en': 'A quick'},
+  'ag_seat_qb': {'ko': '앞B', 'en': 'B quick'},
+  'ag_seat_b': {'ko': 'B', 'en': 'B'},
+  'ag_seat_l9': {'ko': '레프트', 'en': 'Left'},
+  'ag_seat_r9': {'ko': '라이트', 'en': 'Right'},
+  'ag_seat_ch': {'ko': '차', 'en': 'Mid'},
+  'ag_seat_fch': {'ko': '앞차', 'en': 'Front mid'},
+  'ag_seat_bch': {'ko': '빽차', 'en': 'Back mid'},
+  'ag_seat_lb': {'ko': '레프트백', 'en': 'Left back'},
+  'ag_seat_cb': {'ko': '백센터', 'en': 'Back centre'},
+  'ag_seat_cb2': {'ko': '센터백', 'en': 'Centre back'},
+  'ag_seat_rb': {'ko': '라이트백', 'en': 'Right back'},
+  'ag_seat_s_front': {'ko': '세터 · 라이트', 'en': 'Setter · right'},
+
+  // 6인제 전술
+  'ag_tactic_title': {'ko': '전술', 'en': 'System'},
+  'ag_tactic_51': {'ko': '5-1', 'en': '5-1'},
+  'ag_tactic_51_sub': {'ko': '세터 1명', 'en': 'one setter'},
+  'ag_tactic_62': {'ko': '6-2', 'en': '6-2'},
+  'ag_tactic_62_sub': {
+    'ko': '세터 2명 · 전위는 라이트',
+    'en': 'two setters · front one hits right',
+  },
+  'ag_tactic_hint': {
+    'ko':
+        '5-1 은 세터 한 명이 여섯 자리를 다 돌고, 6-2 는 세터 둘이 후위에서 번갈아 토스합니다. '
+            '6-2 의 전위 세터는 라이트 자리에서 공격합니다.',
+    'en':
+        'In 5-1 one setter runs all six rotations; in 6-2 two setters take turns setting '
+            'from the back row, and the front-row setter attacks from the right.',
+  },
+
+  // 9인제 포메이션
+  'ag_form_title': {'ko': '포메이션', 'en': 'Formation'},
+  'ag_form_hint': {
+    'ko': '(속공 수에 따라 리시브 줄이 갈립니다)',
+    'en': '(the number of quicks decides the receive rows)',
+  },
+  'ag_tpl_q1': {'ko': '속공 1 · 2-4-3', 'en': '1 quick · 2-4-3'},
+  'ag_tpl_q1_desc': {
+    'ko': '앞 2 · 가운데 4 · 뒤 3',
+    'en': 'front 2 · middle 4 · back 3',
+  },
+  'ag_tpl_q2': {'ko': '속공 2 · 3-4-2', 'en': '2 quicks · 3-4-2'},
+  'ag_tpl_q2_desc': {
+    'ko': '앞 3 · 가운데 4 · 뒤 2',
+    'en': 'front 3 · middle 4 · back 2',
+  },
+  'ag_tpl_q3': {'ko': '속공 3 · 4-3-2', 'en': '3 quicks · 4-3-2'},
+  'ag_tpl_q3_desc': {
+    'ko': '앞 4 · 가운데 3 · 뒤 2',
+    'en': 'front 4 · middle 3 · back 2',
+  },
+  'ag_note_q2': {
+    'ko': '앞차 · 빽차 중 한 명은 수비 때 뒤로 빠져 가운데를 보고, 거기서 공격에 들어갑니다.',
+    'en':
+        'On defence one of the two mids drops back to cover the centre, and attacks from there.',
+  },
+  'ag_note_q3': {
+    'ko': '차는 수비 때 뒤로 빠져 가운데를 보고, 거기서 공격에 들어갑니다.',
+    'en':
+        'On defence the mid drops back to cover the centre, and attacks from there.',
+  },
 
   // 종목
   'ag_sport_title': {'ko': '종목', 'en': 'Format'},
   'ag_sport_v6': {'ko': '6인제', 'en': '6-a-side'},
   'ag_sport_v6_sub': {'ko': '로테이션 · 대각', 'en': 'rotation · diagonals'},
   'ag_sport_v9': {'ko': '9인제', 'en': '9-a-side'},
-  'ag_sport_v9_sub': {'ko': '자리 고정 3×3', 'en': 'fixed 3×3 seats'},
+  'ag_sport_v9_sub': {'ko': '속공 수로 줄 구성', 'en': 'rows by quick count'},
 
   // 배치 우선순위
   'ag_prio_title': {'ko': '배치 우선순위', 'en': 'Lineup priority'},
@@ -876,11 +939,6 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_compact_list': {'ko': '간단히', 'en': 'Compact'},
 
   // 9인제 구성
-  'ag_tpl_v9': {'ko': '9인제 정규', 'en': '9-a-side'},
-  'ag_tpl_v9_desc': {
-    'ko': '전 · 중 · 후위 3자리씩',
-    'en': '3 seats each in front · middle · back',
-  },
 
   // 모임 보관 · 백업
   'ag_meet_title': {'ko': '지난 모임', 'en': 'Past meetups'},
@@ -955,11 +1013,13 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_help_h1': {'ko': '배치가 정해지는 순서', 'en': 'How lineups are decided'},
   'ag_help_1sport': {
     'ko':
-        '먼저 종목을 고릅니다. 6인제는 로테이션이 있어 자리가 역할(세터 · 레프트…)이고, '
-            '9인제는 로테이션이 없어 코트의 아홉 자리(전 · 중 · 후위 × 좌 · 중 · 우)가 곧 포지션입니다.',
+        '먼저 종목을 고릅니다. 6인제는 로테이션이 있어 존(1~6)으로 서고, 5-1(세터 1) 과 '
+            '6-2(세터 2 · 전위 세터는 라이트)로 갈립니다. 9인제는 로테이션이 없고 속공 수로 '
+            '리시브 줄이 갈립니다 — 속공 1명이면 2-4-3, 2명이면 3-4-2, 3명이면 4-3-2. '
+            '명단에서는 역할 6종(세터 · 속공 · 레프트 · 라이트 · 차 · 백)만 고르면 됩니다.',
     'en':
-        'Pick the format first. 6-a-side rotates, so seats are roles (setter, outside…); '
-            '9-a-side does not rotate, so the nine court seats are the positions.',
+        'Pick the format first. 6-a-side rotates through zones 1–6 and splits into 5-1 and 6-2; '
+            '9-a-side does not rotate, and the number of quicks decides the receive rows.',
   },
   'ag_help_1pin': {
     'ko':
