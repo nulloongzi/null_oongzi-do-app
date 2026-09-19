@@ -1,7 +1,8 @@
 // anchigi_record_tab.dart — 기록 탭. 누적 출전·대기·포지션별 횟수와 초기화.
 import 'package:flutter/material.dart';
 
-import '../../models/anchigi/anchigi_constants.dart';
+import 'package:share_plus/share_plus.dart';
+
 import '../../services/anchigi/anchigi_store.dart';
 import '../../services/i18n.dart';
 import '../../theme.dart';
@@ -80,8 +81,240 @@ class AnchigiRecordTab extends StatelessWidget {
             ],
           ),
         ),
+        _meetsCard(context),
+        _backupCard(context),
         _resetCard(context),
       ],
+    );
+  }
+
+  Future<bool> _confirm(BuildContext context, String msg) async {
+    final r = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: NurungjiColors.light,
+        content: Text(msg, style: const TextStyle(fontWeight: FontWeight.w600)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(t('cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(t('confirm')),
+          ),
+        ],
+      ),
+    );
+    return r ?? false;
+  }
+
+  /// 모임 단위로 끊어 보관한다 — 기록이 한 모임에 영영 묶이지 않게.
+  Widget _meetsCard(BuildContext context) => AgCard(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              t('ag_meet_title'),
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 15,
+                color: NurungjiColors.dark,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              '${store.meets.length}',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: NurungjiColors.brown,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (store.meets.isEmpty)
+          Text(
+            t('ag_meet_none'),
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: NurungjiColors.brown,
+            ),
+          )
+        else
+          for (var i = 0; i < store.meets.length; i++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${store.meets[i].date}  '
+                      '${store.meets[i].rounds}${t('ag_meet_rounds_suf')} · '
+                      '${t('ag_sport_${store.meets[i].sport}')}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: NurungjiColors.dark,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () async {
+                      if (await _confirm(context, t('ag_meet_del_confirm'))) {
+                        store.deleteMeet(i);
+                      }
+                    },
+                    visualDensity: VisualDensity.compact,
+                    iconSize: 16,
+                    color: NurungjiColors.brown,
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              if (store.round <= 1 && store.pastRounds.isEmpty) {
+                messenger.showSnackBar(
+                  SnackBar(content: Text(t('ag_meet_archive_empty'))),
+                );
+                return;
+              }
+              if (await _confirm(context, t('ag_meet_archive_confirm'))) {
+                store.archiveMeet();
+              }
+            },
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            child: Text(
+              t('ag_meet_archive'),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          t('ag_meet_hint'),
+          style: const TextStyle(
+            fontSize: 11,
+            height: 1.5,
+            fontWeight: FontWeight.w600,
+            color: NurungjiColors.brown,
+          ),
+        ),
+      ],
+    ),
+  );
+
+  /// 백업 — 기기를 바꾸거나 앱을 지워도 명단·기록이 남게.
+  Widget _backupCard(BuildContext context) => AgCard(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          t('ag_backup_title'),
+          style: const TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 15,
+            color: NurungjiColors.dark,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => Share.share(store.exportJson()),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 11),
+                ),
+                child: Text(
+                  '⬇ ${t('ag_backup_export')}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => _importDialog(context),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 11),
+                ),
+                child: Text(
+                  '⬆ ${t('ag_backup_import')}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          t('ag_backup_hint'),
+          style: const TextStyle(
+            fontSize: 11,
+            height: 1.5,
+            fontWeight: FontWeight.w600,
+            color: NurungjiColors.brown,
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Future<void> _importDialog(BuildContext context) async {
+    final ctl = TextEditingController();
+    final messenger = ScaffoldMessenger.of(context);
+    final raw = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: NurungjiColors.light,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              t('ag_backup_import_hint'),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 10),
+            TextField(controller: ctl, minLines: 3, maxLines: 6),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(t('cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, ctl.text),
+            child: Text(t('confirm')),
+          ),
+        ],
+      ),
+    );
+    ctl.dispose();
+    if (raw == null || raw.trim().isEmpty) return;
+    final ok = store.importJson(raw);
+    messenger.showSnackBar(
+      SnackBar(content: Text(t(ok ? 'ag_backup_done' : 'ag_backup_bad'))),
     );
   }
 
@@ -130,7 +363,8 @@ class AnchigiRecordTab extends StatelessWidget {
               ),
               cell(t('ag_th_play'), head: true),
               cell(t('ag_th_bench'), head: true),
-              for (final p in kPos) cell(p, head: true, w: 38),
+              for (final p in store.seats)
+                cell(t('ag_posx_$p'), head: true, w: 44),
             ],
           ),
         ),
@@ -167,11 +401,11 @@ class AnchigiRecordTab extends StatelessWidget {
                       ),
                       cell('${st.play}'),
                       cell('${st.bench}'),
-                      for (final q in kPos)
+                      for (final q in store.seats)
                         cell(
                           (st.pos[q] ?? 0) == 0 ? '·' : '${st.pos[q]}',
                           dim: (st.pos[q] ?? 0) == 0,
-                          w: 38,
+                          w: 44,
                         ),
                     ],
                   ),
