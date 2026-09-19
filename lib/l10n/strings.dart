@@ -694,9 +694,11 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_add_btn': {'ko': '추가', 'en': 'Add'},
   'ag_add_hint': {
     'ko':
-        '자리를 고르고 추가하세요. 처음 고른 자리가 주가 됩니다. 안 고르면 세터(S) 하나로 시작해요 — 추가 후 칩을 눌러 바꾸세요.',
+        '자리를 고르고 추가하세요. 처음 고른 자리가 주가 됩니다. 안 고르면 어디든 설 수 있는 사람으로 '
+        '들어갑니다 — 나중에 칩을 눌러 정하면 됩니다.',
     'en':
-        'Pick positions and add. Your first pick is the main. If none, starts with Setter (S) — change it later by tapping the chips.',
+        'Pick seats and add. Your first pick is the main. Pick none and they join as able to '
+        'play anywhere — set it later by tapping the chips.',
   },
   'ag_tier_main': {'ko': '주', 'en': 'Main'},
   'ag_tier_sub': {'ko': '가능', 'en': 'Can'},
@@ -704,9 +706,11 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_set_main': {'ko': '주 포지션으로', 'en': 'Set as main'},
   'ag_tier_hint': {
     'ko':
-        '처음 고른 자리가 주 포지션이에요. 더 누르면 가능 → 도전 → 해제로 바뀌고, ☆를 누르면 주 포지션을 바꿉니다. 경쟁 게임은 주만 씁니다.',
+        '처음 고른 자리가 주 자리예요. 더 누르면 가능 → 도전 → 해제로 바뀌고, 길게 누르면 주 자리를 바꿉니다. '
+        '자리를 다 지우면 어디든 설 수 있는 사람이 됩니다.',
     'en':
-        'Your first pick is your Main. Tap again for Can → Want → off; tap ☆ to change your main. Competitive games use Main only.',
+        'Your first pick is your Main. Tap again for Can → Want → off; long-press to change your '
+        'main. Clear every seat and they can play anywhere.',
   },
   'ag_bulk': {'ko': '일괄', 'en': 'Bulk'},
   'ag_all_on': {'ko': '전원 참석', 'en': 'All present'},
