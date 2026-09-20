@@ -209,12 +209,16 @@ English and Korean throughout. Start today! 🏐
 노트는 로케일별로 따로 들어가고, 비워 두면 영어 사용자에겐 아무 설명도 안 뜬다.
 전체 설명과 같은 원칙 — 직역이 아니라 같은 내용을 영어로 쓴다.
 
+> **출시 노트 상한은 로케일당 500자다**(전체 설명 4000자와 다르다). 지금 KO 291자 /
+> EN 437자. 영어는 같은 내용을 쓰면 한글보다 길어져 처음 쓴 초안이 525자로 넘쳤다 —
+> 여기 손댈 때마다 세어볼 것.
+
 ```
 📷 Team Reels look cleaner
-A team's Instagram Reels now show their real cover images. One tap takes you to Instagram — no extra screen in between, and the team page scrolls lighter.
+A team's Instagram Reels now show their real cover images. One tap opens Instagram — no extra screen in between.
 
 🏐 Anchigi draws 9-a-side too
-6-a-side runs 5-1 or 6-2; 9-a-side lines up as 2-4-3, 3-4-2 or 4-3-2 depending on how many quick hitters you have. Short on people? It still draws, and marks the seats you couldn't fill as "needed" — so you can see exactly who to call. Results show one game at a time, with the confirm button pinned to the bottom.
+6-a-side runs 5-1 or 6-2; 9-a-side lines up as 2-4-3, 3-4-2 or 4-3-2 by how many quick hitters you have. Short on people? It still draws and marks the seats it couldn't fill as "needed", so you know who to call. One game at a time, confirm button pinned to the bottom.
 ```
 
 <details><summary>2.6.0(14) 출시 노트 — 14 가 게시될 때 쓴 문안</summary>
