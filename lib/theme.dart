@@ -60,7 +60,13 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
-          textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+          // ButtonStyle 의 textStyle 은 상속이 아니라 대체라 패밀리를 다시 준다.
+          // 안 주면 이 버튼만 기본 폰트(Roboto)로 떨어져 나머지와 글꼴이 달라진다.
+          textStyle: const TextStyle(
+            fontFamily: 'Pretendard',
+            fontWeight: FontWeight.w800,
+            fontSize: 15,
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(

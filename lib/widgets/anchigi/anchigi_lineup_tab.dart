@@ -32,6 +32,9 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
   /// 뽑은 뒤 뽑기 버튼 위치로 돌아오기 위한 앵커(맨 위로 튀지 않게).
   final _drawKey = GlobalKey();
 
+  /// 코트 보기에서 지금 보고 있는 경기 번호.
+  int _gameTab = 0;
+
   AnchigiStore get s => widget.store;
 
   /// 진단 사유를 사람이 읽는 문장으로.
@@ -66,9 +69,28 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
     };
   }
 
+  /// 지금 시각이 어느 경기에 해당하는지. 없으면 -1.
+  int _currentGameIndex(int rnd, int n) {
+    final now = DateTime.now();
+    final mins = now.hour * 60 + now.minute;
+    for (var i = 0; i < n; i++) {
+      if (mins >= s.schedule.gameStartMin(rnd, i, s.nGames) &&
+          mins < s.schedule.gameEndMin(rnd, i, s.nGames)) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
   Future<void> _draw() async {
     await s.draw();
     if (!mounted) return;
+    final cur = s.current;
+    if (cur != null) {
+      // 뽑으면 지금 시각의 경기로 맞춘다.
+      final now = _currentGameIndex(cur.round, cur.games.length);
+      setState(() => _gameTab = now >= 0 ? now : 0);
+    }
     // 결과가 길어도 뽑기 버튼이 보이는 자리로 되돌린다.
     final ctx = _drawKey.currentContext;
     if (ctx != null && ctx.mounted) {
@@ -100,16 +122,33 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
     if (s.players.isEmpty) return _onboarding();
 
     final cur = s.current;
-    final diag = s.failure.isNotEmpty ? s.failure : s.diagnosis;
+    // 뽑기가 아예 실패한 경우만 오류, 인원이 모자란 것은 안내로 보여준다.
+    final failed = s.failure.isNotEmpty;
+    final diag = failed ? s.failure : s.diagnosis;
 
+    return Column(
+      children: [
+        Expanded(child: _scroll(cur, failed, diag)),
+        // 다시 뽑기 · 확정은 화면 아래 고정 — 코트를 끝까지 내리지 않아도 누를 수 있게.
+        if (cur != null) _actionBar(),
+      ],
+    );
+  }
+
+  Widget _scroll(RoundResult? cur, bool failed, List<InfeasibleReason> diag) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 40),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
       children: [
         // 결과가 있으면 설정을 접어 결과를 위로 올린다.
         _scheduleCard(open: cur == null),
         _settingsCard(open: cur == null),
-        if (diag.isNotEmpty)
-          AgMessage(diag.map(_reasonText).join('\n\n'), kind: AgMsgKind.err),
+        if (failed)
+          AgMessage(diag.map(_reasonText).join('\n\n'), kind: AgMsgKind.err)
+        else if (s.shortHanded)
+          AgMessage(
+            '${t('ag_shortage_note')}'
+            '${diag.isEmpty ? '' : '\n\n${diag.map(_reasonText).join('\n\n')}'}',
+          ),
         _drawCard(),
         if (cur != null) ..._result(cur),
         if (s.pastRounds.isNotEmpty) ..._past(),
@@ -371,11 +410,55 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
 
   Widget _settingsCard({required bool open}) {
     final (lo, hi) = s.benchRange;
+    final tplList = templatesOfSport(s.sport, s.tactic);
     return AgFoldCard(
       title: t('ag_card_settings'),
-      trailing: '${t('ag_feel_${s.feel}')} · ${s.nGames}${t('ag_game_word')}',
+      trailing:
+          '${t('ag_sport_${s.sport}')}'
+          '${s.sport == 'v6' ? ' ${s.tactic}' : ''} · '
+          '${t(s.prio == 'variety' ? 'ag_prio_variety' : 'ag_prio_custom')}',
       initiallyExpanded: open,
       children: [
+        _label(t('ag_sport_title')),
+        AgSegmented(
+          options: [
+            for (final sp in kSports)
+              (
+                value: sp,
+                label: t('ag_sport_$sp'),
+                sub: t('ag_sport_${sp}_sub'),
+              ),
+          ],
+          selected: s.sport,
+          onChanged: s.setSport,
+        ),
+        const SizedBox(height: 14),
+        // 6인제는 전술로, 9인제는 속공 수(포메이션)로 자리 구성이 갈린다.
+        if (s.sport == 'v6') ...[
+          _label(t('ag_tactic_title')),
+          AgSegmented(
+            options: [
+              for (final tc in kTactics)
+                (
+                  value: tc,
+                  label: t('ag_tactic_${tc.replaceAll('-', '')}'),
+                  sub: t('ag_tactic_${tc.replaceAll('-', '')}_sub'),
+                ),
+            ],
+            selected: s.tactic,
+            onChanged: s.setTactic,
+          ),
+          const SizedBox(height: 6),
+          _hint(t('ag_tactic_hint')),
+        ] else ...[
+          _label(t('ag_form_title')),
+          for (final tpl in templatesOfSport('v9')) ...[
+            _formChip(tpl),
+            const SizedBox(height: 6),
+          ],
+          _hint(t('ag_form_hint')),
+        ],
+        const SizedBox(height: 14),
         AgSegmented(
           options: [
             (value: 'abc', label: t('ag_mode_abc'), sub: t('ag_mode_abc_sub')),
@@ -389,115 +472,65 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
           onChanged: s.setMode,
         ),
         const SizedBox(height: 14),
-        Text(
-          t('ag_feel_title'),
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-            color: NurungjiColors.dark,
-          ),
-        ),
-        const SizedBox(height: 6),
+        _label(t('ag_prio_title')),
         AgSegmented(
           options: [
-            for (final f in kFeels)
-              (value: f, label: t('ag_feel_$f'), sub: t('ag_feel_${f}_sub')),
+            (
+              value: 'custom',
+              label: t('ag_prio_custom'),
+              sub: t('ag_prio_custom_sub'),
+            ),
+            (
+              value: 'variety',
+              label: t('ag_prio_variety'),
+              sub: t('ag_prio_variety_sub'),
+            ),
           ],
-          selected: s.feel,
-          onChanged: s.setFeel,
+          selected: s.prio,
+          onChanged: s.setPrio,
         ),
         const SizedBox(height: 6),
-        Text(
-          t('ag_feel_hint'),
-          style: const TextStyle(
-            fontSize: 11,
-            height: 1.5,
-            fontWeight: FontWeight.w600,
-            color: NurungjiColors.brown,
-          ),
-        ),
+        _hint(t('ag_prio_hint')),
         const SizedBox(height: 14),
-        Row(
+        // 자주 만지지 않는 것들은 한 겹 내린다 — 설정 카드가 길어지지 않게.
+        AgFoldCard(
+          title: t('ag_adv_title'),
+          trailing:
+              '${t('ag_flex_title')} ${s.flexSlotsEffective} · '
+              '${s.nGames}${t('ag_game_word')}',
+          initiallyExpanded: false,
           children: [
-            Text(
-              t('ag_tpl_title'),
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: NurungjiColors.dark,
-              ),
+            _label(t('ag_flex_title')),
+            _pickRow(
+              values: const [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+              selected: s.flexSlotsEffective,
+              onTap: s.setFlexSlots,
             ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                t('ag_tpl_hint'),
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: NurungjiColors.brown,
-                ),
-              ),
+            const SizedBox(height: 6),
+            _hint(t('ag_flex_hint')),
+            const SizedBox(height: 14),
+            _label(t('ag_games_count')),
+            _pickRow(
+              values: const [1, 2, 3, 4, 5, 6],
+              selected: s.nGames,
+              onTap: s.setNGames,
             ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            for (final tpl in kTemplates) ...[
-              Expanded(child: _tplChip(tpl)),
-              if (tpl != kTemplates.last) const SizedBox(width: 6),
-            ],
-          ],
-        ),
-        const SizedBox(height: 14),
-        Row(
-          children: [
-            Text(
-              t('ag_games_count'),
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: NurungjiColors.dark,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Row(
+            if (s.sport == 'v6' && tplList.length > 1) ...[
+              const SizedBox(height: 14),
+              _label(t('ag_tpl_title')),
+              const SizedBox(height: 6),
+              Row(
                 children: [
-                  for (var n = 1; n <= 6; n++) ...[
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => s.setNGames(n),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 7),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: s.nGames == n
-                                ? NurungjiColors.yellow
-                                : NurungjiColors.chipBg,
-                            borderRadius: BorderRadius.circular(9),
-                          ),
-                          child: Text(
-                            '$n',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              color: s.nGames == n
-                                  ? NurungjiColors.dark
-                                  : NurungjiColors.chipFg,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (n != 6) const SizedBox(width: 4),
+                  for (final tpl in tplList) ...[
+                    Expanded(child: _tplChip(tpl)),
+                    if (tpl != tplList.last) const SizedBox(width: 6),
                   ],
                 ],
               ),
-            ),
+            ],
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 4),
         Row(
           children: [
             AgStatChip(
@@ -514,6 +547,105 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
           ],
         ),
       ],
+    );
+  }
+
+  Widget _label(String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+        color: NurungjiColors.dark,
+      ),
+    ),
+  );
+
+  Widget _hint(String text) => Text(
+    text,
+    style: const TextStyle(
+      fontSize: 11,
+      height: 1.5,
+      fontWeight: FontWeight.w600,
+      color: NurungjiColors.brown,
+    ),
+  );
+
+  /// 숫자 하나를 고르는 칩 줄(실험 자리 · 경기 수).
+  Widget _pickRow({
+    required List<int> values,
+    required int selected,
+    required ValueChanged<int> onTap,
+  }) => Row(
+    children: [
+      for (var i = 0; i < values.length; i++) ...[
+        Expanded(
+          child: GestureDetector(
+            onTap: () => onTap(values[i]),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 7),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: selected == values[i]
+                    ? NurungjiColors.yellow
+                    : NurungjiColors.chipBg,
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: Text(
+                '${values[i]}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: selected == values[i]
+                      ? NurungjiColors.dark
+                      : NurungjiColors.chipFg,
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (i != values.length - 1) const SizedBox(width: 4),
+      ],
+    ],
+  );
+
+  /// 9인제 포메이션 한 줄(여러 개 켜 두면 그중에서 골라 쓴다).
+  Widget _formChip(AnchigiTemplate tpl) {
+    final on = s.allowed.contains(tpl.id);
+    return GestureDetector(
+      onTap: () => s.toggleTemplate(tpl.id),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 12),
+        decoration: BoxDecoration(
+          color: on ? NurungjiColors.yellow : NurungjiColors.chipBg,
+          borderRadius: BorderRadius.circular(11),
+        ),
+        child: Row(
+          children: [
+            Text(
+              t(tpl.labelKey),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: on ? NurungjiColors.dark : NurungjiColors.chipFg,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              t(tpl.descKey),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: on
+                    ? NurungjiColors.dark.withValues(alpha: .7)
+                    : NurungjiColors.brown,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -621,16 +753,19 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
   // ── 결과 ──────────────────────────────────────────────────────────────────
 
   List<Widget> _result(RoundResult cur) {
-    final relaxed = cur.budget > feelOf(cur.feel).budget;
+    final relaxed = cur.budget > cur.flexAsked;
     final cores = cur.games.first.cores;
     final noC = cores != null && cores[2].isEmpty;
 
     return [
       AgMessage(
         '✓ ${tf('ag_ok_done', {'r': '${cur.round}'})} — '
-        '${cur.mode == 'abc' ? t('ag_ok_abc') : t('ag_ok_free')}',
+        '${cur.mode == 'abc' ? t('ag_ok_abc') : t('ag_ok_free')}'
+        '${cur.hasNeed ? '\n${t('ag_ok_done_need')}' : ''}',
         kind: AgMsgKind.ok,
       ),
+      if (cur.abcFellBack) AgMessage(t('ag_abc_fallback')),
+      if (cur.pinsRelaxed) AgMessage(t('ag_pin_relaxed')),
       if (relaxed) AgMessage(tf('ag_relaxed', {'n': '${cur.budget}'})),
       if (cores != null)
         AgMessage(
@@ -666,98 +801,211 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
         ),
       if (noC) AgMessage(t('ag_no_c_core')),
       _timeline(cur.round, cur.games),
-      for (var gi = 0; gi < cur.games.length; gi++)
-        _gameCard(cur.round, gi, cur.games[gi]),
-      AgCard(
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: s.drawing ? null : _draw,
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                    ),
-                    child: Text(
-                      '🎲 ${t('ag_again')}',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: s.commit,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                    ),
-                    child: Text(
-                      t('ag_confirm_next'),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              t('ag_confirm_hint'),
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 11,
-                height: 1.5,
-                fontWeight: FontWeight.w600,
-                color: NurungjiColors.brown,
-              ),
-            ),
-          ],
+      _viewToggle(),
+      // 간단히 보기는 한 경기가 두어 줄이라 세 경기를 한눈에 둔다.
+      if (s.compact)
+        for (var gi = 0; gi < cur.games.length; gi++)
+          _gameCard(cur.round, gi, cur.games[gi], cur.sport)
+      // 코트는 한 장이 길어서 한 경기씩 본다 — 현장에서 필요한 건 지금 뛰는 경기다.
+      else ...[
+        _gameSelector(cur),
+        _gameCard(
+          cur.round,
+          _gameTab.clamp(0, cur.games.length - 1),
+          cur.games[_gameTab.clamp(0, cur.games.length - 1)],
+          cur.sport,
+        ),
+      ],
+      Padding(
+        padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
+        child: Text(
+          t('ag_confirm_hint'),
+          style: const TextStyle(
+            fontSize: 11,
+            height: 1.5,
+            fontWeight: FontWeight.w600,
+            color: NurungjiColors.brown,
+          ),
         ),
       ),
     ];
   }
 
-  Widget _timeline(int rnd, List<GameResult> games) => AgCard(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          t('ag_timeline'),
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w800,
-            color: NurungjiColors.dark,
-          ),
+  /// 경기 선택 — 지금 뛰는 경기에 표시를 붙인다.
+  Widget _gameSelector(RoundResult cur) {
+    final nowIdx = _currentGameIndex(cur.round, cur.games.length);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 11),
+      child: Row(
+        children: [
+          for (var gi = 0; gi < cur.games.length; gi++) ...[
+            Expanded(
+              child: GestureDetector(
+                onTap: () => setState(() => _gameTab = gi),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: _gameTab == gi
+                        ? NurungjiColors.dark
+                        : NurungjiColors.chipBg,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            '${gi + 1}${t('ag_game_word')}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: _gameTab == gi
+                                  ? Colors.white
+                                  : NurungjiColors.chipFg,
+                            ),
+                          ),
+                          if (gi == nowIdx) ...[
+                            const SizedBox(width: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 1,
+                              ),
+                              decoration: BoxDecoration(
+                                color: NurungjiColors.urgent,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                t('ag_now_word'),
+                                style: const TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      Text(
+                        formatTime(
+                          s.schedule.gameStartMin(cur.round, gi, s.nGames),
+                        ),
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: _gameTab == gi
+                              ? Colors.white.withValues(alpha: .8)
+                              : NurungjiColors.brown,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (gi != cur.games.length - 1) const SizedBox(width: 6),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// 코트로 볼지 목록으로 볼지 — 현장에서 자주 누르는 토글이라 결과 바로 위에 둔다.
+  Widget _viewToggle() => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Align(
+      alignment: Alignment.centerRight,
+      child: SizedBox(
+        width: 190,
+        child: AgSegmented(
+          options: [
+            (value: 'court', label: t('ag_compact_court'), sub: null),
+            (value: 'list', label: t('ag_compact_list'), sub: null),
+          ],
+          selected: s.compact ? 'list' : 'court',
+          onChanged: (v) => s.setCompact(v == 'list'),
         ),
-        const SizedBox(height: 8),
+      ),
+    ),
+  );
+
+  /// 화면 아래 고정되는 다시 뽑기 · 확정.
+  Widget _actionBar() => Container(
+    padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+    decoration: const BoxDecoration(
+      color: NurungjiColors.light,
+      border: Border(top: BorderSide(color: Color(0x22000000))),
+    ),
+    child: SafeArea(
+      top: false,
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: s.drawing ? null : _draw,
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 13),
+              ),
+              child: Text(
+                '🎲 ${t('ag_again')}',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: ElevatedButton(
+              onPressed: s.commit,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 13),
+              ),
+              child: Text(
+                t('ag_confirm_next'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Widget _timeline(int rnd, List<GameResult> games) => AgFoldCard(
+    title: t('ag_timeline'),
+    trailing:
+        '${formatTime(s.schedule.gameStartMin(rnd, 0, s.nGames))}–'
+        '${formatTime(s.schedule.gameEndMin(rnd, games.length - 1, s.nGames))}',
+    initiallyExpanded: false,
+    children: [
+      _tlRow(
+        '${s.schedule.start}–${s.schedule.warmup}',
+        t('ag_warmup'),
+        dim: true,
+      ),
+      for (var gi = 0; gi < games.length; gi++)
         _tlRow(
-          '${s.schedule.start}–${s.schedule.warmup}',
-          t('ag_warmup'),
+          '${formatTime(s.schedule.gameStartMin(rnd, gi, s.nGames))}'
+              '–${formatTime(s.schedule.gameEndMin(rnd, gi, s.nGames))}',
+          '${gi + 1}${t('ag_game_word')}'
+              '${games[gi].left.isEmpty ? '' : '   ${games[gi].left.map((l) => l.name).join(', ')} ${t('ag_leave_word')}'}',
+          warn: games[gi].left.isNotEmpty,
+        ),
+      if (s.schedule.rest > 0 && rnd < s.maxRounds)
+        _tlRow(
+          '${s.schedule.rest}${t('ag_min')}',
+          t('ag_rest_word'),
           dim: true,
         ),
-        for (var gi = 0; gi < games.length; gi++)
-          _tlRow(
-            '${formatTime(s.schedule.gameStartMin(rnd, gi, s.nGames))}'
-                '–${formatTime(s.schedule.gameEndMin(rnd, gi, s.nGames))}',
-            '${gi + 1}${t('ag_game_word')}'
-                '${games[gi].left.isEmpty ? '' : '   ${games[gi].left.map((l) => l.name).join(', ')} ${t('ag_leave_word')}'}',
-            warn: games[gi].left.isNotEmpty,
-          ),
-        if (s.schedule.rest > 0 && rnd < s.maxRounds)
-          _tlRow(
-            '${s.schedule.rest}${t('ag_min')}',
-            t('ag_rest_word'),
-            dim: true,
-          ),
-      ],
-    ),
+    ],
   );
 
   Widget _tlRow(
@@ -798,7 +1046,21 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
     ),
   );
 
-  Widget _gameCard(int rnd, int gi, GameResult g) {
+  /// 이 경기에 쓰인 포메이션의 수비 전환 메모(속공 2 · 3).
+  String _noteOf(GameResult g) {
+    final ids = g.tpls;
+    if (ids == null) return '';
+    final notes = <String>[];
+    for (final id in ids) {
+      final tpl = templateById(id);
+      if (tpl == null || tpl.noteKey.isEmpty) continue;
+      final n = t(tpl.noteKey);
+      if (!notes.contains(n)) notes.add(n);
+    }
+    return notes.join('\n');
+  }
+
+  Widget _gameCard(int rnd, int gi, GameResult g, String sport) {
     // ABC 모드에서 이 경기의 두 팀에 해당하는 코어를 골라 차출 표시에 쓴다.
     final pair = kPairs[gi % 3];
     final teamCores = g.cores == null
@@ -841,12 +1103,21 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
             ],
           ),
           const SizedBox(height: 10),
-          AnchigiCourt(
-            game: g,
-            teamCores: teamCores,
-            picked: s.picked,
-            onPick: s.pick,
-          ),
+          if (s.compact)
+            AnchigiLineupList(
+              game: g,
+              teamCores: teamCores,
+              picked: s.picked,
+              onPick: s.pick,
+            )
+          else
+            AnchigiCourt(
+              game: g,
+              teamCores: teamCores,
+              picked: s.picked,
+              onPick: s.pick,
+              sport: sport,
+            ),
           const SizedBox(height: 10),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -902,6 +1173,66 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
               ),
             ],
           ),
+          if (_noteOf(g).isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              '↔ ${_noteOf(g)}',
+              style: const TextStyle(
+                fontSize: 11,
+                height: 1.5,
+                fontWeight: FontWeight.w600,
+                color: NurungjiColors.brown,
+              ),
+            ),
+          ],
+          if (g.hasNeed) ...[
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${t('ag_needs_title')}  ',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: NurungjiColors.urgent,
+                  ),
+                ),
+                Expanded(
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      for (final seat in [...g.need[0], ...g.need[1]])
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: NurungjiColors.urgent.withValues(alpha: .08),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: NurungjiColors.urgent.withValues(
+                                alpha: .4,
+                              ),
+                            ),
+                          ),
+                          child: Text(
+                            t('ag_posx_$seat'),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: NurungjiColors.urgent,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -942,11 +1273,16 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
       for (var i = 0; i < rounds.length; i++)
         AgFoldCard(
           title: '${rounds[i].round}${t('ag_past_round_suf')}',
-          // 가장 최근 라운드만 펼쳐 둔다.
-          initiallyExpanded: i == 0,
+          // 지금 라운드가 화면을 차지해야 하니 지난 라운드는 전부 접어 둔다.
+          initiallyExpanded: false,
           children: [
             for (var gi = 0; gi < rounds[i].games.length; gi++)
-              _gameCard(rounds[i].round, gi, rounds[i].games[gi]),
+              _gameCard(
+                rounds[i].round,
+                gi,
+                rounds[i].games[gi],
+                rounds[i].sport,
+              ),
           ],
         ),
     ];
