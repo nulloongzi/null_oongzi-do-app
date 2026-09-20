@@ -57,7 +57,7 @@ Volleyball clubs across Korea on one map — pickup games, filters & more 🏐
 누룽지·주먹밥·비빔밥… 나만의 밥이름으로 재미있게.
 
 ■ 안치기 — 라운드 자동 배치
-누가 어느 코트에 들어갈지 자동으로 짜드려요. 로그인 없이 픽업 탭에서 바로.
+6인제도 9인제도. 온 사람만 넣으면 라운드별 코트 배치가 나와요. 출전과 대기를 고르게 나누고, 사람이 모자라면 어떤 자리가 비는지 알려줘요. 로그인 없이 픽업 탭에서 바로.
 
 ■ 믿을 수 있는 정보
 팀·크루마다 '최종 확인일'을 표시하고, 틀린 정보는 앱 안에서 바로 신고.
@@ -91,7 +91,7 @@ Pack the teams you like into your Lunchbox and come back anytime.
 Nurungji, Jumeokbap, Bibimbap… pick your own rice-name.
 
 ■ Anchigi — automatic round draws
-Works out who plays on which court. Right in the Pickup tab, no sign-in.
+6-a-side and 9-a-side. Add who turned up and it fills the court round by round, spreading play and bench time evenly — and when you're short, it shows which seats you still need. Right in the Pickup tab, no sign-in.
 
 ■ Information you can trust
 Every team shows when it was last verified, and you can report bad info in-app.
@@ -148,6 +148,21 @@ English and Korean throughout. Start today! 🏐
 영어 앱 이름은 이 문서에 없던 값이라 여기 남긴다(콘솔에서 확인):
 `Nulloongzi-do: Volleyball Map`
 
+#### 2026-09-20 갱신 — 안치기 문단을 고쳤다 (콘솔 미반영)
+
+안치기가 6인제 5-1·6-2 와 9인제 포메이션(속공 1·2·3)을 지원하고, 인원이 모자라도
+뽑아서 비는 자리를 `(필요)` 로 알려주게 바뀌었다. §1 의 **전체 설명 KO·EN 안치기
+문단**이 그 내용으로 갱신됐다.
+
+| 필드 | 콘솔 상태 |
+|---|---|
+| 전체 설명 KO | **미반영** — 2026-09-08 에 넣은 옛 안치기 한 줄이 그대로 |
+| 전체 설명 EN | **미반영** — 위와 같음 |
+
+> 콘솔은 확인하지 않았다(이 문서 규칙대로 "확인한 값만" 적는다). 다음에 콘솔을
+> 여는 사람이 §1 블록을 그대로 덮어쓰고, 관리형 게시라 **게시 버튼까지 눌러야**
+> 한다. 그때 이 표를 확인값으로 바꿔 주기 바란다.
+
 **글자수 여유** (Play 상한 대비, 괄호는 콘솔이 센 값):
 앱 이름 18/30 · 간단한 설명 KO 42(43)/80 · EN 73/80 ·
 전체 설명 KO 562(564)/4000 · EN 982(984)/4000.
@@ -178,7 +193,14 @@ English and Korean throughout. Start today! 🏐
 ```
 📷 팀 릴스가 더 깔끔해졌어요
 팀 상세의 인스타 릴스가 실제 릴스 커버 이미지로 바로 보여요. 한 번 탭하면 인스타그램으로 넘어갑니다. 예전처럼 중간에 인스타 화면이 끼어드는 단계가 없어졌고, 상세 화면 스크롤도 가벼워졌어요.
+
+🏐 안치기가 9인제도 짜줘요
+6인제는 5-1·6-2, 9인제는 속공 수에 따라 2-4-3·3-4-2·4-3-2 로 자리를 잡아요. 사람이 모자라도 그냥 뽑고 비는 자리를 '(필요)'로 알려주니 누굴 더 불러야 하는지 바로 보입니다. 결과는 경기 하나씩 큼직하게, 확정 버튼은 화면 아래 고정.
 ```
+
+> 안치기 문단은 **그 개편이 15 에 실릴 때만** 쓴다. 다음 빌드로 밀리면 이 문단을
+> 그 버전 노트로 옮길 것 — 노트에 없는 기능이 나가는 것보다, 안 나간 기능이
+> 노트에 있는 쪽이 더 나쁘다.
 
 <details><summary>2.6.0(14) 출시 노트 — 14 가 게시될 때 쓴 문안</summary>
 
@@ -271,7 +293,7 @@ English and Korean throughout. Start today! 🏐
 </details>
 
 ### ASO 키워드(설명에 자연 노출 권장)
-`배구` · `배구 동호회` · `배구 팀` · `픽업 게임` · `생활체육 배구` · `배구 모임` · `동호회 찾기` · `배구 지도`
+`배구` · `배구 동호회` · `배구 팀` · `픽업 게임` · `생활체육 배구` · `배구 모임` · `동호회 찾기` · `배구 지도` · `9인제 배구` · `6인제 배구` · `배구 포지션`
 
 ---
 
