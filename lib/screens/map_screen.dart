@@ -658,11 +658,8 @@ class _MapScreenState extends State<MapScreen> {
       case 'flow_discover':
         await _flowDiscover();
         break;
-      case 'flow_save':
-        await _flowSave(pick());
-        break;
-      case 'flow_share':
-        await _flowShare();
+      case 'flow_collect':
+        await _flowCollect();
         break;
       case 'flow_register':
         await _flowRegister();
@@ -964,10 +961,22 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   /// ② 담고 관리: 클럽 상세 → 도시락 찜 → 도시락(반찬칸) → 식단표
-  Future<void> _flowSave(Club? c) async {
+  /// ② 모으기 — 팀 상세 → 🍱 담기 → 도시락통 → 식단표 → 명함 → 공유.
+  ///
+  /// 저장과 자랑을 한 편으로 묶는다. 따로 찍으면 연결이 죽는다: 명함 안의
+  /// 6열 그리드가 바로 앞에서 채우는 걸 본 그 도시락인데, 두 영상으로
+  /// 나누면 그 사실이 화면에서 사라진다.
+  Future<void> _flowCollect() async {
+    // 릴스가 붙은 팀을 고른다 — 펼쳤을 때 커버가 스쳐 지나가도록.
+    final c = _clubWithReels() ?? _stillClub();
     if (c == null) return;
     await _focusAndShowClub(c);
-    if (!await _hold(3, 'detail')) return; // 상세에서 시작
+    if (!await _hold(2.5, 'detail')) return;
+
+    // 스크롤 다운(= 패널 펼침). 시간표·릴스 커버가 여기서 한 번 스친다.
+    // 주인공은 아니라 자막을 따로 붙이지 않는다 — 릴스는 ⑤가 맡는다.
+    detailPanelDemoExpand.value++;
+    if (!await _hold(3, 'detail_more')) return;
 
     // 다른 팀 3곳은 조용히 채워 둔다 — 반찬칸에 한 칸만 차 있으면 허전하다.
     try {
@@ -998,24 +1007,17 @@ class _MapScreenState extends State<MapScreen> {
     if (!await _hold(4, 'lunchbox')) return; // 반찬칸 그리드
     // 식단표 펼치기 — 시트를 닫았다 열지 않고 실제 버튼과 같은 확장 애니메이션.
     lunchboxDietOpenSignal.value++;
-    // 여기서 끝낸다. 지도로 돌아가면 식단표 자막이 걸린 채 지도가 3초쯤
-    // 흘러 — 마지막 자막은 항상 영상 끝까지 가므로 죽은 꼬리가 된다.
-    await _hold(4, 'diet');
-  }
-
-  /// ③ 자랑하기: 밥이름 프로필 → 네임카드(도시락+시간표+QR) → 공유
-  Future<void> _flowShare() async {
-    try {
-      await _repo.ensureUid();
-    } catch (_) {}
-    if (!mounted) return;
-    showProfileSheet(context);
-    // 프로필 시트는 작은 카드 하나에 여백이라 오래 물릴 그림이 아니다.
-    if (!await _hold(2.5, 'profile')) return; // 밥이름 카드·스탬프
+    if (!await _hold(4, 'diet')) return;
 
     await _backToMap();
     if (!mounted) return;
-    // 네임카드(피드형/스토리형 전환 + 이미지로 공유·저장)
+    showProfileSheet(context);
+    // 프로필 시트는 작은 카드 하나에 여백이라 오래 물릴 그림이 아니다.
+    if (!await _hold(2.5, 'profile')) return;
+
+    await _backToMap();
+    if (!mounted) return;
+    // 네임카드 — 방금 채운 도시락이 6열 그리드로 그대로 들어가 있다.
     unawaited(
       Navigator.push(
         context,
@@ -1026,19 +1028,11 @@ class _MapScreenState extends State<MapScreen> {
 
     await _backToMap();
     if (!mounted) return;
-    // 클럽 공유 메뉴(인스타 스토리·카톡·링크). 릴스가 붙은 팀을 우선 고른다 —
-    // 펼쳤을 때 커버 카드가 뜨는 팀이라야 다음 비트에 보여줄 게 있다.
-    final c = _clubWithReels();
-    if (c == null) return;
+    // 공유는 앱 안의 공유 메뉴로 끝낸다. 명함 화면의 '이미지로 공유'는
+    // 안드로이드 시스템 공유 시트를 열어 — 기기마다 다르고 앱 밖이라
+    // 영상에 넣을 화면이 아니다(인증 사진 선택기를 뺀 것과 같은 이유).
     await _focusAndShowClub(c);
-    // 비트 없이 지나가면 명함 자막이 지도로 돌아온 뒤까지 걸린 채 남는다
-    // (실측: 6.5~16.0초 한 자막, 그중 7초는 화면이 이미 지도였다).
-    await _hold(2, 'club');
-    if (!mounted) return;
-    // 릴스 커버는 _ExpandReveal 안이라 펼쳐야 보인다.
-    detailPanelDemoExpand.value++;
-    if (!await _hold(3, 'club_reels')) return;
-    if (!mounted) return;
+    if (!await _hold(1.5, 'club')) return;
     showShareMenu(
       context,
       url: ShareService.clubUrl(c.id),

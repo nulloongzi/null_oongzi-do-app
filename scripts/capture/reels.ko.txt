@@ -21,20 +21,17 @@ discover|cap|result|우리 동네 팀이|바로 여기|The clubs near you, right
 discover|cap|detail|일정·회비·위치까지|한눈에|Schedule, fees and location at a glance
 discover|outro||누룽지도|지금 내 팀 찾기|Find your club today
 
-save|hook||마음에 드는 팀,|까먹기 전에|Save the club you like, before you forget|마음에 든 팀, 까먹기 전에
-save|cap|detail|괜찮은 팀 찾았다면||Found one that fits?
-save|cap|saved|한 번에 도시락으로||One tap puts it in your lunchbox
-save|cap|lunchbox|찜한 팀은 반찬칸에|차곡차곡|All your saved clubs in one box
-save|cap|diet|식단표로 주간 일정|한 번에 비교|Compare weekly schedules side by side
-save|outro||누룽지도|내 도시락 만들기|Build your own lunchbox
-
-share|hook||내 배구 기록,|이렇게 자랑하자|Show off your volleyball life|내 배구 기록 자랑하기
-share|cap|profile|나만의 밥이름|프로필|Your own rice-name profile
-share|cap|namecard|도시락·시간표·QR|명함 한 장에|Clubs, schedule and QR on one card
-share|cap|club|마음에 든 팀도|그대로 공유|Share a club page too|마음에 든 팀도 그대로 공유
-share|cap|club_reels|팀 릴스도|커버로 같이|Their reels ride along as covers
-share|cap|share|인스타 스토리·카톡|바로 공유|Share straight to Instagram or KakaoTalk
-share|outro||누룽지도|do.nulloongzi.com|Volleyball club map for Korea
+collect|hook||찜해둔 팀들,|명함 한 장으로|Your saved clubs, on one card|찜해둔 팀들, 명함 한 장으로
+collect|cap|detail|괜찮은 팀 찾았다면||Found one that fits?
+collect|cap|detail_more|일정·회비·릴스까지|내려보면 다 있어요|Schedule, dues, even their reels
+collect|cap|saved|버튼 한 번이면|도시락으로|One tap drops it in your lunchbox
+collect|cap|lunchbox|찜한 팀은 반찬칸에|차곡차곡|All your saved clubs in one box
+collect|cap|diet|식단표로 주간 일정|한 번에 비교|Compare weekly schedules side by side
+collect|cap|profile|나만의 밥이름||Your own rice-name
+collect|cap|namecard|모은 도시락이|그대로 명함이 돼요|Your lunchbox becomes your card
+collect|cap|club|마음에 든 팀도|그대로 공유|Share a club page too|마음에 든 팀도 그대로 공유
+collect|cap|share|인스타 스토리·카톡|바로 공유|Share straight to Instagram or KakaoTalk
+collect|outro||누룽지도|내 도시락 만들기|Build your own lunchbox
 
 register|hook||우리 팀은|아직 지도에 없네?|Your club is not on the map yet?|우리 팀은 아직 지도에 없네?
 register|cap|reg_form|직접 올릴 수 있어요|주소 몰라도|You can add it — no address needed
