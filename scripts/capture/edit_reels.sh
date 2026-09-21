@@ -41,7 +41,18 @@ HOOK_D=1.6      # 훅 노출 시간
 OUTRO_D=2.2     # 아웃트로 카드 길이
 CAP_FADE=0.25   # 자막 페이드
 # 자막을 화면 위쪽에 둔다. 아래쪽은 앱의 바텀시트(핵심 콘텐츠)와 인스타 UI가 겹친다.
-CAP_Y=168
+# 다만 맨 위는 피한다 — 9:16 정규화가 fit 방식이 되면서 검색바·티커·탭이 모두
+# 화면에 남았고, 예전 위치(168)는 그것들을 덮는다. 지도 위쪽에 얹는다.
+CAP_Y="${CAP_Y:-290}"
+# 카드 폭: fit 방식에서 폰 화면은 1080 중 약 840px 이다. 936 이면 화면 테두리를
+# 넘어가 크림 여백 위로 삐져나온다 → 화면 안쪽에 들어오는 폭으로.
+CAP_W="${CAP_W:-780}"
+# 탭 표시(화면 녹화의 "여기를 눌렀다" 물결). 앱은 딥링크로 넘어가므로 실제 터치가
+# 없다 — 좌표는 taps.txt 에 스틸에서 잰 값으로 적어두고 후처리로 그린다.
+TAPS="${TAPS:-on}"           # on | off
+TAPS_FILE="${TAPS_FILE:-$HERE/taps.txt}"
+TAP_LEAD="${TAP_LEAD:-0.5}"  # 화면이 바뀌기 몇 초 전에 누르는가
+TAP_N=17                     # 물결 프레임 수(30fps 기준 약 0.57초)
 
 log()  { printf '\033[1;33m▶ %s\033[0m\n' "$*"; }
 warn() { printf '\033[0;35m! %s\033[0m\n' "$*" >&2; }
@@ -61,7 +72,7 @@ rm -rf "$WORK"; mkdir -p "$WORK" "$OUT_DIR"
 
 cap_card() { # cap_card <한글윗줄> <한글아랫줄> <영문> <출력>
   local l1="$1" l2="$2" en="$3" out="$4"
-  local cw=936 pad=38 hs=44 hb=62 he=32 th y
+  local cw="$CAP_W" pad=34 hs=40 hb=56 he=29 th y
   if [ -n "$l2" ]; then th=$(( pad*2 + hs + 14 + hb )); else th=$(( pad*2 + hb )); fi
   [ -n "$en" ] && th=$(( th + 16 + he ))
   convert -size ${cw}x${th} xc:none \
@@ -156,6 +167,42 @@ fit_narration() { # fit_narration <mp3> <시작> <끝> <라벨>
   rm -f "$f.fit.mp3"
 }
 
+# ── 탭 표시(물결) ────────────────────────────────────────────
+# 안드로이드의 "탭 표시"는 실제 터치가 있어야 그린다. 우리 디렉터는 딥링크로
+# 화면을 넘기므로 터치가 없다 → 같은 모양을 후처리로 얹는다.
+# 노란 링이 퍼지고 흰 점이 사라지는, 안드로이드 기본 표시와 같은 어법.
+make_ripple() {
+  local dir="$WORK/ripple"
+  [ -e "$dir/r_00.png" ] && { echo "$dir"; return 0; }
+  mkdir -p "$dir"
+  local i pf r ao ad size=240 c=120
+  for i in $(seq 0 $(( TAP_N - 1 ))); do
+    pf="$(awk -v i="$i" -v n="$TAP_N" 'BEGIN{printf "%.4f", i/(n-1)}')"
+    r="$(awk  -v p="$pf" 'BEGIN{printf "%d", 30 + 78*p}')"
+    ao="$(awk -v p="$pf" 'BEGIN{printf "%.2f", 0.95*(1-p)}')"
+    ad="$(awk -v p="$pf" 'BEGIN{printf "%.2f", 0.55*(1-p*0.75)}')"
+    convert -size ${size}x${size} xc:none \
+      -fill none -stroke "rgba(250,199,16,$ao)" -strokewidth 6 \
+        -draw "circle $c,$c $c,$(( c - r ))" \
+      -stroke "rgba(62,40,35,$ad)" -strokewidth 3 \
+      -fill "rgba(255,255,255,$ad)" \
+        -draw "circle $c,$c $c,$(( c - 28 ))" \
+      "$(printf "$dir/r_%02d.png" "$i")"
+  done
+  echo "$dir"
+}
+
+taps_for() { # taps_for <파일> <flow> → "앵커 x y 리드" (주석·공백 제거)
+  awk -F'|' -v f="$2" '
+    /^[[:space:]]*#/ || NF<4 { next }
+    { a=$1; gsub(/[ \t]/,"",a); if (a!=f) next
+      k=$2; x=$3; y=$4; sub(/#.*/,"",y)
+      gsub(/[ \t]/,"",k); gsub(/[ \t]/,"",x); gsub(/[ \t]/,"",y)
+      L=$5; sub(/#.*/,"",L); gsub(/[ \t]/,"",L)
+      if (k!="" && x!="" && y!="") print k, x, y, (L==""?"-":L) }
+  ' "$1"
+}
+
 # ── 장면 전환 감지 ───────────────────────────────────────────
 # 자막을 초 단위로 하드코딩하면 앱의 _hold() 를 조금만 건드려도 어긋난다.
 # 영상 자체에서 전환 지점을 뽑아 그 구간마다 자막을 하나씩 배정한다.
@@ -185,7 +232,7 @@ beat_at() { # beat_at <beats파일> <라벨>
   awk -v l="$2" '$1==l {print $2; exit}' "$1"
 }
 
-FLOWS="${FLOWS:-discover save share}"
+FLOWS="${FLOWS:-discover collect register reels}"
 made=0
 for flow in $FLOWS; do
   SRC="$SRC_DIR/${flow}_${LANG_TAG}.mp4"
@@ -230,11 +277,31 @@ for flow in $FLOWS; do
       done
     fi
   fi
+  # ── 꼬리 잘라내기 ──────────────────────────────────────────
+  # 녹화 길이는 네트워크 대기(지오코딩·업로드) 때문에 넉넉히 잡을 수밖에 없다.
+  # 남는 만큼은 정지된 화면이 이어지는 죽은 꼬리다.
+  if [ -s "$BEATS" ] && [ "$SRC_OF_TIMING" = "비트" ]; then
+    # 앱이 flow_end 를 찍어 주면 내용이 끝나는 시각을 정확히 안다. 없으면
+    # 마지막 자막 비트 + 넉넉한 여유로 추정한다(구버전 앱으로 찍은 녹화본).
+    LAST="$(beat_at "$BEATS" flow_end)"
+    PAD="${TAIL_PAD_END:-1.0}"
+    if [ -z "$LAST" ]; then
+      LAST="$(awk '{ if ($2+0 > m) m = $2+0 } END { printf "%.2f", m }' "$BEATS")"
+      PAD="${TAIL_PAD:-7.0}"
+    fi
+    CAPPED="$(awk -v l="$LAST" -v p="$PAD" -v d="$DUR" \
+      'BEGIN { if (l <= 0) exit; c = int(l + p + 0.999); print (c < d ? c : d) }')"
+    if [ -n "$CAPPED" ] && [ "$CAPPED" -gt 0 ] && [ "$CAPPED" -lt "$DUR" ]; then
+      log "  꼬리 ${DUR}s → ${CAPPED}s (내용 끝 ${LAST}s)"
+      DUR="$CAPPED"
+    fi
+  fi
+
   BOUNDS+=("$DUR")
   log "  자막 타이밍($SRC_OF_TIMING): ${BOUNDS[*]}"
 
   # ── 오버레이 입력 굽기 ─────────────────────────────────────
-  INPUTS=(-i "$SRC")
+  INPUTS=(-t "$DUR" -i "$SRC")
   FC=""; CUR="[0:v]"
   idx=1
   NAR_T=(); NAR_F=(); NAR_CUR=0   # 나레이션 (시작초, 파일) + 다음 시작 가능 시각
@@ -293,6 +360,37 @@ for flow in $FLOWS; do
     fi
     n=$((n+1))
   done
+
+  # ── 탭 표시 ────────────────────────────────────────────────
+  # 비트가 있어야 "언제"를 알 수 있다. 좌표는 taps.txt(스틸에서 잰 값),
+  # 폰 화면이 프레임 어디에 놓이는지는 frame.txt(정규화 단계가 기록).
+  ntap=0
+  if [ "$TAPS" = "on" ] && [ -s "$TAPS_FILE" ] && [ -s "$BEATS" ]; then
+    FRAME="$SRC_DIR/frame.txt"
+    if [ -s "$FRAME" ]; then
+      read -r FX0 FY0 FW FH FTY FTB < "$FRAME"
+    else
+      # 정규화 정보가 없으면 화면이 프레임을 꽉 채운다고 본다(예전 crop 산출물).
+      FX0=0; FY0=0; FW=$W; FH=$H; FTY=0; FTB=0
+    fi
+    RDIR="$(make_ripple)"
+    while read -r anchor tu tv tlead; do
+      [ -n "${anchor:-}" ] || continue
+      bt="$(beat_at "$BEATS" "$anchor")"
+      [ -n "$bt" ] || continue
+      # 리드는 지점마다 다르다 — 누를 대상이 화면에서 언제 사라지는지가 다르기 때문.
+      [ "${tlead:--}" != "-" ] || tlead="$TAP_LEAD"
+      t0="$(awk -v b="$bt" -v l="$tlead" 'BEGIN{v=b-l; if (v<0.25) v=0.25; printf "%.2f", v}')"
+      ox="$(awk -v x0="$FX0" -v w="$FW" -v u="$tu" 'BEGIN{printf "%d", x0 + u*w}')"
+      oy="$(awk -v y0="$FY0" -v h="$FH" -v v="$tv" -v ty="$FTY" -v tb="$FTB" \
+        'BEGIN{ d=1-ty-tb; if (d<=0) d=1; printf "%d", y0 + ((v-ty)/d)*h }')"
+      INPUTS+=(-framerate "$FPS" -i "$RDIR/r_%02d.png")
+      FC+="[${idx}:v]format=rgba,setpts=PTS-STARTPTS+${t0}/TB[tp${ntap}];"
+      FC+="${CUR}[tp${ntap}]overlay=$(( ox - 120 )):$(( oy - 120 )):eof_action=pass[v${idx}];"
+      CUR="[v${idx}]"; idx=$((idx+1)); ntap=$((ntap+1))
+    done < <(taps_for "$TAPS_FILE" "$flow")
+    [ "$ntap" -gt 0 ] && log "  탭 표시 ${ntap}곳"
+  fi
 
   FC+="${CUR}fps=$FPS,scale=$W:$H,setsar=1,format=yuv420p[body]"
 

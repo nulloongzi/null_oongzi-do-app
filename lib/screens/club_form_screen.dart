@@ -1,5 +1,7 @@
 // club_form_screen.dart — 동호회(클럽) 등록/수정 폼. 웹 registration.js 포팅.
 // 로그인 필수(AuthGate가 보장). 좌표는 지도 피커로 직접 선택(지오코딩 불필요).
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +11,7 @@ import '../models/schedule_block.dart';
 import '../services/target_parse.dart';
 import '../services/club_admin.dart';
 import '../services/data_repository.dart';
+import '../services/deep_link_service.dart' show kCaptureMode;
 import '../services/analytics.dart';
 import '../services/geocoding_service.dart';
 import '../services/i18n.dart';
@@ -19,6 +22,21 @@ import '../widgets/chip_select.dart';
 import '../widgets/map_picker.dart';
 import '../widgets/reel_editor.dart';
 import '../widgets/schedule_editor.dart';
+
+/// 캡처 시연용: 등록 폼을 밖에서 한 단계씩 진행시킨다.
+///
+/// 폼 상태는 private 이고 시연은 손으로 입력할 수 없다. 값만 밀어 넣는 게 아니라
+/// 사용자가 하는 것과 **같은 코드 경로**(_geocode·_pickLocation·_submit)를 부른다 —
+/// 그래야 영상에 나오는 게 실제 동작과 같다.
+/// 값은 "<단계>:<일련번호>" 로 준다. 같은 단계를 연달아 부를 수 있어야 해서다.
+final ValueNotifier<String> clubFormDemo = ValueNotifier<String>('');
+
+/// 방금 끝난 단계를 시연 쪽에 알린다("<단계>:<일련번호>").
+///
+/// 지오코딩·저장은 네트워크라 고정 대기로는 못 맞춘다. 실측에서 첫 지오코딩이
+/// 5초 걸렸는데 3초만 기다렸더니, 늦게 도착한 결과가 그 사이에 입력한 시설
+/// 이름을 덮어써서 ② 단계가 통째로 사라졌다. 기다릴 것은 시간이 아니라 완료다.
+final ValueNotifier<String> clubFormDemoDone = ValueNotifier<String>('');
 
 /// 동호회 등록/수정 폼: 풀스크린 라우트 대신 지도 위 모달 바텀시트(웹 등록 팝업 대응).
 /// 등록·수정 성공 시 true 반환.
@@ -72,6 +90,15 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
   // 인라인 에러(웹 regError 대응): 폼 상단 배너 + 미입력 필수 필드 하이라이트.
   String? _formError;
   final Set<String> _invalid = {};
+
+  // 캡처 시연: '선택 정보' 접힘 섹션을 코드로 펼치기 위한 상태/앵커.
+  // ExpansionTileController 는 현재 stable 에서 deprecated 라 --fatal-infos 게이트에
+  // 걸린다. 대신 key 를 바꿔 initiallyExpanded 로 다시 만든다(시연 전용 경로).
+  bool _demoOptionalOpen = false;
+  final GlobalKey _optionalKey = GlobalKey();
+  final GlobalKey _schedKey = GlobalKey();
+  final GlobalKey _reelKey = GlobalKey();
+  final GlobalKey _submitKey = GlobalKey();
 
   bool get _isEdit => widget.editing != null;
 
@@ -178,10 +205,110 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
         .catchError((_) {});
     // 측정 파리티(웹 registration_open): 등록 폼 도달 = 퍼널 진입 신호
     Track.event('registration_open', {'mode': _isEdit ? 'edit' : 'create'});
+    if (kCaptureMode) clubFormDemo.addListener(_onDemo);
+  }
+
+  // ── 캡처 시연 ────────────────────────────────────────────────
+  void _onDemo() {
+    final v = clubFormDemo.value;
+    if (v.isEmpty) return;
+    unawaited(_demoStep(v.split(':').first));
+  }
+
+  /// 한 글자씩 넣어 '사람이 치는' 것처럼 보이게 한다. 값을 한 번에 꽂으면
+  /// 영상에서 글자가 순간이동해 합성한 티가 난다.
+  Future<void> _demoType(TextEditingController c, String text) async {
+    c.text = '';
+    for (var i = 0; i < text.length; i++) {
+      if (!mounted) return;
+      c.text = text.substring(0, i + 1);
+      c.selection = TextSelection.collapsed(offset: c.text.length);
+      await Future<void>.delayed(const Duration(milliseconds: 55));
+    }
+  }
+
+  /// 시연 중 앵커 위젯이 화면에 들어오도록 스크롤한다. SingleChildScrollView 에
+  /// 컨트롤러가 없어도 가장 가까운 Scrollable 을 찾아 준다.
+  Future<void> _demoScrollTo(GlobalKey k, double alignment) async {
+    final ctx = k.currentContext;
+    if (ctx == null) return;
+    await Scrollable.ensureVisible(
+      ctx,
+      duration: const Duration(milliseconds: 420),
+      curve: Curves.easeOut,
+      alignment: alignment,
+    );
+  }
+
+  Future<void> _demoStep(String step) async {
+    if (!mounted) return;
+    switch (step) {
+      case 'name':
+        await _demoType(_name, '누룽지 배구클럽');
+      case 'target':
+        if (mounted) setState(() => _targets.add('성인'));
+      case 'addr_type': // ① 직접 입력
+        // 폼 힌트에 적힌 예시 주소 — 지오코딩이 확실히 잡는다. 앞서 쓰던
+        // '서울 성북구 화랑로13길 144' 는 네이버가 0건을 돌려줘 장소 검색으로
+        // 넘어갔고, 스낵바에 체육관 이름이 떠서 '주소를 그대로 입력' 자막과
+        // 어긋났다(①과 ②의 구분이 무너진다).
+        await _demoType(_address, '서울 송파구 올림픽로 424');
+      case 'addr_place': // ② 시설 이름으로
+        await _demoType(_address, '잠실학생체육관');
+      case 'addr_search': // ①② 같은 버튼 — 서버가 주소 실패 시 장소 검색으로 넘어간다
+        await _geocode();
+      case 'addr_map': // ② 지도에서 고르기(확정은 mapPickerDemoConfirm)
+        await _pickLocation();
+      case 'optional': // 선택 정보 펼치기
+        if (!_demoOptionalOpen) {
+          setState(() => _demoOptionalOpen = true);
+          // 새 key 로 다시 만들어진 뒤에야 앵커가 레이아웃된다.
+          await Future<void>.delayed(const Duration(milliseconds: 260));
+          await _demoScrollTo(_optionalKey, 0.02);
+        }
+      case 'schedule': // 요일 칩을 하나씩 — 한 번에 꽂으면 합성한 티가 난다
+        // 섹션 맨 위로 붙여 놓으면 요일 칩이 자막 띠(화면 위 14~27%) 뒤로
+        // 숨는다 — 실측: '체크 두 번' 자막이 정작 체크되는 칩을 가렸다.
+        await _demoScrollTo(_schedKey, 0.5);
+        if (_blocks.isEmpty) _blocks.add(ScheduleBlock());
+        final b = _blocks.first;
+        for (final d in ['화', '목']) {
+          if (!mounted) return;
+          final picked = {...b.days, d};
+          final next = ScheduleBlock.dayOrder.where(picked.contains).toList();
+          setState(() => b.days = next);
+          await Future<void>.delayed(const Duration(milliseconds: 420));
+        }
+      case 'reel': // 릴스 링크 한 줄 — 제출은 하지 않는다(시연 전용)
+        await _demoScrollTo(_reelKey, 0.45);
+        if (_reels.isEmpty) _reels.add(TextEditingController());
+        await _demoType(
+          _reels.first,
+          'https://www.instagram.com/reel/DHx9kQ2yLmN/',
+        );
+      case 'price':
+        // 스크롤하지 않는다. schedule 단계가 잡아 놓은 위치에서 회비 칸이
+        // 이미 화면 안이고, 여기서 더 내리면 방금 켠 요일 칩이 자막 띠 뒤로
+        // 도로 숨는다(실측: '체크 두 번' 자막의 마지막 1.7초).
+        await _demoType(_price, '월 3만원 / 게스트 1만원');
+      case 'submit':
+        // 선택 정보를 펼친 뒤엔 등록 버튼이 화면 밖이다. 스크롤해 놓지 않으면
+        // 영상에서 '누른 적 없는데 폼이 닫히는' 장면이 된다(탭 표시도 헛돈다).
+        await _demoScrollTo(_submitKey, 1);
+        // 탭 표시를 앞 비트에서 역산하면 스크롤에 걸린 시간만큼 어긋난다
+        // (실측: 물결이 아직 화면 밖인 버튼 자리에 떴다). 누르는 순간을
+        // 앱이 직접 찍어서 탭 표시가 그 비트에 그대로 붙게 한다.
+        if (kCaptureMode) debugPrint('CAPTURE_BEAT reg_tap_submit');
+        await Future<void>.delayed(const Duration(milliseconds: 150));
+        if (!mounted) return;
+        await _submit();
+    }
+    clubFormDemoDone.value = '$step:${DateTime.now().microsecondsSinceEpoch}';
   }
 
   @override
   void dispose() {
+    clubFormDemo.removeListener(_onDemo);
     for (final c in [
       _name,
       _targetNote,
@@ -223,7 +350,20 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
 
   void _snack(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    // '잠실학생체육관 위치를 찾았어요' 같은 안내는 시연 영상의 핵심 장면이다.
+    // 기본 위치의 스낵바는 화면 맨 아래라 9:16 정규화에서 제스처바와 함께
+    // 잘려나갈 수 있다 → 캡처 빌드에서만 살짝 띄운다(map_screen 과 같은 처리).
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        behavior: kCaptureMode
+            ? SnackBarBehavior.floating
+            : SnackBarBehavior.fixed,
+        margin: kCaptureMode
+            ? const EdgeInsets.only(left: 24, right: 24, bottom: 120)
+            : null,
+      ),
+    );
   }
 
   // 웹 getRegTargetValue: 선택칩 ', ' 결합 + 메모를 괄호로 덧붙임
@@ -453,11 +593,14 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
             ),
             // 선택 정보는 접기 섹션으로(체감 폼 길이 축소). 편집 시엔 펼쳐 시작.
             Theme(
+              key: _optionalKey,
               data: Theme.of(
                 context,
               ).copyWith(dividerColor: Colors.transparent),
               child: ExpansionTile(
-                initiallyExpanded: _isEdit,
+                // 시연이 펼칠 때 key 가 바뀌어 initiallyExpanded 가 다시 먹는다.
+                key: ValueKey('cf_optional_$_demoOptionalOpen'),
+                initiallyExpanded: _isEdit || _demoOptionalOpen,
                 tilePadding: EdgeInsets.zero,
                 childrenPadding: EdgeInsets.zero,
                 expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
@@ -471,20 +614,26 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
                 ),
                 children: [
                   const SizedBox(height: 8),
-                  _group(
-                    t('cf_sched'),
-                    ScheduleEditor(
-                      blocks: _blocks,
-                      onChanged: () => setState(() {}),
+                  KeyedSubtree(
+                    key: _schedKey,
+                    child: _group(
+                      t('cf_sched'),
+                      ScheduleEditor(
+                        blocks: _blocks,
+                        onChanged: () => setState(() {}),
+                      ),
                     ),
                   ),
                   _group(t('cf_price'), _input(_price, t('cf_price_hint'))),
                   _group(t('cf_insta'), _input(_insta, t('cf_insta_hint'))),
-                  _group(
-                    t('f_reel_label'),
-                    ReelEditor(
-                      controllers: _reels,
-                      onChanged: () => setState(() {}),
+                  KeyedSubtree(
+                    key: _reelKey,
+                    child: _group(
+                      t('f_reel_label'),
+                      ReelEditor(
+                        controllers: _reels,
+                        onChanged: () => setState(() {}),
+                      ),
                     ),
                   ),
                   _group(t('cf_link'), _input(_link, t('f_contact_hint'))),
@@ -499,6 +648,7 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
               ),
             const SizedBox(height: 8),
             ElevatedButton(
+              key: _submitKey,
               onPressed: _saving ? null : _submit,
               child: _saving
                   ? const SizedBox(

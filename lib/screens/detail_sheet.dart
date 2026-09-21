@@ -1,5 +1,7 @@
 // detail_sheet.dart — P4 상세 바텀시트 (웹 club-detail / pickup-detail 과 동일한 톤/구성)
 // 칩·이번주 배너·정보행·링크버튼. 공유/릴스 임베드는 P4ب에서.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
@@ -9,6 +11,7 @@ import '../models/pickup_spot.dart';
 import '../services/club_admin.dart';
 import '../services/club_admin_service.dart';
 import '../services/data_repository.dart';
+import '../services/deep_link_service.dart' show kCaptureMode;
 import '../services/i18n.dart';
 import '../services/lunchbox_service.dart';
 import '../services/share_service.dart';
@@ -377,6 +380,10 @@ class _ReelsSectionState extends State<_ReelsSection> {
   );
 }
 
+/// 캡처 시연용: 🍱 를 밖에서 누른다. 서비스만 호출하면 아이콘이 흐린 채로
+/// 남고 스낵바만 떠서, 영상에선 '담았다'가 눌린 것처럼 보이지 않는다.
+final ValueNotifier<int> lunchboxDemoToggle = ValueNotifier<int>(0);
+
 // 🍱 북마크 토글 (웹 #btnBookmark): 타이틀 우측. 담김=진하게/안 담김=흐리게, 탭=추가/해제.
 class _BookmarkButton extends StatefulWidget {
   final String uid;
@@ -396,6 +403,17 @@ class _BookmarkButtonState extends State<_BookmarkButton> {
   void initState() {
     super.initState();
     _load();
+    if (kCaptureMode) lunchboxDemoToggle.addListener(_onDemoToggle);
+  }
+
+  @override
+  void dispose() {
+    lunchboxDemoToggle.removeListener(_onDemoToggle);
+    super.dispose();
+  }
+
+  void _onDemoToggle() {
+    if (mounted) unawaited(_toggle());
   }
 
   Future<void> _load() async {
@@ -711,6 +729,15 @@ Widget _urgentToggle(
   );
 }
 
+/// 캡처 시연용: '인증 신청'을 밖에서 누른다(값이 바뀌면 신청).
+/// 사용자가 누를 때와 같은 _apply() 를 탄다 — 사진 업로드와 요청 문서 생성까지 실제.
+final ValueNotifier<int> verifyDemoApply = ValueNotifier<int>(0);
+
+/// 캡처 시연용: 인증 신청이 실제로 끝난 시각(성공·실패 무관). 업로드는 몇 초가
+/// 걸릴지 알 수 없어 고정 대기로는 못 맞춘다 — 실측 5.5초, 6초 홀드로도 모자라
+/// '심사 중' 안내가 뜨기 전에 지도로 돌아갔다.
+final ValueNotifier<int> verifyDemoDone = ValueNotifier<int>(0);
+
 // 인증 신청/상태 영역(웹 verifyStatusArea 대응) — 소유자 & 미인증일 때만.
 // 최신 요청 조회: 이력 없음→신청 버튼 / 심사 중→안내 / 거절→사유+재신청.
 // 팀 관리자 영역 — 관리자 수 / 빠지기(관리자일 때) / 신청·대기·재신청(아닐 때).
@@ -951,6 +978,9 @@ class _VerificationSection extends StatefulWidget {
 
 class _VerificationSectionState extends State<_VerificationSection> {
   ({String status, String? reason})? _req;
+  // 사진 업로드 중. 누르고 나서 응답이 올 때까지 버튼이 그대로라 눌린 건지
+  // 알 수 없었다(실측: 캡처 영상에서 신청 후 4초간 화면이 정지).
+  bool _busy = false;
 
   @override
   void initState() {
@@ -958,14 +988,30 @@ class _VerificationSectionState extends State<_VerificationSection> {
     VerificationService().latestRequest(widget.club.id).then((r) {
       if (mounted && r != null) setState(() => _req = r);
     });
+    if (kCaptureMode) verifyDemoApply.addListener(_onDemoApply);
+  }
+
+  @override
+  void dispose() {
+    verifyDemoApply.removeListener(_onDemoApply);
+    super.dispose();
+  }
+
+  void _onDemoApply() {
+    if (mounted) unawaited(_apply());
   }
 
   Future<void> _apply() async {
+    if (_busy) return;
+    setState(() => _busy = true);
     final err = await VerificationService().submit(
       clubId: widget.club.id,
       clubName: widget.club.name,
     );
-    if (err == 'cancelled' || !mounted) return;
+    if (kCaptureMode) verifyDemoDone.value++;
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (err == 'cancelled') return;
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(err ?? t('verify_done'))));
@@ -975,9 +1021,15 @@ class _VerificationSectionState extends State<_VerificationSection> {
   Widget _applyBtn(String label) => SizedBox(
     width: double.infinity,
     child: OutlinedButton.icon(
-      onPressed: _apply,
-      icon: const Icon(Icons.verified_outlined, size: 18),
-      label: Text(label),
+      onPressed: _busy ? null : _apply,
+      icon: _busy
+          ? const SizedBox(
+              height: 18,
+              width: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.verified_outlined, size: 18),
+      label: Text(_busy ? t('vf_submitting') : label),
     ),
   );
 

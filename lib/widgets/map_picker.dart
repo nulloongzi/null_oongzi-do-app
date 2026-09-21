@@ -2,8 +2,13 @@
 // 반환: (lat, lng) record 또는 null(취소). registration.js startMapPicker 대체.
 import 'package:flutter/material.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
+import '../services/deep_link_service.dart' show kCaptureMode;
 import '../services/i18n.dart';
 import '../theme.dart';
+
+/// 캡처 시연용: '이 위치로'를 밖에서 누른다(값이 바뀌면 확정).
+/// 시연은 손으로 버튼을 못 누르므로, 사용자가 누를 때와 **같은 코드 경로**를 탄다.
+final ValueNotifier<int> mapPickerDemoConfirm = ValueNotifier<int>(0);
 
 class MapPickerScreen extends StatefulWidget {
   final NLatLng initial;
@@ -15,6 +20,26 @@ class MapPickerScreen extends StatefulWidget {
 
 class _MapPickerScreenState extends State<MapPickerScreen> {
   NaverMapController? _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    if (kCaptureMode) mapPickerDemoConfirm.addListener(_confirm);
+  }
+
+  @override
+  void dispose() {
+    mapPickerDemoConfirm.removeListener(_confirm);
+    super.dispose();
+  }
+
+  // 버튼과 시연이 공유하는 확정 경로.
+  Future<void> _confirm() async {
+    final pos = await _controller?.getCameraPosition();
+    if (pos != null && mounted) {
+      Navigator.pop(context, (pos.target.latitude, pos.target.longitude));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,15 +73,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
             right: 20,
             bottom: 24,
             child: ElevatedButton(
-              onPressed: () async {
-                final pos = await _controller?.getCameraPosition();
-                if (pos != null && context.mounted) {
-                  Navigator.pop(context, (
-                    pos.target.latitude,
-                    pos.target.longitude,
-                  ));
-                }
-              },
+              onPressed: _confirm,
               child: Text(t('map_pick_set')),
             ),
           ),

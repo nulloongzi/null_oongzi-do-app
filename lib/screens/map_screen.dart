@@ -38,6 +38,7 @@ import '../widgets/filter_sheet.dart';
 import '../widgets/glass_surface.dart';
 import '../widgets/reel_card.dart';
 import '../widgets/map_detail_panel.dart';
+import '../widgets/map_picker.dart' show mapPickerDemoConfirm;
 import '../widgets/pickup_list_sheet.dart';
 import '../widgets/share_menu.dart';
 import '../widgets/story_card.dart';
@@ -75,7 +76,7 @@ class MapScreen extends StatefulWidget {
 
 /// 마케팅 자산 자동 캡처 빌드 플래그(`--dart-define=CAPTURE_MODE=true`).
 /// 켜져 있을 때만 `?capture=` 딥링크가 화면을 결정적으로 이동한다(일반 릴리즈엔 무영향).
-const bool kCaptureMode = bool.fromEnvironment('CAPTURE_MODE');
+// kCaptureMode 는 services/deep_link_service.dart 에 있다(등록 폼·피커와 공유).
 
 /// GPU 없는 CI 에뮬(SwiftShader)용 완화 플래그.
 /// 고배율 타일이 오지 않고 카메라 이동 중 렌더가 깨져, 축척을 낮추고 fitBounds 를
@@ -657,11 +658,14 @@ class _MapScreenState extends State<MapScreen> {
       case 'flow_discover':
         await _flowDiscover();
         break;
-      case 'flow_save':
-        await _flowSave(pick());
+      case 'flow_collect':
+        await _flowCollect();
         break;
-      case 'flow_share':
-        await _flowShare();
+      case 'flow_register':
+        await _flowRegister();
+        break;
+      case 'flow_reels':
+        await _flowReels();
         break;
     }
   }
@@ -896,6 +900,14 @@ class _MapScreenState extends State<MapScreen> {
   /// 추정했는데, 앱의 전환이 부드러워(시트 250ms 슬라이드) 점수가 낮게 나오고
   /// 시트가 '열리는' 순간과 '화면이 바뀌는' 순간이 뒤섞여 자막이 엉뚱한 프레임에
   /// 붙었다. 언제 무엇을 보여주는지는 앱이 가장 정확히 안다.
+  /// 흐름의 내용이 여기서 끝난다고 알린다. 녹화 길이는 네트워크 대기 때문에
+  /// 넉넉히 잡을 수밖에 없는데, 남는 꼬리를 '마지막 자막 비트 + 여유'로
+  /// 추정하면 홀드가 짧은 흐름에서 정지 화면이 길게 남는다(실측: 모으기
+  /// 마지막 공유 메뉴가 8초 정지). 편집기가 이 비트에서 자른다.
+  void _endFlow() {
+    if (kCaptureMode) debugPrint('CAPTURE_BEAT flow_end');
+  }
+
   Future<bool> _hold(double sec, [String? beat]) async {
     if (beat != null && kCaptureMode) debugPrint('CAPTURE_BEAT $beat');
     await Future<void>.delayed(Duration(milliseconds: (sec * 1000).round()));
@@ -945,6 +957,7 @@ class _MapScreenState extends State<MapScreen> {
     if (c == null) return;
     await _focusAndShowClub(c);
     if (!await _hold(4, 'detail')) return; // 상세: 일정·회비·주소·버튼
+    _endFlow(); // 아래 원복은 시연이 아니라 뒷정리다 — 편집기가 여기서 자른다
 
     // 필터 원복(다음 캡처 오염 방지)
     await _backToMap();
@@ -957,19 +970,36 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   /// ② 담고 관리: 클럽 상세 → 도시락 찜 → 도시락(반찬칸) → 식단표
-  Future<void> _flowSave(Club? c) async {
+  /// ② 모으기 — 팀 상세 → 🍱 담기 → 도시락통 → 식단표 → 명함 → 공유.
+  ///
+  /// 저장과 자랑을 한 편으로 묶는다. 따로 찍으면 연결이 죽는다: 명함 안의
+  /// 6열 그리드가 바로 앞에서 채우는 걸 본 그 도시락인데, 두 영상으로
+  /// 나누면 그 사실이 화면에서 사라진다.
+  Future<void> _flowCollect() async {
+    // 릴스가 붙은 팀을 고른다 — 펼쳤을 때 커버가 스쳐 지나가도록.
+    final c = _clubWithReels() ?? _stillClub();
     if (c == null) return;
     await _focusAndShowClub(c);
-    if (!await _hold(3, 'detail')) return; // 상세에서 시작
+    if (!await _hold(2.5, 'detail')) return;
 
-    // 찜(도시락 담기) — 실제 저장까지 수행해 도시락이 비지 않게.
+    // 스크롤 다운(= 패널 펼침). 시간표·릴스 커버가 여기서 한 번 스친다.
+    // 주인공은 아니라 자막을 따로 붙이지 않는다 — 릴스는 ⑤가 맡는다.
+    detailPanelDemoExpand.value++;
+    if (!await _hold(3.5, 'detail_more')) return;
+
+    // 다시 접는다. 펼친 상태에선 제목줄(🍱 포함)이 화면 맨 위라 자막 띠에
+    // 가려 아이콘이 바뀌는 게 안 보인다 — 담기 자막이 뜨는데 화면에는
+    // 아무 일도 안 일어났다(실측: 7차 촬영본 10~13초).
+    detailPanelDemoPeek.value++;
+    if (!await _hold(1.5, 'detail_back')) return;
+
+    // 다른 팀 3곳은 조용히 채워 둔다 — 반찬칸에 한 칸만 차 있으면 허전하다.
     try {
       final uid = await _repo.ensureUid();
       final lb = LunchboxService();
-      await lb.addBookmark(uid, c.id);
-      var seeded = 1;
+      var seeded = 0;
       for (final x in _clubs) {
-        if (seeded >= 4) break;
+        if (seeded >= 3) break;
         if (x.id == c.id) continue;
         final hasSched =
             (x.schedule ?? '').isNotEmpty ||
@@ -979,10 +1009,11 @@ class _MapScreenState extends State<MapScreen> {
         seeded++;
       }
     } catch (_) {}
-    // 서비스만 호출하면 화면에 아무 변화가 없어 '담았다'는 사실이 영상에 안 보인다.
-    // 사용자가 🍱 를 눌렀을 때와 같은 스낵바를 띄운다(detail_sheet 의 _toggle 과 동일).
     if (!mounted) return;
-    _snack(t('lb_added'));
+    // 이 팀은 화면의 🍱 를 실제로 누른다. 서비스만 부르면 아이콘이 흐린 채로
+    // 남고 스낵바만 떠서, 영상에선 '한 번에 도시락으로' 자막이 아무 일도
+    // 일어나지 않는 화면 위에 떴다(실측: 4차 촬영본 9~12초).
+    lunchboxDemoToggle.value++;
     if (!await _hold(2.5, 'saved')) return;
 
     await _backToMap();
@@ -992,21 +1023,16 @@ class _MapScreenState extends State<MapScreen> {
     // 식단표 펼치기 — 시트를 닫았다 열지 않고 실제 버튼과 같은 확장 애니메이션.
     lunchboxDietOpenSignal.value++;
     if (!await _hold(4, 'diet')) return;
-    await _backToMap();
-  }
 
-  /// ③ 자랑하기: 밥이름 프로필 → 네임카드(도시락+시간표+QR) → 공유
-  Future<void> _flowShare() async {
-    try {
-      await _repo.ensureUid();
-    } catch (_) {}
+    await _backToMap();
     if (!mounted) return;
     showProfileSheet(context);
-    if (!await _hold(3.5, 'profile')) return; // 밥이름 카드·스탬프
+    // 프로필 시트는 작은 카드 하나에 여백이라 오래 물릴 그림이 아니다.
+    if (!await _hold(2.5, 'profile')) return;
 
     await _backToMap();
     if (!mounted) return;
-    // 네임카드(피드형/스토리형 전환 + 이미지로 공유·저장)
+    // 네임카드 — 방금 채운 도시락이 6열 그리드로 그대로 들어가 있다.
     unawaited(
       Navigator.push(
         context,
@@ -1017,14 +1043,12 @@ class _MapScreenState extends State<MapScreen> {
 
     await _backToMap();
     if (!mounted) return;
-    // 클럽 공유 메뉴(인스타 스토리·카톡·링크)
-    final c = _clubs.isNotEmpty ? _clubs.first : null;
-    if (c == null) return;
+    // 공유는 앱 안의 공유 메뉴로 끝낸다. 명함 화면의 '이미지로 공유'는
+    // 안드로이드 시스템 공유 시트를 열어 — 기기마다 다르고 앱 밖이라
+    // 영상에 넣을 화면이 아니다(인증 사진 선택기를 뺀 것과 같은 이유).
     await _focusAndShowClub(c);
-    // 비트 없이 지나가면 명함 자막이 지도로 돌아온 뒤까지 걸린 채 남는다
-    // (실측: 6.5~16.0초 한 자막, 그중 7초는 화면이 이미 지도였다).
-    await _hold(2.5, 'club');
-    if (!mounted) return;
+    await _hold(1.5, 'club');
+    if (!mounted) return; // 분석기는 _hold 의 반환값을 mounted 체크로 못 읽는다
     showShareMenu(
       context,
       url: ShareService.clubUrl(c.id),
@@ -1032,7 +1056,194 @@ class _MapScreenState extends State<MapScreen> {
       onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
     );
     await _hold(4, 'share');
+    _endFlow();
   }
+
+  /// 릴스가 붙은 팀. 없으면 첫 팀(커버 구간은 빈 화면이 되지만 흐름은 산다).
+  Club? _clubWithReels() {
+    if (_clubs.isEmpty) return null;
+    for (final x in _clubs) {
+      if (x.instaReels.isNotEmpty) return x;
+    }
+    return _clubs.first;
+  }
+
+  /// ⑤ 릴스 연동 — 링크 하나 붙이면 지도 위 상세에 커버로 뜬다.
+  /// 먼저 결과(커버 카드)를 보여주고, 그 다음 붙이는 자리를 보여준다.
+  /// 폼은 열기만 하고 제출하지 않는다 — 실데이터를 만들지 않는다.
+  Future<void> _flowReels() async {
+    await _closeOverlays();
+    if (!mounted) return;
+    await _hold(2, 'reels_open');
+
+    final c = _clubWithReels();
+    if (c == null) return;
+    await _focusAndShowClub(c);
+    if (!await _hold(2, 'reels_detail')) return;
+    detailPanelDemoExpand.value++;
+    if (!await _hold(4, 'reels_cover')) return;
+
+    await _backToMap();
+    if (!mounted) return;
+    if (_repo.currentUid == null) return; // 폼은 로그인 필수
+    final cam = await _controller?.getCameraPosition();
+    if (!mounted) return;
+    final center = cam?.target ?? const NLatLng(37.5559, 127.0838);
+    final saved = showClubFormSheet(context, initialCenter: center);
+    if (!await _hold(2, 'reels_form')) return;
+    await _formStepDone('optional');
+    if (!await _hold(1.5, 'reels_optional')) return;
+    await _formStepDone('reel');
+    if (!await _hold(3.5, 'reels_paste')) return;
+
+    // 제출하지 않고 닫는다 — 시연이 실제 팀을 또 만들면 안 된다.
+    if (mounted) Navigator.of(context).maybePop();
+    unawaited(saved);
+    await _hold(1.5, 'reels_close');
+    await _backToMap();
+    _endFlow();
+  }
+
+  /// ④ 우리 팀 등록: 등록 폼 → 주소 2가지 방법 → 제출 → 인증 신청
+  ///
+  /// 주소를 넣는 세 경로를 모두 보여준다.
+  ///   ① 주소 직접 입력 → 🔍 검색
+  ///   ② 시설 이름 → 같은 🔍 검색 (서버가 주소 0건이면 카카오 장소 검색으로 넘어간다)
+  ///   ③ 지도에서 → 핀을 놓고 확정 → 주소가 역지오코딩으로 자동 입력
+  Future<void> _flowRegister() async {
+    await _closeOverlays();
+    if (!mounted) return;
+    await _hold(2, 'reg_open');
+
+    // 등록은 로그인 필수. 캡처 계정이 로그인돼 있지 않으면 시연이 성립하지 않는다.
+    if (_repo.currentUid == null) {
+      _snack(t('login_required'));
+      return;
+    }
+    final cam = await _controller?.getCameraPosition();
+    if (!mounted) return;
+    final center = cam?.target ?? const NLatLng(37.5559, 127.0838);
+    final saved = showClubFormSheet(context, initialCenter: center);
+    if (!await _hold(2, 'reg_form')) return;
+
+    await _formStepDone('name');
+    if (!await _hold(2.5, 'reg_name')) return;
+    await _formStepDone('target');
+    if (!await _hold(1.5, 'reg_target')) return;
+
+    await _formStepDone('addr_type'); // ① 주소 직접 입력
+    if (!await _hold(2.5, 'reg_addr_type')) return;
+    await _formStepDone('addr_search'); // 응답이 올 때까지 기다린다
+    if (!await _hold(2, 'reg_addr_search')) return;
+
+    // ② 시설 이름 — 같은 검색 버튼이 서버에서 장소 검색으로 넘어간다.
+    await _formStepDone('addr_place');
+    if (!await _hold(2.5, 'reg_addr_place')) return;
+    await _formStepDone('addr_search');
+    if (!await _hold(2, 'reg_addr_place_hit')) return;
+
+    // ③ 지도에서 — 피커는 확정 전까지 끝나지 않으므로 여기선 기다리지 않는다.
+    _formStep('addr_map');
+    if (!await _hold(2.5, 'reg_addr_map')) return;
+    mapPickerDemoConfirm.value++; // '이 위치로'
+    await _awaitStep('addr_map'); // 피커가 닫히고 주소가 채워질 때까지
+    if (!await _hold(2.5, 'reg_addr_picked')) return;
+
+    // 선택 정보(일정·회비). discover 영상이 '일정·회비·위치까지 한눈에'를 파는데
+    // 등록 영상이 필수 항목만 채우면 두 편이 어긋나고, 시연으로 만든 팀도
+    // 운동 시간 없는 껍데기로 지도에 남는다.
+    await _formStepDone('optional');
+    if (!await _hold(1.5, 'reg_optional')) return;
+    await _formStepDone('schedule');
+    if (!await _hold(2, 'reg_schedule')) return;
+    await _formStepDone('price');
+    if (!await _hold(2, 'reg_price')) return;
+
+    _formStep('submit');
+    final created = await saved;
+    if (!mounted) return;
+    if (created == true) await _load();
+    if (!await _hold(2.5, 'reg_done')) return;
+
+    // 방금 만든 팀을 열어 인증을 신청한다(소유자 & 미인증이라 신청 버튼이 보인다).
+    if (!mounted) return;
+    final mine = _clubs.where((c) => c.name == _demoClubName);
+    if (mine.isEmpty) return;
+    await _focusAndShowClub(mine.first);
+    if (!await _hold(2, 'reg_detail')) return;
+    // 인증 영역은 _ExpandReveal 안이라 펼쳐야 보인다. 접힌 채로 신청하면
+    // 자막은 인증을 말하는데 화면에는 아무 일도 안 일어난다.
+    detailPanelDemoExpand.value++;
+    if (!await _hold(1.5, 'reg_verify')) return;
+    verifyDemoApply.value++;
+    // 업로드가 끝나야 '심사 중' 안내로 바뀐다. 고정 대기로는 못 맞춘다 —
+    // 6초를 줘도 응답이 5.5초에 와서 지도로 돌아간 뒤에야 스낵바가 떴다.
+    // 기다리는 동안 화면에는 '사진 올리는 중…' 스피너가 돌고 있다.
+    await _awaitBump(verifyDemoDone);
+    if (!mounted) return;
+    await _hold(3.5, 'reg_verified');
+    await _backToMap();
+    _endFlow();
+  }
+
+  /// 등록 폼 시연이 만드는 팀 이름 — 인증 단계에서 다시 찾을 때 쓴다.
+  /// club_form_screen 의 _demoStep('name') 과 같아야 한다.
+  static const _demoClubName = '누룽지 배구클럽';
+
+  /// 단계가 끝날 때까지 기다린다. 지오코딩·저장은 네트워크라 몇 초가 걸릴지
+  /// 알 수 없고, 고정 대기로 넘어가면 늦게 도착한 결과가 다음 단계의 입력을
+  /// 덮어쓴다(실측: 지오코딩 5초 vs 대기 2.5초 → 시설 이름이 지워졌다).
+  /// 응답이 끝내 안 오면 timeout 후 진행한다 — 시연이 멈추는 것보단 낫다.
+  /// 카운터가 올라갈 때까지 기다린다(타임아웃이면 그냥 진행).
+  Future<void> _awaitBump(ValueNotifier<int> n, {double timeout = 20}) async {
+    final start = n.value;
+    final done = Completer<void>();
+    void listener() {
+      if (n.value != start && !done.isCompleted) done.complete();
+    }
+
+    n.addListener(listener);
+    try {
+      await done.future.timeout(
+        Duration(milliseconds: (timeout * 1000).round()),
+        onTimeout: () {},
+      );
+    } finally {
+      n.removeListener(listener);
+    }
+  }
+
+  Future<void> _awaitStep(String step, {double timeout = 15}) async {
+    final done = Completer<void>();
+    void listener() {
+      if (clubFormDemoDone.value.split(':').first == step &&
+          !done.isCompleted) {
+        done.complete();
+      }
+    }
+
+    clubFormDemoDone.addListener(listener);
+    try {
+      await done.future.timeout(
+        Duration(milliseconds: (timeout * 1000).round()),
+        onTimeout: () {},
+      );
+    } finally {
+      clubFormDemoDone.removeListener(listener);
+    }
+  }
+
+  /// 단계를 시작하고 끝날 때까지 기다린다.
+  Future<void> _formStepDone(String s) async {
+    final wait = _awaitStep(s);
+    _formStep(s);
+    await wait;
+  }
+
+  int _demoSeq = 0;
+  // 같은 단계를 연달아 부를 수 있어야 해서 일련번호를 붙인다(ValueNotifier 는
+  // 같은 값이면 알리지 않는다).
+  void _formStep(String s) => clubFormDemo.value = '$s:${++_demoSeq}';
 
   Future<void> _focusAndShowSpot(PickupSpot spot) async {
     await _centerOnPin(spot.lat, spot.lng);

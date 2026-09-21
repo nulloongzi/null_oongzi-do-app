@@ -12,6 +12,10 @@ class DeepLink {
 
 /// URI 쿼리에서 club/spot id 또는 capture 명령 추출. 없으면 null.
 /// `?capture=<cmd>&lang=ko` 는 마케팅 자산 자동 캡처 전용(앱은 kCaptureMode 빌드에서만 반응).
+///
+/// 캡처 빌드 플래그. 등록 폼·지도 피커·인증 신청도 시연에 참여하므로 화면 파일이
+/// 아니라 여기(딥링크 도메인)에 둔다 — 화면들이 map_screen 을 import 하면 순환이 된다.
+const bool kCaptureMode = bool.fromEnvironment('CAPTURE_MODE');
 DeepLink? parseDeepLink(Uri uri) {
   final cap = uri.queryParameters['capture'];
   if (cap != null && cap.trim().isNotEmpty) {

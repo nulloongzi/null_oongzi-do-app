@@ -4,7 +4,10 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'deep_link_service.dart' show kCaptureMode;
 import 'i18n.dart';
 import 'sanitize.dart';
 
@@ -52,11 +55,15 @@ class VerificationService {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return t('login_required');
 
-    final XFile? file = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1600,
-      imageQuality: 85,
-    );
+    // 캡처 시연은 시스템 사진 선택기를 조종할 수 없다(앱 밖 UI). 홍보 영상에 넣을
+    // 화면도 아니라 번들 이미지를 쓴다 — 업로드와 요청 문서 생성은 실제 그대로다.
+    final XFile? file = kCaptureMode
+        ? await _demoPhoto()
+        : await ImagePicker().pickImage(
+            source: ImageSource.gallery,
+            maxWidth: 1600,
+            imageQuality: 85,
+          );
     if (file == null) return 'cancelled';
 
     try {
@@ -84,6 +91,20 @@ class VerificationService {
       return null;
     } catch (e) {
       return '$e';
+    }
+  }
+
+  /// 시연용 사진: 번들 에셋을 임시 파일로 떨궈 XFile 로 넘긴다.
+  Future<XFile?> _demoPhoto() async {
+    try {
+      const asset = 'assets/markers/marker_yellow.png';
+      final data = await rootBundle.load(asset);
+      final dir = await getTemporaryDirectory();
+      final f = File('${dir.path}/verify_demo.png');
+      await f.writeAsBytes(data.buffer.asUint8List(), flush: true);
+      return XFile(f.path, name: 'verify_demo.png');
+    } catch (_) {
+      return null;
     }
   }
 
