@@ -30,6 +30,7 @@ class AnchigiRosterTab extends StatefulWidget {
 
 class _AnchigiRosterTabState extends State<AnchigiRosterTab> {
   final _nameCtl = TextEditingController();
+  final _pasteCtl = TextEditingController();
 
   /// 추가 폼에서 고르는 중인 포지션(아직 명단에 없는 상태).
   final Map<String, String> _newTier = {};
@@ -39,6 +40,7 @@ class _AnchigiRosterTabState extends State<AnchigiRosterTab> {
   @override
   void dispose() {
     _nameCtl.dispose();
+    _pasteCtl.dispose();
     super.dispose();
   }
 
@@ -50,7 +52,7 @@ class _AnchigiRosterTabState extends State<AnchigiRosterTab> {
         _newTier[pos] = _newTier.values.contains('main') ? 'sub' : 'main';
       } else if (t == 'main') {
         _newTier.remove(pos);
-        final rest = kPos.where(_newTier.containsKey).toList();
+        final rest = s.seats.where(_newTier.containsKey).toList();
         if (rest.isNotEmpty) _newTier[rest.first] = 'main';
       } else if (t == 'sub') {
         _newTier[pos] = 'want';
@@ -172,7 +174,8 @@ class _AnchigiRosterTabState extends State<AnchigiRosterTab> {
             ],
           ),
         ),
-        _addCard(),
+        _addCard(context),
+        _pasteCard(),
         _bulkCard(),
       ],
     );
@@ -262,11 +265,71 @@ class _AnchigiRosterTabState extends State<AnchigiRosterTab> {
             ],
           ),
           const SizedBox(height: 2),
+          // 9인제는 자리가 아홉 개라 한 줄에 다 안 들어간다 — 접어서 보여준다.
+          Wrap(
+            spacing: 5,
+            runSpacing: 5,
+            children: [
+              for (final pos in s.seats)
+                SizedBox(width: _chipWidth(context), child: _tierChip(p, pos)),
+              if (p.isFlex)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: NurungjiColors.chipBg,
+                    borderRadius: BorderRadius.circular(9),
+                    border: Border.all(color: const Color(0x22000000)),
+                  ),
+                  child: Text(
+                    t('ag_flex_badge'),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: NurungjiColors.brown,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
           Row(
             children: [
-              for (final pos in kPos) ...[
-                Expanded(child: _tierChip(p, pos)),
-                if (pos != kPos.last) const SizedBox(width: 5),
+              // 📌 — 진행하는 사람이 자리를 직접 지정한다(실력 등급이 아니다).
+              GestureDetector(
+                onTap: p.isFlex ? null : () => s.togglePin(p.id),
+                child: Opacity(
+                  opacity: p.isFlex ? .35 : 1,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: p.pinned != null
+                          ? NurungjiColors.yellow
+                          : NurungjiColors.chipBg,
+                      borderRadius: BorderRadius.circular(9),
+                      border: Border.all(color: const Color(0x18000000)),
+                    ),
+                    child: Text(
+                      p.pinned != null
+                          ? '📌 ${t('ag_posx_${p.pinned}')}'
+                          : '📌',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: NurungjiColors.dark,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              if (s.mode == 'abc') ...[
+                const SizedBox(width: 6),
+                _pinTeamPicker(p),
               ],
             ],
           ),
@@ -275,8 +338,44 @@ class _AnchigiRosterTabState extends State<AnchigiRosterTab> {
     );
   }
 
+  /// 자리 칩 하나의 폭 — 6인제는 다섯 칸(자리 5), 9인제는 세 칸씩 두 줄(역할 6).
+  double _chipWidth(BuildContext context) {
+    final w = MediaQuery.of(context).size.width - 28 - 24;
+    final per = s.sport == 'v9' ? 3 : 5;
+    return (w - (per - 1) * 5) / per;
+  }
+
+  /// A · B · C 코어 지정(A · B · C 고정 모드에서만 보인다).
+  Widget _pinTeamPicker(AnchigiPlayer p) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8),
+    decoration: BoxDecoration(
+      color: p.pinTeam == null ? NurungjiColors.chipBg : NurungjiColors.yellow,
+      borderRadius: BorderRadius.circular(9),
+      border: Border.all(color: const Color(0x18000000)),
+    ),
+    child: DropdownButtonHideUnderline(
+      child: DropdownButton<int?>(
+        value: p.pinTeam,
+        isDense: true,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          color: NurungjiColors.dark,
+          fontFamily: 'Pretendard',
+        ),
+        items: [
+          DropdownMenuItem(value: null, child: Text(t('ag_pin_team_any'))),
+          for (var i = 0; i < 3; i++)
+            DropdownMenuItem(value: i, child: Text(kTeamName[i])),
+        ],
+        onChanged: (v) => s.setPinTeam(p.id, v),
+      ),
+    ),
+  );
+
   Widget _tierChip(AnchigiPlayer p, String pos) {
-    final tier = p.tier[pos];
+    // '어디든'인 사람은 아직 아무것도 안 고른 상태 — 칩을 눌러 고르기 시작한다.
+    final tier = p.rawTier(pos);
     return GestureDetector(
       onTap: () => s.cycleTier(p.id, pos),
       // 길게 눌러 주 포지션으로(웹의 ☆ 버튼 대응).
@@ -285,7 +384,7 @@ class _AnchigiRosterTabState extends State<AnchigiRosterTab> {
           : () => s.promoteTier(p.id, pos),
       child: Semantics(
         button: true,
-        label: '$pos ${tier == null ? '' : t('ag_tier_$tier')}',
+        label: '${t('ag_pos_$pos')} ${tier == null ? '' : t('ag_tier_$tier')}',
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 6),
           decoration: BoxDecoration(
@@ -299,12 +398,16 @@ class _AnchigiRosterTabState extends State<AnchigiRosterTab> {
                 children: [
                   if (tier == 'main')
                     const Text('★ ', style: TextStyle(fontSize: 8)),
-                  Text(
-                    pos,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                      color: _tierFg(tier),
+                  Flexible(
+                    child: Text(
+                      t('ag_posx_$pos'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        color: _tierFg(tier),
+                      ),
                     ),
                   ),
                 ],
@@ -324,7 +427,7 @@ class _AnchigiRosterTabState extends State<AnchigiRosterTab> {
     );
   }
 
-  Widget _addCard() => AgCard(
+  Widget _addCard(BuildContext context) => AgCard(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -368,12 +471,12 @@ class _AnchigiRosterTabState extends State<AnchigiRosterTab> {
           ],
         ),
         const SizedBox(height: 8),
-        Row(
+        Wrap(
+          spacing: 5,
+          runSpacing: 5,
           children: [
-            for (final pos in kPos) ...[
-              Expanded(child: _newChip(pos)),
-              if (pos != kPos.last) const SizedBox(width: 5),
-            ],
+            for (final pos in s.seats)
+              SizedBox(width: _chipWidth(context), child: _newChip(pos)),
           ],
         ),
         const SizedBox(height: 8),
@@ -403,10 +506,12 @@ class _AnchigiRosterTabState extends State<AnchigiRosterTab> {
         child: Column(
           children: [
             Text(
-              pos,
+              t('ag_posx_$pos'),
               textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: FontWeight.w900,
                 color: _tierFg(tier),
               ),
@@ -424,6 +529,76 @@ class _AnchigiRosterTabState extends State<AnchigiRosterTab> {
       ),
     );
   }
+
+  /// 단톡방 참석 명단을 그대로 붙여넣는 길. 자리는 안 골라도 된다('어디든').
+  Widget _pasteCard() => AgCard(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          t('ag_bulk_add'),
+          style: const TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 15,
+            color: NurungjiColors.dark,
+          ),
+        ),
+        const SizedBox(height: 10),
+        TextField(
+          controller: _pasteCtl,
+          minLines: 3,
+          maxLines: 6,
+          decoration: InputDecoration(
+            hintText: t('ag_bulk_ph'),
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            OutlinedButton(
+              onPressed: () {
+                final n = s.addPlayers(_pasteCtl.text);
+                if (n == 0) return;
+                _pasteCtl.clear();
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(tf('ag_bulk_added', {'n': '$n'}))),
+                );
+              },
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+              ),
+              child: Text(
+                t('ag_bulk_btn'),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '${t('ag_flex_player_hint')}\n${t('ag_pin_hint')}',
+          style: const TextStyle(
+            fontSize: 11,
+            height: 1.5,
+            fontWeight: FontWeight.w600,
+            color: NurungjiColors.brown,
+          ),
+        ),
+      ],
+    ),
+  );
 
   Widget _bulkCard() => AgCard(
     child: Column(

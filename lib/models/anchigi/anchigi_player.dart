@@ -18,7 +18,8 @@ class AnchigiPlayer {
   String id;
   String name;
 
-  /// 포지션 → 티어('main'|'sub'|'want'). 키가 없으면 그 포지션 불가.
+  /// 자리 → 티어('main'|'sub'|'want'). 키가 없으면 그 자리는 안 고른 것.
+  /// 두 종목 자리를 한 맵에 담는다(키가 겹치지 않는다).
   Map<String, String> tier;
 
   /// 참석 여부.
@@ -27,28 +28,72 @@ class AnchigiPlayer {
   /// 퇴장 시각 'HH:MM'. null이면 끝까지.
   String? leave;
 
+  /// 종목별 고정(📌) 자리. {'v6': 'S'} 처럼 진행하는 사람이 지정한다.
+  Map<String, String> pin;
+
+  /// 고정할 코어(0=A,1=B,2=C). null이면 자동.
+  int? pinTeam;
+
+  /// 지금 보고 있는 종목. 가능 자리·티어가 이 값에 따라 갈린다.
+  /// (웹의 전역 sport 와 같은 역할 — 스토어가 갈아 끼운다.)
+  String sport;
+
   AnchigiPlayer({
     required this.id,
     required this.name,
     Map<String, String>? tier,
     this.here = true,
     this.leave,
-  }) : tier = tier ?? <String, String>{};
+    Map<String, String>? pin,
+    this.pinTeam,
+    this.sport = 'v6',
+  }) : tier = tier ?? <String, String>{},
+       pin = pin ?? <String, String>{};
 
-  /// 가능 포지션 목록(kPos 순서). 원본은 p.pos 필드를 캐시했으나
-  /// Dart에서는 tier가 단일 소스가 되도록 파생 getter로 둔다.
-  List<String> get pos => kPos.where((p) => tier[p] != null).toList();
+  List<String> get _seats => posOfSport(sport);
 
-  String? tierOf(String p) => tier[p];
+  /// 이 종목 자리를 하나도 안 고른 사람 = '어디든'.
+  /// 예전엔 자동으로 세터를 박아 넣어, 이름만 넣고 시작하면 전원 세터 전용이 됐다.
+  bool get isFlex => !_seats.any((p) => tier[p] != null);
 
-  int fitOf(String p) => kFit[tier[p]] ?? 0;
+  /// 이 종목에서 설 수 있는 자리. 미지정이면 전 자리.
+  List<String> get pos {
+    final picked = _seats.where((p) => tier[p] != null).toList();
+    return picked.isEmpty ? List<String>.from(_seats) : picked;
+  }
 
-  int get mainCount => tier.values.where((v) => v == 'main').length;
+  /// 솔버가 보는 티어. '어디든'인 사람은 모든 자리가 주 자리다.
+  String? tierOf(String p) {
+    if (!_seats.contains(p)) return null;
+    if (isFlex) return 'main';
+    return tier[p];
+  }
 
-  /// 원본 normalizePlayer(): 포지션이 하나도 없으면 S를 주 포지션으로 강제.
+  /// 저장된 티어 그대로. 명단 화면의 칩 조작은 이쪽을 봐야 첫 클릭이 주로 잡힌다.
+  String? rawTier(String p) => tier[p];
+
+  int fitOf(String p) => kFit[tierOf(p)] ?? 0;
+
+  int get mainCount => _seats.where((p) => tier[p] == 'main').length;
+
+  /// 이 종목의 주 자리(없으면 첫 가능 자리).
+  String? get mainPos {
+    for (final p in _seats) {
+      if (tier[p] == 'main') return p;
+    }
+    return pos.isEmpty ? null : pos.first;
+  }
+
+  /// 이 종목에서 고정된 자리. 설 수 없는 자리면 고정으로 치지 않는다.
+  String? get pinned {
+    final v = pin[sport];
+    return (v != null && pos.contains(v)) ? v : null;
+  }
+
   void normalize() {
-    tier.removeWhere((k, v) => !kPos.contains(k) || !kTiers.contains(v));
-    if (tier.isEmpty) tier['S'] = 'main';
+    tier.removeWhere((k, v) => !kAllPos.contains(k) || !kTiers.contains(v));
+    pin.removeWhere((k, v) => !kSports.contains(k) || !kAllPos.contains(v));
+    if (pinTeam != null && (pinTeam! < 0 || pinTeam! > 2)) pinTeam = null;
   }
 
   AnchigiPlayer copy() => AnchigiPlayer(
@@ -57,6 +102,9 @@ class AnchigiPlayer {
     tier: Map<String, String>.from(tier),
     here: here,
     leave: leave,
+    pin: Map<String, String>.from(pin),
+    pinTeam: pinTeam,
+    sport: sport,
   );
 
   Map<String, dynamic> toJson() => {
@@ -65,6 +113,8 @@ class AnchigiPlayer {
     'tier': tier,
     'here': here,
     'leave': leave,
+    if (pin.isNotEmpty) 'pin': pin,
+    if (pinTeam != null) 'pinTeam': pinTeam,
   };
 
   factory AnchigiPlayer.fromJson(Map<String, dynamic> j) {
@@ -80,12 +130,21 @@ class AnchigiPlayer {
         if (p is String) tier[p] = 'main';
       }
     }
+    final pin = <String, String>{};
+    final rawPin = j['pin'];
+    if (rawPin is Map) {
+      rawPin.forEach((k, v) {
+        if (k is String && v is String) pin[k] = v;
+      });
+    }
     final p = AnchigiPlayer(
       id: (j['id'] as String?) ?? genPlayerId(),
       name: (j['name'] as String?) ?? '',
       tier: tier,
       here: j['here'] as bool? ?? true,
       leave: j['leave'] as String?,
+      pin: pin,
+      pinTeam: (j['pinTeam'] as num?)?.toInt(),
     );
     p.normalize();
     return p;
@@ -99,12 +158,17 @@ class AnchigiStat {
   Map<String, int> pos;
 
   AnchigiStat({this.play = 0, this.bench = 0, Map<String, int>? pos})
-    : pos = pos ?? {for (final p in kPos) p: 0};
+    : pos = pos ?? {for (final p in kAllPos) p: 0} {
+    // 6인제만 쓰던 시절의 기록에는 9인제 자리 칸이 없다.
+    for (final p in kAllPos) {
+      this.pos.putIfAbsent(p, () => 0);
+    }
+  }
 
   Map<String, dynamic> toJson() => {'play': play, 'bench': bench, 'pos': pos};
 
   factory AnchigiStat.fromJson(Map<String, dynamic> j) {
-    final pos = {for (final p in kPos) p: 0};
+    final pos = {for (final p in kAllPos) p: 0};
     final raw = j['pos'];
     if (raw is Map) {
       raw.forEach((k, v) {

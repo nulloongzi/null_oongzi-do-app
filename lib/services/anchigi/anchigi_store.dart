@@ -21,8 +21,26 @@ class AnchigiStore extends ChangeNotifier {
   List<PastRound> pastRounds = [];
   int nGames = 3;
   String mode = 'abc';
-  String feel = 'real';
-  List<String> allowed = ['mb2', 'mb1li', 'mb2li'];
+
+  /// 배치 우선순위: 'custom'(맞춘 자리 우선) | 'variety'(다양성 우선).
+  String prio = 'custom';
+
+  /// 팀당 실험 자리 수. null이면 우선순위의 기본값.
+  int? flexSlots;
+
+  /// 종목: 'v6' | 'v9'.
+  String sport = 'v6';
+
+  /// 6인제 전술: '5-1'(세터 1) | '6-2'(세터 2, 전위 세터는 라이트).
+  String tactic = '5-1';
+
+  /// 보관해 둔 지난 모임.
+  List<AnchigiMeet> meets = [];
+
+  /// 결과를 코트 대신 목록으로 볼지.
+  bool compact = false;
+
+  List<String> allowed = [for (final t in kTemplates) t.id];
   AnchigiSchedule schedule = AnchigiSchedule();
 
   /// 아직 확정하지 않은 뽑기 결과. 설정을 건드리면 폐기된다.
@@ -47,11 +65,18 @@ class AnchigiStore extends ChangeNotifier {
 
   AnchigiStat statOf(String id) => stat[id] ??= AnchigiStat();
 
-  /// 허용된 템플릿(비면 첫 템플릿으로 폴백).
+  /// 이 종목 · 전술에서 허용된 구성(비면 첫 구성으로 폴백).
   List<AnchigiTemplate> get templates {
-    final r = kTemplates.where((t) => allowed.contains(t.id)).toList();
-    return r.isEmpty ? [kTemplates[0]] : r;
+    final mine = templatesOfSport(sport, tactic);
+    final r = mine.where((t) => allowed.contains(t.id)).toList();
+    return r.isEmpty ? [mine.first] : r;
   }
+
+  /// 이 종목의 자리 목록.
+  List<String> get seats => posOfSport(sport);
+
+  /// 인원·자리가 모자라 빈자리가 생길 상황인지(뽑기를 막지는 않는다).
+  bool get shortHanded => _solver().shortHanded();
 
   List<int> get teamSizes {
     final s = templates.map((t) => t.size).toSet().toList()..sort();
@@ -78,7 +103,10 @@ class AnchigiStore extends ChangeNotifier {
     round: round,
     nGames: nGames,
     mode: mode,
-    feel: feel,
+    prio: prio,
+    sport: sport,
+    tactic: tactic,
+    flexSlots: flexSlots,
     allowed: List<String>.from(allowed),
     schedule: schedule.copy(),
   );
@@ -128,11 +156,43 @@ class AnchigiStore extends ChangeNotifier {
     round = read('round', 1, (v) => (v as num).toInt());
     nGames = read('ngames', 3, (v) => (v as num).toInt());
     mode = read('mode', 'abc', (v) => v as String);
-    feel = read('feel', 'real', (v) => v as String);
-    allowed = read('tpl', ['mb2', 'mb1li', 'mb2li'], (v) {
-      final l = (v as List).map((e) => e as String).toList();
-      return l.isEmpty ? ['mb2', 'mb1li', 'mb2li'] : l;
+    sport = read('sport', 'v6', (v) => v as String);
+    if (!kSports.contains(sport)) sport = 'v6';
+    tactic = read('tactic', '5-1', (v) => v as String);
+    if (!kTactics.contains(tactic)) tactic = '5-1';
+    compact = read('compact', false, (v) => v as bool);
+    meets = read('meets', <AnchigiMeet>[], (v) {
+      return (v as List)
+          .map((e) => AnchigiMeet.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
     });
+
+    // 배치 우선순위 2단계 + 실험 자리. 예전 게임 성격 4단계를 여기로 접는다.
+    final rawPrio = read<String?>('prio', null, (v) => v as String?);
+    flexSlots = read<int?>('flex', null, (v) => (v as num?)?.toInt());
+    if (rawPrio == null) {
+      final oldFeel = read<String?>('feel', null, (v) => v as String?);
+      final moved = kFeelToPrio[oldFeel];
+      prio = moved?.$1 ?? 'custom';
+      flexSlots ??= moved?.$2;
+    } else {
+      prio = rawPrio;
+    }
+
+    final allIds = [for (final t in kTemplates) t.id];
+    allowed = read('tpl', allIds, (v) {
+      final l = (v as List).map((e) => e as String).toList();
+      return l.isEmpty ? allIds : l;
+    });
+    // 5-1 구성만 들어 있는 저장본은 새 구성(6-2 · 9인제)을 아직 모르는 것이다.
+    // 그때만 켜 준다 — 사용자가 끈 구성을 매번 되살리면 안 된다.
+    const legacy = ['mb2', 'mb1li', 'mb2li'];
+    final knowsNew = allowed.any((id) => !legacy.contains(id));
+    if (!knowsNew) {
+      for (final id in allIds) {
+        if (!allowed.contains(id)) allowed.add(id);
+      }
+    }
     schedule = read(
       'schedule',
       AnchigiSchedule(),
@@ -144,9 +204,10 @@ class AnchigiStore extends ChangeNotifier {
           .toList();
     });
 
-    if (!kFeels.contains(feel)) feel = 'real';
+    if (!kPrios.contains(prio)) prio = 'custom';
     if (mode != 'abc' && mode != 'free') mode = 'abc';
     if (nGames < 1 || nGames > 6) nGames = 3;
+    _syncSport();
 
     loaded = true;
     notifyListeners();
@@ -165,7 +226,15 @@ class AnchigiStore extends ChangeNotifier {
     await sp.setString(_key('round'), jsonEncode(round));
     await sp.setString(_key('ngames'), jsonEncode(nGames));
     await sp.setString(_key('mode'), jsonEncode(mode));
-    await sp.setString(_key('feel'), jsonEncode(feel));
+    await sp.setString(_key('prio'), jsonEncode(prio));
+    await sp.setString(_key('flex'), jsonEncode(flexSlots));
+    await sp.setString(_key('sport'), jsonEncode(sport));
+    await sp.setString(_key('tactic'), jsonEncode(tactic));
+    await sp.setString(_key('compact'), jsonEncode(compact));
+    await sp.setString(
+      _key('meets'),
+      jsonEncode(meets.map((m) => m.toJson()).toList()),
+    );
     await sp.setString(_key('tpl'), jsonEncode(allowed));
     await sp.setString(_key('schedule'), jsonEncode(schedule.toJson()));
     await sp.setString(
@@ -194,11 +263,58 @@ class AnchigiStore extends ChangeNotifier {
     _commitChange();
   }
 
-  void setFeel(String v) {
-    if (feel == v) return;
-    feel = v;
+  void setPrio(String v) {
+    if (prio == v) return;
+    prio = v;
+    // 실험 자리는 우선순위마다 기본값이 달라 되돌린다.
+    flexSlots = null;
     _invalidate();
     _commitChange();
+  }
+
+  void setFlexSlots(int v) {
+    if (flexSlots == v) return;
+    flexSlots = v;
+    _invalidate();
+    _commitChange();
+  }
+
+  /// 종목 전환. 가능 자리가 종목별로 갈리므로 명단을 다시 맞춘다.
+  void setSport(String v) {
+    if (sport == v || !kSports.contains(v)) return;
+    sport = v;
+    flexSlots = null;
+    _syncSport();
+    _invalidate();
+    _commitChange();
+  }
+
+  /// 6인제 전술 전환(5-1 ↔ 6-2).
+  void setTactic(String v) {
+    if (tactic == v || !kTactics.contains(v)) return;
+    tactic = v;
+    _invalidate();
+    _commitChange();
+  }
+
+  void setCompact(bool v) {
+    if (compact == v) return;
+    compact = v;
+    notifyListeners();
+    persist();
+  }
+
+  /// 명단의 자리 판정이 현재 종목을 따르게 한다.
+  void _syncSport() {
+    for (final p in players) {
+      p.sport = sport;
+    }
+  }
+
+  /// 팀당 실험 자리 수(설정 안 했으면 우선순위 기본값).
+  int get flexSlotsEffective {
+    final v = flexSlots ?? prioOf(prio).flex;
+    return v < 0 ? 0 : (v > kMaxBudget ? kMaxBudget : v);
   }
 
   void setNGames(int v) {
@@ -208,10 +324,14 @@ class AnchigiStore extends ChangeNotifier {
     _commitChange();
   }
 
-  /// 템플릿 토글. 마지막 하나는 끌 수 없다.
+  /// 구성 토글. 이 종목 · 전술에서 마지막 하나 남은 구성은 끌 수 없다.
   void toggleTemplate(String id) {
     if (allowed.contains(id)) {
-      if (allowed.length <= 1) return;
+      final onNow = templatesOfSport(
+        sport,
+        tactic,
+      ).where((t) => allowed.contains(t.id)).length;
+      if (onNow <= 1) return;
       allowed = allowed.where((t) => t != id).toList();
     } else {
       // kTemplates 순서를 유지해야 표시가 흔들리지 않는다.
@@ -247,8 +367,50 @@ class AnchigiStore extends ChangeNotifier {
       id: genPlayerId(),
       name: name.trim(),
       tier: Map<String, String>.from(tier),
+      sport: sport,
     )..normalize();
     players.add(p);
+    _invalidate();
+    _commitChange();
+  }
+
+  /// 여러 명 한 번에 — 줄바꿈 · 쉼표 · 가운뎃점으로 끊어 넣는다.
+  /// 자리는 안 고른 채('어디든') 들어가므로 이름만 붙여넣고 바로 뽑을 수 있다.
+  int addPlayers(String raw) {
+    final names = raw
+        .split(RegExp(r'[\n,·]+'))
+        .map((x) => x.trim())
+        .where((x) => x.isNotEmpty)
+        .toList();
+    if (names.isEmpty) return 0;
+    for (final n in names) {
+      players.add(
+        AnchigiPlayer(id: genPlayerId(), name: n, sport: sport)..normalize(),
+      );
+    }
+    _invalidate();
+    _commitChange();
+    return names.length;
+  }
+
+  /// 📌 — 주 자리에 고정. '어디든'인 사람은 고정할 자리가 없어 무시한다.
+  void togglePin(String id) {
+    final p = players.firstWhere((q) => q.id == id);
+    if (p.pin[sport] != null) {
+      p.pin.remove(sport);
+    } else {
+      if (p.isFlex) return;
+      final m = p.mainPos;
+      if (m == null) return;
+      p.pin[sport] = m;
+    }
+    _invalidate();
+    _commitChange();
+  }
+
+  void setPinTeam(String id, int? team) {
+    final p = players.firstWhere((q) => q.id == id);
+    p.pinTeam = team;
     _invalidate();
     _commitChange();
   }
@@ -302,21 +464,25 @@ class AnchigiStore extends ChangeNotifier {
   /// 포지션이 하나뿐이면 지울 수 없다.
   void cycleTier(String id, String pos) {
     final p = players.firstWhere((q) => q.id == id);
-    final t = p.tier[pos];
+    // 저장된 티어를 본다 — '어디든'을 주 자리로 보정하면 첫 클릭이 먹지 않는다.
+    final t = p.rawTier(pos);
 
     if (t == null) {
       p.tier[pos] = p.mainCount > 0 ? 'sub' : 'main';
     } else if (t == 'main') {
-      if (p.pos.length == 1) return; // 마지막 포지션은 유지
+      // 마지막 한 자리까지 뺄 수 있다 — 다 빼면 '어디든'으로 돌아간다.
       p.tier.remove(pos);
-      final rest = p.pos;
+      final rest = seats.where((q) => p.tier[q] != null).toList();
       if (rest.isNotEmpty && p.mainCount == 0) p.tier[rest.first] = 'main';
     } else if (t == 'sub') {
       p.tier[pos] = 'want';
     } else {
-      if (p.pos.length == 1) return;
       p.tier.remove(pos);
     }
+
+    // 고정해 둔 자리를 스스로 지웠으면 고정도 같이 풀린다.
+    final pinnedSeat = p.pin[sport];
+    if (pinnedSeat != null && p.tier[pinnedSeat] == null) p.pin.remove(sport);
 
     p.normalize();
     _invalidate();
@@ -326,8 +492,11 @@ class AnchigiStore extends ChangeNotifier {
   /// ☆ — 이 포지션을 주 포지션으로. 기존 주는 가능으로 내린다.
   void promoteTier(String id, String pos) {
     final p = players.firstWhere((q) => q.id == id);
-    if (p.tier[pos] == null || p.tier[pos] == 'main') return;
-    p.tier.updateAll((k, v) => v == 'main' ? 'sub' : v);
+    if (p.rawTier(pos) == null || p.rawTier(pos) == 'main') return;
+    // 이 종목 자리만 내린다 — 다른 종목의 주 자리는 건드리지 않는다.
+    for (final q in seats) {
+      if (p.tier[q] == 'main') p.tier[q] = 'sub';
+    }
     p.tier[pos] = 'main';
     _invalidate();
     _commitChange();
@@ -346,15 +515,6 @@ class AnchigiStore extends ChangeNotifier {
     drawing = true;
     failure = [];
     notifyListeners();
-
-    final pre = _solver().diagnose();
-    if (pre.isNotEmpty) {
-      current = null;
-      failure = pre;
-      drawing = false;
-      notifyListeners();
-      return;
-    }
 
     RoundResult? r;
     try {
@@ -377,6 +537,7 @@ class AnchigiStore extends ChangeNotifier {
     for (final g in c.games) {
       for (final team in g.teams) {
         for (final a in team) {
+          if (a.empty) continue;
           final s = statOf(a.id);
           s.play++;
           s.pos[a.pos] = (s.pos[a.pos] ?? 0) + 1;
@@ -386,7 +547,9 @@ class AnchigiStore extends ChangeNotifier {
         statOf(b.id).bench++;
       }
     }
-    pastRounds.add(PastRound(round: c.round, games: c.games, mode: c.mode));
+    pastRounds.add(
+      PastRound(round: c.round, games: c.games, mode: c.mode, sport: c.sport),
+    );
     round++;
     current = null;
     _commitChange();
@@ -399,5 +562,138 @@ class AnchigiStore extends ChangeNotifier {
     pastRounds = [];
     _invalidate();
     _commitChange();
+  }
+
+  // ── 모임 보관 / 백업 ──────────────────────────────────────────────────────
+
+  static String todayStr() {
+    final d = DateTime.now();
+    final m = d.month.toString().padLeft(2, '0');
+    final dd = d.day.toString().padLeft(2, '0');
+    return '${d.year}-$m-$dd';
+  }
+
+  /// 이번 모임을 보관하고 누적 기록만 새로 시작한다. 명단은 그대로 둔다.
+  bool archiveMeet() {
+    if (round <= 1 && pastRounds.isEmpty) return false;
+    meets.insert(
+      0,
+      AnchigiMeet(
+        date: todayStr(),
+        rounds: round - 1 < 0 ? 0 : round - 1,
+        sport: sport,
+        stat: {for (final e in stat.entries) e.key: e.value.toJson()},
+        past: List<PastRound>.from(pastRounds),
+      ),
+    );
+    stat = {};
+    round = 1;
+    pastRounds = [];
+    _invalidate();
+    _commitChange();
+    return true;
+  }
+
+  void deleteMeet(int index) {
+    if (index < 0 || index >= meets.length) return;
+    meets.removeAt(index);
+    _commitChange();
+  }
+
+  /// 백업 JSON. 기기를 바꾸거나 앱을 지워도 명단·기록이 남게.
+  String exportJson() => jsonEncode({
+    'app': 'anchigi',
+    'v': 1,
+    'exportedAt': DateTime.now().toIso8601String(),
+    'players': players.map((p) => p.toJson()).toList(),
+    'stat': {for (final e in stat.entries) e.key: e.value.toJson()},
+    'round': round,
+    'past': pastRounds.map((r) => r.toJson()).toList(),
+    'meets': meets.map((m) => m.toJson()).toList(),
+    'settings': {
+      'sport': sport,
+      'tactic': tactic,
+      'mode': mode,
+      'prio': prio,
+      'flex': flexSlots,
+      'tpl': allowed,
+      'ngames': nGames,
+      'compact': compact,
+      'schedule': schedule.toJson(),
+    },
+  });
+
+  /// 백업 JSON 을 그대로 덮어쓴다. 읽을 수 없으면 false.
+  /// 먼저 전부 읽어 본 뒤에 바꾼다 — 중간에 터져 반쯤 덮어쓰면 안 된다.
+  bool importJson(String raw) {
+    Map<String, dynamic> d;
+    try {
+      final v = jsonDecode(raw);
+      if (v is! Map) return false;
+      d = Map<String, dynamic>.from(v);
+    } catch (_) {
+      return false;
+    }
+    if (d['players'] is! List) return false;
+
+    final List<AnchigiPlayer> newPlayers;
+    final newStat = <String, AnchigiStat>{};
+    final List<PastRound> newPast;
+    final List<AnchigiMeet> newMeets;
+    Map<String, dynamic> sg;
+    try {
+      sg = d['settings'] is Map
+          ? Map<String, dynamic>.from(d['settings'] as Map)
+          : <String, dynamic>{};
+      newPlayers = (d['players'] as List)
+          .map(
+            (e) => AnchigiPlayer.fromJson(Map<String, dynamic>.from(e as Map)),
+          )
+          .toList();
+      if (d['stat'] is Map) {
+        (d['stat'] as Map).forEach((k, v) {
+          if (k is String && v is Map) {
+            newStat[k] = AnchigiStat.fromJson(Map<String, dynamic>.from(v));
+          }
+        });
+      }
+      newPast = (d['past'] as List? ?? [])
+          .map((e) => PastRound.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
+      newMeets = (d['meets'] as List? ?? [])
+          .map((e) => AnchigiMeet.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
+    } catch (_) {
+      return false;
+    }
+
+    if (kSports.contains(sg['sport'])) sport = sg['sport'] as String;
+    if (kTactics.contains(sg['tactic'])) tactic = sg['tactic'] as String;
+    players = newPlayers;
+    stat = newStat;
+    round = (d['round'] as num?)?.toInt() ?? 1;
+    pastRounds = newPast;
+    meets = newMeets;
+
+    final m = sg['mode'];
+    if (m == 'abc' || m == 'free') mode = m as String;
+    if (kPrios.contains(sg['prio'])) prio = sg['prio'] as String;
+    flexSlots = (sg['flex'] as num?)?.toInt();
+    if (sg['compact'] is bool) compact = sg['compact'] as bool;
+    final tpl = sg['tpl'];
+    if (tpl is List && tpl.isNotEmpty) {
+      allowed = tpl.map((e) => e.toString()).toList();
+    }
+    final ng = (sg['ngames'] as num?)?.toInt();
+    if (ng != null && ng >= 1 && ng <= 6) nGames = ng;
+    if (sg['schedule'] is Map) {
+      schedule = AnchigiSchedule.fromJson(
+        Map<String, dynamic>.from(sg['schedule'] as Map),
+      );
+    }
+    _syncSport();
+    _invalidate();
+    _commitChange();
+    return true;
   }
 }
