@@ -1,27 +1,27 @@
-# 캡처 원본 목록 (2026-09-21 16:18)
+# 캡처 원본 목록 (2026-09-21 16:24)
 기기:  / 
 
 84069	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/01.png
-588646	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/02.png
+654960	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/02.png
 394721	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/03.png
-487994	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/04.png
-379383	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/05.png
-346750	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/06.png
-570542	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/07.png
+489931	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/04.png
+385388	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/05.png
+397976	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/06.png
+443343	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/07.png
 108952	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/08.png
 87143	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/01.png
 1528779	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/02.png
-470900	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/03.png
-1617937	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/04.png
-676959	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/05.png
+385326	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/03.png
+2080684	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/04.png
+635218	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/05.png
 108267	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/06.png
 85324	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/register/01.png
-417039	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/register/02.png
+406227	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/register/02.png
 365856	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/register/03.png
-399733	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/register/04.png
+397435	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/register/04.png
 953849	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/register/05.png
 368661	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/register/06.png
-342535	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/register/07.png
+350557	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/register/07.png
 109587	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/register/08.png
 2400742	/c/Users/user/null_oongzi-do-app/marketing-assets/motion/discover_ko.mp4
 4407411	/c/Users/user/null_oongzi-do-app/marketing-assets/motion/full_tour_ko.mp4
