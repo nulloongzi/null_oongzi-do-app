@@ -37,7 +37,8 @@ warn() { printf '\033[0;35m! %s\033[0m\n' "$*" >&2; }
 die()  { printf '\033[1;31m✗ %s\033[0m\n' "$*" >&2; exit 1; }
 
 command -v ffmpeg >/dev/null 2>&1 || die "ffmpeg 가 없습니다."
-IM=convert; command -v magick >/dev/null 2>&1 && IM="magick"
+IM=convert; IDENT=identify
+command -v magick >/dev/null 2>&1 && { IM="magick"; IDENT="magick identify"; }
 command -v "$IM" >/dev/null 2>&1 || die "ImageMagick 이 없습니다."
 [ -f "$FONT" ] || die "폰트가 없습니다: $FONT"
 [ -f "$CARDS_FILE" ] || die "카드 스크립트가 없습니다: $CARDS_FILE"
@@ -68,15 +69,18 @@ beat_at() { # beat_at <비트파일> <라벨>
 # 구간(:0.45-1.0)을 주면 화면 세로에서 그 띠만 잘라 크게 키운다 — 카드뉴스는
 # 폰에서 읽히는 게 전부라, 시트가 주인공인 화면을 폰 통째로 넣으면 글씨가
 # 손톱만 해진다.
-grab() { # grab <흐름@비트[:위-아래]> <출력>
-  local ref="$1" out="$2" band="" t y0 bh
+grab() { # grab <흐름@비트[+추가대기][:위-아래]> <출력>
+  local ref="$1" out="$2" band="" extra=0 t y0 bh
   case "$ref" in *:*) band="${ref##*:}"; ref="${ref%%:*}" ;; esac
+  # 네트워크로 받아오는 그림(릴스 커버 등)은 비트 직후엔 아직 회색이다.
+  # 흐름마다 다르니 카드별로 더 기다릴 수 있게 둔다.
+  case "$ref" in *+*) extra="${ref##*+}"; ref="${ref%%+*}" ;; esac
   local flow="${ref%%@*}" label="${ref#*@}"
   local mp4="$SRC_DIR/${flow}_${LANG_TAG}.mp4"
   [ -s "$mp4" ] || { warn "녹화본 없음: $mp4"; return 1; }
   t="$(beat_at "$SRC_DIR/${flow}_beats.txt" "$label")"
   [ -n "$t" ] || { warn "비트 없음: $flow/$label"; return 1; }
-  t="$(awk -v a="$t" -v b="$SETTLE" 'BEGIN{printf "%.2f", a+b}')"
+  t="$(awk -v a="$t" -v b="$SETTLE" -v c="$extra" 'BEGIN{printf "%.2f", a+b+c}')"
   y0="$FY0"; bh="$FH"
   if [ -n "$band" ]; then
     y0="$(awk -v a="${band%%-*}" -v y="$FY0" -v h="$FH" 'BEGIN{printf "%d", y + a*h}')"
@@ -141,7 +145,13 @@ step_card() { # step_card <번호> <화면png> <ko1> <ko2> <en> <출력>
   if [ -s "$shot" ]; then
     # 상자: 가로 900(좌우 여백 90), 세로 1180(문구 아래 ~ 카드 아래 여백 80).
     mock "$shot" 900 1180 "$out.m.png"
-    "$IM" "$out.t.png" "$out.m.png" -gravity north -geometry +0+660 -composite "$out"
+    # 짧고 넓은 구간(릴스 커버처럼)은 상자 위에 붙이면 아래가 텅 빈다 —
+    # 상자 안에서 세로 가운데로 내린다. 긴 구간은 상자를 꽉 채워 그대로다.
+    local mh oy
+    mh="$($IDENT -format '%h' "$out.m.png" 2>/dev/null || echo 1180)"
+    oy=$(( 660 + (1180 - mh) / 2 ))
+    [ "$oy" -lt 660 ] && oy=660
+    "$IM" "$out.t.png" "$out.m.png" -gravity north -geometry +0+$oy -composite "$out"
   else
     mv -f "$out.t.png" "$out"
   fi
