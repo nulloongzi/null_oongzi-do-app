@@ -1,4 +1,4 @@
-# 캡처 원본 목록 (2026-09-21 16:38)
+# 캡처 원본 목록 (2026-09-21 16:44)
 기기:  / 
 
 84069	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/01.png
@@ -6,13 +6,13 @@
 394721	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/03.png
 489931	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/04.png
 385388	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/05.png
-397976	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/06.png
+421464	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/06.png
 443343	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/07.png
 108952	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/08.png
 87143	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/01.png
 1528779	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/02.png
 385326	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/03.png
-2080684	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/04.png
+1648040	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/04.png
 635218	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/05.png
 108267	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/06.png
 85324	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/register/01.png
