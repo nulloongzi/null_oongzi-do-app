@@ -97,6 +97,7 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
   bool _demoOptionalOpen = false;
   final GlobalKey _optionalKey = GlobalKey();
   final GlobalKey _schedKey = GlobalKey();
+  final GlobalKey _reelKey = GlobalKey();
   final GlobalKey _submitKey = GlobalKey();
 
   bool get _isEdit => widget.editing != null;
@@ -278,6 +279,13 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
           setState(() => b.days = next);
           await Future<void>.delayed(const Duration(milliseconds: 420));
         }
+      case 'reel': // 릴스 링크 한 줄 — 제출은 하지 않는다(시연 전용)
+        await _demoScrollTo(_reelKey, 0.45);
+        if (_reels.isEmpty) _reels.add(TextEditingController());
+        await _demoType(
+          _reels.first,
+          'https://www.instagram.com/reel/DHx9kQ2yLmN/',
+        );
       case 'price':
         // 스크롤하지 않는다. schedule 단계가 잡아 놓은 위치에서 회비 칸이
         // 이미 화면 안이고, 여기서 더 내리면 방금 켠 요일 칩이 자막 띠 뒤로
@@ -618,11 +626,14 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
                   ),
                   _group(t('cf_price'), _input(_price, t('cf_price_hint'))),
                   _group(t('cf_insta'), _input(_insta, t('cf_insta_hint'))),
-                  _group(
-                    t('f_reel_label'),
-                    ReelEditor(
-                      controllers: _reels,
-                      onChanged: () => setState(() {}),
+                  KeyedSubtree(
+                    key: _reelKey,
+                    child: _group(
+                      t('f_reel_label'),
+                      ReelEditor(
+                        controllers: _reels,
+                        onChanged: () => setState(() {}),
+                      ),
                     ),
                   ),
                   _group(t('cf_link'), _input(_link, t('f_contact_hint'))),

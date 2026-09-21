@@ -529,8 +529,9 @@ if [ "$INCLUDE_REELS" = "true" ] && want flows; then
   # 실측(장면 전환 시각)으로 맞춘 길이 + 여유 2초.
   #   discover 내용 종료 16.1s · save 14.8s · share 19.7s
   flow discover flow_discover 19   # 지도 → 필터 → 결과 → 클럽 상세
-  flow save     flow_save     20   # 상세 → 도시락 찜 → 반찬칸 → 식단표
-  flow share    flow_share    22   # 밥이름 → 네임카드 → 공유
+  flow save     flow_save     22   # 상세 → 🍱 담기 → 반찬칸 → 식단표
+  flow share    flow_share    26   # 밥이름 → 네임카드 → 상세(릴스 커버) → 공유
+  flow reels    flow_reels    30   # 상세의 릴스 커버 → 폼의 릴스 칸(제출 없음)
   # 등록은 단계가 많다(이름·대상·주소 2가지·제출·인증). 길이는 첫 캡처 뒤 실측으로 줄인다.
   flow register flow_register 70   # 등록 폼 → 주소 3가지 → 일정·회비 → 제출 → 인증 신청
                                    # 지오코딩·저장 응답을 실제로 기다리므로 길이가 변한다.
@@ -539,7 +540,7 @@ if [ "$INCLUDE_REELS" = "true" ] && want flows; then
 
   # 풀 투어: 3편 이어붙이기(편집 없이 바로 쓰는 앱 소개용).
   TOUR_LIST="$FLOWS_DIR/.tour.txt"; : > "$TOUR_LIST"
-  for n in discover save share register; do
+  for n in discover save share register reels; do
     f="$FLOWS_DIR/${n}_${CAP_LANG}.mp4"
     [ -s "$f" ] && echo "file '$(basename "$f")'" >> "$TOUR_LIST" || true
   done
@@ -553,7 +554,7 @@ if [ "$INCLUDE_REELS" = "true" ] && want flows; then
 
   if [ "$FINGERPRINT" = "true" ]; then
   echo "===== FLOW FINGERPRINT ====="
-  for n in discover save share register full_tour; do
+  for n in discover save share register reels full_tour; do
     flow_montage "$FLOWS_DIR/${n}_${CAP_LANG}.mp4" "flow_${n}"
   done
   echo "===== END FLOW FINGERPRINT ====="

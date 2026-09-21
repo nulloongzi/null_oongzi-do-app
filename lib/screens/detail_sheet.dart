@@ -380,6 +380,10 @@ class _ReelsSectionState extends State<_ReelsSection> {
   );
 }
 
+/// 캡처 시연용: 🍱 를 밖에서 누른다. 서비스만 호출하면 아이콘이 흐린 채로
+/// 남고 스낵바만 떠서, 영상에선 '담았다'가 눌린 것처럼 보이지 않는다.
+final ValueNotifier<int> lunchboxDemoToggle = ValueNotifier<int>(0);
+
 // 🍱 북마크 토글 (웹 #btnBookmark): 타이틀 우측. 담김=진하게/안 담김=흐리게, 탭=추가/해제.
 class _BookmarkButton extends StatefulWidget {
   final String uid;
@@ -399,6 +403,17 @@ class _BookmarkButtonState extends State<_BookmarkButton> {
   void initState() {
     super.initState();
     _load();
+    if (kCaptureMode) lunchboxDemoToggle.addListener(_onDemoToggle);
+  }
+
+  @override
+  void dispose() {
+    lunchboxDemoToggle.removeListener(_onDemoToggle);
+    super.dispose();
+  }
+
+  void _onDemoToggle() {
+    if (mounted) unawaited(_toggle());
   }
 
   Future<void> _load() async {

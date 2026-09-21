@@ -32,6 +32,7 @@ share|hook||내 배구 기록,|이렇게 자랑하자|Show off your volleyball l
 share|cap|profile|나만의 밥이름|프로필|Your own rice-name profile
 share|cap|namecard|도시락·시간표·QR|명함 한 장에|Clubs, schedule and QR on one card
 share|cap|club|마음에 든 팀도|그대로 공유|Share a club page too|마음에 든 팀도 그대로 공유
+share|cap|club_reels|팀 릴스도|커버로 같이|Their reels ride along as covers
 share|cap|share|인스타 스토리·카톡|바로 공유|Share straight to Instagram or KakaoTalk
 share|outro||누룽지도|do.nulloongzi.com|Volleyball club map for Korea
 
@@ -50,3 +51,11 @@ register|cap|reg_done|등록 완료||Registered
 register|cap|reg_verify|인증까지|한 번에|Verification in one tap
 register|cap|reg_verified|심사 후|인증 배지가 붙어요|A verified badge after review
 register|outro||누룽지도|우리 팀 등록하기|Add your club today
+
+# ⑤ 릴스 연동 — 링크 하나로 지도 위에 릴스가 붙는다
+reels|hook||우리 팀 릴스,|지도에서 바로|Your club's reels, right on the map|우리 팀 릴스, 지도에서 바로
+reels|cap|reels_detail|팀 상세를|열어보면|Open a club page
+reels|cap|reels_cover|인스타 릴스가|커버로 뜹니다|Its Instagram reels show up as covers
+reels|cap|reels_form|붙이는 건|링크 하나|Adding them is just one link
+reels|cap|reels_paste|주소만 넣으면|나머지는 알아서|Paste the URL, we handle the rest
+reels|outro||누룽지도|우리 팀 릴스 올리기|Put your reels on the map

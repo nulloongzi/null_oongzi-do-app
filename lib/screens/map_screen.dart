@@ -667,6 +667,9 @@ class _MapScreenState extends State<MapScreen> {
       case 'flow_register':
         await _flowRegister();
         break;
+      case 'flow_reels':
+        await _flowReels();
+        break;
     }
   }
 
@@ -966,14 +969,13 @@ class _MapScreenState extends State<MapScreen> {
     await _focusAndShowClub(c);
     if (!await _hold(3, 'detail')) return; // 상세에서 시작
 
-    // 찜(도시락 담기) — 실제 저장까지 수행해 도시락이 비지 않게.
+    // 다른 팀 3곳은 조용히 채워 둔다 — 반찬칸에 한 칸만 차 있으면 허전하다.
     try {
       final uid = await _repo.ensureUid();
       final lb = LunchboxService();
-      await lb.addBookmark(uid, c.id);
-      var seeded = 1;
+      var seeded = 0;
       for (final x in _clubs) {
-        if (seeded >= 4) break;
+        if (seeded >= 3) break;
         if (x.id == c.id) continue;
         final hasSched =
             (x.schedule ?? '').isNotEmpty ||
@@ -983,10 +985,11 @@ class _MapScreenState extends State<MapScreen> {
         seeded++;
       }
     } catch (_) {}
-    // 서비스만 호출하면 화면에 아무 변화가 없어 '담았다'는 사실이 영상에 안 보인다.
-    // 사용자가 🍱 를 눌렀을 때와 같은 스낵바를 띄운다(detail_sheet 의 _toggle 과 동일).
     if (!mounted) return;
-    _snack(t('lb_added'));
+    // 이 팀은 화면의 🍱 를 실제로 누른다. 서비스만 부르면 아이콘이 흐린 채로
+    // 남고 스낵바만 떠서, 영상에선 '한 번에 도시락으로' 자막이 아무 일도
+    // 일어나지 않는 화면 위에 떴다(실측: 4차 촬영본 9~12초).
+    lunchboxDemoToggle.value++;
     if (!await _hold(2.5, 'saved')) return;
 
     await _backToMap();
@@ -995,8 +998,9 @@ class _MapScreenState extends State<MapScreen> {
     if (!await _hold(4, 'lunchbox')) return; // 반찬칸 그리드
     // 식단표 펼치기 — 시트를 닫았다 열지 않고 실제 버튼과 같은 확장 애니메이션.
     lunchboxDietOpenSignal.value++;
-    if (!await _hold(4, 'diet')) return;
-    await _backToMap();
+    // 여기서 끝낸다. 지도로 돌아가면 식단표 자막이 걸린 채 지도가 3초쯤
+    // 흘러 — 마지막 자막은 항상 영상 끝까지 가므로 죽은 꼬리가 된다.
+    await _hold(4, 'diet');
   }
 
   /// ③ 자랑하기: 밥이름 프로필 → 네임카드(도시락+시간표+QR) → 공유
@@ -1006,7 +1010,8 @@ class _MapScreenState extends State<MapScreen> {
     } catch (_) {}
     if (!mounted) return;
     showProfileSheet(context);
-    if (!await _hold(3.5, 'profile')) return; // 밥이름 카드·스탬프
+    // 프로필 시트는 작은 카드 하나에 여백이라 오래 물릴 그림이 아니다.
+    if (!await _hold(2.5, 'profile')) return; // 밥이름 카드·스탬프
 
     await _backToMap();
     if (!mounted) return;
@@ -1021,13 +1026,18 @@ class _MapScreenState extends State<MapScreen> {
 
     await _backToMap();
     if (!mounted) return;
-    // 클럽 공유 메뉴(인스타 스토리·카톡·링크)
-    final c = _clubs.isNotEmpty ? _clubs.first : null;
+    // 클럽 공유 메뉴(인스타 스토리·카톡·링크). 릴스가 붙은 팀을 우선 고른다 —
+    // 펼쳤을 때 커버 카드가 뜨는 팀이라야 다음 비트에 보여줄 게 있다.
+    final c = _clubWithReels();
     if (c == null) return;
     await _focusAndShowClub(c);
     // 비트 없이 지나가면 명함 자막이 지도로 돌아온 뒤까지 걸린 채 남는다
     // (실측: 6.5~16.0초 한 자막, 그중 7초는 화면이 이미 지도였다).
-    await _hold(2.5, 'club');
+    await _hold(2, 'club');
+    if (!mounted) return;
+    // 릴스 커버는 _ExpandReveal 안이라 펼쳐야 보인다.
+    detailPanelDemoExpand.value++;
+    if (!await _hold(3, 'club_reels')) return;
     if (!mounted) return;
     showShareMenu(
       context,
@@ -1036,6 +1046,50 @@ class _MapScreenState extends State<MapScreen> {
       onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
     );
     await _hold(4, 'share');
+  }
+
+  /// 릴스가 붙은 팀. 없으면 첫 팀(커버 구간은 빈 화면이 되지만 흐름은 산다).
+  Club? _clubWithReels() {
+    if (_clubs.isEmpty) return null;
+    for (final x in _clubs) {
+      if (x.instaReels.isNotEmpty) return x;
+    }
+    return _clubs.first;
+  }
+
+  /// ⑤ 릴스 연동 — 링크 하나 붙이면 지도 위 상세에 커버로 뜬다.
+  /// 먼저 결과(커버 카드)를 보여주고, 그 다음 붙이는 자리를 보여준다.
+  /// 폼은 열기만 하고 제출하지 않는다 — 실데이터를 만들지 않는다.
+  Future<void> _flowReels() async {
+    await _closeOverlays();
+    if (!mounted) return;
+    await _hold(2, 'reels_open');
+
+    final c = _clubWithReels();
+    if (c == null) return;
+    await _focusAndShowClub(c);
+    if (!await _hold(2, 'reels_detail')) return;
+    detailPanelDemoExpand.value++;
+    if (!await _hold(4, 'reels_cover')) return;
+
+    await _backToMap();
+    if (!mounted) return;
+    if (_repo.currentUid == null) return; // 폼은 로그인 필수
+    final cam = await _controller?.getCameraPosition();
+    if (!mounted) return;
+    final center = cam?.target ?? const NLatLng(37.5559, 127.0838);
+    final saved = showClubFormSheet(context, initialCenter: center);
+    if (!await _hold(2, 'reels_form')) return;
+    await _formStepDone('optional');
+    if (!await _hold(1.5, 'reels_optional')) return;
+    await _formStepDone('reel');
+    if (!await _hold(3.5, 'reels_paste')) return;
+
+    // 제출하지 않고 닫는다 — 시연이 실제 팀을 또 만들면 안 된다.
+    if (mounted) Navigator.of(context).maybePop();
+    unawaited(saved);
+    await _hold(1.5, 'reels_close');
+    await _backToMap();
   }
 
   /// ④ 우리 팀 등록: 등록 폼 → 주소 2가지 방법 → 제출 → 인증 신청
