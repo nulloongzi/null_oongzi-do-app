@@ -1032,7 +1032,8 @@ class _MapScreenState extends State<MapScreen> {
     // 안드로이드 시스템 공유 시트를 열어 — 기기마다 다르고 앱 밖이라
     // 영상에 넣을 화면이 아니다(인증 사진 선택기를 뺀 것과 같은 이유).
     await _focusAndShowClub(c);
-    if (!await _hold(1.5, 'club')) return;
+    await _hold(1.5, 'club');
+    if (!mounted) return; // 분석기는 _hold 의 반환값을 mounted 체크로 못 읽는다
     showShareMenu(
       context,
       url: ShareService.clubUrl(c.id),
