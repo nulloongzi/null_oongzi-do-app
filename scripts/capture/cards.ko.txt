@@ -19,7 +19,7 @@
 discover|cover||같이 배구할 팀,|어디서 찾지?|Where do you find a club to play with?
 discover|step|discover@map|전국 배구 동호회를|지도 한 장에|Every club in Korea, on one map
 discover|step|discover@filter:0.26-1.0|지역·대상만|고르면 끝|Just pick a region and who it is for
-discover|step|discover@result:0.18-0.78|우리 동네 팀이|바로 여기|The clubs near you, right here
+discover|step|discover@result:0.26-0.70|우리 동네 팀이|바로 여기|The clubs near you, right here
 discover|step|discover@detail:0.38-0.93|일정·회비·위치까지|한눈에|Schedule, fees and location at a glance
 discover|end||누룽지도|지금 내 팀 찾기|Find your club today
 
@@ -29,7 +29,7 @@ collect|step|collect@detail_more:0.42-1.0|일정·회비·릴스까지|내려보
 collect|step|collect@saved:0.55-1.0|버튼 한 번이면|도시락으로|One tap drops it in your lunchbox
 collect|step|collect@lunchbox:0.24-0.82|찜한 팀은 반찬칸에|차곡차곡|All your saved clubs in one box
 collect|step|collect@diet:0.22-0.86|식단표로 주간 일정|한 번에 비교|Compare weekly schedules side by side
-collect|step|collect@namecard:0.10-0.78|모은 도시락이|그대로 명함이 돼요|Your lunchbox becomes your card
+collect|step|collect@namecard:0.15-0.73|모은 도시락이|그대로 명함이 돼요|Your lunchbox becomes your card
 collect|step|collect@share:0.26-0.74|인스타 스토리·카톡|바로 공유|Share straight to Instagram or KakaoTalk
 collect|end||누룽지도|내 도시락 만들기|Build your own lunchbox
 
