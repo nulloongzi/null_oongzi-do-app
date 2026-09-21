@@ -18,27 +18,27 @@
 # ① 찾기
 discover|cover||같이 배구할 팀,|어디서 찾지?|Where do you find a club to play with?
 discover|step|discover@map|전국 배구 동호회를|지도 한 장에|Every club in Korea, on one map
-discover|step|discover@filter|지역·대상만|고르면 끝|Just pick a region and who it is for
-discover|step|discover@result|우리 동네 팀이|바로 여기|The clubs near you, right here
-discover|step|discover@detail:0.38-1.0|일정·회비·위치까지|한눈에|Schedule, fees and location at a glance
+discover|step|discover@filter:0.26-1.0|지역·대상만|고르면 끝|Just pick a region and who it is for
+discover|step|discover@result:0.18-0.78|우리 동네 팀이|바로 여기|The clubs near you, right here
+discover|step|discover@detail:0.38-0.93|일정·회비·위치까지|한눈에|Schedule, fees and location at a glance
 discover|end||누룽지도|지금 내 팀 찾기|Find your club today
 
 # ② 모으기 (담고 → 명함으로 자랑까지)
 collect|cover||찜해둔 팀들,|명함 한 장으로|Your saved clubs, on one card
-collect|step|collect@detail_more:0.30-1.0|일정·회비·릴스까지|내려보면 다 있어요|Schedule, dues, even their reels
+collect|step|collect@detail_more:0.42-1.0|일정·회비·릴스까지|내려보면 다 있어요|Schedule, dues, even their reels
 collect|step|collect@saved:0.55-1.0|버튼 한 번이면|도시락으로|One tap drops it in your lunchbox
-collect|step|collect@lunchbox:0.30-0.88|찜한 팀은 반찬칸에|차곡차곡|All your saved clubs in one box
-collect|step|collect@diet:0.26-0.90|식단표로 주간 일정|한 번에 비교|Compare weekly schedules side by side
-collect|step|collect@namecard|모은 도시락이|그대로 명함이 돼요|Your lunchbox becomes your card
-collect|step|collect@share:0.22-0.85|인스타 스토리·카톡|바로 공유|Share straight to Instagram or KakaoTalk
+collect|step|collect@lunchbox:0.24-0.82|찜한 팀은 반찬칸에|차곡차곡|All your saved clubs in one box
+collect|step|collect@diet:0.22-0.86|식단표로 주간 일정|한 번에 비교|Compare weekly schedules side by side
+collect|step|collect@namecard:0.10-0.78|모은 도시락이|그대로 명함이 돼요|Your lunchbox becomes your card
+collect|step|collect@share:0.26-0.74|인스타 스토리·카톡|바로 공유|Share straight to Instagram or KakaoTalk
 collect|end||누룽지도|내 도시락 만들기|Build your own lunchbox
 
 # ④ 등록
 register|cover||우리 팀은|아직 지도에 없네?|Your club is not on the map yet?
-register|step|register@reg_name:0.10-0.75|이름과 대상만|고르면 절반 끝|Name and who it is for — half done
+register|step|register@reg_target:0.10-0.75|이름과 대상만|고르면 절반 끝|Name and who it is for — half done
 register|step|register@reg_addr_type:0.45-1.0|주소를 알면|그대로 입력|Know the address? Just type it
-register|step|register@reg_addr_place_hit:0.45-1.0|몰라도 괜찮아요|체육관 이름으로|Don't know it? The gym name works
+register|step|register@reg_addr_place:0.45-1.0|몰라도 괜찮아요|체육관 이름으로|Don't know it? The gym name works
 register|step|register@reg_addr_map|그것도 애매하면|지도에서 찍기|Still unsure? Pick it on the map
 register|step|register@reg_schedule:0.10-0.75|운동 요일과 시간은|체크 두 번|Practice days — two taps
-register|step|register@reg_verified:0.30-1.0|인증 신청까지|한 번에|Verification in the same go
+register|step|register@reg_verified:0.55-1.0|인증 신청까지|한 번에|Verification in the same go
 register|end||누룽지도|우리 팀 등록하기|Add your club today
