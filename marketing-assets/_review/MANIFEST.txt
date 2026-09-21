@@ -1,11 +1,11 @@
-# 캡처 원본 목록 (2026-09-21 14:07)
-기기: SM-F741N / Physical size: 1080x2640
+# 캡처 원본 목록 (2026-09-21 14:48)
+기기:  / 
 
 2400742	/c/Users/user/null_oongzi-do-app/marketing-assets/motion/discover_ko.mp4
 4407411	/c/Users/user/null_oongzi-do-app/marketing-assets/motion/full_tour_ko.mp4
 944015	/c/Users/user/null_oongzi-do-app/marketing-assets/motion/save_ko.mp4
 1064388	/c/Users/user/null_oongzi-do-app/marketing-assets/motion/share_ko.mp4
-4771957	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/collect_body.mp4
+5057493	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/collect_body.mp4
 15553	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/collect_c0.png
 23547	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/collect_c1.png
 17539	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/collect_c2.png
@@ -18,7 +18,7 @@
 108366	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/collect_hook.png
 68720	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/collect_outro.mp4
 108952	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/collect_outro.png
-3289991	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/reels_body.mp4
+3496251	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/reels_body.mp4
 14043	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/reels_c0.png
 19945	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/reels_c1.png
 15538	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/reels_c2.png
@@ -43,26 +43,26 @@
 13852	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/ripple/r_14.png
 13893	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/ripple/r_15.png
 6155	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/.edit/ripple/r_16.png
-4730649	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/final/collect_ko.mp4
+5022246	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/final/collect_ko.mp4
 3754558	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/final/discover_ko.mp4
-3302419	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/final/reels_ko.mp4
+3514577	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/final/reels_ko.mp4
 5017658	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/final/register_ko.mp4
 2826033	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/final/save_ko.mp4
 3752462	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/final/share_ko.mp4
-3090038	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/flows/collect_ko.mp4
+3313555	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/flows/collect_ko.mp4
 2453373	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/flows/discover_ko.mp4
-10743453	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/flows/full_tour_ko.mp4
-2031392	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/flows/reels_ko.mp4
+11333216	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/flows/full_tour_ko.mp4
+2397711	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/flows/reels_ko.mp4
 3169928	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/flows/register_ko.mp4
 1778615	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/flows/save_ko.mp4
 2675709	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/flows/share_ko.mp4
-36789985	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/raw/flow_collect_ko.mp4
+37035675	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/raw/flow_collect_ko.mp4
 14509371	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/raw/flow_discover_ko.mp4
-21089485	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/raw/flow_reels_ko.mp4
+21233446	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/raw/flow_reels_ko.mp4
 51598334	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/raw/flow_register_ko.mp4
 14019499	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/raw/flow_save_ko.mp4
 16903972	/c/Users/user/null_oongzi-do-app/marketing-assets/reels/raw/flow_share_ko.mp4
-1818624	/c/Users/user/null_oongzi-do-app/marketing-assets/screens/play_01_map_ko.png
+1819213	/c/Users/user/null_oongzi-do-app/marketing-assets/screens/play_01_map_ko.png
 1818806	/c/Users/user/null_oongzi-do-app/marketing-assets/stills/01_map.png
 356499	/c/Users/user/null_oongzi-do-app/marketing-assets/stills/02_filter_open.png
 356963	/c/Users/user/null_oongzi-do-app/marketing-assets/stills/03_filter_set.png
