@@ -900,6 +900,14 @@ class _MapScreenState extends State<MapScreen> {
   /// 추정했는데, 앱의 전환이 부드러워(시트 250ms 슬라이드) 점수가 낮게 나오고
   /// 시트가 '열리는' 순간과 '화면이 바뀌는' 순간이 뒤섞여 자막이 엉뚱한 프레임에
   /// 붙었다. 언제 무엇을 보여주는지는 앱이 가장 정확히 안다.
+  /// 흐름의 내용이 여기서 끝난다고 알린다. 녹화 길이는 네트워크 대기 때문에
+  /// 넉넉히 잡을 수밖에 없는데, 남는 꼬리를 '마지막 자막 비트 + 여유'로
+  /// 추정하면 홀드가 짧은 흐름에서 정지 화면이 길게 남는다(실측: 모으기
+  /// 마지막 공유 메뉴가 8초 정지). 편집기가 이 비트에서 자른다.
+  void _endFlow() {
+    if (kCaptureMode) debugPrint('CAPTURE_BEAT flow_end');
+  }
+
   Future<bool> _hold(double sec, [String? beat]) async {
     if (beat != null && kCaptureMode) debugPrint('CAPTURE_BEAT $beat');
     await Future<void>.delayed(Duration(milliseconds: (sec * 1000).round()));
@@ -949,6 +957,7 @@ class _MapScreenState extends State<MapScreen> {
     if (c == null) return;
     await _focusAndShowClub(c);
     if (!await _hold(4, 'detail')) return; // 상세: 일정·회비·주소·버튼
+    _endFlow(); // 아래 원복은 시연이 아니라 뒷정리다 — 편집기가 여기서 자른다
 
     // 필터 원복(다음 캡처 오염 방지)
     await _backToMap();
@@ -976,7 +985,13 @@ class _MapScreenState extends State<MapScreen> {
     // 스크롤 다운(= 패널 펼침). 시간표·릴스 커버가 여기서 한 번 스친다.
     // 주인공은 아니라 자막을 따로 붙이지 않는다 — 릴스는 ⑤가 맡는다.
     detailPanelDemoExpand.value++;
-    if (!await _hold(3, 'detail_more')) return;
+    if (!await _hold(3.5, 'detail_more')) return;
+
+    // 다시 접는다. 펼친 상태에선 제목줄(🍱 포함)이 화면 맨 위라 자막 띠에
+    // 가려 아이콘이 바뀌는 게 안 보인다 — 담기 자막이 뜨는데 화면에는
+    // 아무 일도 안 일어났다(실측: 7차 촬영본 10~13초).
+    detailPanelDemoPeek.value++;
+    if (!await _hold(1.5, 'detail_back')) return;
 
     // 다른 팀 3곳은 조용히 채워 둔다 — 반찬칸에 한 칸만 차 있으면 허전하다.
     try {
@@ -1041,6 +1056,7 @@ class _MapScreenState extends State<MapScreen> {
       onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
     );
     await _hold(4, 'share');
+    _endFlow();
   }
 
   /// 릴스가 붙은 팀. 없으면 첫 팀(커버 구간은 빈 화면이 되지만 흐름은 산다).
@@ -1085,6 +1101,7 @@ class _MapScreenState extends State<MapScreen> {
     unawaited(saved);
     await _hold(1.5, 'reels_close');
     await _backToMap();
+    _endFlow();
   }
 
   /// ④ 우리 팀 등록: 등록 폼 → 주소 2가지 방법 → 제출 → 인증 신청
@@ -1166,6 +1183,7 @@ class _MapScreenState extends State<MapScreen> {
     if (!mounted) return;
     await _hold(3.5, 'reg_verified');
     await _backToMap();
+    _endFlow();
   }
 
   /// 등록 폼 시연이 만드는 팀 이름 — 인증 단계에서 다시 찾을 때 쓴다.

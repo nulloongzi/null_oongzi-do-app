@@ -279,15 +279,20 @@ for flow in $FLOWS; do
   fi
   # ── 꼬리 잘라내기 ──────────────────────────────────────────
   # 녹화 길이는 네트워크 대기(지오코딩·업로드) 때문에 넉넉히 잡을 수밖에 없다.
-  # 남는 만큼은 정지된 지도가 이어지는 죽은 화면이라, 마지막 비트 + 여유만 남긴다.
-  # 여유는 마지막 _hold() 보다 길게 잡아야 끝을 자르지 않는다(현재 최대 6s:
-  # register 의 reg_verified — 업로드 응답을 기다린다).
+  # 남는 만큼은 정지된 화면이 이어지는 죽은 꼬리다.
   if [ -s "$BEATS" ] && [ "$SRC_OF_TIMING" = "비트" ]; then
-    LAST="$(awk '{ if ($2+0 > m) m = $2+0 } END { printf "%.2f", m }' "$BEATS")"
-    CAPPED="$(awk -v l="$LAST" -v p="${TAIL_PAD:-7.0}" -v d="$DUR" \
+    # 앱이 flow_end 를 찍어 주면 내용이 끝나는 시각을 정확히 안다. 없으면
+    # 마지막 자막 비트 + 넉넉한 여유로 추정한다(구버전 앱으로 찍은 녹화본).
+    LAST="$(beat_at "$BEATS" flow_end)"
+    PAD="${TAIL_PAD_END:-1.0}"
+    if [ -z "$LAST" ]; then
+      LAST="$(awk '{ if ($2+0 > m) m = $2+0 } END { printf "%.2f", m }' "$BEATS")"
+      PAD="${TAIL_PAD:-7.0}"
+    fi
+    CAPPED="$(awk -v l="$LAST" -v p="$PAD" -v d="$DUR" \
       'BEGIN { if (l <= 0) exit; c = int(l + p + 0.999); print (c < d ? c : d) }')"
     if [ -n "$CAPPED" ] && [ "$CAPPED" -gt 0 ] && [ "$CAPPED" -lt "$DUR" ]; then
-      log "  꼬리 ${DUR}s → ${CAPPED}s (마지막 비트 ${LAST}s)"
+      log "  꼬리 ${DUR}s → ${CAPPED}s (내용 끝 ${LAST}s)"
       DUR="$CAPPED"
     fi
   fi

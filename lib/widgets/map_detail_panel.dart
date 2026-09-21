@@ -39,6 +39,11 @@ final ValueNotifier<double> detailPanelTop = ValueNotifier<double>(-1);
 /// 아예 나타나지 않는다 — 자막은 인증을 말하는데 아무 일도 안 일어나 보였다.
 final ValueNotifier<int> detailPanelDemoExpand = ValueNotifier<int>(0);
 
+/// 캡처 시연용: 다시 접는다(expand → peek). 펼친 상태에선 제목줄(🍱 포함)이
+/// 화면 맨 위, 자막 띠(위 14~27%) 뒤로 들어간다 — 담기를 눌러도 아이콘이
+/// 바뀌는 게 영상에 안 보였다(실측: 7차 촬영본 10~13초).
+final ValueNotifier<int> detailPanelDemoPeek = ValueNotifier<int>(0);
+
 class MapDetailPanel extends StatefulWidget {
   final Widget child; // 스크롤될 상세 본문
   final VoidCallback onClose;
@@ -108,20 +113,27 @@ class _MapDetailPanelState extends State<MapDetailPanel> {
   @override
   void initState() {
     super.initState();
-    if (kCaptureMode) detailPanelDemoExpand.addListener(_onDemoExpand);
+    if (kCaptureMode) {
+      detailPanelDemoExpand.addListener(_onDemoExpand);
+      detailPanelDemoPeek.addListener(_onDemoPeek);
+    }
   }
 
-  void _onDemoExpand() {
+  void _onDemoExpand() => _snapTo(_expanded);
+  void _onDemoPeek() => _snapTo(_peek);
+
+  void _snapTo(double h) {
     if (!mounted || !_ready) return;
     setState(() {
       _dragging = false;
-      _apply(_expanded);
+      _apply(h);
     });
   }
 
   @override
   void dispose() {
     detailPanelDemoExpand.removeListener(_onDemoExpand);
+    detailPanelDemoPeek.removeListener(_onDemoPeek);
     _expand.dispose();
     detailPanelTop.value = -1; // 패널이 사라지면 좌표도 무효화
     super.dispose();
