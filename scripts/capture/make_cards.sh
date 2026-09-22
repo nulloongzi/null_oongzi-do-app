@@ -37,8 +37,9 @@ warn() { printf '\033[0;35m! %s\033[0m\n' "$*" >&2; }
 die()  { printf '\033[1;31m✗ %s\033[0m\n' "$*" >&2; exit 1; }
 
 command -v ffmpeg >/dev/null 2>&1 || die "ffmpeg 가 없습니다."
-IM=convert; IDENT=identify
-command -v magick >/dev/null 2>&1 && { IM="magick"; IDENT="magick identify"; }
+IM=convert
+command -v magick >/dev/null 2>&1 && IM="magick"
+imident() { if [ "$IM" = magick ]; then magick identify "$@"; else identify "$@"; fi; }
 command -v "$IM" >/dev/null 2>&1 || die "ImageMagick 이 없습니다."
 [ -f "$FONT" ] || die "폰트가 없습니다: $FONT"
 [ -f "$CARDS_FILE" ] || die "카드 스크립트가 없습니다: $CARDS_FILE"
@@ -123,7 +124,7 @@ step_card() { # step_card <n> <flow@beat> <ko1> <ko2> <en> <spot x,y,r|-> <focus
   "$IM" -background none -fill "#111111" -stroke "#111111" -strokewidth 1 \
     -font "$FONT" -pointsize 96 -interline-spacing 6 label:"$captext" "$out.txt.png"
   local tw th
-  read -r tw th < <("$IDENT" -format '%w %h' "$out.txt.png")
+  read -r tw th < <(imident -format '%w %h' "$out.txt.png")
   local bw=$(( tw + 68 )) bh=$(( th + 40 ))
   "$IM" -size ${bw}x${bh} xc:"$C_HL" "$out.txt.png" -gravity center -composite "$out.cap.png"
   "$IM" "$out.cap.png" -background none -rotate -1.5 "$out.capr.png"
