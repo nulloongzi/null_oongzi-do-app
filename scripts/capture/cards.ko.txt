@@ -1,54 +1,46 @@
-# 인스타 카드뉴스 스크립트 (한글 + 영문 병기)
+# 인스타 카드뉴스 스크립트 — 코치마크/스포트라이트 스타일
 #
-# 형식: <세트>|<종류>|<출처>|<한글 윗줄>|<한글 아랫줄>|<영문>
-#   cover = 표지. 출처 칸은 비운다.
-#   step  = 화면 + 문구. 출처는 <흐름>@<비트>[+<추가대기>][:<위>-<아래>] —
-#           reels/flows/<흐름>_ko.mp4 에서 그 시각의 프레임을 뽑는다.
-#           흐름 녹화본은 자막이 없는 판이라 카드 문구와 겹치지 않는다.
-#           뒤에 구간을 붙이면 화면 세로에서 그 띠만 잘라 크게 키운다
-#           (0=화면 맨 위, 1=맨 아래). 카드뉴스는 폰에서 읽히는 게 전부라,
-#           바텀시트가 주인공인 화면을 폰 통째로 넣으면 글씨가 손톱만 해진다.
-#           지도처럼 전체가 그림인 화면은 구간을 비워 폰째로 둔다.
-#           +추가대기: 네트워크로 받아오는 그림(릴스 커버)은 비트 직후엔
-#           아직 회색이라 더 기다렸다 뽑는다.
-#   end   = 마지막 브랜드 카드. 출처 칸은 비운다.
-#
-# 한글 아랫줄을 비우면 윗줄이 큰 글씨 한 줄로 나온다.
-# 문구는 릴스(reels.ko.txt)와 같은 말을 쓴다 — 같은 계정에서 두 형식이
-# 따로 노는 것처럼 보이면 안 된다.
+# 형식: <세트>|<종류>|<출처>|<한글1>|<한글2>|<영문>|<스팟>|<포커스>
+#   cover / end = 브랜드 크림 카드(표지·마무리). 출처·스팟·포커스 비운다.
+#   step = 실제 화면 풀블리드 + 딤 + 캡션. 출처는 <흐름>@<비트>[+추가대기].
+#     스팟 = "x,y,r" (0~1 화면상대 좌표 + 반지름px). 이 칸이 있으면 그 지점만
+#            밝게 남기고 나머지를 어둡게(누를 버튼 강조). 비우면(-) 전체를
+#            살짝만 딤(지도·결과처럼 화면 전체가 콘텐츠인 카드).
+#     포커스 = 세로 어디를 카드 중앙에 둘지(0=맨 위, 1=맨 아래).
+#   한글2를 비우면 한 줄. 스팟 카드 문구는 명령형으로.
 
-# ① 찾기
-discover|cover||같이 배구할 팀,|어디서 찾지?|Where do you find a club to play with?
-discover|step|discover@map|전국 배구 동호회를|지도 한 장에|Every club in Korea, on one map
-discover|step|discover@filter:0.26-1.0|지역·대상만|고르면 끝|Just pick a region and who it is for
-discover|step|discover@result:0.26-0.70|우리 동네 팀이|바로 여기|The clubs near you, right here
-discover|step|discover@detail:0.38-0.93|일정·회비·위치까지|한눈에|Schedule, fees and location at a glance
-discover|end||누룽지도|지금 내 팀 찾기|Find your club today
+# ① 찾기 — 버튼 콕 찍을 데가 없어 전부 전체 딤(콘텐츠가 주인공)
+discover|cover||같이 배구할 팀,|어디서 찾지?|Where do you find a club to play with?||
+discover|step|discover@map|전국 배구 동호회|지도 한 장에|Every club in Korea, one map|-|0.50
+discover|step|discover@filter|지역·대상만|고르면 끝|Pick a region and type|-|0.50
+discover|step|discover@result|우리 동네 팀이|여기 다 있네|The clubs near you|-|0.45
+discover|step|discover@detail|일정·회비·위치|한눈에|Schedule, fees, location|-|0.60
+discover|end||누룽지도|지금 내 팀 찾기|Find your club today||
 
-# ② 모으기 (담고 → 명함으로 자랑까지)
-collect|cover||찜해둔 팀들,|명함 한 장으로|Your saved clubs, on one card
-collect|step|collect@detail_more:0.42-1.0|일정·회비·릴스까지|내려보면 다 있어요|Schedule, dues, even their reels
-collect|step|collect@saved:0.55-1.0|버튼 한 번이면|도시락으로|One tap drops it in your lunchbox
-collect|step|collect@lunchbox:0.24-0.82|찜한 팀은 반찬칸에|차곡차곡|All your saved clubs in one box
-collect|step|collect@diet:0.22-0.86|식단표로 주간 일정|한 번에 비교|Compare weekly schedules side by side
-collect|step|collect@namecard:0.15-0.73|모은 도시락이|그대로 명함이 돼요|Your lunchbox becomes your card
-collect|step|collect@share:0.26-0.74|인스타 스토리·카톡|바로 공유|Share straight to Instagram or KakaoTalk
-collect|end||누룽지도|내 도시락 만들기|Build your own lunchbox
+# ② 모으기
+collect|cover||찜해둔 팀들,|명함 한 장으로|Your saved clubs, on one card||
+collect|step|collect@detail_more|내려보면|다 나와요|Scroll — it is all here|-|0.62
+collect|step|collect@saved|여기 눌러|도시락에 쏙|Tap to save it|0.906,0.720,240|0.60
+collect|step|collect@lunchbox|찜한 팀은|반찬칸에 차곡|All saved in one box|-|0.50
+collect|step|collect@diet|주간 일정|한 번에 비교|Compare weekly schedules|-|0.50
+collect|step|collect@namecard|모은 도시락이|그대로 명함|Your lunchbox becomes your card|-|0.50
+collect|step|collect@share|인스타·카톡|바로 공유|Share anywhere|-|0.55
+collect|end||누룽지도|내 도시락 만들기|Build your own lunchbox||
 
 # ④ 등록
-register|cover||우리 팀은|아직 지도에 없네?|Your club is not on the map yet?
-register|step|register@reg_target:0.10-0.75|이름과 대상만|고르면 절반 끝|Name and who it is for — half done
-register|step|register@reg_addr_type:0.45-1.0|주소를 알면|그대로 입력|Know the address? Just type it
-register|step|register@reg_addr_place:0.45-1.0|몰라도 괜찮아요|체육관 이름으로|Don't know it? The gym name works
-register|step|register@reg_addr_map|그것도 애매하면|지도에서 찍기|Still unsure? Pick it on the map
-register|step|register@reg_schedule:0.10-0.75|운동 요일과 시간은|체크 두 번|Practice days — two taps
-register|step|register@reg_verified:0.55-1.0|인증 신청까지|한 번에|Verification in the same go
-register|end||누룽지도|우리 팀 등록하기|Add your club today
+register|cover||우리 팀은|아직 지도에 없네?|Your club is not on the map yet?||
+register|step|register@reg_target|이름·대상만|고르면 절반 끝|Name and type — half done|0.50,0.36,320|0.40
+register|step|register@reg_addr_type|주소 알면|그대로 입력|Know it? Just type it|-|0.55
+register|step|register@reg_addr_place|몰라도 OK|체육관 이름으로|Don't know it? The gym name works|-|0.55
+register|step|register@reg_addr_map|그것도 애매하면|지도에서 콕|Pin it on the map|-|0.45
+register|step|register@reg_schedule|운동 요일은|콕콕 두 번|Tap your days|0.50,0.42,330|0.42
+register|step|register@reg_verified|인증 신청까지|한 번에|Verify in one go|-|0.55
+register|end||누룽지도|우리 팀 등록하기|Add your club today||
 
 # ⑤ 릴스 연동
-reels|cover||우리 팀 릴스,|지도에서 바로|Your club's reels, right on the map
-reels|step|reels@reels_cover+2.0:0.725-1.0|인스타 릴스가|커버로 뜹니다|Its Instagram reels show up as covers
-reels|step|reels@reels_form:0.50-1.0|등록·수정 폼의|추가 정보 안에|It lives under the optional details
-reels|step|reels@reels_optional:0.30-0.88|릴스·게시물 링크|칸 하나|One field: the reel or post link
-reels|step|reels@reels_paste:0.30-0.88|주소만 넣으면|나머지는 알아서|Paste the URL, we handle the rest
-reels|end||누룽지도|우리 팀 릴스 올리기|Put your reels on the map
+reels|cover||우리 팀 릴스,|지도에서 바로|Your club's reels, right on the map||
+reels|step|reels@reels_cover+2.0|팀 릴스가|커버로 뜬다|Reels show up as covers|-|0.72
+reels|step|reels@reels_form|여기 눌러|추가 정보 열기|Open the optional details|0.920,0.876,160|0.70
+reels|step|reels@reels_optional|릴스 링크|칸 하나면 끝|One field: the reel link|0.50,0.62,300|0.55
+reels|step|reels@reels_paste|주소만 넣으면|끝|Paste the URL, done|-|0.55
+reels|end||누룽지도|우리 팀 릴스 올리기|Put your reels on the map||
