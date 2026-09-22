@@ -85,60 +85,60 @@ step_card() { # step_card <n> <flow@beat> <ko1> <ko2> <en> <spot x,y,r|-> <focus
   meta="$(grab "$src" "$focus" "$out.full.png")" || { warn "화면 없음, 스킵: $src"; return 1; }
   sh="${meta%%:*}"; oy="${meta##*:}"
 
-  # 딤 두 겹: base(살짝) / dark(많이). 반투명 검정 오버레이 — 버전 안 탄다.
-  "$IM" "$out.full.png" \
-    \( -size ${W}x${H} xc:"rgba(16,11,9,$DIM_BASE)" \) -compose over -composite "$out.base.png"
+  # 딤: 바깥은 어둡게 + 채도 죽여 무채색으로(스펙 2.6 — 밝고 쨍한 건 스팟과
+  # 노랑박스 둘뿐이라야 강조가 튄다). -modulate 로 채도만 낮추고 검정 오버레이로
+  # 어둡게 — 버전 안 타는 조합.
+  "$IM" "$out.full.png" -modulate 100,32,100 \
+    \( -size ${W}x${H} xc:"rgba(12,10,9,$DIM_SPOT)" \) -compose over -composite "$out.dark.png"
   if [ "$spot" != "-" ] && [ -n "$spot" ]; then
     local sx sy sr rest
     sx="$(awk -v x="${spot%%,*}" 'BEGIN{printf "%d", x*1080}')"
     rest="${spot#*,}"
     sy="$(awk -v y="${rest%%,*}" -v sh="$sh" -v oy="$oy" 'BEGIN{printf "%d", y*sh-oy}')"
     sr="${rest##*,}"
-    # dark = 화면 전체를 많이 어둡게.
-    "$IM" "$out.full.png" \
-      \( -size ${W}x${H} xc:"rgba(16,11,9,$DIM_SPOT)" \) -compose over -composite "$out.dark.png"
-    # 스포트라이트 마스크(흰 타원=밝게 남길 곳) → base 를 그 모양으로 오려 dark 위에.
+    # 스팟 마스크: 대상 하나에 맞춘 작은 원, 엣지 블러(칼같이 자르지 않는다).
     "$IM" -size ${W}x${H} xc:black -fill white \
-      -draw "ellipse $sx,$sy $sr,$sr 0,360" -blur 0x55 "$out.mask.png"
-    "$IM" "$out.base.png" "$out.mask.png" -alpha off -compose CopyOpacity -composite "$out.patch.png"
+      -draw "ellipse $sx,$sy $sr,$sr 0,360" -blur 0x45 "$out.mask.png"
+    # 스팟 안은 원본(풀컬러·풀밝기)으로 되살린다.
+    "$IM" "$out.full.png" "$out.mask.png" -alpha off -compose CopyOpacity -composite "$out.patch.png"
     "$IM" "$out.dark.png" "$out.patch.png" -compose over -composite "$out.bg.png"
-    # 대상 강조: 옅은 흰 링.
-    "$IM" "$out.bg.png" -fill none -stroke white -strokewidth 5 \
-      -draw "ellipse $sx,$sy $((sr-6)),$((sr-6)) 0,360" "$out.bg2.png"
+    # 옅은 흰 글로우 한 겹(screen) — 하드 링 대신.
+    "$IM" "$out.bg.png" \
+      \( -size ${W}x${H} xc:black -fill none -stroke white -strokewidth 6 \
+         -draw "ellipse $sx,$sy $((sr-3)),$((sr-3)) 0,360" -blur 0x10 \) \
+      -compose screen -composite "$out.bg2.png"
     mv -f "$out.bg2.png" "$out.bg.png"
-    rm -f "$out.dark.png" "$out.mask.png" "$out.patch.png"
+    rm -f "$out.mask.png" "$out.patch.png"
   else
-    mv -f "$out.base.png" "$out.bg.png"
+    # 버튼 없는 카드: 채도만 살짝 죽이고(무드 통일) 밝기는 거의 유지.
+    "$IM" "$out.full.png" -modulate 100,74,100 \
+      \( -size ${W}x${H} xc:"rgba(12,10,9,$DIM_BASE)" \) -compose over -composite "$out.bg.png"
   fi
-  rm -f "$out.full.png" "$out.base.png" 2>/dev/null || true
+  rm -f "$out.full.png" "$out.dark.png" 2>/dev/null || true
 
-  # 캡션: 노랑 솔리드 박스 + 검은 800(스트로크로 굵기) + 살짝 -1.5° 회전.
-  local BW=920 BH
-  if [ -n "$l2" ]; then
-    BH=310
-    "$IM" -size ${BW}x${BH} xc:"$C_HL" -font "$FONT" -gravity north -fill black \
-      -stroke black -strokewidth 2 -pointsize 92 \
-      -annotate +0+34 "$l1" -annotate +0+164 "$l2" "$out.cap.png"
-  else
-    BH=190
-    "$IM" -size ${BW}x${BH} xc:"$C_HL" -font "$FONT" -gravity north -fill black \
-      -stroke black -strokewidth 2 -pointsize 92 \
-      -annotate +0+44 "$l1" "$out.cap.png"
-  fi
+  # 캡션: 텍스트에 붙는 인라인 노랑 박스(풀폭 띠 금지). 검정 800(스트로크로 굵기),
+  # -1.5° 회전. label: 이 내용에 맞춰 캔버스를 잡아 준다 → 박스가 글자를 감싼다.
+  local captext
+  if [ -n "$l2" ]; then captext="$l1"$'\n'"$l2"; else captext="$l1"; fi
+  "$IM" -background none -fill "#111111" -stroke "#111111" -strokewidth 1 \
+    -font "$FONT" -pointsize 96 -interline-spacing 6 label:"$captext" "$out.txt.png"
+  local tw th
+  read -r tw th < <("$IDENT" -format '%w %h' "$out.txt.png")
+  local bw=$(( tw + 68 )) bh=$(( th + 40 ))
+  "$IM" -size ${bw}x${bh} xc:"$C_HL" "$out.txt.png" -gravity center -composite "$out.cap.png"
   "$IM" "$out.cap.png" -background none -rotate -1.5 "$out.capr.png"
-  "$IM" "$out.bg.png" "$out.capr.png" -gravity north -geometry +0+300 -composite "$out.c1.png"
-  # 영문: 박스 아래 작은 흰 글씨(스크린샷 위라 검정 스트로크로 가독).
-  local eny=$(( 300 + BH + 34 ))
+  "$IM" "$out.bg.png" "$out.capr.png" -gravity north -geometry +0+360 -composite "$out.c1.png"
+  # 영문: 박스 아래 작은 흰 글씨.
+  local eny=$(( 360 + bh + 40 ))
   "$IM" "$out.c1.png" -font "$FONT" -gravity north \
     -fill white -stroke black -strokewidth 3 -pointsize 38 -annotate +0+${eny} "$en" "$out.c2.png"
-  # 큰 순번(좌상단) — 카드뉴스 관습, 이어보기 유도. 밝은 화면에 묻히지 않게
-  # 좌상단 모서리에 옅은 어둠을 먼저 깐다.
+  # 큰 순번(좌상단) — 흰 900 · 90% · 코너에 옅은 어둠.
   "$IM" "$out.c2.png" \
-    \( -size 460x320 radial-gradient:"rgba(0,0,0,0.55)"-none \) \
-    -gravity northwest -geometry -110-110 -compose over -composite "$out.c3.png"
+    \( -size 460x320 radial-gradient:"rgba(0,0,0,0.5)"-none \) \
+    -gravity northwest -geometry -120-120 -compose over -composite "$out.c3.png"
   "$IM" "$out.c3.png" -font "$FONT" -gravity northwest \
-    -fill white -stroke "$C_DARK" -strokewidth 3 -pointsize 150 -annotate +64+64 "$n" "$out"
-  rm -f "$out.bg.png" "$out.cap.png" "$out.capr.png" "$out.c1.png" "$out.c2.png" "$out.c3.png"
+    -fill "rgba(255,255,255,0.92)" -stroke none -pointsize 126 -annotate +64+56 "$n" "$out"
+  rm -f "$out.bg.png" "$out.txt.png" "$out.cap.png" "$out.capr.png" "$out.c1.png" "$out.c2.png" "$out.c3.png"
 }
 
 # ── 표지 / 마무리(브랜드 크림) ───────────────────────────────

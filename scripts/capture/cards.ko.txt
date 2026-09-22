@@ -20,7 +20,7 @@ discover|end||누룽지도|지금 내 팀 찾기|Find your club today||
 # ② 모으기
 collect|cover||찜해둔 팀들,|명함 한 장으로|Your saved clubs, on one card||
 collect|step|collect@detail_more|내려보면|다 나와요|Scroll — it is all here|-|0.62
-collect|step|collect@saved|여기 눌러|도시락에 쏙|Tap to save it|0.906,0.720,240|0.60
+collect|step|collect@saved|여기 눌러|도시락에 쏙|Tap to save it|0.930,0.720,120|0.60
 collect|step|collect@lunchbox|찜한 팀은|반찬칸에 차곡|All saved in one box|-|0.50
 collect|step|collect@diet|주간 일정|한 번에 비교|Compare weekly schedules|-|0.50
 collect|step|collect@namecard|모은 도시락이|그대로 명함|Your lunchbox becomes your card|-|0.50
