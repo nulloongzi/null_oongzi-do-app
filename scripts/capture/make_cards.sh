@@ -29,7 +29,7 @@ C_YELLOW='#FAC710'; C_DARK='#4E342E'; C_BROWN='#8D6E63'; C_BG='#FFF8E1'; C_HL='#
 # 딤은 반투명 검정 오버레이로 준다. -evaluate multiply 는 IM 버전(HDRI 등)에 따라
 # 안 먹는 경우가 있어(실측: 사용자 IM7 에서 무효) 버전 안 타는 compose 로 고정.
 DIM_SPOT="${DIM_SPOT:-0.66}"   # 스포트라이트 밖 딤 세기(0=원본, 1=완전 검정)
-DIM_BASE="${DIM_BASE:-0.14}"   # 스포트라이트 안 / 버튼없는 카드(살짝만)
+DIM_BASE="${DIM_BASE:-0.20}"   # 스포트라이트 안 / 버튼없는 카드(살짝만)
 SETTLE="${SETTLE:-1.0}"        # 전환 애니메이션이 가라앉을 시간
 
 log()  { printf '\033[1;33m▶ %s\033[0m\n' "$*"; }
@@ -131,10 +131,14 @@ step_card() { # step_card <n> <flow@beat> <ko1> <ko2> <en> <spot x,y,r|-> <focus
   local eny=$(( 300 + BH + 34 ))
   "$IM" "$out.c1.png" -font "$FONT" -gravity north \
     -fill white -stroke black -strokewidth 3 -pointsize 38 -annotate +0+${eny} "$en" "$out.c2.png"
-  # 큰 순번(좌상단) — 카드뉴스 관습, 이어보기 유도.
-  "$IM" "$out.c2.png" -font "$FONT" -gravity northwest \
-    -fill white -stroke "$C_DARK" -strokewidth 3 -pointsize 150 -annotate +64+70 "$n" "$out"
-  rm -f "$out.bg.png" "$out.cap.png" "$out.capr.png" "$out.c1.png" "$out.c2.png"
+  # 큰 순번(좌상단) — 카드뉴스 관습, 이어보기 유도. 밝은 화면에 묻히지 않게
+  # 좌상단 모서리에 옅은 어둠을 먼저 깐다.
+  "$IM" "$out.c2.png" \
+    \( -size 460x320 radial-gradient:"rgba(0,0,0,0.55)"-none \) \
+    -gravity northwest -geometry -110-110 -compose over -composite "$out.c3.png"
+  "$IM" "$out.c3.png" -font "$FONT" -gravity northwest \
+    -fill white -stroke "$C_DARK" -strokewidth 3 -pointsize 150 -annotate +64+64 "$n" "$out"
+  rm -f "$out.bg.png" "$out.cap.png" "$out.capr.png" "$out.c1.png" "$out.c2.png" "$out.c3.png"
 }
 
 # ── 표지 / 마무리(브랜드 크림) ───────────────────────────────

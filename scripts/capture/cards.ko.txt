@@ -39,7 +39,7 @@ register|end||누룽지도|우리 팀 등록하기|Add your club today||
 
 # ⑤ 릴스 연동
 reels|cover||우리 팀 릴스,|지도에서 바로|Your club's reels, right on the map||
-reels|step|reels@reels_cover+2.0|팀 릴스가|커버로 뜬다|Reels show up as covers|-|0.72
+reels|step|reels@reels_cover+2.0|팀 릴스가|커버로 뜬다|Reels show up as covers|-|0.84
 reels|step|reels@reels_form|여기 눌러|추가 정보 열기|Open the optional details|0.920,0.876,160|0.70
 reels|step|reels@reels_optional|릴스 링크|칸 하나면 끝|One field: the reel link|0.50,0.62,300|0.55
 reels|step|reels@reels_paste|주소만 넣으면|끝|Paste the URL, done|-|0.55
