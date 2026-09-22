@@ -19,20 +19,17 @@ discover|end||누룽지도|지금 내 팀 찾기|Find your club today||
 
 # ② 모으기
 collect|cover||찜해둔 팀들,|명함 한 장으로|Your saved clubs, on one card||
-collect|step|collect@detail_more|내려보면|다 나와요|Scroll — it is all here|-|0.62
 collect|step|collect@saved|여기 눌러|도시락에 쏙|Tap to save it|0.930,0.720,120|0.60
 collect|step|collect@lunchbox|찜한 팀은|반찬칸에 차곡|All saved in one box|-|0.50
 collect|step|collect@diet|주간 일정|한 번에 비교|Compare weekly schedules|-|0.50
 collect|step|collect@namecard|모은 도시락이|그대로 명함|Your lunchbox becomes your card|-|0.50
-collect|step|collect@share|인스타·카톡|바로 공유|Share anywhere|-|0.55
 collect|end||누룽지도|내 도시락 만들기|Build your own lunchbox||
 
 # ④ 등록
 register|cover||우리 팀은|아직 지도에 없네?|Your club is not on the map yet?||
-register|step|register@reg_target|이름·대상만|고르면 절반 끝|Name and type — half done|0.50,0.36,320|0.40
+register|step|register@reg_target|이름·대상만|고르면 절반 끝|Name and type — half done|0.50,0.42,240|0.40
 register|step|register@reg_addr_type|주소 알면|그대로 입력|Know it? Just type it|-|0.55
 register|step|register@reg_addr_place|몰라도 OK|체육관 이름으로|Don't know it? The gym name works|-|0.55
-register|step|register@reg_addr_map|그것도 애매하면|지도에서 콕|Pin it on the map|-|0.45
 register|step|register@reg_schedule|운동 요일은|콕콕 두 번|Tap your days|0.50,0.42,330|0.42
 register|step|register@reg_verified|인증 신청까지|한 번에|Verify in one go|-|0.55
 register|end||누룽지도|우리 팀 등록하기|Add your club today||
