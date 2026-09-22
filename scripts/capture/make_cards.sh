@@ -26,8 +26,10 @@ LOGO="$ROOT/assets/nulloongzido logo_without bg.png"
 W=1080; H=1920
 # 브랜드 팔레트 — lib/theme.dart 와 동일. 강조 노랑만 더 쨍하게(#FFE600, 레퍼런스).
 C_YELLOW='#FAC710'; C_DARK='#4E342E'; C_BROWN='#8D6E63'; C_BG='#FFF8E1'; C_HL='#FFE600'
-DIM_SPOT="${DIM_SPOT:-0.34}"   # 스포트라이트 밖(=어둡게). 0.34 ≈ 66% 딤
-DIM_BASE="${DIM_BASE:-0.86}"   # 스포트라이트 안 / 버튼없는 카드(=살짝만)
+# 딤은 반투명 검정 오버레이로 준다. -evaluate multiply 는 IM 버전(HDRI 등)에 따라
+# 안 먹는 경우가 있어(실측: 사용자 IM7 에서 무효) 버전 안 타는 compose 로 고정.
+DIM_SPOT="${DIM_SPOT:-0.66}"   # 스포트라이트 밖 딤 세기(0=원본, 1=완전 검정)
+DIM_BASE="${DIM_BASE:-0.14}"   # 스포트라이트 안 / 버튼없는 카드(살짝만)
 SETTLE="${SETTLE:-1.0}"        # 전환 애니메이션이 가라앉을 시간
 
 log()  { printf '\033[1;33m▶ %s\033[0m\n' "$*"; }
@@ -83,28 +85,32 @@ step_card() { # step_card <n> <flow@beat> <ko1> <ko2> <en> <spot x,y,r|-> <focus
   meta="$(grab "$src" "$focus" "$out.full.png")" || { warn "화면 없음, 스킵: $src"; return 1; }
   sh="${meta%%:*}"; oy="${meta##*:}"
 
+  # 딤 두 겹: base(살짝) / dark(많이). 반투명 검정 오버레이 — 버전 안 탄다.
+  "$IM" "$out.full.png" \
+    \( -size ${W}x${H} xc:"rgba(16,11,9,$DIM_BASE)" \) -compose over -composite "$out.base.png"
   if [ "$spot" != "-" ] && [ -n "$spot" ]; then
-    # 스포트라이트: 밖은 어둡게(DIM_SPOT), 안은 밝게(DIM_BASE). 흰 타원 마스크로 섞는다.
-    local sx sy sr
+    local sx sy sr rest
     sx="$(awk -v x="${spot%%,*}" 'BEGIN{printf "%d", x*1080}')"
-    local rest="${spot#*,}"
+    rest="${spot#*,}"
     sy="$(awk -v y="${rest%%,*}" -v sh="$sh" -v oy="$oy" 'BEGIN{printf "%d", y*sh-oy}')"
     sr="${rest##*,}"
-    "$IM" "$out.full.png" -evaluate multiply "$DIM_SPOT" "$out.dark.png"
-    "$IM" "$out.full.png" -evaluate multiply "$DIM_BASE" "$out.base.png"
+    # dark = 화면 전체를 많이 어둡게.
+    "$IM" "$out.full.png" \
+      \( -size ${W}x${H} xc:"rgba(16,11,9,$DIM_SPOT)" \) -compose over -composite "$out.dark.png"
+    # 스포트라이트 마스크(흰 타원=밝게 남길 곳) → base 를 그 모양으로 오려 dark 위에.
     "$IM" -size ${W}x${H} xc:black -fill white \
       -draw "ellipse $sx,$sy $sr,$sr 0,360" -blur 0x55 "$out.mask.png"
-    "$IM" "$out.dark.png" "$out.base.png" "$out.mask.png" -composite "$out.bg.png"
-    # 대상 강조: 옅은 흰 링(1.05배 느낌).
+    "$IM" "$out.base.png" "$out.mask.png" -alpha off -compose CopyOpacity -composite "$out.patch.png"
+    "$IM" "$out.dark.png" "$out.patch.png" -compose over -composite "$out.bg.png"
+    # 대상 강조: 옅은 흰 링.
     "$IM" "$out.bg.png" -fill none -stroke white -strokewidth 5 \
       -draw "ellipse $sx,$sy $((sr-6)),$((sr-6)) 0,360" "$out.bg2.png"
     mv -f "$out.bg2.png" "$out.bg.png"
-    rm -f "$out.dark.png" "$out.base.png" "$out.mask.png"
+    rm -f "$out.dark.png" "$out.mask.png" "$out.patch.png"
   else
-    # 버튼 없는 카드: 살짝만 딤(콘텐츠가 주인공).
-    "$IM" "$out.full.png" -evaluate multiply "$DIM_BASE" "$out.bg.png"
+    mv -f "$out.base.png" "$out.bg.png"
   fi
-  rm -f "$out.full.png"
+  rm -f "$out.full.png" "$out.base.png" 2>/dev/null || true
 
   # 캡션: 노랑 솔리드 박스 + 검은 800(스트로크로 굵기) + 살짝 -1.5° 회전.
   local BW=920 BH
