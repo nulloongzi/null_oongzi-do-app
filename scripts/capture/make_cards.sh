@@ -25,6 +25,8 @@ FONT="$ROOT/assets/fonts/PretendardVariable.ttf"
 # 한글 획을 뭉개서 밤티가 난다. 없으면 가변폰트로 폴백.
 FONT_BOLD="$ROOT/assets/fonts/Pretendard-ExtraBold.ttf"
 [ -f "$FONT_BOLD" ] || FONT_BOLD="$FONT"
+FONT_BLACK="$ROOT/assets/fonts/Pretendard-Black.ttf"
+[ -f "$FONT_BLACK" ] || FONT_BLACK="$FONT_BOLD"
 LOGO="$ROOT/assets/nulloongzido logo_without bg.png"
 
 W=1080; H=1920
@@ -32,7 +34,7 @@ W=1080; H=1920
 C_YELLOW='#FAC710'; C_DARK='#4E342E'; C_BROWN='#8D6E63'; C_BG='#FFF8E1'; C_HL='#FFE600'
 # 딤은 반투명 검정 오버레이로 준다. -evaluate multiply 는 IM 버전(HDRI 등)에 따라
 # 안 먹는 경우가 있어(실측: 사용자 IM7 에서 무효) 버전 안 타는 compose 로 고정.
-DIM_SPOT="${DIM_SPOT:-0.66}"   # 스포트라이트 밖 딤 세기(0=원본, 1=완전 검정)
+DIM_SPOT="${DIM_SPOT:-0.70}"   # 스포트라이트 밖 딤 세기(밝은 지도 UI 기준 70%)
 DIM_BASE="${DIM_BASE:-0.20}"   # 스포트라이트 안 / 버튼없는 카드(살짝만)
 SETTLE="${SETTLE:-1.0}"        # 전환 애니메이션이 가라앉을 시간
 
@@ -121,29 +123,41 @@ step_card() { # step_card <n> <flow@beat> <ko1> <ko2> <en> <spot x,y,r|-> <focus
   fi
   rm -f "$out.full.png" "$out.dark.png" 2>/dev/null || true
 
-  # 캡션: 텍스트에 붙는 인라인 노랑 박스(풀폭 띠 금지). 검정 800(스트로크로 굵기),
-  # -1.5° 회전. label: 이 내용에 맞춰 캔버스를 잡아 준다 → 박스가 글자를 감싼다.
+  # 상단 그라데이션 — 순번/앱 UI 글씨와 안 겹치게(스펙 2.4).
+  "$IM" "$out.bg.png" \( -size ${W}x520 gradient:"rgba(0,0,0,0.5)"-none \) \
+    -gravity north -compose over -composite "$out.g.png"
+
+  # 캡션: Pretendard Black 인라인 노랑 박스(패딩 28/16), -1.5°. 영문은 카드에선 뺀다.
   local captext
   if [ -n "$l2" ]; then captext="$l1"$'\n'"$l2"; else captext="$l1"; fi
-  "$IM" -background none -fill "#111111" -font "$FONT_BOLD" \
-    -kerning -1 -pointsize 96 -interline-spacing 6 label:"$captext" "$out.txt.png"
+  "$IM" -background none -fill "#111111" -font "$FONT_BLACK" \
+    -kerning -2 -pointsize 84 -interline-spacing 10 label:"$captext" "$out.txt.png"
   local tw th
   read -r tw th < <(imident -format '%w %h' "$out.txt.png")
-  local bw=$(( tw + 68 )) bh=$(( th + 40 ))
+  local bw=$(( tw + 56 )) bh=$(( th + 32 ))
   "$IM" -size ${bw}x${bh} xc:"$C_HL" "$out.txt.png" -gravity center -composite "$out.cap.png"
   "$IM" "$out.cap.png" -background none -rotate -1.5 "$out.capr.png"
-  "$IM" "$out.bg.png" "$out.capr.png" -gravity north -geometry +0+360 -composite "$out.c1.png"
-  # 영문: 박스 아래 작은 흰 글씨.
-  local eny=$(( 360 + bh + 40 ))
-  "$IM" "$out.c1.png" -font "$FONT" -gravity north \
-    -fill white -stroke black -strokewidth 3 -pointsize 38 -annotate +0+${eny} "$en" "$out.c2.png"
-  # 큰 순번(좌상단) — 흰 900 · 90% · 코너에 옅은 어둠.
-  "$IM" "$out.c2.png" \
-    \( -size 460x320 radial-gradient:"rgba(0,0,0,0.5)"-none \) \
-    -gravity northwest -geometry -120-120 -compose over -composite "$out.c3.png"
-  "$IM" "$out.c3.png" -font "$FONT_BOLD" -gravity northwest \
-    -fill "rgba(255,255,255,0.92)" -stroke none -pointsize 132 -annotate +64+52 "$n" "$out"
-  rm -f "$out.bg.png" "$out.txt.png" "$out.cap.png" "$out.capr.png" "$out.c1.png" "$out.c2.png" "$out.c3.png"
+  local cbw cbh
+  read -r cbw cbh < <(imident -format '%w %h' "$out.capr.png")
+
+  if [ "$spot" != "-" ] && [ -n "$spot" ]; then
+    # 캡션을 대상 바로 위에 놓고 노랑 삼각 화살표로 가리킨다(스펙 2.4).
+    local tgt_top=$(( sy - sr )) atip bx by maxx
+    atip=$(( tgt_top - 22 ))
+    by=$(( atip - 34 - cbh )); [ "$by" -lt 300 ] && by=300
+    bx=$(( sx - cbw/2 )); [ "$bx" -lt 40 ] && bx=40
+    maxx=$(( W - 40 - cbw )); [ "$bx" -gt "$maxx" ] && bx=$maxx
+    "$IM" "$out.g.png" "$out.capr.png" -geometry +${bx}+${by} -compose over -composite \
+      -fill "$C_HL" -stroke none \
+      -draw "polygon $((sx-22)),$(( by+cbh-6 )) $((sx+22)),$(( by+cbh-6 )) ${sx},${atip}" "$out.cap2.png"
+  else
+    "$IM" "$out.g.png" "$out.capr.png" -gravity north -geometry +0+340 -composite "$out.cap2.png"
+  fi
+
+  # 순번: Pretendard Black 150 · 흰 90%.
+  "$IM" "$out.cap2.png" -font "$FONT_BLACK" -gravity northwest \
+    -fill "rgba(255,255,255,0.9)" -stroke none -pointsize 150 -annotate +60+40 "$n" "$out"
+  rm -f "$out.bg.png" "$out.g.png" "$out.txt.png" "$out.cap.png" "$out.capr.png" "$out.cap2.png"
 }
 
 # ── 표지 / 마무리(브랜드 크림) ───────────────────────────────
