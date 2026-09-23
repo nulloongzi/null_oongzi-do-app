@@ -138,18 +138,24 @@ def beat_at(flow, label):
     return None
 
 
-def phone_crop(top):
+def phone_crop(top, bot=None):
+    scale = ",scale=1080:-2:flags=lanczos"
+    if bot is not None:
+        # 위아래를 둘 다 정하면(상태바·아래 군더더기 둘 다 뺄 때) 그 높이에 맞춰
+        # 양옆을 가운데 기준으로 살짝 걷어내 9:19.5 를 지킨다.
+        return (f"crop=w=trunc(oh/{PHONE_RATIO:.6f}/2)*2:h=trunc(ih*{bot - top:.4f}/2)*2"
+                f":x=(iw-ow)/2:y=trunc(ih*{top})" + scale)
     # 폭은 그대로, 높이는 폭×19.5/9. 위에서 top 비율만큼 버리되 아래로 넘치지 않게.
     h = f"min(ih\\,trunc(iw*{PHONE_RATIO:.6f}/2)*2)"
-    return f"crop=iw:{h}:0:min(trunc(ih*{top})\\,ih-{h}),scale=1080:-2:flags=lanczos"
+    return f"crop=iw:{h}:0:min(trunc(ih*{top})\\,ih-{h})" + scale
 
 
-def grab(src, top, out, frame):
+def grab(src, top, bot, out, frame):
     if src.startswith("still:"):
         p = STILLS / f"{src[6:]}.png"
         if not p.is_file():
             die(f"스틸 없음: {p}")
-        ffmpeg("-i", str(p), "-frames:v", "1", "-vf", phone_crop(top), str(out))
+        ffmpeg("-i", str(p), "-frames:v", "1", "-vf", phone_crop(top, bot), str(out))
         return
     m = re.fullmatch(r"([\w-]+)@([\w.-]+?)(?:\+([\d.]+))?", src)
     if not m:
@@ -165,7 +171,7 @@ def grab(src, top, out, frame):
         if b is None:
             die(f"비트 없음: {flow}/{label} ({FLOWS / (flow + '_beats.txt')})")
         t = b + SETTLE + extra
-    vf = phone_crop(top)
+    vf = phone_crop(top, bot)
     if frame:
         x0, y0, fw, fh = frame
         vf = f"crop={fw}:{fh}:{x0}:{y0}," + vf
@@ -311,8 +317,9 @@ def main():
         for i, s in enumerate(slides):
             if s[0] == "step":
                 src, top = s[6], float(s[7] or 0)
+                bot = float(s[8]) if len(s) > 8 and s[8] else None
                 log(f"{i + 1:02d} 화면 ← {src}")
-                grab(src, top, work / "img" / f"{i:02d}.png", frame)
+                grab(src, top, bot, work / "img" / f"{i:02d}.png", frame)
 
         html_path = work / "strip.html"
         html_path.write_text(build_html(slides), encoding="utf-8")
