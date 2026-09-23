@@ -5,6 +5,7 @@
 # 무겁다. 화질 판단에 필요한 최소치만 남긴 프록시를 올려 원격에서 눈으로 확인한다.
 #   · 스틸 → 폭 540 JPEG (구도·타일·시트 위치 판별용)
 #   · 영상 → 360x640 h264 crf32 (전환·렉·잘림 판별용)
+#   · 카드뉴스 → 폭 540 JPEG (글씨가 읽히는 크기인지·구간이 어디서 잘렸는지)
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -25,6 +26,19 @@ for f in "$SRC"/stills/*.png "$SRC"/screens/*.png; do
   n=$((n+1))
 done
 echo "▶ 스틸 프록시 ${n}장"
+
+# 카드뉴스는 글씨가 주인공이라 스틸보다 조금 더 키운다(폭 540 = 원본의 절반).
+# make_cards.py 캐러셀(cards/carousel/)만 올린다 — 예전 코치마크 세트 폴더가
+# PC 에 남아 있어도 섞이지 않게. 파일명이 01.png 라 폴더명을 접두어로 붙인다.
+c=0
+for f in "$SRC"/cards/carousel/*.png; do
+  [ -e "$f" ] || continue
+  set_name="$(basename "$(dirname "$f")")"
+  convert "$f" -resize 540x -quality 82 \
+    "$REV/card_${set_name}_$(basename "${f%.png}").jpg" 2>/dev/null || continue
+  c=$((c+1))
+done
+[ "$c" -gt 0 ] && echo "▶ 카드 프록시 ${c}장"
 
 # flows/ 와 motion/ 은 파일명이 같다(discover_ko.mp4 …). 그대로 복사하면 뒤에
 # 처리되는 쪽이 앞을 덮어써서 절반만 올라간다 → 출처를 접두어로 붙인다.
@@ -61,7 +75,9 @@ echo "▶ 영상 프록시 ${v}편"
 
 BR="$(git rev-parse --abbrev-ref HEAD)"
 git add -f "$REV"
-git commit -q -m "chore(capture): 리뷰용 프록시 업로드 (스틸 ${n}장 / 영상 ${v}편)" || { echo "▶ 변경 없음"; exit 0; }
+MSG="chore(capture): 리뷰용 프록시 업로드 (스틸 ${n}장 / 영상 ${v}편"
+[ "$c" -gt 0 ] && MSG="$MSG / 카드 ${c}장"
+git commit -q -m "$MSG)" || { echo "▶ 변경 없음"; exit 0; }
 # 캡처가 도는 동안 원격에 커밋이 올라가 있는 경우가 잦다(스크립트 수정 등).
 # 프록시는 신규 파일뿐이라 리베이스가 안전하다.
 #

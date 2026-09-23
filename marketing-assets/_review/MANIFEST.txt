@@ -1,6 +1,42 @@
-# 캡처 원본 목록 (2026-09-21 14:48)
+# 캡처 원본 목록 (2026-09-23 14:10)
 기기:  / 
 
+93378	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/carousel/01.png
+735661	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/carousel/02.png
+754285	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/carousel/03.png
+394911	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/carousel/04.png
+340110	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/carousel/05.png
+283810	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/carousel/06.png
+294827	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/carousel/07.png
+260488	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/carousel/08.png
+380116	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/carousel/09.png
+82028	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/carousel/10.png
+3537202	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/carousel_strip.png
+84069	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/01.png
+724158	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/02.png
+503573	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/03.png
+393441	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/04.png
+354453	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/05.png
+108952	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/06.png
+87143	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/01.png
+2088641	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/02.png
+547804	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/03.png
+2130062	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/04.png
+783368	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/05.png
+108267	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/06.png
+79826	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/reels/01.png
+656549	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/reels/02.png
+357689	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/reels/03.png
+445989	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/reels/04.png
+358199	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/reels/05.png
+111226	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/reels/06.png
+85324	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/register/01.png
+492074	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/register/02.png
+447061	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/register/03.png
+456246	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/register/04.png
+441943	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/register/05.png
+338964	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/register/06.png
+109587	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/register/07.png
 2400742	/c/Users/user/null_oongzi-do-app/marketing-assets/motion/discover_ko.mp4
 4407411	/c/Users/user/null_oongzi-do-app/marketing-assets/motion/full_tour_ko.mp4
 944015	/c/Users/user/null_oongzi-do-app/marketing-assets/motion/save_ko.mp4
