@@ -1,6 +1,17 @@
-# 캡처 원본 목록 (2026-09-23 09:50)
+# 캡처 원본 목록 (2026-09-23 13:57)
 기기:  / 
 
+93378	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/carousel/01.png
+735661	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/carousel/02.png
+754285	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/carousel/03.png
+374609	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/carousel/04.png
+340110	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/carousel/05.png
+283810	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/carousel/06.png
+294827	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/carousel/07.png
+260488	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/carousel/08.png
+380116	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/carousel/09.png
+82028	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/carousel/10.png
+3505187	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/carousel_strip.png
 84069	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/01.png
 724158	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/02.png
 503573	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/collect/03.png
