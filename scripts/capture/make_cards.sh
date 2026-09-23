@@ -21,6 +21,10 @@ SRC_DIR="$ART/reels/flows"
 OUT_ROOT="$ART/cards"
 CARDS_FILE="${CARDS_SCRIPT:-$HERE/cards.$LANG_TAG.txt}"
 FONT="$ROOT/assets/fonts/PretendardVariable.ttf"
+# 캡션·순번은 진짜 ExtraBold(가변폰트에서 인스턴스화). stroke 가짜볼드는
+# 한글 획을 뭉개서 밤티가 난다. 없으면 가변폰트로 폴백.
+FONT_BOLD="$ROOT/assets/fonts/Pretendard-ExtraBold.ttf"
+[ -f "$FONT_BOLD" ] || FONT_BOLD="$FONT"
 LOGO="$ROOT/assets/nulloongzido logo_without bg.png"
 
 W=1080; H=1920
@@ -121,8 +125,8 @@ step_card() { # step_card <n> <flow@beat> <ko1> <ko2> <en> <spot x,y,r|-> <focus
   # -1.5° 회전. label: 이 내용에 맞춰 캔버스를 잡아 준다 → 박스가 글자를 감싼다.
   local captext
   if [ -n "$l2" ]; then captext="$l1"$'\n'"$l2"; else captext="$l1"; fi
-  "$IM" -background none -fill "#111111" -stroke "#111111" -strokewidth 1 \
-    -font "$FONT" -pointsize 96 -interline-spacing 6 label:"$captext" "$out.txt.png"
+  "$IM" -background none -fill "#111111" -font "$FONT_BOLD" \
+    -kerning -1 -pointsize 96 -interline-spacing 6 label:"$captext" "$out.txt.png"
   local tw th
   read -r tw th < <(imident -format '%w %h' "$out.txt.png")
   local bw=$(( tw + 68 )) bh=$(( th + 40 ))
@@ -137,8 +141,8 @@ step_card() { # step_card <n> <flow@beat> <ko1> <ko2> <en> <spot x,y,r|-> <focus
   "$IM" "$out.c2.png" \
     \( -size 460x320 radial-gradient:"rgba(0,0,0,0.5)"-none \) \
     -gravity northwest -geometry -120-120 -compose over -composite "$out.c3.png"
-  "$IM" "$out.c3.png" -font "$FONT" -gravity northwest \
-    -fill "rgba(255,255,255,0.92)" -stroke none -pointsize 126 -annotate +64+56 "$n" "$out"
+  "$IM" "$out.c3.png" -font "$FONT_BOLD" -gravity northwest \
+    -fill "rgba(255,255,255,0.92)" -stroke none -pointsize 132 -annotate +64+52 "$n" "$out"
   rm -f "$out.bg.png" "$out.txt.png" "$out.cap.png" "$out.capr.png" "$out.c1.png" "$out.c2.png" "$out.c3.png"
 }
 
