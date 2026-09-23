@@ -28,9 +28,10 @@ done
 echo "▶ 스틸 프록시 ${n}장"
 
 # 카드뉴스는 글씨가 주인공이라 스틸보다 조금 더 키운다(폭 540 = 원본의 절반).
-# 세트별로 폴더가 갈리고 파일명이 01.png 로 같으니 세트명을 접두어로 붙인다.
+# make_cards.py 캐러셀(cards/carousel/)만 올린다 — 예전 코치마크 세트 폴더가
+# PC 에 남아 있어도 섞이지 않게. 파일명이 01.png 라 폴더명을 접두어로 붙인다.
 c=0
-for f in "$SRC"/cards/*/*.png; do
+for f in "$SRC"/cards/carousel/*.png; do
   [ -e "$f" ] || continue
   set_name="$(basename "$(dirname "$f")")"
   convert "$f" -resize 540x -quality 82 \
