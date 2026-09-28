@@ -559,9 +559,10 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
               label: label,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onTap: () => FriendsHub.instance
-                    .setHidden(id, !hidden)
-                    .catchError((_) {}),
+                onTap: () =>
+                    FriendsHub.instance.setHidden(id, !hidden).catchError((_) {
+                      if (mounted) _snack(t('fr_err_generic'));
+                    }),
                 child: icon,
               ),
             )

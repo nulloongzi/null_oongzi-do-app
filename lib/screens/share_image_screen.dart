@@ -9,10 +9,13 @@ import 'package:share_plus/share_plus.dart';
 import '../models/club.dart';
 import '../models/profile.dart';
 import '../services/data_repository.dart';
+import '../services/friend_share_service.dart';
+import '../services/friends_service.dart';
 import '../services/i18n.dart';
 import '../services/lunchbox_service.dart';
 import '../services/profile_service.dart';
 import '../services/schedule_parse.dart';
+import '../services/analytics.dart';
 import '../services/share_service.dart';
 import '../theme.dart';
 import '../widgets/diet_grid.dart' show DietTeam;
@@ -35,6 +38,7 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
   bool _loading = true;
   bool _sharing = false;
   bool _feedMode = true; // 포장 형태: 피드형(식단표 포함)↔스토리형(웹 sh_pick_shape)
+  bool _withFriends = false; // '밥친구 포함' — 기본 꺼짐. 겸상 친구가 없으면 잠긴다
   ui.Image? _logo; // 미리보기용 브랜드 로고(한 번만 로드 — 토글마다 다시 읽지 않게)
 
   @override
@@ -87,6 +91,43 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
     return null;
   }
 
+  static Color _hexColor(String hex) {
+    try {
+      return Color(
+        int.parse(hex.replaceFirst('#', ''), radix: 16) | 0xFF000000,
+      );
+    } catch (_) {
+      return const Color(0xFFFFF9C4);
+    }
+  }
+
+  /// 카드에 넣을 밥친구: 이번 주 겸상하는 친구만, 겸상 많은 순 최대 4명(웹 myCardFriends).
+  /// '식단표 전부 숨기기'를 켠 친구는 목록에 있어도 넣지 않는다 — 밖으로 나가는 이미지라 더 보수적으로.
+  List<MyCardFriend> _cardFriends() {
+    final hub = FriendsHub.instance;
+    final st = hub.state.value;
+    if (st.uid == null) return const [];
+    final picked = pickCardFriends([
+      for (final l in st.friends)
+        CardFriendEntry(
+          name: st.profileOf(l.other).name,
+          color: st.profileOf(l.other).color,
+          tier: hub.mealOf(l.other).tier,
+          n: hub.mealOf(l.other).n,
+          hidden: hub.friendLunchboxes.value[l.other]?.status == 'hidden',
+        ),
+    ]);
+    return [
+      for (final f in picked)
+        MyCardFriend(
+          name: f.name,
+          color: _hexColor(f.color),
+          tier: f.tier,
+          n: f.n,
+        ),
+    ];
+  }
+
   /// 화면 상태 → 카드 렌더 데이터. 미리보기와 공유가 같은 값을 쓴다.
   MyCardData _cardData() {
     final p = _profile;
@@ -131,6 +172,7 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
       diet: diet,
       url: ShareService.siteBase,
       feed: _feedMode,
+      friends: _withFriends ? _cardFriends() : const [],
     );
   }
 
@@ -171,19 +213,52 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
                   ),
                 ),
                 // 포장 형태 선택(웹 sh_pick_shape): 피드형=식단표 포함 / 스토리형=카드+도시락
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                // + '밥친구 포함' 스위치(웹 #previewFriends). 겸상 친구가 없으면 흐리게 잠긴다.
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 4,
                   children: [
                     ChoiceChip(
                       label: Text(t('share_mode_feed')),
                       selected: _feedMode,
                       onSelected: (_) => setState(() => _feedMode = true),
                     ),
-                    const SizedBox(width: 8),
                     ChoiceChip(
                       label: Text(t('share_mode_story')),
                       selected: !_feedMode,
                       onSelected: (_) => setState(() => _feedMode = false),
+                    ),
+                    Builder(
+                      builder: (_) {
+                        final can = _cardFriends().isNotEmpty;
+                        final chip = FilterChip(
+                          key: const ValueKey('share_friends_toggle'),
+                          avatar: Icon(
+                            _withFriends && can
+                                ? Icons.toggle_on
+                                : Icons.toggle_off_outlined,
+                            size: 20,
+                          ),
+                          label: Text(t('share_friends_toggle')),
+                          selected: _withFriends && can,
+                          onSelected: can
+                              ? (v) {
+                                  Track.event('mycard_friends', {
+                                    'on': v ? 1 : 0,
+                                  });
+                                  setState(() => _withFriends = v);
+                                }
+                              : null,
+                        );
+                        return can
+                            ? chip
+                            : Tooltip(
+                                message: t('share_friends_none'),
+                                triggerMode: TooltipTriggerMode.tap,
+                                child: chip,
+                              );
+                      },
                     ),
                   ],
                 ),

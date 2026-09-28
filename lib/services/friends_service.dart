@@ -28,6 +28,20 @@ const kInviteLen = 6;
 final kInviteRe = RegExp(r'^[A-HJ-NP-Z2-9]{6}$');
 const kPendingTtl = Duration(days: 7); // 신청은 7일 뒤 조용히 사라진다
 const kMaxFriends = 100;
+const kMaxRequestsPerDay = 30; // 스팸 방지 — 룰로는 셀 수 없어 이 기기에서만 센다
+
+/// 하루 신청 횟수: prefs 에 { d: '2026-9-28', n } 로 둔다. 날이 바뀌면 0 부터 (웹 friendsPure 와 같다).
+String requestDayKey(DateTime now) => '${now.year}-${now.month}-${now.day}';
+int countRequestsToday(String? raw, DateTime now) {
+  if (raw == null || raw.isEmpty) return 0;
+  try {
+    final v = jsonDecode(raw);
+    if (v is Map && v['d'] == requestDayKey(now)) {
+      return (v['n'] as num?)?.toInt() ?? 0;
+    }
+  } catch (_) {}
+  return 0;
+}
 
 String makeInviteCode([Random? rand]) {
   final r = rand ?? Random.secure();
@@ -175,6 +189,8 @@ class FriendsService {
   /// 새 코드 받기: 새 코드를 먼저 잡고, 저장하고, 옛 코드를 지운다
   /// (순서가 바뀌면 코드가 없는 순간이 생긴다). 옛 코드는 즉시 무효.
   Future<String> regenerate(String uid, String? old, {Random? rand}) async {
+    // 화면이 옛 코드를 모르면(로드 실패) 서버의 것을 읽어 지운다 — 옛 코드가 살아남으면 안 된다
+    old ??= (await _private(uid).get()).data()?['invite_code'] as String?;
     final code = await _claimNewCode(uid, rand: rand);
     await _private(uid).set({'invite_code': code}, SetOptions(merge: true));
     if (old != null) {
@@ -293,7 +309,8 @@ class FriendsHub {
   FriendShareService get shareSvc => _shareSvc ??= FriendShareService();
   set shareSvc(FriendShareService v) => _shareSvc = v;
   Map<String, int> _lbSeen = {};
-  static const _lbSeenKey = 'friend_lb_seen';
+  // 기기 저장 키는 계정별 — 한 폰에서 계정을 바꿔도 '본 시각'·'오늘 신청 수'가 섞이지 않게
+  String get _lbSeenKey => 'friend_lb_seen:${state.value.uid ?? ''}';
 
   // 늦게 만든다 — Firebase 초기화 전(테스트 포함)에 허브를 건드려도 죽지 않게.
   FriendsService? _svc;
@@ -303,9 +320,12 @@ class FriendsHub {
   StreamSubscription? _sub;
   final Map<String, FriendProfile> _profiles = {};
   String? myCode;
-  static const _seenKey = 'seen_friend_req';
+  String get _seenKey => 'seen_friend_req:${state.value.uid ?? ''}';
 
+  bool _started = false;
   void start() {
+    if (_started) return; // 두 번 부르면 도시락 저장마다 sync 가 겹친다
+    _started = true;
     lunchboxChanged.addListener(_onLunchboxChanged);
     myMeal.addListener(_syncWarmth);
     friendLunchboxes.addListener(_syncWarmth);
@@ -321,8 +341,10 @@ class FriendsHub {
   void _stop() {
     _sub?.cancel();
     _sub = null;
+    ++_gen; // 아직 도는 로드가 새 사용자 상태를 덮지 않게
     _profiles.clear();
     myCode = null;
+    _codeF = null;
     state.value = FriendState.empty;
     hasUnseen.value = false;
     share.value = FriendShareSettings.empty;
@@ -369,17 +391,26 @@ class FriendsHub {
     warmth.value = tier;
   }
 
+  // 스냅샷 세대: 프로필·도시락 로드를 기다리는 동안 다음 스냅샷이 오면 옛 결과는 버린다
+  // (안 그러면 늦게 끝난 옛 스냅샷이 취소된 신청을 되살린다).
+  int _gen = 0;
+
   void _listen(String uid) {
     _sub?.cancel();
+    ++_gen;
     state.value = FriendState(uid: uid);
     _loadShare(uid);
     _sub = svc.watch(uid).listen((docs) async {
+      final gen = ++_gen;
       final p = partitionFriendships(docs, uid, DateTime.now());
       final others = {
         for (final l in [...p.friends, ...p.incoming, ...p.outgoing]) l.other,
       };
-      for (final o in others) {
-        _profiles[o] ??= await svc.loadProfile(o);
+      final missing = others.where((o) => !_profiles.containsKey(o)).toList();
+      final loaded = await Future.wait(missing.map(svc.loadProfile));
+      if (gen != _gen) return;
+      for (var i = 0; i < missing.length; i++) {
+        _profiles[missing[i]] = loaded[i];
       }
       state.value = FriendState(
         uid: uid,
@@ -390,7 +421,7 @@ class FriendsHub {
         profiles: Map.of(_profiles),
       );
       await _syncUnseen();
-      await _loadFriendLunchboxes(p.friends);
+      await _loadFriendLunchboxes(p.friends, gen);
     }, onError: (_) {});
   }
 
@@ -411,13 +442,16 @@ class FriendsHub {
     await _syncUnseen();
   }
 
-  Future<void> _loadFriendLunchboxes(List<FriendLink> friends) async {
+  Future<void> _loadFriendLunchboxes(List<FriendLink> friends, int gen) async {
     final m = <String, FriendLunchbox>{};
-    for (final f in friends) {
-      try {
-        m[f.other] = await shareSvc.loadFriend(f.other);
-      } catch (_) {}
-    }
+    await Future.wait(
+      friends.map((f) async {
+        try {
+          m[f.other] = await shareSvc.loadFriend(f.other);
+        } catch (_) {}
+      }),
+    );
+    if (gen != _gen) return;
     friendLunchboxes.value = m;
     await _syncUnseen();
   }
@@ -467,8 +501,14 @@ class FriendsHub {
   ) async {
     final uid = state.value.uid;
     if (uid == null) return;
-    share.value = next;
-    await shareSvc.saveSettings(uid, fields);
+    final prev = share.value;
+    share.value = next; // 낙관적으로 먼저 보여주고, 저장이 실패하면 되돌린다
+    try {
+      await shareSvc.saveSettings(uid, fields);
+    } catch (_) {
+      share.value = prev;
+      rethrow;
+    }
     await shareSvc.sync(uid);
     await refreshMyMeal();
     await _syncUnseen();
@@ -535,10 +575,41 @@ class FriendsHub {
     await _syncUnseen();
   }
 
-  Future<String> ensureMyCode() async {
+  Future<String>? _codeF;
+
+  /// 내 초대코드. 진행 중인 발급이 있으면 그걸 기다린다 — 겹쳐 부르면 코드가 두 개 발급되고
+  /// 하나는 프로필에 없는데도 룰이 받아 주는 '유령 코드'가 된다.
+  Future<String> ensureMyCode() {
     final uid = state.value.uid;
-    if (uid == null) throw StateError('login');
-    return myCode ??= await svc.ensureMyCode(uid);
+    if (uid == null) return Future.error(StateError('login'));
+    final have = myCode;
+    if (have != null) return Future.value(have);
+    return _codeF ??= svc
+        .ensureMyCode(uid)
+        .then((c) => myCode = c)
+        .whenComplete(() => _codeF = null);
+  }
+
+  String get _reqDayKey => 'friend_req_day:${state.value.uid ?? ''}';
+  Future<int> requestsToday() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return countRequestsToday(prefs.getString(_reqDayKey), DateTime.now());
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  Future<void> noteRequestSent() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final now = DateTime.now();
+      final n = countRequestsToday(prefs.getString(_reqDayKey), now) + 1;
+      await prefs.setString(
+        _reqDayKey,
+        jsonEncode({'d': requestDayKey(now), 'n': n}),
+      );
+    } catch (_) {}
   }
 
   Future<String> regenerate() async {

@@ -1,6 +1,7 @@
 // friends_page.dart — 🍚 팝업 둘째 장: 밥친구 목록 · 추가(초대코드) · 상세. 웹 js/friends.js 포팅.
 // 식단표 겹쳐 보기·겸상은 2·3단계. 이 장은 관계만 다룬다.
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -55,16 +56,25 @@ class _FriendsPageState extends State<FriendsPage> {
       _code.text = c;
       WidgetsBinding.instance.addPostFrameCallback((_) => _doLookup());
     }
+    if (_view == _View.add) _ensureCode();
+    // 로그인이 늦게 끝나면(딥링크로 열린 경우) 그때 받는다
+    hub.state.addListener(_onStateForCode);
+  }
+
+  void _onStateForCode() {
+    if (_view == _View.add) _ensureCode();
   }
 
   @override
   void dispose() {
+    hub.state.removeListener(_onStateForCode);
     _code.dispose();
     _msgTimer?.cancel();
     super.dispose();
   }
 
   void _toast(String m) {
+    if (!mounted) return; // 네트워크 중에 팝업을 닫았을 수 있다
     setState(() => _msg = m);
     _msgTimer?.cancel();
     _msgTimer = Timer(const Duration(milliseconds: 2400), () {
@@ -79,6 +89,7 @@ class _FriendsPageState extends State<FriendsPage> {
     if (v == _View.add) {
       _lookup = null;
       _showQr = false;
+      _ensureCode();
     }
   });
 
@@ -104,8 +115,13 @@ class _FriendsPageState extends State<FriendsPage> {
       _toast(t('fr_err_full'));
       return;
     }
+    if (await hub.requestsToday() >= kMaxRequestsPerDay) {
+      _toast(t('fr_err_daily'));
+      return;
+    }
     try {
       final out = await hub.svc.sendRequest(me, r.code!, r.uid!);
+      if (out == 'sent') await hub.noteRequestSent();
       if (!mounted) return;
       setState(
         () => _lookup = InviteLookup(
@@ -115,10 +131,35 @@ class _FriendsPageState extends State<FriendsPage> {
           profile: r.profile,
         ),
       );
-      _toast(t(out == 'accepted' ? 'fr_accepted_short' : 'fr_sent_toast'));
+      _toast(
+        t(
+          out == 'accepted'
+              ? 'fr_accepted_short'
+              : out == 'friend'
+              ? 'fr_lk_friend'
+              : 'fr_sent_toast',
+        ),
+      );
     } catch (_) {
       _toast(t('fr_err_generic'));
     }
+  }
+
+  /// 거절·취소·끊기: 실패하면 안내 (버리는 Future 가 없게).
+  Future<void> _remove(String id, String why) async {
+    try {
+      await hub.svc.remove(id, why);
+    } catch (_) {
+      _toast(t('fr_err_generic'));
+    }
+  }
+
+  /// 내 초대코드는 추가 화면을 열 때 한 번만 받는다 — build 에서 부르면 재빌드마다 겹쳐 두 번 발급된다.
+  void _ensureCode() {
+    if (hub.myCode != null || hub.state.value.uid == null) return;
+    hub.ensureMyCode().then((_) {
+      if (mounted) setState(() {});
+    }, onError: (_) {});
   }
 
   Future<void> _copy(String text, String msg) async {
@@ -416,13 +457,17 @@ class _FriendsPageState extends State<FriendsPage> {
                 _meta(p.name, t('fr_req_sub')),
                 _btn(
                   t('fr_reject'),
-                  () => hub.svc.remove(l.id, 'reject'),
+                  () => _remove(l.id, 'reject'),
                   small: true,
                 ),
                 const SizedBox(width: 6),
                 _btn(
                   t('fr_accept'),
                   () async {
+                    if (st.friends.length >= kMaxFriends) {
+                      _toast(t('fr_err_full')); // 받는 쪽도 100명 상한
+                      return;
+                    }
                     try {
                       await hub.svc.accept(l.id);
                       _toast(tf('fr_accepted_toast', {'name': p.name}));
@@ -445,6 +490,13 @@ class _FriendsPageState extends State<FriendsPage> {
     ].where((v) => v.m.n > 0).toList()..sort((a, b) => b.m.n - a.m.n);
     if (hot.isNotEmpty) {
       out.add(_label(t('fr_meal_title')));
+      // 겸상이 낯선 사람에게 한 줄
+      out.add(
+        Text(
+          t('fr_meal_hint'),
+          style: const TextStyle(fontSize: 12, color: Color(0xFFA99A8C)),
+        ),
+      );
       out.add(
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -560,7 +612,7 @@ class _FriendsPageState extends State<FriendsPage> {
                 _meta(p.name, t('fr_waiting')),
                 _btn(
                   t('fr_cancel'),
-                  () => hub.svc.remove(l.id, 'cancel'),
+                  () => _remove(l.id, 'cancel'),
                   small: true,
                 ),
               ],
@@ -600,11 +652,6 @@ class _FriendsPageState extends State<FriendsPage> {
   // ── 추가 ────────────────────────────────────────────────────────
   List<Widget> _add(FriendState st) {
     final code = hub.myCode;
-    if (code == null && st.uid != null) {
-      hub.ensureMyCode().then((_) {
-        if (mounted) setState(() {});
-      }, onError: (_) {});
-    }
     final r = _lookup;
     return [
       _head(t('fr_add_title'), onBack: () => _go(_View.list)),
@@ -669,6 +716,7 @@ class _FriendsPageState extends State<FriendsPage> {
               t('fr_regen_confirm'),
               () async {
                 setState(() => _confirm = null);
+                if (code == null) return; // 아직 못 받은 코드는 바꿀 수 없다
                 try {
                   await hub.regenerate();
                   _toast(t('fr_regen_done'));
@@ -682,7 +730,7 @@ class _FriendsPageState extends State<FriendsPage> {
           else
             _btn(
               t('fr_regen'),
-              () => setState(() => _confirm = 'regen'),
+              code == null ? null : () => setState(() => _confirm = 'regen'),
               small: true,
             ),
         ],
@@ -964,9 +1012,10 @@ class _ShareConfirmCard extends StatefulWidget {
 
 class _ShareConfirmCardState extends State<_ShareConfirmCard> {
   final hub = FriendsHub.instance;
-  late final Future<List<({String id, FriendTeam team})>> _teams = hub.shareSvc
-      .myTeams(hub.state.value.uid ?? '');
+  late Future<List<({String id, FriendTeam team})>> _teams = _load();
   Set<String>? _off; // 체크를 끈 팀
+  Future<List<({String id, FriendTeam team})>> _load() =>
+      hub.shareSvc.myTeams(hub.state.value.uid ?? '');
   bool _busy = false;
 
   @override
@@ -1005,7 +1054,26 @@ class _ShareConfirmCardState extends State<_ShareConfirmCard> {
                 ),
               ),
               const SizedBox(height: 8),
-              if (!snap.hasData)
+              if (snap.hasError)
+                // 팀 목록을 못 읽으면 영원히 도는 대신 다시 시도
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        t('fr_err_generic'),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: NurungjiColors.brown,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => setState(() => _teams = _load()),
+                      child: Text(t('fr_retry')),
+                    ),
+                  ],
+                )
+              else if (!snap.hasData)
                 const Center(
                   child: Padding(
                     padding: EdgeInsets.all(8),
@@ -1156,6 +1224,7 @@ class _FriendLunchboxViewState extends State<_FriendLunchboxView> {
     return FutureBuilder<(FriendLunchbox, List<FriendTeam>)>(
       future: _f,
       builder: (ctx, snap) {
+        if (snap.hasError) return _note(t('fr_err_generic'));
         if (!snap.hasData) return _note(t('fr_loading'));
         final (lb, mine) = snap.data!;
         if (lb.status != 'ok') {
@@ -1205,7 +1274,60 @@ class _FriendLunchboxViewState extends State<_FriendLunchboxView> {
               theirs: lb.teams,
               meals: hub.mealOf(widget.other).overlaps,
             ),
-            if (hub.mealOf(widget.other).n == 0) _note(t('fr_meal_zero')),
+            if (hub.mealOf(widget.other).n == 0)
+              _note(t('fr_meal_zero'))
+            else
+              // 겸상 목록을 글로 한 번 더 — 표만으로는 요일·시각을 읽기 어렵다
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Column(
+                  children: [
+                    for (final o in sortOverlaps(
+                      hub.mealOf(widget.other).overlaps,
+                    ))
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 9,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFBF3E2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Text(
+                              '${i18nDay(o.day)} ${fmtHourRange(o.start, o.end)}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: NurungjiColors.dark,
+                                fontFeatures: [FontFeature.tabularFigures()],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                lb.teams
+                                        .where((tm) => tm.id == o.id)
+                                        .map((tm) => tm.name)
+                                        .firstOrNull ??
+                                    '',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: NurungjiColors.brown,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
           ],
         );
       },
@@ -1247,8 +1369,9 @@ class FriendTimetable extends StatelessWidget {
       if (v.e.start < minH) minH = v.e.start;
       if (v.e.end > maxH) maxH = v.e.end;
     }
-    final h0 = (minH.floor() - 1).clamp(6, 22);
-    final h1 = (maxH.ceil() + 1).clamp(h0 + 3, 24);
+    // 23시 이후 일정이면 clamp(h0 + 3, 24) 의 아래가 위보다 커져 던진다 → 웹과 같은 min/max
+    final h0 = math.min(22, math.max(6, minH.floor() - 1));
+    final h1 = math.min(24, math.max(h0 + 3, maxH.ceil() + 1));
     final span = (h1 - h0).toDouble();
     final height = (span * 22).clamp(180.0, 400.0);
     const timeW = 24.0;

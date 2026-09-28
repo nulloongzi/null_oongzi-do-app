@@ -131,4 +131,98 @@ void main() {
       expect((await _render(data)).width, 1080);
     }
   });
+
+  group('밥친구 포함 (4단계)', () {
+    List<MyCardFriend> friends(int n) => [
+      for (var i = 0; i < n; i++)
+        MyCardFriend(
+          name: '밥친구$i',
+          color: const Color(0xFFF8BBD0),
+          tier: (i % 3) + 1,
+          n: i + 1,
+        ),
+    ];
+    MyCardData withFriends(bool feed, int n) => MyCardData(
+      nickname: '현미밥-a3k',
+      riceType: '현미밥',
+      bgColor: const Color(0xFFFFF9C4),
+      joined: '가입 2026.7.1',
+      mainTeam: '잠실 배구회',
+      slots: _data(feed: feed, filled: 3).slots,
+      diet: _data(feed: feed, filled: 3).diet,
+      url: 'https://do.nulloongzi.com/',
+      feed: feed,
+      friends: friends(n),
+    );
+
+    test('밥친구 없으면 friends 자리가 없다', () {
+      for (final feed in [true, false]) {
+        expect(MyCardPainter(withFriends(feed, 0)).layout().friends, Rect.zero);
+      }
+    });
+
+    for (final feed in [false, true]) {
+      test('${feed ? '피드' : '스토리'}: 1~6명 — 스텁을 덮지 않고 신원이 머리글 아래', () {
+        for (var n = 1; n <= 6; n++) {
+          final p = MyCardPainter(withFriends(feed, n));
+          final l = p.layout();
+          expect(l.friends, isNot(Rect.zero), reason: '$n명');
+          expect(
+            l.bottom,
+            lessThanOrEqualTo(p.stubTop - ShareCard.gap + 0.01),
+            reason: 'feed=$feed n=$n',
+          );
+          expect(
+            l.identity.top,
+            greaterThanOrEqualTo(l.fmt.top + ShareCard.headerH + 24 - 0.01),
+            reason: 'feed=$feed n=$n: 신원이 머리글에 붙는다',
+          );
+        }
+      });
+    }
+
+    test('스토리: 밥친구 칸은 도시락통 아래(264), 도시락통은 320 이상', () {
+      final l = MyCardPainter(withFriends(false, 4)).layout();
+      final l0 = MyCardPainter(withFriends(false, 0)).layout();
+      expect(l.friends.height, 264);
+      expect(l.friends.top, closeTo(l.bento.bottom + ShareCard.gap, 0.01));
+      expect(l.friends.bottom, closeTo(l.stubTop - ShareCard.gap, 0.01));
+      expect(l.bento.height, greaterThanOrEqualTo(320));
+      expect(l.bento.height, lessThan(l0.bento.height));
+      expect(l.identity.bottom, lessThanOrEqualTo(l.bento.top - 24 + 0.01));
+    });
+
+    test('피드: 얼굴 묶음은 신원 줄 오른쪽 안, 식단표·도시락통은 그대로', () {
+      final l = MyCardPainter(withFriends(true, 3)).layout();
+      final l0 = MyCardPainter(withFriends(true, 0)).layout();
+      expect(l.friends.width, 72 + 48 * 2);
+      expect(l.friends.right, closeTo(l.identity.right, 0.01));
+      expect(l.friends.top, greaterThanOrEqualTo(l.identity.top - 0.01));
+      expect(l.friends.bottom, lessThanOrEqualTo(l.identity.bottom + 0.01));
+      expect(l.diet, l0.diet);
+      expect(l.bento, l0.bento);
+    });
+
+    test('피드: 1명이어도 묶음 폭은 알약 최소 168, 본문 안', () {
+      final l = MyCardPainter(withFriends(true, 1)).layout();
+      expect(l.friends.width, 168);
+      expect(
+        l.friends.right,
+        lessThanOrEqualTo(ShareCard.w - ShareCard.m + 0.01),
+      );
+    });
+
+    test('5명 이상은 4명까지만 자리를 잡는다', () {
+      expect(
+        MyCardPainter(withFriends(true, 7)).layout().friends.width,
+        72 + 48 * 3,
+      );
+    });
+
+    test('그리기: 누룽지(conic) 포함 두 규격이 죽지 않는다', () async {
+      for (final feed in [true, false]) {
+        expect((await _render(withFriends(feed, 4))).width, 1080);
+      }
+    });
+  });
 }
