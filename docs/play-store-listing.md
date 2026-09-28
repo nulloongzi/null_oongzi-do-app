@@ -171,27 +171,52 @@ English and Korean throughout. Start today! 🏐
 > 게 아니다 — 다음에 보고 "안 맞는다"며 고치지 말 것.
 > **EN 간단한 설명은 여유가 7자뿐이다** — 여기만 손댈 때 상한을 다시 세어볼 것.
 
-### 출시 노트 (What's new · v2.7.0)
+### 출시 노트 (What's new · v2.8.0)
 
 > **번호 이력 (확인한 값만).**
 > 최신 → 과거 순. 모두 콘솔 출시 내역에서 확인한 값이다(2026-09-08).
 >
 > | versionCode | 상태 |
 > |---|---|
-> | **16 (2.7.0)** | **빌드됨, 업로드 전** (2026-09-20). Release AAB run #14 산출물 — 브랜치 `claude/great-newton-jz74x5`(커밋 `55a95c7`), `build_number=16` 입력으로 빌드. 릴스 커버 카드 + 릴스 계측 + 안치기 6·9인제 개편. 업로드·게시하면 이 줄을 갱신할 것. |
+> | **17 (2.8.0)** | **빌드됨, 업로드 전** (2026-09-28). pubspec `2.8.0+17`, 브랜치 `claude/release-2.8.0` 으로 Release AAB 를 다시 돌린 산출물이 정본. (run #16 이 main `9a4e400` 에서 `build_number=17` 입력으로 같은 코드를 먼저 빌드했지만 올리지 않았다 — 올리지 말 것.) 밥친구(초대코드·식단표 공유·합석) + 공유 카드 리디자인 + 공식 닉네임 보호 + 앱 링크를 루트(`/`)로 좁힘(웹 네이버·카카오 로그인이 앱으로 넘어가던 문제). 업로드·게시하면 이 줄을 갱신할 것. |
+> | 16 (2.7.0) | **프로덕션 게시됨** (2026-09-28 사용자 확인). 릴스 커버 카드 + 릴스 계측 + 안치기 6·9인제 개편. 17 로 대체 예정.
 > | 15 (2.7.0) | **건너뜀.** run #13 이 15 를 빌드해 뒀는데(커밋 `d489c92`) Play 에 올린 적이 있는지 확인값이 없다. 업로드됐다면 같은 번호가 거부되므로 16 으로 넘겼다 — 번호는 연속일 필요가 없다. 그 산출물엔 안치기 개편도 없다. |
-> | **14 (2.6.0)** | **프로덕션 게시됨** (2026-09-15 확인). Release AAB run #12(커밋 `ec0bb38`) 산출물. 팀 관리자 권한 + 위치 공개 수준. 지금 사용자가 받는 버전. |
+> | **14 (2.6.0)** | **프로덕션 게시됨** (2026-09-15 확인). Release AAB run #12(커밋 `ec0bb38`) 산출물. 팀 관리자 권한 + 위치 공개 수준. 16 으로 대체됨. |
 > | 13 (2.5.2) | 업로드함. 14 로 대체됨. (게시 여부는 확인하지 못한 채 넘어갔다 — 14 가 나갔으므로 이제 의미 없다.) |
 > | 12 (2.5.1) | 2026-09-07 22:20 게시, 설치 18회(2026-09-08 확인). Release AAB run #10 산출물. |
 > | 11 (2.5.0) | 2026-09-07 11:27 출시 → 같은 날 22:20 에 12 로 대체됨. run #9(커밋 `9064f10`) 빌드분. |
 > | 10 (2.4.0) | **AAB 를 만든 적이 없다** — 스토어에 나간 적 없음(Release AAB 실행 이력으로 확인). |
 > | 9 (2.3.0) | 12 이전의 라이브. 대체됨. |
 >
-> 번호는 재사용할 수 없다. 14 가 게시됐고 15 는 위 사정으로 건너뛰었으므로 다음은 16 이다
-> (pubspec 은 `2.7.0+15` 그대로다 — 빌드할 때 `build_number` 입력으로 올린다. 이 상태를
-> 유지할 거면 다음 사람이 pubspec 만 보고 15 라고 믿지 않도록 이 표를 먼저 볼 것).
+> 번호는 재사용할 수 없다. 16 까지 썼으므로 다음은 17 이다(pubspec 도 `2.8.0+17` 로 맞췄으니
+> 이제 `build_number` 입력 없이 빌드하면 된다).
 >
-> 아래가 16(2.7.0) 의 노트 — **2.6.0 이후 변경분만**. 14 의 노트는 접어 뒀다.
+> 아래가 17(2.8.0) 의 노트 — **2.7.0(16) 이후 변경분만**. 16 의 노트는 접어 뒀다.
+
+```
+🍚 밥친구가 생겼어요
+초대코드로 친구를 맺고 서로의 식단표(운동 일정)를 겹쳐 볼 수 있어요. 같은 팀에서 만나는 친구는 '합석'으로 표시되고, 함께 다니는 팀 수에 따라 한 숟갈 · 한 그릇 · 한솥밥으로 밥그릇이 차올라요. 보여줄 팀은 내가 고릅니다.
+
+🖼️ 공유 카드가 새로워졌어요
+피드(3:4)·스토리(9:16) 규격에 딱 맞게 다시 그렸고, 원하면 합석 친구도 카드에 넣을 수 있어요.
+
+🔗 웹에서 로그인할 때 앱이 끼어들던 문제를 고쳤어요
+```
+
+**EN (en-US)**
+
+```
+🍚 Meal Buddies are here
+Add friends with an invite code and overlay each other's weekly schedules. Friends on the same team show up as "sharing a table", and the bowl fills up with how many teams you share — a spoonful, a bowl, or the whole pot. You choose which teams to show.
+
+🖼️ Fresh share cards
+Redrawn to fit feed (3:4) and story (9:16) exactly — and you can add your table-mates to the card.
+
+🔗 Fixed the app hijacking web sign-in
+```
+
+<details><summary>2.7.0(16) 출시 노트 — 16 이 게시될 때 쓴 문안</summary>
+
 
 ```
 📷 팀 릴스가 더 깔끔해졌어요
@@ -220,6 +245,8 @@ A team's Instagram Reels now show their real cover images. One tap opens Instagr
 🏐 Anchigi draws 9-a-side too
 6-a-side runs 5-1 or 6-2; 9-a-side lines up as 2-4-3, 3-4-2 or 4-3-2 by how many quick hitters you have. Short on people? It still draws and marks the seats it couldn't fill as "needed", so you know who to call. One game at a time, confirm button pinned to the bottom.
 ```
+
+</details>
 
 <details><summary>2.6.0(14) 출시 노트 — 14 가 게시될 때 쓴 문안</summary>
 
