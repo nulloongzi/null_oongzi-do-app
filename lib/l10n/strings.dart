@@ -201,6 +201,11 @@ const Map<String, Map<String, String>> kStrings = {
     'en': 'That name is already taken',
   },
   'nickname_done': {'ko': '닉네임 변경 완료!', 'en': 'Nickname updated!'},
+  'nickname_reserved': {
+    'ko': '누룽지도 공식 계정만 쓸 수 있는 이름이에요. 다른 이름을 골라주세요.',
+    'en':
+        'That name is reserved for official Nulloongzi accounts. Please pick another.',
+  },
 
   // 도시락
   'lunchbox_title': {'ko': '도시락 🍱', 'en': 'Lunchbox 🍱'},

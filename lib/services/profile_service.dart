@@ -6,6 +6,24 @@ import '../models/profile.dart';
 
 typedef _Rice = ({String name, int weight, String color});
 
+/// 예약 닉네임: 서비스 이름('누룽지'·'Nulloongzi'·'null_oongzi' …)은 공식 계정만 쓴다.
+/// 공백·기호·대소문자를 걷어내고 비교한다. 웹 레포 firestore.rules isReservedNickname ·
+/// js/profile.js 와 같은 목록 — 실제로 막는 건 룰이고, 앱은 저장 전에 이유를 알려줄 뿐이다.
+const kReservedNicknameWords = [
+  '누룽지',
+  'nulloongzi',
+  'nuloongzi',
+  'nullongzi',
+  'nurungji',
+  'nurungzi',
+  'nuroongzi',
+];
+
+bool isReservedNickname(String? name) {
+  final n = (name ?? '').toLowerCase().replaceAll(RegExp(r'[^a-z0-9가-힣]'), '');
+  return kReservedNicknameWords.any(n.contains);
+}
+
 class RiceName {
   final String base;
   final String code;
@@ -116,6 +134,20 @@ class ProfileService {
         .limit(1)
         .get();
     return q.docs.isNotEmpty;
+  }
+
+  /// 예약 닉네임을 쓸 수 있는 계정인가 — 운영자(admins) 또는 official_accounts/{uid}.
+  /// 웹 레포 firestore.rules canUseReservedNickname() 과 같은 기준.
+  Future<bool> canUseReservedNickname(String uid) async {
+    try {
+      final r = await Future.wait([
+        _db.collection('admins').doc(uid).get(),
+        _db.collection('official_accounts').doc(uid).get(),
+      ]);
+      return r.any((d) => d.exists);
+    } catch (_) {
+      return false;
+    }
   }
 
   /// 닉네임 변경(full_nickname만). update merge → 화이트리스트 키 유지로 룰 통과.
