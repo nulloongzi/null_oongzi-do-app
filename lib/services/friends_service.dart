@@ -28,6 +28,20 @@ const kInviteLen = 6;
 final kInviteRe = RegExp(r'^[A-HJ-NP-Z2-9]{6}$');
 const kPendingTtl = Duration(days: 7); // 신청은 7일 뒤 조용히 사라진다
 const kMaxFriends = 100;
+const kMaxRequestsPerDay = 30; // 스팸 방지 — 룰로는 셀 수 없어 이 기기에서만 센다
+
+/// 하루 신청 횟수: prefs 에 { d: '2026-9-28', n } 로 둔다. 날이 바뀌면 0 부터 (웹 friendsPure 와 같다).
+String requestDayKey(DateTime now) => '${now.year}-${now.month}-${now.day}';
+int countRequestsToday(String? raw, DateTime now) {
+  if (raw == null || raw.isEmpty) return 0;
+  try {
+    final v = jsonDecode(raw);
+    if (v is Map && v['d'] == requestDayKey(now)) {
+      return (v['n'] as num?)?.toInt() ?? 0;
+    }
+  } catch (_) {}
+  return 0;
+}
 
 String makeInviteCode([Random? rand]) {
   final r = rand ?? Random.secure();
@@ -539,6 +553,28 @@ class FriendsHub {
     final uid = state.value.uid;
     if (uid == null) throw StateError('login');
     return myCode ??= await svc.ensureMyCode(uid);
+  }
+
+  static const _reqDayKey = 'friend_req_day';
+  Future<int> requestsToday() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return countRequestsToday(prefs.getString(_reqDayKey), DateTime.now());
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  Future<void> noteRequestSent() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final now = DateTime.now();
+      final n = countRequestsToday(prefs.getString(_reqDayKey), now) + 1;
+      await prefs.setString(
+        _reqDayKey,
+        jsonEncode({'d': requestDayKey(now), 'n': n}),
+      );
+    } catch (_) {}
   }
 
   Future<String> regenerate() async {

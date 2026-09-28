@@ -104,8 +104,13 @@ class _FriendsPageState extends State<FriendsPage> {
       _toast(t('fr_err_full'));
       return;
     }
+    if (await hub.requestsToday() >= kMaxRequestsPerDay) {
+      _toast(t('fr_err_daily'));
+      return;
+    }
     try {
       final out = await hub.svc.sendRequest(me, r.code!, r.uid!);
+      if (out == 'sent') await hub.noteRequestSent();
       if (!mounted) return;
       setState(
         () => _lookup = InviteLookup(
@@ -445,6 +450,13 @@ class _FriendsPageState extends State<FriendsPage> {
     ].where((v) => v.m.n > 0).toList()..sort((a, b) => b.m.n - a.m.n);
     if (hot.isNotEmpty) {
       out.add(_label(t('fr_meal_title')));
+      // 겸상이 낯선 사람에게 한 줄
+      out.add(
+        Text(
+          t('fr_meal_hint'),
+          style: const TextStyle(fontSize: 12, color: Color(0xFFA99A8C)),
+        ),
+      );
       out.add(
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -1156,6 +1168,7 @@ class _FriendLunchboxViewState extends State<_FriendLunchboxView> {
     return FutureBuilder<(FriendLunchbox, List<FriendTeam>)>(
       future: _f,
       builder: (ctx, snap) {
+        if (snap.hasError) return _note(t('fr_err_generic'));
         if (!snap.hasData) return _note(t('fr_loading'));
         final (lb, mine) = snap.data!;
         if (lb.status != 'ok') {
@@ -1205,7 +1218,60 @@ class _FriendLunchboxViewState extends State<_FriendLunchboxView> {
               theirs: lb.teams,
               meals: hub.mealOf(widget.other).overlaps,
             ),
-            if (hub.mealOf(widget.other).n == 0) _note(t('fr_meal_zero')),
+            if (hub.mealOf(widget.other).n == 0)
+              _note(t('fr_meal_zero'))
+            else
+              // 겸상 목록을 글로 한 번 더 — 표만으로는 요일·시각을 읽기 어렵다
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Column(
+                  children: [
+                    for (final o in sortOverlaps(
+                      hub.mealOf(widget.other).overlaps,
+                    ))
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 9,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFBF3E2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Text(
+                              '${i18nDay(o.day)} ${fmtHourRange(o.start, o.end)}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: NurungjiColors.dark,
+                                fontFeatures: [FontFeature.tabularFigures()],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                lb.teams
+                                        .where((tm) => tm.id == o.id)
+                                        .map((tm) => tm.name)
+                                        .firstOrNull ??
+                                    '',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: NurungjiColors.brown,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
           ],
         );
       },

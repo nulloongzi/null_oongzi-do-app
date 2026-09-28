@@ -28,6 +28,21 @@ class MyCardSlot {
   const MyCardSlot({this.name, this.isCustom = false});
 }
 
+/// 카드에 넣는 밥친구 한 명. 나가는 건 밥이름·밥 색·익힘 단계·겸상 횟수뿐 —
+/// 친구의 팀·요일·시간은 카드에 없다(docs/design-system.md §7-4).
+class MyCardFriend {
+  final String name;
+  final Color color;
+  final int tier; // 0 생쌀 · 1 뜸 · 2 노릇 · 3 누룽지
+  final int n; // 이번 주 겸상 횟수
+  const MyCardFriend({
+    required this.name,
+    required this.color,
+    required this.tier,
+    required this.n,
+  });
+}
+
 class MyCardData {
   final String nickname; // 밥이름 전체 "백미밥-a3z"
   final String riceType; // 밥 종류 "백미밥"
@@ -39,6 +54,7 @@ class MyCardData {
   final List<DietTeam> diet; // 식단표용
   final String url; // QR 목적지
   final bool feed; // true=피드형(3:4, 식단표 포함) / false=스토리형(9:16)
+  final List<MyCardFriend> friends; // '밥친구 포함'을 켰을 때만 (최대 4명)
 
   const MyCardData({
     required this.nickname,
@@ -51,6 +67,7 @@ class MyCardData {
     this.slots = const [],
     this.diet = const [],
     this.feed = false,
+    this.friends = const [],
   });
 }
 
@@ -62,6 +79,7 @@ class MyCardLayout {
   final Rect identity;
   final Rect bento; // 도시락통
   final Rect diet; // 식단표 (스토리형은 Rect.zero)
+  final Rect friends; // 밥친구: 스토리는 도시락통 아래 칸, 피드는 신원 줄 오른쪽 얼굴 묶음 (없으면 Rect.zero)
   final double stubTop; // QR 스텁 윗단(절취선)
   const MyCardLayout({
     required this.fmt,
@@ -70,11 +88,15 @@ class MyCardLayout {
     required this.bento,
     required this.diet,
     required this.stubTop,
+    this.friends = Rect.zero,
   });
 
   /// 본문 블록의 아래끝. 이 값이 stubTop - gap 을 넘으면 QR 스텁을 덮는다.
-  double get bottom =>
-      math.max(bento.bottom, diet == Rect.zero ? 0.0 : diet.bottom);
+  double get bottom => [
+    bento.bottom,
+    if (diet != Rect.zero) diet.bottom,
+    if (friends != Rect.zero) friends.bottom,
+  ].reduce(math.max);
 }
 
 /// 공유용 PNG 바이트로 렌더. 규격은 data.feed 에 따라 3:4 / 9:16.
@@ -90,8 +112,25 @@ Future<Uint8List?> renderMyCardPng(MyCardData data) async {
   return bytes?.buffer.asUint8List();
 }
 
-// 웹 js/my-card.js 의 BENTO / ID_STORY / ID_FEED 와 같은 값.
-const _bentoStoryMin = 440.0, _bentoStoryMax = 760.0;
+// 웹 js/my-card.js 의 BENTO / ID_STORY / ID_FEED / FR 과 같은 값.
+const _bentoStoryMin = 440.0, _bentoStoryMax = 760.0, _bentoStoryMinFr = 320.0;
+// 밥친구(4단계): 스토리 칸 높이 · 얼굴 크기, 피드 얼굴 크기 · 겹침 간격 · 이름과의 간격
+const _frMax = 4;
+const _frStoryH = 264.0, _frStoryAv = 96.0;
+const _frFeedAv = 72.0, _frFeedStep = 48.0, _frFeedGap = 32.0;
+// 익힘 단계 색 — 화면(warm_avatar.dart)·웹 css .fr-warm 과 같은 값
+const _warmRing = [
+  Color(0x00000000),
+  Color(0xFFF1D9A6),
+  Color(0xFFF5B82E),
+  Color(0xFFA0522D),
+];
+const _warmInk = [
+  Color(0xFF8D6E63),
+  Color(0xFF8D6E63),
+  Color(0xFFB7791F),
+  Color(0xFF8B4513),
+];
 const _bentoFeedH = 360.0, _bentoFeedMinH = 300.0, _dietMin = 320.0;
 // 스토리 신원(세로 스택)
 const _sEmblem = 136.0, _sGapE = 28.0, _sName = 72.0, _sNameMin = 44.0;
@@ -175,6 +214,10 @@ class MyCardPainter extends CustomPainter {
     return h;
   }
 
+  List<MyCardFriend> get _friends => data.friends.length > _frMax
+      ? data.friends.sublist(0, _frMax)
+      : data.friends;
+
   // ── 배치 (웹 myCardLayout 과 같은 산술) ───────────────────────
   MyCardLayout layout() {
     final fmt = _fmt;
@@ -182,12 +225,19 @@ class MyCardPainter extends CustomPainter {
     final headBot = fmt.top + ShareCard.headerH;
     final bodyBot = st - ShareCard.gap;
     const x = ShareCard.m, w = ShareCard.bodyW;
+    final nFr = _friends.length;
 
     if (!data.feed) {
       final idH = _identityStoryH();
-      final minTop = headBot + 40 + idH + 48; // 신원 아래 최소 간격 48
-      final bentoH = (bodyBot - minTop).clamp(_bentoStoryMin, _bentoStoryMax);
-      final cardY = bodyBot - bentoH;
+      // 밥친구 칸이 들어오면 신원 위아래 간격을 줄이고(40/48 → 24/24) 도시락통 최소치도 낮춘다.
+      // 도시락통이 탄력 요소라 그만큼 줄어들 뿐, 빈 곳은 생기지 않는다.
+      final minTop = headBot + (nFr > 0 ? 24 : 40) + idH + (nFr > 0 ? 24 : 48);
+      final bentoBot = nFr > 0 ? bodyBot - _frStoryH - ShareCard.gap : bodyBot;
+      final bentoH = (bentoBot - minTop).clamp(
+        nFr > 0 ? _bentoStoryMinFr : _bentoStoryMin,
+        _bentoStoryMax,
+      );
+      final cardY = bentoBot - bentoH;
       return MyCardLayout(
         fmt: fmt,
         fieldH: cardY + ShareCard.overlap,
@@ -200,6 +250,9 @@ class MyCardPainter extends CustomPainter {
         ),
         bento: Rect.fromLTWH(x, cardY, w, bentoH),
         diet: Rect.zero,
+        friends: nFr > 0
+            ? Rect.fromLTWH(x, bentoBot + ShareCard.gap, w, _frStoryH)
+            : Rect.zero,
         stubTop: st,
       );
     }
@@ -209,12 +262,18 @@ class MyCardPainter extends CustomPainter {
     var bH = _bentoFeedH;
     if (bodyBot - (bY + bH + 24) < _dietMin) bH = _bentoFeedMinH;
     final dY = bY + bH + 24;
+    // 피드는 세로가 빠듯해 칸을 따로 두지 않고, 신원 줄 오른쪽에 얼굴 겹침 + 알약. 식단표 크기는 그대로.
+    final cw = nFr > 0 ? _frFeedAv + _frFeedStep * (nFr - 1) : 0.0;
+    const ch = _frFeedAv + 8 + 30;
     return MyCardLayout(
       fmt: fmt,
       fieldH: bY + ShareCard.overlap,
       identity: Rect.fromLTWH(x, idY, w, fid),
       bento: Rect.fromLTWH(x, bY, w, bH),
       diet: Rect.fromLTWH(x, dY, w, bodyBot - dY),
+      friends: nFr > 0
+          ? Rect.fromLTWH(x + w - cw, idY + (fid - ch) / 2, cw, ch)
+          : Rect.zero,
       stubTop: st,
     );
   }
@@ -228,12 +287,19 @@ class MyCardPainter extends CustomPainter {
     _field(canvas, l.fieldH);
     cardHeader(canvas, l.fmt.top, logo);
     if (data.feed) {
-      _identityFeed(canvas, l.identity);
+      _identityFeed(canvas, l.identity, l.friends);
     } else {
       _identityStory(canvas, l.identity);
     }
     _bento(canvas, l.bento);
     if (l.diet != Rect.zero) _timetable(canvas, l.diet);
+    if (l.friends != Rect.zero) {
+      if (data.feed) {
+        _friendCluster(canvas, l.friends);
+      } else {
+        _friendsPanel(canvas, l.friends);
+      }
+    }
     cardStub(canvas, l.fmt, data.url, t('mycard_cta'));
   }
 
@@ -351,9 +417,12 @@ class MyCardPainter extends CustomPainter {
     }
   }
 
-  void _identityFeed(Canvas c, Rect r) {
+  void _identityFeed(Canvas c, Rect r, Rect friends) {
     _emblem(c, Offset(r.left + _fEmblem / 2, r.center.dy), _fEmblem);
-    final tx = r.left + _fEmblem + _fGap, tw = r.right - tx;
+    // 오른쪽에 밥친구 얼굴이 오면 이름 폭을 그만큼 줄인다
+    final tx = r.left + _fEmblem + _fGap;
+    final tw =
+        (friends == Rect.zero ? r.right : friends.left - _frFeedGap) - tx;
     var y = r.top + (r.height - _identityFeedTextH()) / 2;
     final fs = cardFit(data.nickname, tw, _fName, _fNameMin, FontWeight.w800);
     final nst = cardStyle(fs, FontWeight.w800, _ink);
@@ -494,6 +563,148 @@ class MyCardPainter extends CustomPainter {
       );
     }
     c.restore();
+  }
+
+  // ── 밥친구 (4단계) ─────────────────────────────────────────────
+  /// 밥그릇 벡터(friends_page _BowlPainter 와 같은 모양, 24 단위 좌표).
+  static Path _bowlPath() => Path()
+    ..moveTo(12, 4.6)
+    ..cubicTo(10.1, 4.6, 8.8, 5.6, 8.1, 6.8)
+    ..cubicTo(7.1, 6.4, 5.7, 7.1, 5.7, 8.5)
+    ..cubicTo(5.7, 9.4, 6.4, 10, 7.1, 10)
+    ..lineTo(16.9, 10)
+    ..cubicTo(17.6, 10, 18.3, 9.4, 18.3, 8.5)
+    ..cubicTo(18.3, 7.1, 16.9, 6.4, 15.9, 6.8)
+    ..cubicTo(15.2, 5.6, 13.9, 4.6, 12, 4.6)
+    ..close()
+    ..moveTo(4.2, 11.6)
+    ..lineTo(19.8, 11.6)
+    ..cubicTo(19.8, 14.7, 17.3, 17.2, 14, 17.8)
+    ..lineTo(14, 18.7)
+    ..cubicTo(14, 19.1, 13.7, 19.4, 13.3, 19.4)
+    ..lineTo(10.7, 19.4)
+    ..cubicTo(10.3, 19.4, 10, 19.1, 10, 18.7)
+    ..lineTo(10, 17.8)
+    ..cubicTo(6.7, 17.2, 4.2, 14.7, 4.2, 11.6)
+    ..close();
+
+  /// 아바타: 익힘 테두리(누룽지는 갈색·금빛이 도는 테두리) → 흰 틈 → 밥 색 얼굴 + 밥그릇.
+  void _friendAvatar(
+    Canvas c,
+    Offset o,
+    double size,
+    MyCardFriend f,
+    double ringW,
+    double gapW,
+  ) {
+    final r0 = size / 2, tier = f.tier.clamp(0, 3);
+    if (tier > 0) {
+      final rr = r0 + gapW + ringW;
+      final ring = Paint()..color = _warmRing[tier];
+      if (tier == 3) {
+        ring.shader = const SweepGradient(
+          colors: [
+            Color(0xFF8B4513),
+            Color(0xFFF5B82E),
+            Color(0xFFC9772B),
+            Color(0xFF6D3B1A),
+            Color(0xFFF5B82E),
+            Color(0xFF8B4513),
+          ],
+        ).createShader(Rect.fromCircle(center: o, radius: rr));
+      }
+      c.drawCircle(o, rr, ring);
+    }
+    c.drawCircle(o, r0 + gapW, Paint()..color = Colors.white);
+    c.drawCircle(o, r0, Paint()..color = f.color);
+    c.drawCircle(
+      o,
+      r0 - 1.5,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..color = const Color(0x99FFFFFF),
+    );
+    final bs = size * 0.58;
+    c.save();
+    c.translate(o.dx - bs / 2, o.dy - bs / 2);
+    c.scale(bs / 24);
+    c.drawPath(_bowlPath(), Paint()..color = _ink);
+    c.restore();
+  }
+
+  String _mealText(MyCardFriend f) =>
+      '${t('fr_warm_${f.tier}')} · ${tf('mycard_meal_n', {'n': '${f.n}'})}';
+
+  /// 스토리: 도시락통 아래 '이번 주 겸상' 칸. 얼굴 + 밥이름 + 익힘 단계·겸상 횟수.
+  void _friendsPanel(Canvas c, Rect r) {
+    cardPanel(c, r);
+    const ip = 32.0;
+    final ix = r.left + ip, iw = r.width - ip * 2;
+    final list = _friends, n = list.length;
+    _sectionTitle(
+      c,
+      ix,
+      r.top + ip,
+      t('mycard_friends_title'),
+      tf('mycard_friends_n', {'n': '$n'}),
+      iw,
+    );
+    final top = r.top + ip + 32 + 16, cw = iw / n;
+    final nst = cardStyle(24, FontWeight.w700, _ink);
+    for (var i = 0; i < n; i++) {
+      final f = list[i], cx = ix + cw * i + cw / 2;
+      _friendAvatar(c, Offset(cx, top + _frStoryAv / 2), _frStoryAv, f, 5, 4);
+      cardText(
+        c,
+        cardEllip(f.name, nst, cw - 16),
+        nst,
+        cx,
+        top + _frStoryAv + 8 + 15,
+        align: TextAlign.center,
+        middle: true,
+      );
+      final tst = cardStyle(22, FontWeight.w700, _warmInk[f.tier.clamp(0, 3)]);
+      cardText(
+        c,
+        cardEllip(_mealText(f), tst, cw - 16),
+        tst,
+        cx,
+        top + _frStoryAv + 8 + 30 + 4 + 11,
+        align: TextAlign.center,
+        middle: true,
+      );
+    }
+  }
+
+  /// 피드: 신원 줄 오른쪽에 얼굴 겹침(흰 테두리로 구분) + '이번 주 겸상 N' 알약.
+  void _friendCluster(Canvas c, Rect r) {
+    final list = _friends;
+    var best = 0;
+    for (var i = 0; i < list.length; i++) {
+      _friendAvatar(
+        c,
+        Offset(r.left + _frFeedAv / 2 + _frFeedStep * i, r.top + _frFeedAv / 2),
+        _frFeedAv,
+        list[i],
+        3,
+        3,
+      );
+      best = math.max(best, list[i].tier.clamp(0, 3));
+    }
+    final label = tf('mycard_friends_pill', {'n': '${list.length}'});
+    final st = cardStyle(20, FontWeight.w800, _warmInk[best]);
+    final pw = cardMeasure(label, st) + 28, py = r.top + _frFeedAv + 8;
+    cardPill(c, r.center.dx - pw / 2, py, pw, 30);
+    cardText(
+      c,
+      label,
+      st,
+      r.center.dx,
+      py + 16,
+      align: TextAlign.center,
+      middle: true,
+    );
   }
 
   /// 빈 칸 점선 테두리 (웹 setLineDash([10, 8]) 과 같은 간격).

@@ -166,6 +166,47 @@ class FriendMeal {
   int get tier => warmthTier(n);
 }
 
+/// 겸상 목록 정렬: 요일 → 시작 시각 (웹 friendSharePure.sortOverlaps).
+List<MealOverlap> sortOverlaps(List<MealOverlap> list) =>
+    [...list]..sort((a, b) {
+      final d = scheduleDays.indexOf(a.day) - scheduleDays.indexOf(b.day);
+      return d != 0 ? d : a.start.compareTo(b.start);
+    });
+
+/// 시각 표기 "19–22" / "19:30–22" (웹 fmtRange 와 같다).
+String fmtHourRange(double a, double b) => '${_fmtHour(a)}–${_fmtHour(b)}';
+String _fmtHour(double v) {
+  final h = v.floor(), m = ((v - h) * 60).round();
+  return m == 0 ? '$h' : '$h:${m < 10 ? '0' : ''}$m';
+}
+
+/// 포장하기 카드 후보 한 명(선별용). 나가는 건 이름·색·익힘 단계뿐.
+class CardFriendEntry {
+  final String name;
+  final String color;
+  final int tier;
+  final int n;
+  final bool hidden; // '식단표 전부 숨기기'를 켠 친구 — 카드에 넣지 않는다
+  const CardFriendEntry({
+    required this.name,
+    required this.color,
+    required this.tier,
+    required this.n,
+    this.hidden = false,
+  });
+}
+
+/// 카드에 넣을 밥친구: 겸상 있는 친구만, 전부 숨긴 친구는 빼고, 겸상 많은 순(같으면 이름순) 최대 [max].
+/// 웹 friendSharePure.pickCardFriends 와 같은 규칙.
+List<CardFriendEntry> pickCardFriends(
+  List<CardFriendEntry> entries, {
+  int max = 4,
+}) {
+  final out = entries.where((f) => f.n > 0 && !f.hidden).toList()
+    ..sort((a, b) => b.n != a.n ? b.n - a.n : a.name.compareTo(b.name));
+  return out.length > max ? out.sublist(0, max) : out;
+}
+
 class FriendLunchbox {
   final String status; // ok | none(아직 공개 안 함) | hidden(전부 숨김)
   final List<FriendTeam> teams;

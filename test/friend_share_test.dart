@@ -355,4 +355,47 @@ void main() {
     );
     expect(tester.hasRunningAnimations, isFalse);
   });
+
+  group('포장하기 밥친구 · 겸상 목록 (4단계)', () {
+    test('pickCardFriends: 겸상 있는 친구만, 전부 숨긴 친구 제외, 겸상 많은 순 최대 4', () {
+      CardFriendEntry e(String name, int n, {bool hidden = false}) =>
+          CardFriendEntry(
+            name: name,
+            color: '#fff',
+            tier: warmthTier(n),
+            n: n,
+            hidden: hidden,
+          );
+      final out = pickCardFriends([
+        e('가', 1),
+        e('나', 0),
+        e('다', 3),
+        e('라', 2, hidden: true),
+        e('마', 2),
+        e('바', 1),
+        e('사', 1),
+      ]);
+      expect(out.map((f) => f.name), ['다', '마', '가', '바']);
+      expect(pickCardFriends(const []), isEmpty);
+    });
+
+    test('sortOverlaps: 요일 → 시작 시각', () {
+      final out = sortOverlaps(const [
+        MealOverlap('a', '토', 19, 22),
+        MealOverlap('a', '월', 20, 22),
+        MealOverlap('a', '월', 19, 21),
+      ]);
+      expect(out.map((o) => '${o.day}${o.start.toInt()}'), [
+        '월19',
+        '월20',
+        '토19',
+      ]);
+    });
+
+    test('fmtHourRange: 정시는 시만, 아니면 분까지', () {
+      expect(fmtHourRange(19, 22), '19–22');
+      expect(fmtHourRange(19.5, 22), '19:30–22');
+      expect(fmtHourRange(9.25, 10.75), '9:15–10:45');
+    });
+  });
 }

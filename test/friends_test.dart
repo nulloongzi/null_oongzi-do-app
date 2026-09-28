@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nulloongzido/services/deep_link_service.dart';
 import 'package:nulloongzido/services/friend_share_service.dart';
 import 'package:nulloongzido/services/friends_service.dart';
@@ -308,5 +309,71 @@ void main() {
       hub.share.value = FriendShareSettings.empty;
       await tester.pumpWidget(const SizedBox());
     });
+  });
+
+  group('하루 신청 상한', () {
+    test('30건 — 구상안과 같은 숫자', () => expect(kMaxRequestsPerDay, 30));
+    test('같은 날이면 세고, 날이 바뀌면 0 부터', () {
+      final day = DateTime(2026, 9, 28, 23, 50);
+      final raw = '{"d":"${requestDayKey(day)}","n":7}';
+      expect(countRequestsToday(raw, day), 7);
+      expect(countRequestsToday(raw, day.add(const Duration(minutes: 20))), 0);
+      expect(countRequestsToday(null, day), 0);
+      expect(countRequestsToday('{broken', day), 0);
+    });
+  });
+
+  testWidgets('친구 상세: 겹쳐 보기 아래 겸상 목록을 글로', (tester) async {
+    SharedPreferences.setMockInitialValues({}); // '마지막으로 본 시각' 저장이 플러그인 없이도 끝나게
+    appLang.value = 'ko';
+    final hub = FriendsHub.instance;
+    final db = FakeFirebaseFirestore();
+    await db.collection('clubs').doc('a').set({
+      'name': '잠실 배구회',
+      'schedule': '토 19:00~22:00',
+    });
+    await db
+        .collection('users')
+        .doc('c')
+        .collection('shared')
+        .doc('lunchbox')
+        .set({
+          'teams': ['a'],
+          'custom': [],
+          'hide_all': false,
+          'updated_at': Timestamp.fromDate(DateTime(2026, 9, 1)),
+        });
+    hub.shareSvc = FriendShareService(db: db);
+    hub.share.value = const FriendShareSettings(shareOk: true);
+    hub.myMeal.value = const [
+      FriendTeam('잠실 배구회', false, 0, [SchedEvent('토', 19, 22)], id: 'a'),
+    ];
+    hub.state.value = FriendState(
+      uid: 'me',
+      loaded: true,
+      friends: const [
+        FriendLink('c_me', 'c', {'status': 'accepted'}),
+      ],
+      profiles: const {'c': FriendProfile('팥밥-q7', '#F8BBD0')},
+    );
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: SingleChildScrollView(child: FriendsPage())),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.text('팥밥-q7'));
+    // 친구 도시락 로드(fake Firestore) → 겸상 계산 → 목록. 익힘 애니메이션이 돌아 pumpAndSettle 은 쓰지 않는다.
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.text('토 19–22'), findsOneWidget);
+    expect(find.text(t('fr_meal_zero')), findsNothing);
+
+    hub.state.value = FriendState.empty;
+    hub.friendLunchboxes.value = {};
+    hub.myMeal.value = const [];
+    hub.share.value = FriendShareSettings.empty;
+    await tester.pumpWidget(const SizedBox());
   });
 }

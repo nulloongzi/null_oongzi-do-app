@@ -306,6 +306,15 @@ const Map<String, Map<String, String>> kStrings = {
   'logout_confirm': {'ko': '로그아웃 하시겠습니까?', 'en': 'Log out?'},
   'share_mode_feed': {'ko': '피드형 (식단표 포함)', 'en': 'Feed (with schedule)'},
   'share_mode_story': {'ko': '스토리형', 'en': 'Story'},
+  'share_friends_toggle': {'ko': '밥친구 포함', 'en': 'Include bap friends'},
+  'share_friends_none': {
+    'ko': '이번 주 겸상하는 밥친구가 없어요',
+    'en': 'No bap friends eating together this week',
+  },
+  'mycard_friends_title': {'ko': '이번 주 겸상', 'en': 'Eating together this week'},
+  'mycard_friends_n': {'ko': '밥친구 {n}', 'en': '{n} friends'},
+  'mycard_friends_pill': {'ko': '이번 주 겸상 {n}', 'en': 'Together · {n}'},
+  'mycard_meal_n': {'ko': '겸상 {n}', 'en': '{n}×/wk'},
   // 공유 카드(my_card.dart)는 Canvas에 직접 그려서 이모지가 tofu(□)로 뜬다.
   // 카드 안에 들어가는 문구는 이모지 없는 별도 키를 쓴다.
   'mycard_lunchbox': {'ko': '도시락', 'en': 'Lunchbox'},
@@ -1430,6 +1439,14 @@ const Map<String, Map<String, String>> kStrings = {
   'fr_meal_zero': {
     'ko': "같은 팀에서 같은 시간에 운동하면 겸상이에요.",
     'en': "Same team, same time = eating together.",
+  },
+  'fr_meal_hint': {
+    'ko': "같은 팀 · 같은 시간에 운동하는 밥친구",
+    'en': "Friends on the same team at the same time",
+  },
+  'fr_err_daily': {
+    'ko': "신청은 하루 30건까지예요. 내일 다시 해주세요.",
+    'en': "Up to 30 requests a day. Try again tomorrow.",
   },
   'fr_meal_fab': {
     'ko': "이번 주 겸상하는 밥친구가 있어요",
