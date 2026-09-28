@@ -103,7 +103,11 @@ class FriendState {
 class FriendProfile {
   final String name;
   final String color; // "#FFF9C4"
-  const FriendProfile(this.name, this.color);
+  final String? riceName; // users.nickname (밥 종류). 없으면 밥이름 앞부분
+  const FriendProfile(this.name, this.color, [this.riceName]);
+
+  /// 밥도감에 세는 밥 종류 — 나가는 친구 정보는 이것뿐(docs/design-system.md §7-4).
+  String get rice => riceName ?? name.split('-').first;
 }
 
 /// 내 관계 문서들 → 친구 / 받은 신청 / 보낸 신청. 만료된 신청은 뺀다.
@@ -206,7 +210,8 @@ class FriendsService {
       final d = (await _db.collection('users').doc(uid).get()).data() ?? {};
       final full = (d['full_nickname'] ?? d['nickname'] ?? '') as String;
       final color = d['color'] is String ? d['color'] as String : '#FFF9C4';
-      return FriendProfile(full.isEmpty ? '?' : full, color);
+      final rice = d['nickname'] is String ? d['nickname'] as String : null;
+      return FriendProfile(full.isEmpty ? '?' : full, color, rice);
     } catch (_) {
       return const FriendProfile('?', '#FFF9C4');
     }

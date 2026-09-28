@@ -309,17 +309,8 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'pf_save_err': {'ko': '게임 처리 중 오류: ', 'en': 'Something went wrong: '},
   'logout_confirm': {'ko': '로그아웃 하시겠습니까?', 'en': 'Log out?'},
-  'share_mode_feed': {'ko': '피드형 (식단표 포함)', 'en': 'Feed (with schedule)'},
-  'share_mode_story': {'ko': '스토리형', 'en': 'Story'},
-  'share_friends_toggle': {'ko': '밥친구 포함', 'en': 'Include bap friends'},
-  'share_friends_none': {
-    'ko': '이번 주 합석하는 밥친구가 없어요',
-    'en': 'No bap friends eating together this week',
-  },
-  'mycard_friends_title': {'ko': '이번 주 합석', 'en': 'Eating together this week'},
-  'mycard_friends_n': {'ko': '밥친구 {n}', 'en': '{n} friends'},
-  'mycard_friends_pill': {'ko': '이번 주 합석 {n}', 'en': 'Together · {n}'},
-  'mycard_meal_n': {'ko': '같은 팀 {n}', 'en': 'shared teams: {n}'},
+  'share_mode_card': {'ko': '네임카드', 'en': 'Name card'},
+  'share_mode_diet': {'ko': '식단표', 'en': 'Schedule'},
   // 공유 카드(my_card.dart)는 Canvas에 직접 그려서 이모지가 tofu(□)로 뜬다.
   // 카드 안에 들어가는 문구는 이모지 없는 별도 키를 쓴다.
   'mycard_lunchbox': {'ko': '도시락', 'en': 'Lunchbox'},
@@ -328,7 +319,127 @@ const Map<String, Map<String, String>> kStrings = {
   'mycard_tier_rice': {'ko': '밥', 'en': 'Rice'},
   'mycard_tier_soup': {'ko': '국', 'en': 'Soup'},
   'mycard_tier_sides': {'ko': '반찬', 'en': 'Sides'},
-  'mycard_cta': {'ko': '내 밥이름 만들러 가기', 'en': 'Get your own rice-name'},
+  'mycard_cta': {'ko': '나는 무슨 밥일까?', 'en': 'What rice are you?'},
+  'mycard_cta_diet': {'ko': '같이 뛸 팀 찾기', 'en': 'Find a team to play with'},
+  // 식단표 카드 헤드라인: "화·목·토 저녁형" · "주 3회 · 8시간 코트 위" (웹 mc_kind_* · mc_diet_*)
+  'mycard_kind_eve': {'ko': '저녁형', 'en': 'evenings'},
+  'mycard_kind_noon': {'ko': '낮형', 'en': 'afternoons'},
+  'mycard_kind_morn': {'ko': '아침형', 'en': 'mornings'},
+  'mycard_diet_ndays': {'ko': '주 {n}일', 'en': '{n} days a week ·'},
+  'mycard_diet_sub': {
+    'ko': '주 {n}회 · {h}시간 코트 위',
+    'en': '{n} sessions · {h}h on court',
+  },
+  'mycard_diet_empty': {'ko': '이번 주 식단표', 'en': "This week's schedule"},
+  // 밥도감(네임카드) — 웹 dex_* 와 같은 말. 단계 이름에 '누룽지'는 쓰지 않는다.
+  'dex_no': {'ko': '밥도감 No.{n}', 'en': 'Rice-dex No.{n}'},
+  'dex_r_common': {'ko': '흔함', 'en': 'Common'},
+  'dex_r_rare': {'ko': '드묾', 'en': 'Rare'},
+  'dex_r_legend': {'ko': '전설', 'en': 'Legendary'},
+  'dex_title': {'ko': '내 밥상 · 밥도감', 'en': 'My table · Rice-dex'},
+  'dex_count': {'ko': '{n} / {total}종', 'en': '{n} / {total} kinds'},
+  'dex_next': {'ko': '{stage}까지 {n}종 남았어요', 'en': '{n} more to {stage}'},
+  'dex_done': {'ko': '밥도감을 다 모았어요', 'en': 'Rice-dex complete'},
+  'dex_st_1': {'ko': '혼밥', 'en': 'Solo meal'},
+  'dex_st_2': {'ko': '밥상', 'en': 'A table'},
+  'dex_st_3': {'ko': '한상차림', 'en': 'Full spread'},
+  'dex_st_4': {'ko': '잔칫상', 'en': 'Feast'},
+  'dex_st_5': {'ko': '수라상', 'en': 'Royal table'},
+  // 밥 종류별 한 줄 성격 — 번호는 rice_dex.dart kRiceData 순서(= 밥도감 번호)
+  'rice_line_1': {
+    'ko': '씹을수록 진가가 나오는 꾸준파',
+    'en': 'The steady one — better the more you chew',
+  },
+  'rice_line_2': {
+    'ko': '어느 팀에 둬도 어울리는 기본기 장인',
+    'en': 'Fits any team — master of the basics',
+  },
+  'rice_line_3': {
+    'ko': '조용하다가 한 방에 색을 내는 타입',
+    'en': 'Quiet, then one big splash of color',
+  },
+  'rice_line_4': {
+    'ko': '소박하지만 든든한, 끝까지 뛰는 체력파',
+    'en': 'Humble but hearty — runs till the end',
+  },
+  'rice_line_5': {
+    'ko': '톡톡 튀는 존재감, 코트의 분위기 메이커',
+    'en': 'Pops with presence — the mood maker',
+  },
+  'rice_line_6': {
+    'ko': '뭐든 섞어도 맛있는 올라운더',
+    'en': 'Mix in anything — the all-rounder',
+  },
+  'rice_line_7': {
+    'ko': '작지만 꽉 찬, 수비에서 빛나는 알갱이',
+    'en': 'Small but full — shines on defense',
+  },
+  'rice_line_8': {
+    'ko': '알아보는 사람만 아는 은근한 실력파',
+    'en': 'Quiet skill that only insiders notice',
+  },
+  'rice_line_9': {
+    'ko': '경기 끝나고 제일 먼저 찾게 되는 편한 사람',
+    'en': 'The comfy one everyone looks for after a game',
+  },
+  'rice_line_10': {'ko': '불 붙으면 못 말리는 화력형', 'en': 'Unstoppable once fired up'},
+  'rice_line_11': {
+    'ko': '섞일수록 팀워크가 사는 조율형',
+    'en': 'Better mixed — the team-play conductor',
+  },
+  'rice_line_12': {
+    'ko': '어디든 따라가는 원정 전문',
+    'en': 'Goes anywhere — the away-game specialist',
+  },
+  'rice_line_13': {
+    'ko': '부르면 바로 오는 기동력',
+    'en': 'Call and they\'re already there',
+  },
+  'rice_line_14': {'ko': '달콤한 겉모습, 알찬 속', 'en': 'Sweet outside, packed inside'},
+  'rice_line_15': {
+    'ko': '한 그릇에 다 올리는 올인형',
+    'en': 'Piles it all on — the all-in type',
+  },
+  'rice_line_16': {
+    'ko': '믿고 맡기는 뜨끈한 해결사',
+    'en': 'Warm and reliable — the problem solver',
+  },
+  'rice_line_17': {
+    'ko': '시간이 걸려도 제대로 뜸 들이는 장인',
+    'en': 'Takes time, but steamed just right',
+  },
+  'rice_line_18': {
+    'ko': '팀을 챙기는 달달한 살림꾼',
+    'en': 'Sweet devotion — looks after the team',
+  },
+  'rice_line_19': {
+    'ko': '부드럽게 받아내는 리시브 장인',
+    'en': 'Soft hands — the receive master',
+  },
+  'rice_line_20': {
+    'ko': '한 번 보면 기억에 남는 사람',
+    'en': 'Leaves a scent — hard to forget',
+  },
+  'rice_line_21': {
+    'ko': '좋은 건 다 들어간 팀의 보약',
+    'en': 'Everything good inside — the team\'s tonic',
+  },
+  'rice_line_22': {
+    'ko': '마지막 한 점까지 긁어먹는 근성파',
+    'en': 'Scrapes the last grain — pure grit',
+  },
+  'rice_line_23': {
+    'ko': '3분이면 준비 완료, 번개 출석왕',
+    'en': 'Ready in 3 minutes — first to every pickup',
+  },
+  'rice_line_24': {
+    'ko': '푸짐한 열정, 연습량으로 승부',
+    'en': 'A heaping bowl of passion — wins on practice',
+  },
+  'rice_line_25': {
+    'ko': '참 쉽죠? 전설로만 전해지는 밥',
+    'en': 'Happy little accidents — a living legend',
+  },
   'lb_no_sched': {'ko': '찜한 팀의 일정이 없어요', 'en': 'No schedule for saved teams'},
   'share_kakao': {'ko': '💬 카카오톡', 'en': '💬 KakaoTalk'},
   'kakao_view_btn': {'ko': '지도에서 보기', 'en': 'View on map'},
