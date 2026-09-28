@@ -12,6 +12,7 @@ void showShareMenu(
   required String url,
   required String shareTitle,
   VoidCallback? onStory, // 인스타 스토리 (스토리 카드 렌더 → IG)
+  VoidCallback? onFeed, // 피드 이미지 3:4 (카드 렌더 → OS 공유시트)
 }) {
   final u = Uri.tryParse(url);
   final idP = <String, Object?>{
@@ -53,6 +54,15 @@ void showShareMenu(
                   Navigator.pop(ctx);
                   Track.event('share', {'method': 'ig_story', ...idP});
                   onStory();
+                },
+              ),
+            if (onFeed != null)
+              _menuButton(
+                label: t('share_feed'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Track.event('share', {'method': 'feed_card', ...idP});
+                  onFeed();
                 },
               ),
             _menuButton(

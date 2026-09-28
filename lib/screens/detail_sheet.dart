@@ -1313,6 +1313,7 @@ List<Widget> _spotDetailChildren(
         url: ShareService.spotUrl(s.id),
         shareTitle: s.title,
         onStory: () => shareStoryCard(context, StoryCardData.fromSpot(s)),
+        onFeed: () => shareFeedCard(context, StoryCardData.fromSpot(s)),
       ),
     ),
     // 추가 안내(notes) — 웹 픽업 상세 메모 행 (폼 저장값 표시 누락 보완)
@@ -1394,6 +1395,7 @@ void showClubDetail(
     url: ShareService.clubUrl(c.id),
     shareTitle: c.name,
     onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
+    onFeed: () => shareFeedCard(context, StoryCardData.fromClub(c)),
   );
   Future<void> copyAddr() async {
     await Clipboard.setData(ClipboardData(text: c.address ?? ''));

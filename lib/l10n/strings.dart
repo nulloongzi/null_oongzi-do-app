@@ -157,6 +157,7 @@ const Map<String, Map<String, String>> kStrings = {
   // 공유 메뉴
   'share_title': {'ko': '공유하기', 'en': 'Share'},
   'share_story': {'ko': '📸 인스타 스토리', 'en': '📸 Instagram Story'},
+  'share_feed': {'ko': '🖼 피드 이미지 (3:4)', 'en': '🖼 Feed image (3:4)'},
   'share_story_hint': {
     'ko': '링크 자동 복사 — 보는 사람은 탭 1번에 입장',
     'en': 'Link auto-copied — 1 tap to open',
@@ -257,10 +258,11 @@ const Map<String, Map<String, String>> kStrings = {
   'err_delete': {'ko': '삭제 실패', 'en': 'Delete failed'},
   'err_generic': {'ko': '오류', 'en': 'Error'},
   'back_exit_hint': {'ko': '한 번 더 누르면 종료돼요', 'en': 'Press back again to exit'},
-  'card_title_fallback': {'ko': '배구 모임', 'en': 'Volleyball meetup'},
+  // 공유 카드(캔버스) 문구 — 웹 sh_club_fallback · sh_card_cta 와 같다. 이모지 금지(□로 깨짐).
+  'card_title_fallback': {'ko': '배구 동호회', 'en': 'Volleyball club'},
   'card_cta': {
-    'ko': '이 팀, 어때요? 지도에서 보기 👀',
-    'en': 'Check out this team on the map 👀',
+    'ko': 'QR 찍으면 누룽지도에서 열려요',
+    'en': 'Scan to open in Nulloongzi-do',
   },
   'login_google_fail': {'ko': '구글 로그인 실패', 'en': 'Google sign-in failed'},
   'login_err': {'ko': '로그인 오류가 발생했어요', 'en': 'A sign-in error occurred'},
@@ -307,7 +309,7 @@ const Map<String, Map<String, String>> kStrings = {
   // 공유 카드(my_card.dart)는 Canvas에 직접 그려서 이모지가 tofu(□)로 뜬다.
   // 카드 안에 들어가는 문구는 이모지 없는 별도 키를 쓴다.
   'mycard_lunchbox': {'ko': '도시락', 'en': 'Lunchbox'},
-  'mycard_timetable': {'ko': '시간표', 'en': 'Schedule'},
+  'mycard_timetable': {'ko': '식단표', 'en': 'Schedule'}, // 웹 mc_timetable 과 같은 말
   // 보온도시락 스택의 각 단 — 맨 아래 밥, 그 위 국, 맨 위 반찬 3칸.
   'mycard_tier_rice': {'ko': '밥', 'en': 'Rice'},
   'mycard_tier_soup': {'ko': '국', 'en': 'Soup'},
