@@ -106,16 +106,23 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- App Links: 공유 링크(?club=/?spot=)로 앱 열기.
+            <!-- App Links: 공유 링크(?club=/?spot=/?invite=)로 앱 열기.
                  autoVerify 검증은 https://do.nulloongzi.com/.well-known/assetlinks.json —
                  커스텀 도메인 루트 = 웹 레포 루트라 배포 가능해짐 (웹 레포에 커밋됨).
-                 (검증 실패 시 링크는 브라우저=웹앱으로 안전하게 폴백). -->
+                 (검증 실패 시 링크는 브라우저=웹앱으로 안전하게 폴백).
+
+                 경로는 루트(/)만. 공유 링크는 전부 https://do.nulloongzi.com/?… 모양이다.
+                 경로를 안 적으면 도메인 전체를 가져가서, 웹 카카오·네이버 로그인의 복귀
+                 주소(/auth/callback/)와 약관·개인정보 같은 웹 전용 페이지까지 앱이 열었다 —
+                 웹 로그인이 중간에 끊기고 앱 첫 화면만 떴다.
+                 안드로이드 15+ 는 assetlinks.json 의 동적 규칙이 같은 범위를 한 번 더 좁힌다. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https"
-                      android:host="do.nulloongzi.com" />
+                      android:host="do.nulloongzi.com"
+                      android:path="/" />
             </intent-filter>
             <!-- 카카오톡 공유 후 앱 복귀(커스텀 스킴 kakao{네이티브앱키}) -->
             <intent-filter>
