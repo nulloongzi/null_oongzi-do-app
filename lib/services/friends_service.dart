@@ -10,12 +10,15 @@
 //   friendships/{작은uid_큰uid}  { members, requested_by, requested_to,
 //                                  status: pending|accepted, code, created_at, accepted_at }
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'analytics.dart';
+import 'friend_share_service.dart';
+import 'lunchbox_service.dart' show lunchboxChanged;
 
 // ── 순수 규칙 (웹 window.friendsPure 와 같은 값·같은 규칙) ─────────────
 
@@ -273,8 +276,20 @@ class FriendsHub {
 
   final state = ValueNotifier<FriendState>(FriendState.empty);
 
-  /// 받은 신청 중 아직 둘째 장에서 못 본 게 있나 — 둘째 도트를 키우고 빛낸다.
+  /// 둘째 장에 새 소식이 있나 — 둘째 도트를 키우고 빛낸다.
+  /// 못 본 받은 신청 · '보일 팀' 확인 필요 · 도시락이 바뀐 친구.
   final hasUnseen = ValueNotifier<bool>(false);
+
+  /// 2단계: 내 공유 설정(숨긴 팀 · 전부 숨기기 · 확인 여부).
+  final share = ValueNotifier<FriendShareSettings>(FriendShareSettings.empty);
+
+  /// 2단계: 친구 도시락 사본(uid → 도시락). '도시락 바뀜' 판단에 쓴다.
+  final friendLunchboxes = ValueNotifier<Map<String, FriendLunchbox>>({});
+  FriendShareService? _shareSvc;
+  FriendShareService get shareSvc => _shareSvc ??= FriendShareService();
+  set shareSvc(FriendShareService v) => _shareSvc = v;
+  Map<String, int> _lbSeen = {};
+  static const _lbSeenKey = 'friend_lb_seen';
 
   // 늦게 만든다 — Firebase 초기화 전(테스트 포함)에 허브를 건드려도 죽지 않게.
   FriendsService? _svc;
@@ -287,6 +302,7 @@ class FriendsHub {
   static const _seenKey = 'seen_friend_req';
 
   void start() {
+    lunchboxChanged.addListener(_onLunchboxChanged);
     _authSub ??= FirebaseAuth.instance.authStateChanges().listen((u) {
       if (u == null || u.isAnonymous) {
         _stop();
@@ -303,11 +319,20 @@ class FriendsHub {
     myCode = null;
     state.value = FriendState.empty;
     hasUnseen.value = false;
+    share.value = FriendShareSettings.empty;
+    friendLunchboxes.value = {};
+    _shareSvc?.reset();
+  }
+
+  void _onLunchboxChanged() {
+    final uid = state.value.uid;
+    if (uid != null) shareSvc.sync(uid).catchError((_) {});
   }
 
   void _listen(String uid) {
     _sub?.cancel();
     state.value = FriendState(uid: uid);
+    _loadShare(uid);
     _sub = svc.watch(uid).listen((docs) async {
       final p = partitionFriendships(docs, uid, DateTime.now());
       final others = {
@@ -325,26 +350,147 @@ class FriendsHub {
         profiles: Map.of(_profiles),
       );
       await _syncUnseen();
+      await _loadFriendLunchboxes(p.friends);
     }, onError: (_) {});
+  }
+
+  Future<void> _loadShare(String uid) async {
+    try {
+      share.value = await shareSvc.loadSettings(uid);
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_lbSeenKey);
+      _lbSeen = raw == null
+          ? {}
+          : Map<String, int>.from(
+              (jsonDecode(raw) as Map).map((k, v) => MapEntry('$k', v as int)),
+            );
+      // 다른 기기에서 도시락을 바꿨을 수 있다 → 사본을 지금 도시락에 맞춘다(같으면 쓰지 않음)
+      await shareSvc.sync(uid);
+    } catch (_) {}
+    await _syncUnseen();
+  }
+
+  Future<void> _loadFriendLunchboxes(List<FriendLink> friends) async {
+    final m = <String, FriendLunchbox>{};
+    for (final f in friends) {
+      try {
+        m[f.other] = await shareSvc.loadFriend(f.other);
+      } catch (_) {}
+    }
+    friendLunchboxes.value = m;
+    await _syncUnseen();
+  }
+
+  Future<FriendLunchbox> reloadFriendLunchbox(String other) async {
+    final lb = await shareSvc.loadFriend(other);
+    friendLunchboxes.value = {...friendLunchboxes.value, other: lb};
+    return lb;
+  }
+
+  /// '도시락 바뀜': 친구 사본이 마지막으로 본 뒤 바뀌었나. 처음 보는 친구는 기준만 잡는다.
+  bool isLunchboxChanged(String other) {
+    final at = friendLunchboxes.value[other]?.updatedAt;
+    if (at == null) return false;
+    final seen = _lbSeen[other];
+    if (seen == null) {
+      _lbSeen[other] = at.millisecondsSinceEpoch;
+      _saveLbSeen();
+      return false;
+    }
+    return at.millisecondsSinceEpoch > seen;
+  }
+
+  Future<void> markLunchboxSeen(String other) async {
+    final at = friendLunchboxes.value[other]?.updatedAt;
+    if (at == null) return;
+    _lbSeen[other] = at.millisecondsSinceEpoch;
+    await _saveLbSeen();
+    await _syncUnseen();
+  }
+
+  Future<void> _saveLbSeen() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_lbSeenKey, jsonEncode(_lbSeen));
+    } catch (_) {}
+  }
+
+  bool get needsShareConfirm =>
+      state.value.uid != null &&
+      state.value.friends.isNotEmpty &&
+      !share.value.shareOk;
+
+  Future<void> _saveShare(
+    Map<String, dynamic> fields,
+    FriendShareSettings next,
+  ) async {
+    final uid = state.value.uid;
+    if (uid == null) return;
+    share.value = next;
+    await shareSvc.saveSettings(uid, fields);
+    await shareSvc.sync(uid);
+    await _syncUnseen();
+  }
+
+  Future<void> setHidden(String teamId, bool hide) {
+    final list = [...share.value.hidden]..remove(teamId);
+    if (hide) list.add(teamId);
+    Track.event('friend_team_visibility', {'hidden': hide ? 1 : 0});
+    return _saveShare(
+      {'friend_hidden': list},
+      FriendShareSettings(
+        hidden: list,
+        hideAll: share.value.hideAll,
+        shareOk: share.value.shareOk,
+      ),
+    );
+  }
+
+  Future<void> setHideAll(bool v) {
+    Track.event('friend_hide_all', {'on': v ? 1 : 0});
+    return _saveShare(
+      {'friend_hide_all': v},
+      FriendShareSettings(
+        hidden: share.value.hidden,
+        hideAll: v,
+        shareOk: share.value.shareOk,
+      ),
+    );
+  }
+
+  /// 첫 밥친구 때 '보일 팀' 확인. [hidden] 은 체크를 끈 팀.
+  Future<void> confirmShare(List<String> hidden) {
+    Track.event('friend_share_confirm', {'hidden': hidden.length});
+    return _saveShare(
+      {'friend_hidden': hidden, 'friend_share_ok': true},
+      FriendShareSettings(
+        hidden: hidden,
+        hideAll: share.value.hideAll,
+        shareOk: true,
+      ),
+    );
   }
 
   Future<void> _syncUnseen() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final seen = prefs.getStringList(_seenKey) ?? const [];
-      hasUnseen.value = state.value.incoming.any((l) => !seen.contains(l.id));
+      hasUnseen.value =
+          state.value.incoming.any((l) => !seen.contains(l.id)) ||
+          needsShareConfirm ||
+          state.value.friends.any((f) => isLunchboxChanged(f.other));
     } catch (_) {}
   }
 
   /// 둘째 장을 봤다 → 지금 받은 신청을 모두 본 것으로.
   Future<void> markSeen() async {
-    hasUnseen.value = false;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setStringList(_seenKey, [
         for (final l in state.value.incoming) l.id,
       ]);
     } catch (_) {}
+    await _syncUnseen();
   }
 
   Future<String> ensureMyCode() async {

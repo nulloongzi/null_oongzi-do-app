@@ -7,6 +7,7 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nulloongzido/services/deep_link_service.dart';
+import 'package:nulloongzido/services/friend_share_service.dart';
 import 'package:nulloongzido/services/friends_service.dart';
 import 'package:nulloongzido/services/i18n.dart';
 import 'package:nulloongzido/widgets/friends_page.dart';
@@ -226,6 +227,7 @@ void main() {
     testWidgets('받은 신청과 친구가 보이고, 비었으면 안내', (tester) async {
       appLang.value = 'ko';
       final hub = FriendsHub.instance;
+      hub.shareSvc = FriendShareService(db: FakeFirebaseFirestore());
       hub.state.value = FriendState(
         uid: 'me',
         loaded: true,
@@ -245,6 +247,14 @@ void main() {
       expect(find.text('수락'), findsOneWidget);
       expect(find.text('팥밥-q7'), findsOneWidget);
       expect(find.text('밥친구 1'), findsOneWidget);
+      // 첫 밥친구 — '보일 팀' 확인 카드가 먼저, 공개 스위치는 확인 뒤에도 목록 끝에
+      expect(find.text(t('fr_share_title')), findsOneWidget);
+      expect(find.text(t('fr_vis_title')), findsOneWidget);
+
+      hub.share.value = const FriendShareSettings(shareOk: true);
+      await tester.pump();
+      expect(find.text(t('fr_share_title')), findsNothing);
+      hub.share.value = FriendShareSettings.empty;
 
       hub.state.value = const FriendState(uid: 'me', loaded: true);
       await tester.pump();

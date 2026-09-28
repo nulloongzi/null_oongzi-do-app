@@ -4,6 +4,8 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import '../models/club.dart';
 import '../services/data_repository.dart';
+import '../services/friend_share_service.dart';
+import '../services/friends_service.dart';
 import '../services/i18n.dart';
 import '../services/lunchbox_service.dart';
 import '../services/schedule_parse.dart';
@@ -520,8 +522,59 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
   }
 
   // 벤토 셀 하나. 채움=흰 배경+노랑 테두리 / 빈칸=옅은 점선풍 / 선택=주황 테두리.
-  Widget _cell(int i) {
+  // 밥친구 눈 스위치(웹 appendFriendEye). 편집 중엔 버튼, 평소엔 숨긴 칸에만 작은 표시.
+  Widget _cell(int i) => ValueListenableBuilder<FriendShareSettings>(
+    valueListenable: FriendsHub.instance.share,
+    builder: (_, _, _) => _cellBody(i),
+  );
+
+  Widget _friendEye(String id, bool hidden) {
+    final icon = Container(
+      width: _editing ? 24 : 20,
+      height: _editing ? 24 : 20,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x2E5D4037),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Icon(
+        hidden ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+        size: 14,
+        color: hidden ? const Color(0xFFA99A8C) : const Color(0xFF6D5443),
+      ),
+    );
+    final label = t(hidden ? 'lb_eye_off' : 'lb_eye_on');
+    return Positioned(
+      top: 3,
+      left: 3,
+      child: _editing
+          ? Semantics(
+              button: true,
+              label: label,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => FriendsHub.instance
+                    .setHidden(id, !hidden)
+                    .catchError((_) {}),
+                child: icon,
+              ),
+            )
+          : Semantics(label: label, child: icon),
+    );
+  }
+
+  Widget _cellBody(int i) {
     final id = _data?.bookmarks[i];
+    final hub = FriendsHub.instance;
+    final signedIn = hub.state.value.uid != null;
+    final hidden =
+        id != null && signedIn && hub.share.value.hidden.contains(id);
     final r = id == null ? null : _resolve(id);
     final filled = id != null;
     final selected = _selectedSlot == i;
@@ -579,12 +632,16 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
                     height: 1.4,
                     fontWeight: filled ? FontWeight.w700 : FontWeight.w600,
                     color: filled
-                        ? NurungjiColors.dark
+                        ? NurungjiColors.dark.withValues(
+                            alpha: hidden ? 0.6 : 1,
+                          )
                         : const Color(0xFFBCAAA4),
                   ),
                 ),
               ),
             ),
+            if (filled && signedIn && (_editing || hidden))
+              _friendEye(id, hidden),
             if (filled && _editing)
               Positioned(
                 top: 3,
