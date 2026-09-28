@@ -302,7 +302,7 @@ class FriendsHub {
   /// 2단계: 친구 도시락 사본(uid → 도시락). '도시락 바뀜' 판단에 쓴다.
   final friendLunchboxes = ValueNotifier<Map<String, FriendLunchbox>>({});
 
-  /// 3단계: 겸상을 셀 내 팀(친구에게 보이는 동호회 팀) · 🍚 버블에 띄울 가장 높은 익힘 단계.
+  /// 3단계: 합석을 셀 내 팀(친구에게 보이는 동호회 팀) · 🍚 버블에 띄울 가장 높은 익힘 단계.
   final myMeal = ValueNotifier<List<FriendTeam>>(const []);
   final warmth = ValueNotifier<int>(0);
   FriendShareService? _shareSvc;
@@ -351,6 +351,7 @@ class FriendsHub {
     friendLunchboxes.value = {};
     myMeal.value = const [];
     warmth.value = 0;
+    _mealSeen = {};
     _shareSvc?.reset();
   }
 
@@ -361,7 +362,7 @@ class FriendsHub {
     refreshMyMeal();
   }
 
-  /// 내 공개 팀이 바뀌면(도시락 저장 · 눈 스위치 · 전부 숨기기) 겸상도 다시 센다.
+  /// 내 공개 팀이 바뀌면(도시락 저장 · 눈 스위치 · 전부 숨기기) 합석도 다시 센다.
   Future<void> refreshMyMeal() async {
     final uid = state.value.uid;
     if (uid == null) return;
@@ -370,7 +371,7 @@ class FriendsHub {
     } catch (_) {}
   }
 
-  /// 친구 한 명과의 이번 주 겸상. 친구 도시락은 [friendLunchboxes] 캐시에서.
+  /// 친구 한 명과의 이번 주 합석. 친구 도시락은 [friendLunchboxes] 캐시에서.
   FriendMeal mealOf(String other) {
     final lb = friendLunchboxes.value[other];
     if (lb == null || lb.status != 'ok') return FriendMeal.none;
@@ -382,13 +383,37 @@ class FriendsHub {
     );
   }
 
-  void _syncWarmth() {
+  // 합석 알림은 처음 한 번만: 어떤 밥친구와 처음 합석하게 됐을 때 🍚 버블 테두리·둘째 도트로
+  // 알리고, 밥친구 장을 보면 꺼진다. 본 합석 친구는 계정별로 기기에 둔다(웹 nurungji_meal_seen).
+  Set<String> _mealSeen = {};
+  String get _mealSeenKey => 'meal_seen:${state.value.uid ?? ''}';
+
+  Iterable<({String uid, int tier})> get _mealFriends => [
+    for (final f in state.value.friends)
+      if (mealOf(f.other).tier > 0) (uid: f.other, tier: mealOf(f.other).tier),
+  ];
+
+  /// 아직 안 본 합석 친구 중 가장 높은 익힘 단계(없으면 0) — 🍚 버블 테두리 색.
+  int get unseenMealTier {
     var tier = 0;
-    for (final f in state.value.friends) {
-      final t = mealOf(f.other).tier;
-      if (t > tier) tier = t;
+    for (final x in _mealFriends) {
+      if (!_mealSeen.contains(x.uid) && x.tier > tier) tier = x.tier;
     }
-    warmth.value = tier;
+    return tier;
+  }
+
+  void _syncWarmth() {
+    warmth.value = unseenMealTier;
+    _syncUnseen();
+  }
+
+  Future<void> _markMealSeen() async {
+    _mealSeen = {..._mealSeen, for (final x in _mealFriends) x.uid};
+    warmth.value = unseenMealTier;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_mealSeenKey, _mealSeen.toList());
+    } catch (_) {}
   }
 
   // 스냅샷 세대: 프로필·도시락 로드를 기다리는 동안 다음 스냅샷이 오면 옛 결과는 버린다
@@ -435,6 +460,8 @@ class FriendsHub {
           : Map<String, int>.from(
               (jsonDecode(raw) as Map).map((k, v) => MapEntry('$k', v as int)),
             );
+      _mealSeen = {...?prefs.getStringList(_mealSeenKey)};
+      warmth.value = unseenMealTier;
       // 다른 기기에서 도시락을 바꿨을 수 있다 → 사본을 지금 도시락에 맞춘다(같으면 쓰지 않음)
       await shareSvc.sync(uid);
       await refreshMyMeal();
@@ -560,6 +587,7 @@ class FriendsHub {
       hasUnseen.value =
           state.value.incoming.any((l) => !seen.contains(l.id)) ||
           needsShareConfirm ||
+          unseenMealTier > 0 || // 처음 합석하게 된 밥친구
           state.value.friends.any((f) => isLunchboxChanged(f.other));
     } catch (_) {}
   }
@@ -572,6 +600,7 @@ class FriendsHub {
         for (final l in state.value.incoming) l.id,
       ]);
     } catch (_) {}
+    await _markMealSeen();
     await _syncUnseen();
   }
 

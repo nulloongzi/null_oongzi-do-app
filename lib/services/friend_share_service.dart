@@ -118,7 +118,7 @@ class FriendTeam {
   const FriendTeam(this.name, this.isCustom, this.slot, this.events, {this.id});
 }
 
-// ── 겸상 · 익힘 (웹 friendSharePure.mealOverlaps / warmthTier 와 같다) ──
+// ── 합석 · 익힘 (웹 friendSharePure.mealOverlaps / warmthTier 와 같다) ──
 
 class MealOverlap {
   final String id;
@@ -130,7 +130,7 @@ class MealOverlap {
 
 const _mealMinHours = 0.5;
 
-/// 겸상: 같은 동호회(id) · 같은 요일 · 30분 이상 겹치는 시간. 직접 추가한 팀은 같은 팀인지
+/// 합석: 같은 동호회(id) · 같은 요일 · 30분 이상 겹치는 시간. 직접 추가한 팀은 같은 팀인지
 /// 알 수 없어서 넣지 않는다. 양쪽 모두 친구에게 공개한 팀이어야 한다 — 숨긴 팀까지 세면
 /// 두 사람의 숫자가 달라져 숨긴 팀이 드러난다.
 List<MealOverlap> mealOverlaps(List<FriendTeam> mine, List<FriendTeam> theirs) {
@@ -155,7 +155,7 @@ List<MealOverlap> mealOverlaps(List<FriendTeam> mine, List<FriendTeam> theirs) {
   return out;
 }
 
-/// 익힘 단계: 한 주 겸상 횟수 → 0 생쌀 · 1 뜸 · 2 노릇 · 3 누룽지(3회 이상)
+/// 익힘 단계: 한 주 합석 횟수 → 0 생쌀 · 1 뜸 · 2 노릇 · 3 누룽지(3회 이상)
 int warmthTier(int n) => n >= 3 ? 3 : (n >= 2 ? 2 : (n >= 1 ? 1 : 0));
 
 class FriendMeal {
@@ -166,7 +166,7 @@ class FriendMeal {
   int get tier => warmthTier(n);
 }
 
-/// 겸상 목록 정렬: 요일 → 시작 시각 (웹 friendSharePure.sortOverlaps).
+/// 합석 목록 정렬: 요일 → 시작 시각 (웹 friendSharePure.sortOverlaps).
 List<MealOverlap> sortOverlaps(List<MealOverlap> list) =>
     [...list]..sort((a, b) {
       final d = scheduleDays.indexOf(a.day) - scheduleDays.indexOf(b.day);
@@ -196,7 +196,7 @@ class CardFriendEntry {
   });
 }
 
-/// 카드에 넣을 밥친구: 겸상 있는 친구만, 전부 숨긴 친구는 빼고, 겸상 많은 순(같으면 이름순) 최대 [max].
+/// 카드에 넣을 밥친구: 합석 있는 친구만, 전부 숨긴 친구는 빼고, 합석 많은 순(같으면 이름순) 최대 [max].
 /// 웹 friendSharePure.pickCardFriends 와 같은 규칙.
 List<CardFriendEntry> pickCardFriends(
   List<CardFriendEntry> entries, {
@@ -328,7 +328,7 @@ class FriendShareService {
     return out;
   }
 
-  /// 겸상을 셀 내 팀: 친구에게 실제로 보이는 동호회 팀만. 확인 전이거나 전부 숨기기면 없다.
+  /// 합석을 셀 내 팀: 친구에게 실제로 보이는 동호회 팀만. 확인 전이거나 전부 숨기기면 없다.
   Future<List<FriendTeam>> myMealTeams(
     String uid,
     FriendShareSettings s,

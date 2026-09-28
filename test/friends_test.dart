@@ -264,7 +264,7 @@ void main() {
       hub.state.value = FriendState.empty;
     });
 
-    testWidgets('겸상 줄 · 겸상 많은 순 · 익힘 문구', (tester) async {
+    testWidgets('합석 줄 · 합석 많은 순 · 익힘 문구', (tester) async {
       appLang.value = 'ko';
       final hub = FriendsHub.instance;
       hub.shareSvc = FriendShareService(db: FakeFirebaseFirestore());
@@ -297,8 +297,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       expect(find.text(t('fr_meal_title')), findsOneWidget);
       final tag = tf('fr_meal_tier', {'tier': t('fr_warm_2'), 'n': '2'});
-      expect(find.text(tag), findsNWidgets(2)); // 겸상 줄 + 목록 줄
-      // 이름순이면 가밥이 먼저지만, 겸상 많은 팥밥이 목록 맨 위
+      expect(find.text(tag), findsNWidgets(2)); // 합석 줄 + 목록 줄
+      // 이름순이면 가밥이 먼저지만, 합석 많은 팥밥이 목록 맨 위
       final y1 = tester.getTopLeft(find.text('팥밥-q7').last).dy;
       final y2 = tester.getTopLeft(find.text('가밥-z9')).dy;
       expect(y1, lessThan(y2));
@@ -323,7 +323,7 @@ void main() {
     });
   });
 
-  testWidgets('친구 상세: 겹쳐 보기 아래 겸상 목록을 글로', (tester) async {
+  testWidgets('친구 상세: 겹쳐 보기 아래 합석 목록을 글로', (tester) async {
     SharedPreferences.setMockInitialValues({}); // '마지막으로 본 시각' 저장이 플러그인 없이도 끝나게
     appLang.value = 'ko';
     final hub = FriendsHub.instance;
@@ -363,7 +363,7 @@ void main() {
     );
     await tester.pump();
     await tester.tap(find.text('팥밥-q7'));
-    // 친구 도시락 로드(fake Firestore) → 겸상 계산 → 목록. 익힘 애니메이션이 돌아 pumpAndSettle 은 쓰지 않는다.
+    // 친구 도시락 로드(fake Firestore) → 합석 계산 → 목록. 익힘 애니메이션이 돌아 pumpAndSettle 은 쓰지 않는다.
     for (var i = 0; i < 6; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
@@ -411,5 +411,53 @@ void main() {
         isTrue,
       );
     });
+  });
+
+  test('합석 알림은 처음 한 번만 — 본 뒤에는 같은 친구로 다시 뜨지 않는다', () async {
+    SharedPreferences.setMockInitialValues({});
+    final hub = FriendsHub.instance;
+    hub.shareSvc = FriendShareService(db: FakeFirebaseFirestore());
+    const ev = [SchedEvent('토', 19, 22), SchedEvent('화', 20, 22)];
+    hub.myMeal.value = const [FriendTeam('A', false, 0, ev, id: 'a')];
+    hub.friendLunchboxes.value = {
+      'c': const FriendLunchbox('ok', [
+        FriendTeam('A', false, 0, ev, id: 'a'),
+      ], null),
+    };
+    hub.state.value = FriendState(
+      uid: 'me-meal',
+      loaded: true,
+      friends: const [
+        FriendLink('c_me', 'c', {'status': 'accepted'}),
+      ],
+      profiles: const {'c': FriendProfile('팥밥-q7', '#F8BBD0')},
+    );
+    expect(hub.unseenMealTier, 2); // 처음 합석 → 알림
+    await hub.markSeen(); // 밥친구 장을 봤다
+    expect(hub.unseenMealTier, 0);
+    expect(hub.warmth.value, 0);
+    // 새 친구가 합석하게 되면 그 친구로 다시 한 번
+    hub.friendLunchboxes.value = {
+      'c': const FriendLunchbox('ok', [
+        FriendTeam('A', false, 0, ev, id: 'a'),
+      ], null),
+      'd': const FriendLunchbox('ok', [
+        FriendTeam('A', false, 0, ev, id: 'a'),
+      ], null),
+    };
+    hub.state.value = FriendState(
+      uid: 'me-meal',
+      loaded: true,
+      friends: const [
+        FriendLink('c_me', 'c', {'status': 'accepted'}),
+        FriendLink('d_me', 'd', {'status': 'accepted'}),
+      ],
+      profiles: const {},
+    );
+    expect(hub.unseenMealTier, 2);
+
+    hub.state.value = FriendState.empty;
+    hub.friendLunchboxes.value = {};
+    hub.myMeal.value = const [];
   });
 }

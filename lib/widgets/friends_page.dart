@@ -1,5 +1,5 @@
 // friends_page.dart — 🍚 팝업 둘째 장: 밥친구 목록 · 추가(초대코드) · 상세. 웹 js/friends.js 포팅.
-// 식단표 겹쳐 보기·겸상은 2·3단계. 이 장은 관계만 다룬다.
+// 식단표 겹쳐 보기·합석은 2·3단계. 이 장은 관계만 다룬다.
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -490,7 +490,7 @@ class _FriendsPageState extends State<FriendsPage> {
     ].where((v) => v.m.n > 0).toList()..sort((a, b) => b.m.n - a.m.n);
     if (hot.isNotEmpty) {
       out.add(_label(t('fr_meal_title')));
-      // 겸상이 낯선 사람에게 한 줄
+      // 합석이 낯선 사람에게 한 줄
       out.add(
         Text(
           t('fr_meal_hint'),
@@ -541,7 +541,7 @@ class _FriendsPageState extends State<FriendsPage> {
         ),
       );
     } else {
-      // 겸상 많은 순, 같으면 이름순
+      // 합석 많은 순, 같으면 이름순
       final sorted = [...st.friends]
         ..sort(
           (a, b) => hub.mealOf(b.other).n != hub.mealOf(a.other).n
@@ -1277,7 +1277,7 @@ class _FriendLunchboxViewState extends State<_FriendLunchboxView> {
             if (hub.mealOf(widget.other).n == 0)
               _note(t('fr_meal_zero'))
             else
-              // 겸상 목록을 글로 한 번 더 — 표만으로는 요일·시각을 읽기 어렵다
+              // 합석 목록을 글로 한 번 더 — 표만으로는 요일·시각을 읽기 어렵다
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Column(
@@ -1335,7 +1335,7 @@ class _FriendLunchboxViewState extends State<_FriendLunchboxView> {
   }
 }
 
-/// 겹쳐 본 식단표. 친구 칸은 도시락 색으로 채우고, 내 칸은 테두리만. 겸상 표시는 3단계에서 얹는다.
+/// 겹쳐 본 식단표. 친구 칸은 도시락 색으로 채우고, 내 칸은 테두리만. 합석 표시는 3단계에서 얹는다.
 class FriendTimetable extends StatelessWidget {
   final List<FriendTeam> mine;
   final List<FriendTeam> theirs;
@@ -1498,7 +1498,7 @@ class FriendTimetable extends StatelessWidget {
                             ),
                         for (final v in friendEv) block(v, false),
                         for (final v in myEv) block(v, true),
-                        // 겸상 칸: 금빛으로 맨 위에
+                        // 합석 칸: 금빛으로 맨 위에
                         for (final m in meals)
                           Positioned(
                             left:
@@ -1513,26 +1513,14 @@ class FriendTimetable extends StatelessWidget {
                               message: t('fr_tt_meal_legend'),
                               child: Container(
                                 alignment: Alignment.center,
+                                // 합석 칸: 효과 없이 단색(웹 .fr-tt-blk.gs 와 같은 값)
                                 decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      Color(0xFFFFE082),
-                                      Color(0xFFF5B82E),
-                                    ],
-                                  ),
+                                  color: const Color(0xFFF5B82E),
                                   borderRadius: BorderRadius.circular(5),
                                   border: Border.all(
                                     color: const Color(0xFFC98A12),
                                     width: 1.5,
                                   ),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Color(0xBFF5B82E),
-                                      blurRadius: 8,
-                                    ),
-                                  ],
                                 ),
                                 child: Text(
                                   t('fr_tt_meal'),
@@ -1593,9 +1581,7 @@ class FriendTimetable extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: const Color(0xFFF5B82E),
                   borderRadius: BorderRadius.circular(3),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0xCCF5B82E), blurRadius: 6),
-                  ],
+                  border: Border.all(color: const Color(0xFFC98A12)),
                 ),
               ),
               const SizedBox(width: 4),

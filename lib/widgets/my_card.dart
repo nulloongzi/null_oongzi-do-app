@@ -28,13 +28,13 @@ class MyCardSlot {
   const MyCardSlot({this.name, this.isCustom = false});
 }
 
-/// 카드에 넣는 밥친구 한 명. 나가는 건 밥이름·밥 색·익힘 단계·겸상 횟수뿐 —
+/// 카드에 넣는 밥친구 한 명. 나가는 건 밥이름·밥 색·익힘 단계·합석 횟수뿐 —
 /// 친구의 팀·요일·시간은 카드에 없다(docs/design-system.md §7-4).
 class MyCardFriend {
   final String name;
   final Color color;
   final int tier; // 0 생쌀 · 1 뜸 · 2 노릇 · 3 누룽지
-  final int n; // 이번 주 겸상 횟수
+  final int n; // 이번 주 합석 횟수
   const MyCardFriend({
     required this.name,
     required this.color,
@@ -118,7 +118,7 @@ const _bentoStoryMin = 440.0, _bentoStoryMax = 760.0, _bentoStoryMinFr = 320.0;
 const _frMax = 4;
 const _frStoryH = 264.0, _frStoryAv = 96.0;
 const _frFeedAv = 72.0, _frFeedStep = 48.0, _frFeedGap = 32.0;
-const _frFeedMinW = 168.0; // 얼굴 묶음 폭의 최소 — 아래 알약('이번 주 겸상 N')이 넘치지 않게
+const _frFeedMinW = 168.0; // 얼굴 묶음 폭의 최소 — 아래 알약('이번 주 합석 N')이 넘치지 않게
 // 익힘 단계 색 — 화면(warm_avatar.dart)·웹 css .fr-warm 과 같은 값
 const _warmRing = [
   Color(0x00000000),
@@ -592,7 +592,7 @@ class MyCardPainter extends CustomPainter {
     ..cubicTo(6.7, 17.2, 4.2, 14.7, 4.2, 11.6)
     ..close();
 
-  /// 아바타: 익힘 테두리(누룽지는 갈색·금빛이 도는 테두리) → 흰 틈 → 밥 색 얼굴 + 밥그릇.
+  /// 아바타: 익힘 단계 색 테두리 → 흰 틈 → 밥 색 얼굴 + 밥그릇.
   void _friendAvatar(
     Canvas c,
     Offset o,
@@ -604,20 +604,8 @@ class MyCardPainter extends CustomPainter {
     final r0 = size / 2, tier = f.tier.clamp(0, 3);
     if (tier > 0) {
       final rr = r0 + gapW + ringW;
-      final ring = Paint()..color = _warmRing[tier];
-      if (tier == 3) {
-        ring.shader = const SweepGradient(
-          colors: [
-            Color(0xFF8B4513),
-            Color(0xFFF5B82E),
-            Color(0xFFC9772B),
-            Color(0xFF6D3B1A),
-            Color(0xFFF5B82E),
-            Color(0xFF8B4513),
-          ],
-        ).createShader(Rect.fromCircle(center: o, radius: rr));
-      }
-      c.drawCircle(o, rr, ring);
+      // 단계 색으로만 구분(그라데이션·효과 없음)
+      c.drawCircle(o, rr, Paint()..color = _warmRing[tier]);
     }
     c.drawCircle(o, r0 + gapW, Paint()..color = Colors.white);
     c.drawCircle(o, r0, Paint()..color = f.color);
@@ -640,7 +628,7 @@ class MyCardPainter extends CustomPainter {
   String _mealText(MyCardFriend f) =>
       '${t('fr_warm_${f.tier}')} · ${tf('mycard_meal_n', {'n': '${f.n}'})}';
 
-  /// 스토리: 도시락통 아래 '이번 주 겸상' 칸. 얼굴 + 밥이름 + 익힘 단계·겸상 횟수.
+  /// 스토리: 도시락통 아래 '이번 주 합석' 칸. 얼굴 + 밥이름 + 익힘 단계·합석 횟수.
   void _friendsPanel(Canvas c, Rect r) {
     cardPanel(c, r);
     const ip = 32.0;
@@ -681,7 +669,7 @@ class MyCardPainter extends CustomPainter {
     }
   }
 
-  /// 피드: 신원 줄 오른쪽에 얼굴 겹침(흰 테두리로 구분) + '이번 주 겸상 N' 알약.
+  /// 피드: 신원 줄 오른쪽에 얼굴 겹침(흰 테두리로 구분) + '이번 주 합석 N' 알약.
   void _friendCluster(Canvas c, Rect r) {
     final list = _friends;
     var best = 0;

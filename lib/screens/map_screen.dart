@@ -1840,7 +1840,7 @@ class _MapScreenState extends State<MapScreen> {
 
   // 플로팅 글래스 FAB (이모지) — 누르면 spring 축소.
   /// 🍚 버블 + 받은 밥친구 신청 수 배지.
-  // 🍚 버블: 받은 신청 배지 + 이번 주 겸상 친구가 있으면 금빛 테두리와 김(가장 높은 익힘 단계).
+  // 🍚 버블: 받은 신청 배지 + 이번 주 합석 친구가 있으면 금빛 테두리와 김(가장 높은 익힘 단계).
   Widget _profileFab() => ListenableBuilder(
     listenable: Listenable.merge([
       FriendsHub.instance.state,
@@ -1855,13 +1855,7 @@ class _MapScreenState extends State<MapScreen> {
           if (tier > 0)
             Semantics(
               label: t('fr_meal_fab'),
-              child: WarmAvatar(
-                size: 52,
-                tier: tier,
-                big: true,
-                crumbs: false,
-                child: child!,
-              ),
+              child: WarmAvatar(size: 52, tier: tier, big: true, child: child!),
             )
           else
             child!,

@@ -38,7 +38,7 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
   bool _loading = true;
   bool _sharing = false;
   bool _feedMode = true; // 포장 형태: 피드형(식단표 포함)↔스토리형(웹 sh_pick_shape)
-  bool _withFriends = false; // '밥친구 포함' — 기본 꺼짐. 겸상 친구가 없으면 잠긴다
+  bool _withFriends = false; // '밥친구 포함' — 기본 꺼짐. 합석 친구가 없으면 잠긴다
   ui.Image? _logo; // 미리보기용 브랜드 로고(한 번만 로드 — 토글마다 다시 읽지 않게)
 
   @override
@@ -101,7 +101,7 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
     }
   }
 
-  /// 카드에 넣을 밥친구: 이번 주 겸상하는 친구만, 겸상 많은 순 최대 4명(웹 myCardFriends).
+  /// 카드에 넣을 밥친구: 이번 주 합석하는 친구만, 합석 많은 순 최대 4명(웹 myCardFriends).
   /// '식단표 전부 숨기기'를 켠 친구는 목록에 있어도 넣지 않는다 — 밖으로 나가는 이미지라 더 보수적으로.
   List<MyCardFriend> _cardFriends() {
     final hub = FriendsHub.instance;
@@ -213,7 +213,7 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
                   ),
                 ),
                 // 포장 형태 선택(웹 sh_pick_shape): 피드형=식단표 포함 / 스토리형=카드+도시락
-                // + '밥친구 포함' 스위치(웹 #previewFriends). 겸상 친구가 없으면 흐리게 잠긴다.
+                // + '밥친구 포함' 스위치(웹 #previewFriends). 합석 친구가 없으면 흐리게 잠긴다.
                 Wrap(
                   alignment: WrapAlignment.center,
                   spacing: 8,
