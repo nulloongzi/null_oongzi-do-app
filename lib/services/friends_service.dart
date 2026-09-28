@@ -285,6 +285,10 @@ class FriendsHub {
 
   /// 2단계: 친구 도시락 사본(uid → 도시락). '도시락 바뀜' 판단에 쓴다.
   final friendLunchboxes = ValueNotifier<Map<String, FriendLunchbox>>({});
+
+  /// 3단계: 겸상을 셀 내 팀(친구에게 보이는 동호회 팀) · 🍚 버블에 띄울 가장 높은 익힘 단계.
+  final myMeal = ValueNotifier<List<FriendTeam>>(const []);
+  final warmth = ValueNotifier<int>(0);
   FriendShareService? _shareSvc;
   FriendShareService get shareSvc => _shareSvc ??= FriendShareService();
   set shareSvc(FriendShareService v) => _shareSvc = v;
@@ -303,6 +307,8 @@ class FriendsHub {
 
   void start() {
     lunchboxChanged.addListener(_onLunchboxChanged);
+    myMeal.addListener(_syncWarmth);
+    friendLunchboxes.addListener(_syncWarmth);
     _authSub ??= FirebaseAuth.instance.authStateChanges().listen((u) {
       if (u == null || u.isAnonymous) {
         _stop();
@@ -321,12 +327,46 @@ class FriendsHub {
     hasUnseen.value = false;
     share.value = FriendShareSettings.empty;
     friendLunchboxes.value = {};
+    myMeal.value = const [];
+    warmth.value = 0;
     _shareSvc?.reset();
   }
 
   void _onLunchboxChanged() {
     final uid = state.value.uid;
-    if (uid != null) shareSvc.sync(uid).catchError((_) {});
+    if (uid == null) return;
+    shareSvc.sync(uid).catchError((_) {});
+    refreshMyMeal();
+  }
+
+  /// 내 공개 팀이 바뀌면(도시락 저장 · 눈 스위치 · 전부 숨기기) 겸상도 다시 센다.
+  Future<void> refreshMyMeal() async {
+    final uid = state.value.uid;
+    if (uid == null) return;
+    try {
+      myMeal.value = await shareSvc.myMealTeams(uid, share.value);
+    } catch (_) {}
+  }
+
+  /// 친구 한 명과의 이번 주 겸상. 친구 도시락은 [friendLunchboxes] 캐시에서.
+  FriendMeal mealOf(String other) {
+    final lb = friendLunchboxes.value[other];
+    if (lb == null || lb.status != 'ok') return FriendMeal.none;
+    return FriendMeal(
+      mealOverlaps(myMeal.value, [
+        for (final t in lb.teams)
+          if (!t.isCustom) t,
+      ]),
+    );
+  }
+
+  void _syncWarmth() {
+    var tier = 0;
+    for (final f in state.value.friends) {
+      final t = mealOf(f.other).tier;
+      if (t > tier) tier = t;
+    }
+    warmth.value = tier;
   }
 
   void _listen(String uid) {
@@ -366,6 +406,7 @@ class FriendsHub {
             );
       // 다른 기기에서 도시락을 바꿨을 수 있다 → 사본을 지금 도시락에 맞춘다(같으면 쓰지 않음)
       await shareSvc.sync(uid);
+      await refreshMyMeal();
     } catch (_) {}
     await _syncUnseen();
   }
@@ -429,6 +470,7 @@ class FriendsHub {
     share.value = next;
     await shareSvc.saveSettings(uid, fields);
     await shareSvc.sync(uid);
+    await refreshMyMeal();
     await _syncUnseen();
   }
 

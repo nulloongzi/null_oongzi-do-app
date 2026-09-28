@@ -12,6 +12,7 @@ import '../services/schedule_parse.dart';
 import '../services/share_service.dart';
 import '../theme.dart';
 import 'bounce_tap.dart';
+import 'warm_avatar.dart';
 
 enum _View { list, add, detail }
 
@@ -133,6 +134,7 @@ class _FriendsPageState extends State<FriendsPage> {
         hub.state,
         hub.share,
         hub.friendLunchboxes,
+        hub.myMeal,
       ]),
       builder: (ctx, _) => _frame(hub.state.value),
     );
@@ -291,6 +293,58 @@ class _FriendsPageState extends State<FriendsPage> {
     ),
   );
 
+  String _mealText(FriendMeal m) =>
+      tf('fr_meal_tier', {'tier': t('fr_warm_${m.tier}'), 'n': '${m.n}'});
+
+  Widget _mealCard(FriendState st, FriendLink l, FriendMeal m) {
+    final p = st.profileOf(l.other);
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: BounceTap(
+        onTap: () => _go(_View.detail, detail: l.id),
+        child: Container(
+          width: 84,
+          padding: const EdgeInsets.fromLTRB(4, 10, 4, 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFBF3E2),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            children: [
+              WarmAvatar(
+                size: 48,
+                tier: m.tier,
+                big: true,
+                child: _avatar(p.color, 48),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                p.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: NurungjiColors.dark,
+                ),
+              ),
+              Text(
+                _mealText(m),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 10,
+                  height: 1.3,
+                  fontWeight: FontWeight.w800,
+                  color: warmInk[m.tier],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _meta(String title, String sub) => Expanded(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -386,6 +440,20 @@ class _FriendsPageState extends State<FriendsPage> {
       }
     }
     if (hub.needsShareConfirm) out.add(_ShareConfirmCard(onDone: _toast));
+    final hot = [
+      for (final l in st.friends) (l: l, m: hub.mealOf(l.other)),
+    ].where((v) => v.m.n > 0).toList()..sort((a, b) => b.m.n - a.m.n);
+    if (hot.isNotEmpty) {
+      out.add(_label(t('fr_meal_title')));
+      out.add(
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          clipBehavior: Clip.none,
+          padding: const EdgeInsets.fromLTRB(2, 14, 2, 10),
+          child: Row(children: [for (final v in hot) _mealCard(st, v.l, v.m)]),
+        ),
+      );
+    }
     if (st.friends.isEmpty) {
       out.add(
         Container(
@@ -421,13 +489,19 @@ class _FriendsPageState extends State<FriendsPage> {
         ),
       );
     } else {
+      // 겸상 많은 순, 같으면 이름순
       final sorted = [...st.friends]
         ..sort(
-          (a, b) =>
-              st.profileOf(a.other).name.compareTo(st.profileOf(b.other).name),
+          (a, b) => hub.mealOf(b.other).n != hub.mealOf(a.other).n
+              ? hub.mealOf(b.other).n - hub.mealOf(a.other).n
+              : st
+                    .profileOf(a.other)
+                    .name
+                    .compareTo(st.profileOf(b.other).name),
         );
       for (final l in sorted) {
         final p = st.profileOf(l.other);
+        final meal = hub.mealOf(l.other);
         out.add(
           InkWell(
             onTap: () => _go(_View.detail, detail: l.id),
@@ -436,13 +510,17 @@ class _FriendsPageState extends State<FriendsPage> {
               padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
               child: Row(
                 children: [
-                  _avatar(p.color, 38),
+                  WarmAvatar(
+                    size: 38,
+                    tier: meal.tier,
+                    child: _avatar(p.color, 38),
+                  ),
                   const SizedBox(width: 12),
                   _meta(
                     p.name,
                     hub.isLunchboxChanged(l.other)
                         ? t('fr_lb_changed')
-                        : _since(l),
+                        : (meal.n > 0 ? _mealText(meal) : _since(l)),
                   ),
                   if (hub.isLunchboxChanged(l.other))
                     Container(
@@ -753,6 +831,7 @@ class _FriendsPageState extends State<FriendsPage> {
     }
     final link = l;
     final p = st.profileOf(link.other);
+    final meal = hub.mealOf(link.other);
     return [
       _head(p.name, onBack: () => _go(_View.list)),
       Container(
@@ -763,7 +842,12 @@ class _FriendsPageState extends State<FriendsPage> {
         ),
         child: Row(
           children: [
-            _avatar('#FFFFFF', 56),
+            WarmAvatar(
+              size: 56,
+              tier: meal.tier,
+              big: true,
+              child: _avatar('#FFFFFF', 56),
+            ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -777,6 +861,18 @@ class _FriendsPageState extends State<FriendsPage> {
                       color: NurungjiColors.dark,
                     ),
                   ),
+                  if (meal.tier > 0)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Text(
+                        _mealText(meal),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: warmInk[meal.tier],
+                        ),
+                      ),
+                    ),
                   Text(
                     _since(link),
                     style: const TextStyle(
@@ -1104,7 +1200,12 @@ class _FriendLunchboxViewState extends State<_FriendLunchboxView> {
                 ],
               ),
             _label(t('fr_tt_title')),
-            FriendTimetable(mine: mine, theirs: lb.teams),
+            FriendTimetable(
+              mine: mine,
+              theirs: lb.teams,
+              meals: hub.mealOf(widget.other).overlaps,
+            ),
+            if (hub.mealOf(widget.other).n == 0) _note(t('fr_meal_zero')),
           ],
         );
       },
@@ -1116,7 +1217,13 @@ class _FriendLunchboxViewState extends State<_FriendLunchboxView> {
 class FriendTimetable extends StatelessWidget {
   final List<FriendTeam> mine;
   final List<FriendTeam> theirs;
-  const FriendTimetable({super.key, required this.mine, required this.theirs});
+  final List<MealOverlap> meals;
+  const FriendTimetable({
+    super.key,
+    required this.mine,
+    required this.theirs,
+    this.meals = const [],
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1268,6 +1375,55 @@ class FriendTimetable extends StatelessWidget {
                             ),
                         for (final v in friendEv) block(v, false),
                         for (final v in myEv) block(v, true),
+                        // 겸상 칸: 금빛으로 맨 위에
+                        for (final m in meals)
+                          Positioned(
+                            left:
+                                timeW + colW * scheduleDays.indexOf(m.day) + 2,
+                            width: colW - 4,
+                            top: (m.start - h0) / span * height,
+                            height: ((m.end - m.start) / span * height).clamp(
+                              4.0,
+                              height,
+                            ),
+                            child: Tooltip(
+                              message: t('fr_tt_meal_legend'),
+                              child: Container(
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      Color(0xFFFFE082),
+                                      Color(0xFFF5B82E),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(5),
+                                  border: Border.all(
+                                    color: const Color(0xFFC98A12),
+                                    width: 1.5,
+                                  ),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Color(0xBFF5B82E),
+                                      blurRadius: 8,
+                                    ),
+                                  ],
+                                ),
+                                child: Text(
+                                  t('fr_tt_meal'),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.clip,
+                                  style: const TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFF5D4037),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -1306,6 +1462,28 @@ class FriendTimetable extends StatelessWidget {
               t('fr_tt_friend'),
               style: const TextStyle(fontSize: 11, color: NurungjiColors.brown),
             ),
+            if (meals.isNotEmpty) ...[
+              const SizedBox(width: 12),
+              Container(
+                width: 12,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5B82E),
+                  borderRadius: BorderRadius.circular(3),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0xCCF5B82E), blurRadius: 6),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                t('fr_tt_meal_legend'),
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: NurungjiColors.brown,
+                ),
+              ),
+            ],
           ],
         ),
       ],

@@ -35,6 +35,7 @@ import 'lunchbox_screen.dart';
 import 'profile_screen.dart';
 import 'share_image_screen.dart';
 import '../widgets/bounce_tap.dart';
+import '../widgets/warm_avatar.dart';
 import '../widgets/filter_sheet.dart';
 import '../widgets/glass_surface.dart';
 import '../widgets/reel_card.dart';
@@ -1839,14 +1840,31 @@ class _MapScreenState extends State<MapScreen> {
 
   // 플로팅 글래스 FAB (이모지) — 누르면 spring 축소.
   /// 🍚 버블 + 받은 밥친구 신청 수 배지.
-  Widget _profileFab() => ValueListenableBuilder<FriendState>(
-    valueListenable: FriendsHub.instance.state,
-    builder: (ctx, st, child) {
-      final n = st.incoming.length;
+  // 🍚 버블: 받은 신청 배지 + 이번 주 겸상 친구가 있으면 금빛 테두리와 김(가장 높은 익힘 단계).
+  Widget _profileFab() => ListenableBuilder(
+    listenable: Listenable.merge([
+      FriendsHub.instance.state,
+      FriendsHub.instance.warmth,
+    ]),
+    builder: (ctx, child) {
+      final n = FriendsHub.instance.state.value.incoming.length;
+      final tier = FriendsHub.instance.warmth.value;
       return Stack(
         clipBehavior: Clip.none,
         children: [
-          child!,
+          if (tier > 0)
+            Semantics(
+              label: t('fr_meal_fab'),
+              child: WarmAvatar(
+                size: 52,
+                tier: tier,
+                big: true,
+                crumbs: false,
+                child: child!,
+              ),
+            )
+          else
+            child!,
           if (n > 0)
             Positioned(
               top: -4,

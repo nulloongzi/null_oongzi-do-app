@@ -7,6 +7,7 @@ import 'package:nulloongzido/services/friend_share_service.dart';
 import 'package:nulloongzido/services/i18n.dart';
 import 'package:nulloongzido/services/schedule_parse.dart';
 import 'package:nulloongzido/widgets/friends_page.dart';
+import 'package:nulloongzido/widgets/warm_avatar.dart';
 
 void main() {
   group('buildSharedLunchbox', () {
@@ -196,5 +197,162 @@ void main() {
       ),
     );
     expect(find.text(t('fr_tt_empty')), findsOneWidget);
+  });
+
+  group('겸상 · 익힘 (3단계)', () {
+    FriendTeam team(String? id, List<SchedEvent> ev) =>
+        FriendTeam(id ?? '직접', id == null, 0, ev, id: id);
+
+    test('같은 팀 · 같은 요일 · 30분 이상 겹치면 겸상', () {
+      final ov = mealOverlaps(
+        [
+          team('a', const [SchedEvent('월', 19, 22), SchedEvent('수', 20, 22)]),
+        ],
+        [
+          team('a', const [
+            SchedEvent('월', 19, 22),
+            SchedEvent('수', 21.75, 23),
+          ]),
+        ],
+      );
+      expect(ov.length, 1); // 수요일은 15분만 겹쳐 빠진다
+      expect(
+        (ov.single.day, ov.single.start, ov.single.end),
+        ('월', 19.0, 22.0),
+      );
+    });
+
+    test('다른 팀 · 직접 추가한 팀은 세지 않는다', () {
+      const ev = [SchedEvent('월', 19, 22)];
+      expect(mealOverlaps([team('a', ev)], [team('b', ev)]), isEmpty);
+      expect(mealOverlaps([team(null, ev)], [team(null, ev)]), isEmpty);
+    });
+
+    test('겹치는 시간만 잘라 한 번씩 센다', () {
+      final ov = mealOverlaps(
+        [
+          team('a', const [SchedEvent('토', 14, 17)]),
+          team('a', const [SchedEvent('토', 14, 17)]),
+        ],
+        [
+          team('a', const [SchedEvent('토', 15, 18)]),
+        ],
+      );
+      expect(ov.length, 1);
+      expect((ov.single.start, ov.single.end), (15.0, 17.0));
+    });
+
+    test('익힘 단계: 0 생쌀 · 1 뜸 · 2 노릇 · 3회 이상 누룽지', () {
+      expect([0, 1, 2, 3, 4, 9].map(warmthTier), [0, 1, 2, 3, 3, 3]);
+    });
+
+    test('myMealTeams: 공개한 동호회 팀만, 확인 전·전부 숨기기면 없음', () async {
+      final db = FakeFirebaseFirestore();
+      await db.collection('clubs').doc('a').set({
+        'name': 'A',
+        'schedule': '월 19:00~22:00',
+      });
+      await db.collection('clubs').doc('b').set({
+        'name': 'B',
+        'schedule': '수 20:00~22:00',
+      });
+      await db
+          .collection('users')
+          .doc('me')
+          .collection('private')
+          .doc('profile')
+          .set({
+            'bookmarks': ['a', 'b', 'custom_1', null, null],
+            'customTeams': {
+              'custom_1': {'name': '동네', 'schedule': '토 14:00~17:00'},
+            },
+          });
+      final svc = FriendShareService(db: db);
+      expect(await svc.myMealTeams('me', FriendShareSettings.empty), isEmpty);
+      expect(
+        await svc.myMealTeams(
+          'me',
+          const FriendShareSettings(shareOk: true, hideAll: true),
+        ),
+        isEmpty,
+      );
+      final mine = await svc.myMealTeams(
+        'me',
+        const FriendShareSettings(shareOk: true, hidden: ['b']),
+      );
+      expect(mine.map((t) => t.id), ['a']);
+    });
+  });
+
+  testWidgets('FriendTimetable: 겸상 칸과 범례', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 360,
+            child: FriendTimetable(
+              mine: [
+                FriendTeam('A', false, 0, [SchedEvent('월', 19, 22)], id: 'a'),
+              ],
+              theirs: [
+                FriendTeam('A', false, 0, [SchedEvent('월', 19, 22)], id: 'a'),
+              ],
+              meals: [MealOverlap('a', '월', 19, 22)],
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(find.text(t('fr_tt_meal')), findsWidgets);
+    expect(find.text(t('fr_tt_meal_legend')), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final tier in [1, 2, 3]) {
+    testWidgets('WarmAvatar 익힘 $tier 단계가 그려지고 움직인다', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WarmAvatar(
+                size: 48,
+                tier: tier,
+                big: true,
+                child: const SizedBox.square(dimension: 48),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 1500));
+      expect(tester.takeException(), isNull);
+      expect(tester.hasRunningAnimations, isTrue);
+    });
+  }
+
+  testWidgets('WarmAvatar: 움직임 줄이기면 멈춘다 · 목록(작은 것)은 테두리만', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: MediaQuery(
+          data: MediaQueryData(disableAnimations: true),
+          child: Column(
+            children: [
+              WarmAvatar(
+                size: 48,
+                tier: 3,
+                big: true,
+                child: SizedBox.square(dimension: 48),
+              ),
+              WarmAvatar(
+                size: 38,
+                tier: 2,
+                child: SizedBox.square(dimension: 38),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    expect(tester.hasRunningAnimations, isFalse);
   });
 }

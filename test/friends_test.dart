@@ -10,6 +10,7 @@ import 'package:nulloongzido/services/deep_link_service.dart';
 import 'package:nulloongzido/services/friend_share_service.dart';
 import 'package:nulloongzido/services/friends_service.dart';
 import 'package:nulloongzido/services/i18n.dart';
+import 'package:nulloongzido/services/schedule_parse.dart';
 import 'package:nulloongzido/widgets/friends_page.dart';
 
 /// firestore.rules invite_codes 의 정규식과 같은 식.
@@ -260,6 +261,52 @@ void main() {
       await tester.pump();
       expect(find.text(t('fr_empty_title')), findsOneWidget);
       hub.state.value = FriendState.empty;
+    });
+
+    testWidgets('겸상 줄 · 겸상 많은 순 · 익힘 문구', (tester) async {
+      appLang.value = 'ko';
+      final hub = FriendsHub.instance;
+      hub.shareSvc = FriendShareService(db: FakeFirebaseFirestore());
+      hub.share.value = const FriendShareSettings(shareOk: true);
+      const ev = [SchedEvent('토', 19, 22), SchedEvent('화', 20, 22)];
+      hub.myMeal.value = const [FriendTeam('A', false, 0, ev, id: 'a')];
+      hub.friendLunchboxes.value = {
+        'c': const FriendLunchbox('ok', [
+          FriendTeam('A', false, 0, ev, id: 'a'),
+        ], null),
+        'd': const FriendLunchbox('ok', [
+          FriendTeam('B', false, 0, ev, id: 'b'),
+        ], null),
+      };
+      hub.state.value = FriendState(
+        uid: 'me',
+        loaded: true,
+        friends: const [
+          FriendLink('a_me', 'd', {'status': 'accepted'}),
+          FriendLink('c_me', 'c', {'status': 'accepted'}),
+        ],
+        profiles: const {
+          'c': FriendProfile('팥밥-q7', '#F8BBD0'),
+          'd': FriendProfile('가밥-z9', '#FFF176'),
+        },
+      );
+      expect(hub.mealOf('c').n, 2);
+      expect(hub.mealOf('d').n, 0);
+      await tester.pumpWidget(wrap(const FriendsPage()));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.text(t('fr_meal_title')), findsOneWidget);
+      final tag = tf('fr_meal_tier', {'tier': t('fr_warm_2'), 'n': '2'});
+      expect(find.text(tag), findsNWidgets(2)); // 겸상 줄 + 목록 줄
+      // 이름순이면 가밥이 먼저지만, 겸상 많은 팥밥이 목록 맨 위
+      final y1 = tester.getTopLeft(find.text('팥밥-q7').last).dy;
+      final y2 = tester.getTopLeft(find.text('가밥-z9')).dy;
+      expect(y1, lessThan(y2));
+
+      hub.state.value = FriendState.empty;
+      hub.friendLunchboxes.value = {};
+      hub.myMeal.value = const [];
+      hub.share.value = FriendShareSettings.empty;
+      await tester.pumpWidget(const SizedBox());
     });
   });
 }
