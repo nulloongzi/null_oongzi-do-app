@@ -118,6 +118,7 @@ const _bentoStoryMin = 440.0, _bentoStoryMax = 760.0, _bentoStoryMinFr = 320.0;
 const _frMax = 4;
 const _frStoryH = 264.0, _frStoryAv = 96.0;
 const _frFeedAv = 72.0, _frFeedStep = 48.0, _frFeedGap = 32.0;
+const _frFeedMinW = 168.0; // 얼굴 묶음 폭의 최소 — 아래 알약('이번 주 겸상 N')이 넘치지 않게
 // 익힘 단계 색 — 화면(warm_avatar.dart)·웹 css .fr-warm 과 같은 값
 const _warmRing = [
   Color(0x00000000),
@@ -263,7 +264,9 @@ class MyCardPainter extends CustomPainter {
     if (bodyBot - (bY + bH + 24) < _dietMin) bH = _bentoFeedMinH;
     final dY = bY + bH + 24;
     // 피드는 세로가 빠듯해 칸을 따로 두지 않고, 신원 줄 오른쪽에 얼굴 겹침 + 알약. 식단표 크기는 그대로.
-    final cw = nFr > 0 ? _frFeedAv + _frFeedStep * (nFr - 1) : 0.0;
+    final cw = nFr > 0
+        ? math.max(_frFeedAv + _frFeedStep * (nFr - 1), _frFeedMinW)
+        : 0.0;
     const ch = _frFeedAv + 8 + 30;
     return MyCardLayout(
       fmt: fmt,
@@ -361,7 +364,11 @@ class MyCardPainter extends CustomPainter {
   }) {
     final st = cardStyle(h >= 60 ? 28 : 25, FontWeight.w700, _dark);
     final ico = h * 0.44;
-    final lb = cardEllip(data.mainTeam!, st, maxW - (24 + ico + 12 + 26));
+    final lb = cardEllip(
+      stripEmoji(data.mainTeam),
+      st,
+      maxW - (24 + ico + 12 + 26),
+    );
     final pw = 24 + ico + 12 + cardMeasure(lb, st) + 26;
     final px = centered ? x - pw / 2 : x;
     cardPill(c, px, y, pw, h);
@@ -375,22 +382,19 @@ class MyCardPainter extends CustomPainter {
     cardText(c, lb, st, px + 24 + ico + 12, y + h / 2 + 1, middle: true);
   }
 
+  // 밥이름·팀 이름은 사용자 입력이라 이모지가 섞일 수 있다 — 캔버스에서는 □로 깨지니 뺀다
+  String get _nick => stripEmoji(data.nickname);
+
   void _identityStory(Canvas c, Rect r) {
     final cx = r.center.dx;
     var y = r.top;
     _emblem(c, Offset(cx, y + _sEmblem / 2), _sEmblem);
     y += _sEmblem + _sGapE;
-    final fs = cardFit(
-      data.nickname,
-      r.width,
-      _sName,
-      _sNameMin,
-      FontWeight.w800,
-    );
+    final fs = cardFit(_nick, r.width, _sName, _sNameMin, FontWeight.w800);
     final nst = cardStyle(fs, FontWeight.w800, _ink);
     cardText(
       c,
-      cardEllip(data.nickname, nst, r.width),
+      cardEllip(_nick, nst, r.width),
       nst,
       cx,
       y + _sName / 2,
@@ -424,11 +428,11 @@ class MyCardPainter extends CustomPainter {
     final tw =
         (friends == Rect.zero ? r.right : friends.left - _frFeedGap) - tx;
     var y = r.top + (r.height - _identityFeedTextH()) / 2;
-    final fs = cardFit(data.nickname, tw, _fName, _fNameMin, FontWeight.w800);
+    final fs = cardFit(_nick, tw, _fName, _fNameMin, FontWeight.w800);
     final nst = cardStyle(fs, FontWeight.w800, _ink);
     cardText(
       c,
-      cardEllip(data.nickname, nst, tw),
+      cardEllip(_nick, nst, tw),
       nst,
       tx,
       y + _fName / 2,
@@ -549,7 +553,7 @@ class MyCardPainter extends CustomPainter {
     final fs = data.feed ? (big ? 30.0 : 24.0) : (big ? 36.0 : 28.0);
     final lh = (fs * 1.22).roundToDouble();
     final st = cardStyle(fs, FontWeight.w800, _ink);
-    final lines = cardWrapWords(s.name!, st, r.width - 40, 2);
+    final lines = cardWrapWords(stripEmoji(s.name), st, r.width - 40, 2);
     final sy = r.center.dy + 10 - (lines.length - 1) * lh / 2;
     for (var i = 0; i < lines.length; i++) {
       cardText(
@@ -657,7 +661,7 @@ class MyCardPainter extends CustomPainter {
       _friendAvatar(c, Offset(cx, top + _frStoryAv / 2), _frStoryAv, f, 5, 4);
       cardText(
         c,
-        cardEllip(f.name, nst, cw - 16),
+        cardEllip(stripEmoji(f.name), nst, cw - 16),
         nst,
         cx,
         top + _frStoryAv + 8 + 15,
@@ -681,10 +685,13 @@ class MyCardPainter extends CustomPainter {
   void _friendCluster(Canvas c, Rect r) {
     final list = _friends;
     var best = 0;
+    // 얼굴 줄은 묶음 안에서 가운데(묶음이 알약 폭만큼 넓을 수 있다)
+    final rowW = _frFeedAv + _frFeedStep * (list.length - 1);
+    final ax = r.left + (r.width - rowW) / 2;
     for (var i = 0; i < list.length; i++) {
       _friendAvatar(
         c,
-        Offset(r.left + _frFeedAv / 2 + _frFeedStep * i, r.top + _frFeedAv / 2),
+        Offset(ax + _frFeedAv / 2 + _frFeedStep * i, r.top + _frFeedAv / 2),
         _frFeedAv,
         list[i],
         3,
@@ -695,12 +702,17 @@ class MyCardPainter extends CustomPainter {
     final label = tf('mycard_friends_pill', {'n': '${list.length}'});
     final st = cardStyle(20, FontWeight.w800, _warmInk[best]);
     final pw = cardMeasure(label, st) + 28, py = r.top + _frFeedAv + 8;
-    cardPill(c, r.center.dx - pw / 2, py, pw, 30);
+    // 알약은 본문 폭 안에 (긴 영어 문구도 오른쪽 여백을 넘지 않게)
+    final px = (r.center.dx - pw / 2).clamp(
+      ShareCard.m,
+      ShareCard.w - ShareCard.m - pw,
+    );
+    cardPill(c, px, py, pw, 30);
     cardText(
       c,
       label,
       st,
-      r.center.dx,
+      px + pw / 2,
       py + 16,
       align: TextAlign.center,
       middle: true,

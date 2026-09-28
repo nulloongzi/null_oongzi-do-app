@@ -376,4 +376,40 @@ void main() {
     hub.share.value = FriendShareSettings.empty;
     await tester.pumpWidget(const SizedBox());
   });
+
+  group('FriendsHub 초대코드', () {
+    test('겹쳐 불러도 코드는 하나만 발급된다', () async {
+      final db = FakeFirebaseFirestore();
+      final hub = FriendsHub.instance;
+      hub.svc = FriendsService(db: db);
+      hub.myCode = null;
+      hub.state.value = const FriendState(uid: 'me', loaded: true);
+      final codes = await Future.wait([
+        hub.ensureMyCode(),
+        hub.ensureMyCode(),
+        hub.ensureMyCode(),
+      ]);
+      expect(codes.toSet().length, 1);
+      expect((await db.collection('invite_codes').get()).docs.length, 1);
+      expect(await hub.ensureMyCode(), codes.first);
+      hub.myCode = null;
+      hub.state.value = FriendState.empty;
+    });
+
+    test('화면이 옛 코드를 몰라도 새 코드 받기가 서버의 옛 코드를 지운다', () async {
+      final db = FakeFirebaseFirestore();
+      final svc = FriendsService(db: db);
+      final old = await svc.ensureMyCode('me');
+      final fresh = await svc.regenerate('me', null);
+      expect(fresh, isNot(old));
+      expect(
+        (await db.collection('invite_codes').doc(old).get()).exists,
+        isFalse,
+      );
+      expect(
+        (await db.collection('invite_codes').doc(fresh).get()).exists,
+        isTrue,
+      );
+    });
+  });
 }

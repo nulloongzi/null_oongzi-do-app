@@ -203,6 +203,15 @@ void main() {
       expect(l.bento, l0.bento);
     });
 
+    test('피드: 1명이어도 묶음 폭은 알약 최소 168, 본문 안', () {
+      final l = MyCardPainter(withFriends(true, 1)).layout();
+      expect(l.friends.width, 168);
+      expect(
+        l.friends.right,
+        lessThanOrEqualTo(ShareCard.w - ShareCard.m + 0.01),
+      );
+    });
+
     test('5명 이상은 4명까지만 자리를 잡는다', () {
       expect(
         MyCardPainter(withFriends(true, 7)).layout().friends.width,

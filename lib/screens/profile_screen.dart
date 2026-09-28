@@ -506,7 +506,7 @@ class _ProfilePagerState extends State<ProfilePager> {
   }
 
   void _setHeight(int i, double h) {
-    if ((_heights[i] - h).abs() < 0.5) return;
+    if (!mounted || (_heights[i] - h).abs() < 0.5) return;
     setState(() => _heights[i] = h);
   }
 

@@ -398,4 +398,27 @@ void main() {
       expect(fmtHourRange(9.25, 10.75), '9:15–10:45');
     });
   });
+
+  testWidgets('FriendTimetable: 23시 이후 일정도 그려진다 (clamp 회귀)', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 360,
+            child: FriendTimetable(
+              mine: [
+                FriendTeam('나', false, 0, [SchedEvent('금', 23, 24)], id: 'a'),
+              ],
+              theirs: [
+                FriendTeam('밤', false, 0, [SchedEvent('금', 23.5, 24)], id: 'a'),
+              ],
+              meals: [MealOverlap('a', '금', 23.5, 24)],
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+    expect(find.text('밤'), findsOneWidget);
+  });
 }

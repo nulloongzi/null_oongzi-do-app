@@ -1471,6 +1471,7 @@ const Map<String, Map<String, String>> kStrings = {
     'en': "They won’t be notified. You’ll disappear from each other’s list.",
   },
   'fr_unfriended': {'ko': "밥친구를 끊었어요", 'en': "Friend removed"},
+  'fr_retry': {'ko': "다시 시도", 'en': "Retry"},
   'fr_err_generic': {
     'ko': "잠시 후 다시 시도해 주세요.",
     'en': "Please try again in a moment.",
