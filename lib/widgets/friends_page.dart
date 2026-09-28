@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../services/analytics.dart';
+import '../services/friend_share_service.dart';
 import '../services/friends_service.dart';
 import '../services/i18n.dart';
+import '../services/schedule_parse.dart';
 import '../services/share_service.dart';
 import '../theme.dart';
 import 'bounce_tap.dart';
@@ -125,56 +127,57 @@ class _FriendsPageState extends State<FriendsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<FriendState>(
-      valueListenable: hub.state,
-      builder: (ctx, st, _) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFFDF8),
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x22000000),
-              blurRadius: 16,
-              offset: Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ...switch (_view) {
-              _View.add => _add(st),
-              _View.detail => _detail(st),
-              _View.list => _list(st),
-            },
-            if (_msg != null)
-              Container(
-                margin: const EdgeInsets.only(top: 12),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: NurungjiColors.dark,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  _msg!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Color(0xFFFFF8E1),
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
+    // 관계 · 공유 설정 · 친구 도시락 셋 중 무엇이 바뀌어도 다시 그린다
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        hub.state,
+        hub.share,
+        hub.friendLunchboxes,
+      ]),
+      builder: (ctx, _) => _frame(hub.state.value),
     );
   }
+
+  Widget _frame(FriendState st) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
+    decoration: BoxDecoration(
+      color: const Color(0xFFFFFDF8),
+      borderRadius: BorderRadius.circular(22),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x22000000),
+          blurRadius: 16,
+          offset: Offset(0, 6),
+        ),
+      ],
+    ),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ...switch (_view) {
+          _View.add => _add(st),
+          _View.detail => _detail(st),
+          _View.list => _list(st),
+        },
+        if (_msg != null)
+          Container(
+            margin: const EdgeInsets.only(top: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: NurungjiColors.dark,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              _msg!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Color(0xFFFFF8E1), fontSize: 13),
+            ),
+          ),
+      ],
+    ),
+  );
 
   // ── 조각 ────────────────────────────────────────────────────────
   Widget _head(String title, {VoidCallback? onBack, Widget? right}) => Padding(
@@ -382,6 +385,7 @@ class _FriendsPageState extends State<FriendsPage> {
         );
       }
     }
+    if (hub.needsShareConfirm) out.add(_ShareConfirmCard(onDone: _toast));
     if (st.friends.isEmpty) {
       out.add(
         Container(
@@ -434,7 +438,28 @@ class _FriendsPageState extends State<FriendsPage> {
                 children: [
                   _avatar(p.color, 38),
                   const SizedBox(width: 12),
-                  _meta(p.name, _since(l)),
+                  _meta(
+                    p.name,
+                    hub.isLunchboxChanged(l.other)
+                        ? t('fr_lb_changed')
+                        : _since(l),
+                  ),
+                  if (hub.isLunchboxChanged(l.other))
+                    Container(
+                      width: 8,
+                      height: 8,
+                      margin: const EdgeInsets.only(right: 6),
+                      decoration: const BoxDecoration(
+                        color: NurungjiColors.yellow,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: NurungjiColors.yellow,
+                            blurRadius: 6,
+                          ),
+                        ],
+                      ),
+                    ),
                   const Icon(Icons.chevron_right, color: Color(0xFFA99A8C)),
                 ],
               ),
@@ -465,6 +490,31 @@ class _FriendsPageState extends State<FriendsPage> {
           ),
         );
       }
+    }
+    if (st.friends.isNotEmpty) {
+      final on = !hub.share.value.hideAll;
+      out.add(
+        Container(
+          margin: const EdgeInsets.only(top: 8),
+          padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFBF3E2),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              _meta(t('fr_vis_title'), t(on ? 'fr_vis_on' : 'fr_vis_off')),
+              Switch(
+                value: on,
+                activeTrackColor: NurungjiColors.brown,
+                onChanged: (v) => hub.setHideAll(!v).catchError((_) {
+                  _toast(t('fr_err_generic'));
+                }),
+              ),
+            ],
+          ),
+        ),
+      );
     }
     return out;
   }
@@ -740,7 +790,8 @@ class _FriendsPageState extends State<FriendsPage> {
           ],
         ),
       ),
-      _note(t('fr_diet_soon'), center: true),
+      const SizedBox(height: 12),
+      _FriendLunchboxView(other: link.other),
       const SizedBox(height: 10),
       Center(
         child: _confirm == 'unfriend'
@@ -802,4 +853,462 @@ class _BowlPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter old) => false;
+}
+
+// ── 2단계: 식단표 공유 ────────────────────────────────────────────
+
+/// 첫 밥친구 때 '보일 팀' 확인. 기본이 전부 보이기라, 이걸 마치기 전에는 사본을 쓰지 않는다.
+class _ShareConfirmCard extends StatefulWidget {
+  final void Function(String) onDone;
+  const _ShareConfirmCard({required this.onDone});
+
+  @override
+  State<_ShareConfirmCard> createState() => _ShareConfirmCardState();
+}
+
+class _ShareConfirmCardState extends State<_ShareConfirmCard> {
+  final hub = FriendsHub.instance;
+  late final Future<List<({String id, FriendTeam team})>> _teams = hub.shareSvc
+      .myTeams(hub.state.value.uid ?? '');
+  Set<String>? _off; // 체크를 끈 팀
+  bool _busy = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0x29FAC710),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0x99FAC710), width: 1.5),
+      ),
+      child: FutureBuilder<List<({String id, FriendTeam team})>>(
+        future: _teams,
+        builder: (ctx, snap) {
+          final teams = snap.data ?? const [];
+          _off ??= snap.hasData ? {...hub.share.value.hidden} : null;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                t('fr_share_title'),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: NurungjiColors.dark,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                t('fr_share_body'),
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: NurungjiColors.brown,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (!snap.hasData)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(8),
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              else if (teams.isEmpty)
+                Text(
+                  t('fr_share_none'),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFFA99A8C),
+                  ),
+                )
+              else
+                for (final x in teams)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFFDF8),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: CheckboxListTile(
+                      dense: true,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      activeColor: NurungjiColors.brown,
+                      value: !_off!.contains(x.id),
+                      onChanged: (v) => setState(() {
+                        if (v == true) {
+                          _off!.remove(x.id);
+                        } else {
+                          _off!.add(x.id);
+                        }
+                      }),
+                      title: Text(
+                        '${x.team.isCustom ? '🍙 ' : ''}${x.team.name}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: NurungjiColors.dark,
+                        ),
+                      ),
+                    ),
+                  ),
+              const SizedBox(height: 6),
+              BounceTap(
+                onTap: () async {
+                  if (_busy || !snap.hasData) return;
+                  setState(() => _busy = true);
+                  try {
+                    await hub.confirmShare(_off!.toList());
+                    widget.onDone(t('fr_share_done'));
+                  } catch (_) {
+                    widget.onDone(t('fr_err_generic'));
+                  }
+                  if (mounted) setState(() => _busy = false);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: NurungjiColors.yellow,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    t('fr_share_ok'),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: NurungjiColors.dark,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+const _slotFill = [
+  Color(0xFFFDE293),
+  Color(0xFFFABD7B),
+  Color(0xFFB3D099),
+  Color(0xFFEB9E88),
+  Color(0xFFC68ED3),
+];
+const _slotRail = [
+  Color(0xFFFBC02D),
+  Color(0xFFF57C00),
+  Color(0xFF689F38),
+  Color(0xFFD84315),
+  Color(0xFF8E24AA),
+];
+const _slotBg = [
+  Color(0xFFFFFDE7),
+  Color(0xFFFFF3E0),
+  Color(0xFFF1F8E9),
+  Color(0xFFFBE9E7),
+  Color(0xFFF3E5F5),
+];
+
+/// 친구 상세: 친구 도시락 칩 + 식단표 겹쳐 보기(친구 칸 채움 · 내 칸 테두리).
+class _FriendLunchboxView extends StatefulWidget {
+  final String other;
+  const _FriendLunchboxView({required this.other});
+
+  @override
+  State<_FriendLunchboxView> createState() => _FriendLunchboxViewState();
+}
+
+class _FriendLunchboxViewState extends State<_FriendLunchboxView> {
+  final hub = FriendsHub.instance;
+  late final Future<(FriendLunchbox, List<FriendTeam>)> _f = () async {
+    final lb = await hub.reloadFriendLunchbox(widget.other);
+    final mine = await hub.shareSvc.myTeams(hub.state.value.uid ?? '');
+    await hub.markLunchboxSeen(widget.other);
+    return (lb, [for (final x in mine) x.team]);
+  }();
+
+  Widget _note(String s) => Padding(
+    padding: const EdgeInsets.all(8),
+    child: Text(
+      s,
+      textAlign: TextAlign.center,
+      style: const TextStyle(
+        fontSize: 12,
+        color: Color(0xFFA99A8C),
+        height: 1.5,
+      ),
+    ),
+  );
+
+  Widget _label(String s) => Padding(
+    padding: const EdgeInsets.only(top: 10, bottom: 6),
+    child: Text(
+      s,
+      style: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+        color: NurungjiColors.brown,
+      ),
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<(FriendLunchbox, List<FriendTeam>)>(
+      future: _f,
+      builder: (ctx, snap) {
+        if (!snap.hasData) return _note(t('fr_loading'));
+        final (lb, mine) = snap.data!;
+        if (lb.status != 'ok') {
+          return _note(
+            t(lb.status == 'hidden' ? 'fr_lb_hidden' : 'fr_lb_none'),
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _label(t('fr_lb_title')),
+            if (lb.teams.isEmpty)
+              _note(t('fr_lb_empty'))
+            else
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final tm in lb.teams)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _slotBg[tm.slot % 5],
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: _slotRail[tm.slot % 5],
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Text(
+                        '${tm.isCustom ? '🍙 ' : ''}${tm.name}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: NurungjiColors.dark,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            _label(t('fr_tt_title')),
+            FriendTimetable(mine: mine, theirs: lb.teams),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// 겹쳐 본 식단표. 친구 칸은 도시락 색으로 채우고, 내 칸은 테두리만. 겸상 표시는 3단계에서 얹는다.
+class FriendTimetable extends StatelessWidget {
+  final List<FriendTeam> mine;
+  final List<FriendTeam> theirs;
+  const FriendTimetable({super.key, required this.mine, required this.theirs});
+
+  @override
+  Widget build(BuildContext context) {
+    final friendEv = [
+      for (final tm in theirs)
+        for (final e in tm.events) (e: e, tm: tm),
+    ];
+    if (friendEv.isEmpty) {
+      return Text(
+        t('fr_tt_empty'),
+        textAlign: TextAlign.center,
+        style: const TextStyle(fontSize: 12, color: Color(0xFFA99A8C)),
+      );
+    }
+    final myEv = [
+      for (final tm in mine)
+        for (final e in tm.events) (e: e, tm: tm),
+    ];
+    var minH = 24.0, maxH = 0.0;
+    for (final v in [...friendEv, ...myEv]) {
+      if (v.e.start < minH) minH = v.e.start;
+      if (v.e.end > maxH) maxH = v.e.end;
+    }
+    final h0 = (minH.floor() - 1).clamp(6, 22);
+    final h1 = (maxH.ceil() + 1).clamp(h0 + 3, 24);
+    final span = (h1 - h0).toDouble();
+    final height = (span * 22).clamp(180.0, 400.0);
+    const timeW = 24.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.fromLTRB(4, 8, 4, 6),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0x2E8D6E63)),
+          ),
+          child: LayoutBuilder(
+            builder: (ctx, c) {
+              final colW = (c.maxWidth - timeW) / 7;
+              Widget block(({SchedEvent e, FriendTeam tm}) v, bool me) {
+                final d = scheduleDays.indexOf(v.e.day);
+                final slot = v.tm.slot % 5;
+                return Positioned(
+                  left: timeW + colW * d + 2,
+                  width: colW - 4,
+                  top: (v.e.start - h0) / span * height,
+                  height: ((v.e.end - v.e.start) / span * height).clamp(
+                    4.0,
+                    height,
+                  ),
+                  child: Tooltip(
+                    message: v.tm.name,
+                    child: Container(
+                      decoration: me
+                          ? BoxDecoration(
+                              borderRadius: BorderRadius.circular(5),
+                              border: Border.all(
+                                color: NurungjiColors.brown,
+                                width: 1.5,
+                              ),
+                            )
+                          : BoxDecoration(
+                              color: _slotFill[slot],
+                              borderRadius: BorderRadius.circular(5),
+                              border: Border(
+                                left: BorderSide(
+                                  color: _slotRail[slot],
+                                  width: 3,
+                                ),
+                              ),
+                            ),
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.all(1),
+                      child: me
+                          ? null
+                          : Text(
+                              v.tm.name,
+                              textAlign: TextAlign.center,
+                              maxLines: 3,
+                              overflow: TextOverflow.clip,
+                              style: const TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                height: 1.15,
+                                color: NurungjiColors.dark,
+                              ),
+                            ),
+                    ),
+                  ),
+                );
+              }
+
+              final every = span > 8 ? 2 : 1;
+              return Column(
+                children: [
+                  Row(
+                    children: [
+                      const SizedBox(width: timeW),
+                      for (final d in scheduleDays)
+                        Expanded(
+                          child: Text(
+                            i18nDay(d),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: NurungjiColors.dark,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  SizedBox(
+                    height: height,
+                    child: Stack(
+                      clipBehavior: Clip.hardEdge,
+                      children: [
+                        for (var i = 0; i <= 7; i++)
+                          Positioned(
+                            left: timeW + colW * i,
+                            top: 0,
+                            bottom: 0,
+                            child: Container(
+                              width: 1,
+                              color: const Color(0x1F8D6E63),
+                            ),
+                          ),
+                        for (var h = h0; h <= h1; h++)
+                          if ((h - h0) % every == 0 || h == h1)
+                            Positioned(
+                              left: 0,
+                              width: timeW - 4,
+                              top: ((h - h0) / span * height - 6).clamp(
+                                0.0,
+                                height - 12,
+                              ),
+                              child: Text(
+                                '$h',
+                                textAlign: TextAlign.right,
+                                style: const TextStyle(
+                                  fontSize: 9,
+                                  color: Color(0xFFA99A8C),
+                                ),
+                              ),
+                            ),
+                        for (final v in friendEv) block(v, false),
+                        for (final v in myEv) block(v, true),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Container(
+              width: 12,
+              height: 10,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(3),
+                border: Border.all(color: NurungjiColors.brown, width: 1.5),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              t('fr_tt_me'),
+              style: const TextStyle(fontSize: 11, color: NurungjiColors.brown),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              width: 12,
+              height: 10,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFABD7B),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              t('fr_tt_friend'),
+              style: const TextStyle(fontSize: 11, color: NurungjiColors.brown),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 }
