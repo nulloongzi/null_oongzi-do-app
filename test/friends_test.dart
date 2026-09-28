@@ -1,0 +1,255 @@
+// 밥친구 1단계 테스트 — 순수 규칙(웹 tests/friends.test.js 와 같은 불변식) +
+// FriendsService(fake Firestore) + 딥링크 + 둘째 장 렌더.
+// 보안 규칙 자체는 웹 레포 tests/firestore-rules.test.js(에뮬레이터)가 검증한다.
+import 'dart:math';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:nulloongzido/services/deep_link_service.dart';
+import 'package:nulloongzido/services/friends_service.dart';
+import 'package:nulloongzido/services/i18n.dart';
+import 'package:nulloongzido/widgets/friends_page.dart';
+
+/// firestore.rules invite_codes 의 정규식과 같은 식.
+final ruleRe = RegExp(r'^[A-HJ-NP-Z2-9]{6}$');
+
+void main() {
+  group('초대코드 규칙', () {
+    test('알파벳 32자, 0·O·1·I 없음 — 웹과 같은 문자열', () {
+      expect(kInviteAlphabet, 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789');
+      for (final ch in ['0', 'O', '1', 'I']) {
+        expect(kInviteAlphabet.contains(ch), isFalse, reason: ch);
+      }
+    });
+
+    test('만든 코드는 항상 룰 정규식을 통과한다', () {
+      final r = Random(42);
+      for (var i = 0; i < 500; i++) {
+        expect(ruleRe.hasMatch(makeInviteCode(r)), isTrue);
+      }
+    });
+
+    test('사람이 친 코드 정규화', () {
+      expect(normalizeInviteCode(' nrj-7k2 '), 'NRJ7K2');
+      expect(normalizeInviteCode('NRJ 7K2'), 'NRJ7K2');
+      expect(normalizeInviteCode('NRJ7K0'), ''); // 0 은 알파벳에 없다
+      expect(normalizeInviteCode('NRJ7K'), '');
+      expect(normalizeInviteCode(null), '');
+    });
+
+    test('쌍 id 는 순서와 상관없다', () {
+      expect(friendPairId('b', 'a'), 'a_b');
+      expect(friendPairId('a', 'b'), 'a_b');
+    });
+  });
+
+  group('신청 만료 · 분류', () {
+    final now = DateTime.utc(2026, 9, 28);
+    Timestamp ago(int days) =>
+        Timestamp.fromDate(now.subtract(Duration(days: days)));
+
+    test('7일 넘은 신청만 만료, 서버 시각이 없는 막 만든 신청은 아님', () {
+      expect(
+        isRequestExpired({'status': 'pending', 'created_at': ago(8)}, now),
+        isTrue,
+      );
+      expect(
+        isRequestExpired({'status': 'pending', 'created_at': ago(6)}, now),
+        isFalse,
+      );
+      expect(isRequestExpired({'status': 'pending'}, now), isFalse);
+      expect(
+        isRequestExpired({'status': 'accepted', 'created_at': ago(99)}, now),
+        isFalse,
+      );
+    });
+
+    test('친구 / 받은 신청 / 보낸 신청, 만료는 뺀다', () {
+      final r = partitionFriendships(
+        [
+          (
+            id: 'a_me',
+            data: {
+              'members': ['a', 'me'],
+              'status': 'accepted',
+            },
+          ),
+          (
+            id: 'b_me',
+            data: {
+              'members': ['b', 'me'],
+              'status': 'pending',
+              'requested_by': 'b',
+              'requested_to': 'me',
+              'created_at': ago(1),
+            },
+          ),
+          (
+            id: 'c_me',
+            data: {
+              'members': ['c', 'me'],
+              'status': 'pending',
+              'requested_by': 'me',
+              'requested_to': 'c',
+              'created_at': ago(0),
+            },
+          ),
+          (
+            id: 'd_me',
+            data: {
+              'members': ['d', 'me'],
+              'status': 'pending',
+              'requested_by': 'd',
+              'requested_to': 'me',
+              'created_at': ago(30),
+            },
+          ),
+          (id: 'bad', data: {'members': 'not-a-list'}),
+        ],
+        'me',
+        now,
+      );
+      expect(r.friends.map((l) => l.other), ['a']);
+      expect(r.incoming.map((l) => l.other), ['b']);
+      expect(r.outgoing.map((l) => l.other), ['c']);
+    });
+  });
+
+  group('FriendsService (fake Firestore)', () {
+    late FakeFirebaseFirestore db;
+    late FriendsService svc;
+    setUp(() async {
+      db = FakeFirebaseFirestore();
+      svc = FriendsService(db: db);
+      await db.collection('users').doc('b').set({
+        'full_nickname': '보리밥-k2',
+        'nickname': '보리밥',
+        'color': '#FFF59D',
+      });
+      await db.collection('invite_codes').doc('BBBB22').set({'uid': 'b'});
+    });
+
+    test('내 코드: 처음엔 만들어 저장하고, 다음엔 같은 코드', () async {
+      final c1 = await svc.ensureMyCode('me');
+      expect(ruleRe.hasMatch(c1), isTrue);
+      expect(
+        (await db.collection('invite_codes').doc(c1).get()).data()!['uid'],
+        'me',
+      );
+      expect(await svc.ensureMyCode('me'), c1);
+    });
+
+    test('새 코드 받기: 옛 코드는 지워져 바로 무효', () async {
+      final old = await svc.ensureMyCode('me');
+      final neu = await svc.regenerate('me', old);
+      expect(neu, isNot(old));
+      expect(
+        (await db.collection('invite_codes').doc(old).get()).exists,
+        isFalse,
+      );
+      expect(await svc.ensureMyCode('me'), neu);
+    });
+
+    test('코드 조회 결과: 형식 밖 / 없음 / 내 코드 / 신청 가능', () async {
+      const st = FriendState(uid: 'me', loaded: true);
+      expect((await svc.lookup('abc', st)).status, 'invalid');
+      expect((await svc.lookup('ZZZZ99', st)).status, 'not_found');
+      await db.collection('invite_codes').doc('MEME22').set({'uid': 'me'});
+      expect((await svc.lookup('meme22', st)).status, 'self');
+      final r = await svc.lookup('bbbb-22', st);
+      expect(r.status, 'ok');
+      expect(r.uid, 'b');
+      expect(r.profile!.name, '보리밥-k2');
+    });
+
+    test('신청 → 받은 쪽 수락 → 끊기', () async {
+      expect(await svc.sendRequest('me', 'BBBB22', 'b'), 'sent');
+      final ref = db.collection('friendships').doc(friendPairId('me', 'b'));
+      final d = (await ref.get()).data()!;
+      expect(d['status'], 'pending');
+      expect(d['members'], ['b', 'me']);
+      expect(d['requested_to'], 'b');
+      expect(d['code'], 'BBBB22');
+      // 같은 사람에게 다시 신청해도 문서는 하나
+      expect(await svc.sendRequest('me', 'BBBB22', 'b'), 'sent');
+      await svc.accept(ref.id);
+      expect((await ref.get()).data()!['status'], 'accepted');
+      expect(await svc.sendRequest('me', 'BBBB22', 'b'), 'friend');
+      await svc.remove(ref.id, 'unfriend');
+      expect((await ref.get()).exists, isFalse);
+    });
+
+    test('상대가 먼저 신청해 뒀으면 내 신청이 곧 수락', () async {
+      final id = friendPairId('me', 'b');
+      await db.collection('friendships').doc(id).set({
+        'members': ['b', 'me'],
+        'requested_by': 'b',
+        'requested_to': 'me',
+        'status': 'pending',
+        'code': 'MEME22',
+        'created_at': Timestamp.now(),
+      });
+      expect(await svc.sendRequest('me', 'BBBB22', 'b'), 'accepted');
+      expect(
+        (await db.collection('friendships').doc(id).get()).data()!['status'],
+        'accepted',
+      );
+    });
+  });
+
+  group('딥링크', () {
+    test('?invite= 는 형식이 맞는 코드만 받는다', () {
+      final d = parseDeepLink(
+        Uri.parse('https://do.nulloongzi.com/?invite=nrj7k2'),
+      );
+      expect(d?.kind, 'invite');
+      expect(d?.id, 'NRJ7K2');
+      expect(
+        parseDeepLink(Uri.parse('https://do.nulloongzi.com/?invite=bad')),
+        isNull,
+      );
+    });
+    test('club 이 있으면 club 이 먼저', () {
+      expect(
+        parseDeepLink(Uri.parse('https://x/?club=abc&invite=NRJ7K2'))?.kind,
+        'club',
+      );
+    });
+  });
+
+  group('둘째 장 렌더', () {
+    Widget wrap(Widget w) => MaterialApp(
+      home: Scaffold(body: SingleChildScrollView(child: w)),
+    );
+
+    testWidgets('받은 신청과 친구가 보이고, 비었으면 안내', (tester) async {
+      appLang.value = 'ko';
+      final hub = FriendsHub.instance;
+      hub.state.value = FriendState(
+        uid: 'me',
+        loaded: true,
+        incoming: const [
+          FriendLink('b_me', 'b', {'status': 'pending'}),
+        ],
+        friends: const [
+          FriendLink('c_me', 'c', {'status': 'accepted'}),
+        ],
+        profiles: const {
+          'b': FriendProfile('흑미밥-z9', '#FFF176'),
+          'c': FriendProfile('팥밥-q7', '#F8BBD0'),
+        },
+      );
+      await tester.pumpWidget(wrap(const FriendsPage()));
+      expect(find.text('흑미밥-z9'), findsOneWidget);
+      expect(find.text('수락'), findsOneWidget);
+      expect(find.text('팥밥-q7'), findsOneWidget);
+      expect(find.text('밥친구 1'), findsOneWidget);
+
+      hub.state.value = const FriendState(uid: 'me', loaded: true);
+      await tester.pump();
+      expect(find.text(t('fr_empty_title')), findsOneWidget);
+      hub.state.value = FriendState.empty;
+    });
+  });
+}
