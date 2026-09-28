@@ -7,6 +7,7 @@ import 'package:appinio_social_share/appinio_social_share.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
+import '../widgets/share_card_kit.dart';
 import '../widgets/story_card.dart';
 import 'i18n.dart';
 import 'share_service.dart';
@@ -55,7 +56,7 @@ Future<void> shareStoryCard(BuildContext context, StoryCardData data) async {
   var card = data;
   if (data.lat != null && data.lng != null) {
     final st = await StationService.nearest(data.lat!, data.lng!);
-    if (st != null) card = data.copyWith(station: st.label);
+    if (st != null) card = data.copyWith(station: st.cardLabel);
   }
 
   Uint8List? png;
@@ -94,5 +95,34 @@ Future<void> shareStoryCard(BuildContext context, StoryCardData data) async {
     } catch (_) {
       messenger.showSnackBar(SnackBar(content: Text('${t('err_share')}: $e')));
     }
+  }
+}
+
+/// 피드 이미지(3:4, 1080×1440) → OS 공유시트. 인스타 피드·카톡에 이미지로 올리는 용도.
+/// 스토리와 달리 IG 스티커가 아니라서 링크 복사·코치가 필요 없다(웹 shareFeedCard 대응).
+Future<void> shareFeedCard(BuildContext context, StoryCardData data) async {
+  final messenger = ScaffoldMessenger.of(context);
+  var card = data;
+  if (data.lat != null && data.lng != null) {
+    final st = await StationService.nearest(data.lat!, data.lng!);
+    if (st != null) card = data.copyWith(station: st.cardLabel);
+  }
+  Uint8List? png;
+  try {
+    png = await renderStoryCardPng(card, format: CardFormat.feed);
+  } catch (_) {}
+  if (png == null) {
+    messenger.showSnackBar(SnackBar(content: Text(t('err_card'))));
+    return;
+  }
+  try {
+    final dir = await getTemporaryDirectory();
+    final file = File(
+      '${dir.path}/nurungji_feed_${DateTime.now().millisecondsSinceEpoch}.png',
+    );
+    await file.writeAsBytes(png);
+    await Share.shareXFiles([XFile(file.path)], text: data.url);
+  } catch (e) {
+    messenger.showSnackBar(SnackBar(content: Text('${t('err_share')}: $e')));
   }
 }

@@ -607,6 +607,7 @@ class _MapScreenState extends State<MapScreen> {
               url: ShareService.clubUrl(c.id),
               shareTitle: c.name,
               onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
+              onFeed: () => shareFeedCard(context, StoryCardData.fromClub(c)),
             );
           }
         }
@@ -887,6 +888,7 @@ class _MapScreenState extends State<MapScreen> {
             url: ShareService.clubUrl(c4.id),
             shareTitle: c4.name,
             onStory: () => shareStoryCard(context, StoryCardData.fromClub(c4)),
+            onFeed: () => shareFeedCard(context, StoryCardData.fromClub(c4)),
           );
         }
         break;
@@ -1054,6 +1056,7 @@ class _MapScreenState extends State<MapScreen> {
       url: ShareService.clubUrl(c.id),
       shareTitle: c.name,
       onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
+      onFeed: () => shareFeedCard(context, StoryCardData.fromClub(c)),
     );
     await _hold(4, 'share');
     _endFlow();

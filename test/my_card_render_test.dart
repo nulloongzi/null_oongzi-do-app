@@ -1,7 +1,7 @@
 // 내 카드(공유 이미지) 렌더 테스트 — 골든 대신 '구조 검사'.
 // 이 카드는 Canvas에 좌표를 직접 계산해 그리므로 깨지는 방식이 정해져 있다:
 //   · 레이아웃 산술이 음수/NaN이 되어 paint가 throw
-//   · 블록 합이 세로 예산을 넘어 푸터(QR)를 덮음  ← 실제로 한 번 그렇게 됐다
+//   · 블록 합이 세로 예산을 넘어 QR 스텁을 덮음  ← 실제로 한 번 그렇게 됐다
 // 처음엔 픽셀 프로브로 확인했는데 그 좌표가 QR 모듈 위에 떨어져 헛짚었다.
 // 침범은 좌표로 따지는 게 맞다 → layout()을 직접 본다.
 import 'dart:ui' as ui;
@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nulloongzido/services/schedule_parse.dart';
 import 'package:nulloongzido/widgets/diet_grid.dart' show DietTeam;
 import 'package:nulloongzido/widgets/my_card.dart';
+import 'package:nulloongzido/widgets/share_card_kit.dart';
 
 Future<ui.Image> _render(MyCardData data) async {
   final painter = MyCardPainter(data);
@@ -58,46 +59,55 @@ MyCardData _data({
 }
 
 void main() {
-  test('규격: 스토리형 9:16(1080×1920) / 피드형 4:5(1080×1350)', () async {
+  test('규격: 스토리형 9:16(1080×1920) / 피드형 3:4(1080×1440)', () async {
     final story = await _render(_data(feed: false));
     expect(story.width, 1080);
     expect(story.height, 1920);
-    // 피드형은 인스타 피드 제 규격 4:5 — 9:16로 내면 피드에서 잘린다.
+    // 피드형은 3:4 — 인스타 피드·그리드가 3:4를 그대로 보여준다(2025~).
     final feed = await _render(_data(feed: true));
     expect(feed.width, 1080);
-    expect(feed.height, 1350);
+    expect(feed.height, 1440);
   });
 
-  test('블록이 푸터(QR/CTA)를 침범하지 않는다 (찜 0~5개, 두 규격)', () async {
+  test('블록이 QR 스텁을 침범하지 않는다 (찜 0~5개, 두 규격)', () async {
     for (final feed in [true, false]) {
       for (var filled = 0; filled <= 5; filled++) {
         final p = MyCardPainter(_data(feed: feed, filled: filled));
         expect(
           p.layout().bottom,
-          lessThanOrEqualTo(p.footTop),
-          reason: 'feed=$feed filled=$filled: 마지막 블록이 푸터까지 내려왔다',
+          lessThanOrEqualTo(p.stubTop - ShareCard.gap + 0.01),
+          reason: 'feed=$feed filled=$filled: 마지막 블록이 스텁까지 내려왔다',
         );
       }
     }
   });
 
-  // 피드 배치가 바뀌었다: 위 [네임카드 | 도시락통], 아래 시간표(전체 폭).
-  // 도시락통이 좁은 열에 갇히면 6열 그리드에서 팀 이름이 잘려서 위로 올렸다.
-  test('피드형: 위 [네임카드 | 도시락통], 아래 시간표가 겹치지 않게', () async {
-    final l = MyCardPainter(_data(feed: true, filled: 5)).layout();
-    expect(l.diet, isNot(Rect.zero));
-    expect(l.hero.right, lessThanOrEqualTo(l.box.left)); // 상단 두 칸은 좌우
-    expect(l.hero.top, l.box.top);
-    expect(l.hero.height, l.box.height);
-    expect(l.diet.top, greaterThanOrEqualTo(l.box.bottom)); // 시간표는 그 아래
-    expect(l.diet.width, greaterThan(l.box.width)); // 전체 폭을 쓴다
-    expect(l.bottom, lessThanOrEqualTo(l.footTop)); // QR 을 덮지 않는다
+  test('빈 띠가 없다: 본문은 스텁 바로 위까지, 그 위는 밥색 필드', () async {
+    for (final feed in [true, false]) {
+      final l = MyCardPainter(_data(feed: feed)).layout();
+      // 본문 아래끝이 스텁 절취선 - gap 에 붙는다 (크림 띠가 남지 않는다)
+      expect(l.bottom, closeTo(l.stubTop - ShareCard.gap, 0.01));
+      // 필드는 맨 위부터 본문 카드 윗단을 overlap 만큼 넘어 내려온다
+      expect(l.fieldH, closeTo(l.bento.top + ShareCard.overlap, 0.01));
+      // 머리글·QR은 안전영역 안
+      expect(l.identity.top, greaterThanOrEqualTo(l.fmt.top));
+    }
   });
 
-  test('스토리형: 시간표 없이 도시락통만, 가운데 정렬', () async {
+  test('피드형: 신원 → 도시락통 → 식단표 순으로 겹치지 않게', () async {
+    final l = MyCardPainter(_data(feed: true, filled: 5)).layout();
+    expect(l.diet, isNot(Rect.zero));
+    expect(l.bento.top, greaterThanOrEqualTo(l.identity.bottom));
+    expect(l.diet.top, greaterThanOrEqualTo(l.bento.bottom));
+    expect(l.diet.width, l.bento.width); // 둘 다 본문 폭
+    expect(l.diet.height, greaterThanOrEqualTo(320)); // 식단표 최소 높이
+  });
+
+  test('스토리형: 식단표 없이 도시락통만, 가운데 정렬', () async {
     final l = MyCardPainter(_data(feed: false, filled: 5)).layout();
     expect(l.diet, Rect.zero);
-    expect(l.box.center.dx, closeTo(540, 0.5));
+    expect(l.bento.center.dx, closeTo(540, 0.5));
+    expect(l.bento.height, inInclusiveRange(440, 760));
   });
 
   test('찜 0개 / 일정 0개여도 죽지 않는다', () async {
@@ -109,13 +119,13 @@ void main() {
     }
   });
 
-  test('밥이름이 아주 길어도(2줄 말줄임) 레이아웃이 버틴다', () async {
+  test('밥이름이 아주 길어도(축소 + 말줄임) 레이아웃이 버틴다', () async {
     for (final feed in [true, false]) {
       final data = _data(feed: feed, filled: 5, nickname: '아주아주긴밥이름' * 6);
       final p = MyCardPainter(data);
       expect(
         p.layout().bottom,
-        lessThanOrEqualTo(p.footTop),
+        lessThanOrEqualTo(p.stubTop - ShareCard.gap + 0.01),
         reason: 'feed=$feed',
       );
       expect((await _render(data)).width, 1080);
