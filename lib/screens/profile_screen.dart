@@ -2,28 +2,38 @@
 // 웹처럼 화면 중앙 팝업 모달(딤 blur + slideUp 스프링)로 표시.
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../models/profile.dart';
+import '../services/analytics.dart';
 import '../services/data_repository.dart';
+import '../services/friends_service.dart';
 import '../services/i18n.dart';
 import '../services/lunchbox_service.dart';
 import '../services/profile_service.dart';
 import '../services/social_auth_service.dart';
 import '../theme.dart';
 import '../widgets/bounce_tap.dart';
+import '../widgets/friends_page.dart';
 import '../widgets/provider_stamp.dart';
 import 'share_image_screen.dart';
 
 /// 내 정보 팝업: 웹 프로필 오버레이 대응 — 화면 중앙 카드 모달(딤 blur + 스프링 등장).
-Future<void> showProfileSheet(BuildContext context) {
+/// 옆으로 넘기면 둘째 장이 밥친구다. [initialPage] 1 + [inviteCode] 는 초대 링크(?invite=) 착지.
+Future<void> showProfileSheet(
+  BuildContext context, {
+  int initialPage = 0,
+  String? inviteCode,
+}) {
   return showGeneralDialog<void>(
     context: context,
     barrierDismissible: false, // 딤·blur·바깥탭을 _ProfileModal에서 직접 처리
     barrierLabel: 'profile',
     barrierColor: Colors.transparent,
     transitionDuration: const Duration(milliseconds: 300),
-    pageBuilder: (ctx, a1, a2) => const _ProfileModal(),
+    pageBuilder: (ctx, a1, a2) =>
+        _ProfileModal(initialPage: initialPage, inviteCode: inviteCode),
     transitionBuilder: (ctx, anim, sec, child) =>
         FadeTransition(opacity: anim, child: child), // 오버레이 fadeIn
   );
@@ -31,7 +41,9 @@ Future<void> showProfileSheet(BuildContext context) {
 
 // 중앙 모달: 배경 blur+갈색 딤(바깥 탭 닫기) + 스프링으로 떠오르는 카드.
 class _ProfileModal extends StatelessWidget {
-  const _ProfileModal();
+  final int initialPage;
+  final String? inviteCode;
+  const _ProfileModal({this.initialPage = 0, this.inviteCode});
 
   @override
   Widget build(BuildContext context) {
@@ -65,9 +77,10 @@ class _ProfileModal extends StatelessWidget {
                   maxWidth: 360,
                   maxHeight: MediaQuery.of(context).size.height * 0.85,
                 ),
-                child: const SingleChildScrollView(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  child: ProfileScreen(),
+                child: ProfilePager(
+                  initialPage: initialPage,
+                  inviteCode: inviteCode,
+                  maxHeight: MediaQuery.of(context).size.height * 0.85,
                 ),
               ),
             ),
@@ -181,6 +194,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
     try {
+      if (isReservedNickname(n) && !await _svc.canUseReservedNickname(uid)) {
+        _snack(t('nickname_reserved'));
+        return;
+      }
       if (await _svc.isDuplicate(n)) {
         _snack(t('nickname_dup'));
         return;
@@ -440,5 +457,199 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
+  }
+}
+
+// ── 🍚 팝업 두 장: 내 카드 ↔ 밥친구 (웹 js/friends.js 와 같은 동작) ─────────
+// 위의 도트 두 개가 두 장을 알려주고, 받은 신청을 아직 안 봤으면 둘째 점이 커지고 빛난다.
+// 두 장의 높이가 달라서, 팝업 높이는 보고 있는 장에 맞춘다(넘기는 동안은 두 높이 사이를 보간).
+// 로그아웃·익명이면 둘째 장 없이 지금처럼 카드 한 장.
+class ProfilePager extends StatefulWidget {
+  final int initialPage;
+  final String? inviteCode;
+  final double maxHeight;
+  const ProfilePager({
+    super.key,
+    this.initialPage = 0,
+    this.inviteCode,
+    required this.maxHeight,
+  });
+
+  @override
+  State<ProfilePager> createState() => _ProfilePagerState();
+}
+
+class _ProfilePagerState extends State<ProfilePager> {
+  late final PageController _pc = PageController(
+    initialPage: widget.initialPage,
+  );
+  final _heights = <double>[320, 320];
+  late double _page = widget.initialPage.toDouble();
+  static const _dotsH = 28.0;
+  static const _pad = EdgeInsets.symmetric(horizontal: 20, vertical: 8);
+
+  @override
+  void initState() {
+    super.initState();
+    _pc.addListener(() {
+      final p = _pc.page ?? _page;
+      if (p != _page) setState(() => _page = p);
+    });
+    if (widget.initialPage == 1) _onFriendsShown();
+  }
+
+  @override
+  void dispose() {
+    _pc.dispose();
+    super.dispose();
+  }
+
+  void _onFriendsShown() {
+    FriendsHub.instance.markSeen();
+    Track.event('friends_open');
+  }
+
+  void _setHeight(int i, double h) {
+    if (!mounted || (_heights[i] - h).abs() < 0.5) return;
+    setState(() => _heights[i] = h);
+  }
+
+  Widget _pageOf(int i, Widget child) => SingleChildScrollView(
+    padding: _pad,
+    child: _MeasureSize(
+      onSize: (s) => _setHeight(i, s.height + _pad.vertical),
+      child: child,
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<FriendState>(
+      valueListenable: FriendsHub.instance.state,
+      builder: (ctx, st, _) {
+        if (st.uid == null) {
+          return const SingleChildScrollView(
+            padding: _pad,
+            child: ProfileScreen(),
+          );
+        }
+        final lo = _page.floor().clamp(0, 1), hi = _page.ceil().clamp(0, 1);
+        final h = (_heights[lo] + (_heights[hi] - _heights[lo]) * (_page - lo))
+            .clamp(120.0, widget.maxHeight - _dotsH);
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              height: _dotsH,
+              child: ValueListenableBuilder<bool>(
+                valueListenable: FriendsHub.instance.hasUnseen,
+                builder: (ctx, unseen, _) => _Dots(
+                  page: _page,
+                  signal: unseen,
+                  onTap: (i) => _pc.animateToPage(
+                    i,
+                    duration: const Duration(milliseconds: 280),
+                    curve: Curves.easeOutCubic,
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(
+              height: h,
+              child: PageView(
+                controller: _pc,
+                onPageChanged: (i) {
+                  if (i == 1) _onFriendsShown();
+                },
+                children: [
+                  _pageOf(0, const ProfileScreen()),
+                  _pageOf(1, FriendsPage(initialCode: widget.inviteCode)),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _Dots extends StatelessWidget {
+  final double page;
+  final bool signal; // 받은 신청을 아직 못 봄 → 둘째 점이 커지고 빛난다
+  final void Function(int) onTap;
+  const _Dots({required this.page, required this.signal, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final cur = page.round();
+    Widget dot(int i) {
+      final on = cur == i;
+      final sig = i == 1 && !on && signal;
+      return Semantics(
+        button: true,
+        selected: on,
+        label: t(i == 0 ? 'fr_page_card' : 'fr_page_friends'),
+        child: GestureDetector(
+          onTap: () => onTap(i),
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.all(6),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              width: on ? 22 : (sig ? 13 : 8),
+              height: sig ? 13 : 8,
+              decoration: BoxDecoration(
+                color: sig
+                    ? NurungjiColors.yellow
+                    : (on ? const Color(0xFFFFF8E1) : const Color(0x99FFF8E1)),
+                borderRadius: BorderRadius.circular(999),
+                boxShadow: sig
+                    ? const [
+                        BoxShadow(color: Color(0x59FAC710), spreadRadius: 3),
+                        BoxShadow(color: Color(0xE6FAC710), blurRadius: 14),
+                      ]
+                    : null,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [dot(0), dot(1)],
+    );
+  }
+}
+
+/// 자식의 실제 크기를 알려준다 — 팝업 높이를 보고 있는 장에 맞추려고.
+class _MeasureSize extends SingleChildRenderObjectWidget {
+  final void Function(Size) onSize;
+  const _MeasureSize({required this.onSize, required super.child});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _MeasureBox(onSize);
+
+  @override
+  void updateRenderObject(BuildContext context, _MeasureBox renderObject) {
+    renderObject.onSize = onSize;
+  }
+}
+
+class _MeasureBox extends RenderProxyBox {
+  _MeasureBox(this.onSize);
+  void Function(Size) onSize;
+  Size? _last;
+
+  @override
+  void performLayout() {
+    super.performLayout();
+    if (size != _last) {
+      _last = size;
+      final s = size;
+      WidgetsBinding.instance.addPostFrameCallback((_) => onSize(s));
+    }
   }
 }

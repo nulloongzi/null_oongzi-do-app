@@ -12,6 +12,14 @@ class StationInfo {
     final dist = distance > 0 ? '  ${distance}m · 도보 $walk분' : '';
     return '🚇 $name$dist';
   }
+
+  /// 공유 카드용 "강남역 · 320m · 도보 5분" — 캔버스에선 이모지가 □로 깨지므로 없이.
+  /// 웹 share.js 의 역 알약과 같은 문구.
+  String get cardLabel {
+    if (distance <= 0) return name;
+    final walk = (distance / 67).round().clamp(1, 999);
+    return '$name · ${distance}m · 도보 $walk분';
+  }
 }
 
 class StationService {

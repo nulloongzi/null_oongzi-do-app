@@ -3,8 +3,25 @@
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/profile.dart';
+import 'rice_dex.dart' show kRiceData;
 
-typedef _Rice = ({String name, int weight, String color});
+/// 예약 닉네임: 서비스 이름('누룽지'·'Nulloongzi'·'null_oongzi' …)은 공식 계정만 쓴다.
+/// 공백·기호·대소문자를 걷어내고 비교한다. 웹 레포 firestore.rules isReservedNickname ·
+/// js/profile.js 와 같은 목록 — 실제로 막는 건 룰이고, 앱은 저장 전에 이유를 알려줄 뿐이다.
+const kReservedNicknameWords = [
+  '누룽지',
+  'nulloongzi',
+  'nuloongzi',
+  'nullongzi',
+  'nurungji',
+  'nurungzi',
+  'nuroongzi',
+];
+
+bool isReservedNickname(String? name) {
+  final n = (name ?? '').toLowerCase().replaceAll(RegExp(r'[^a-z0-9가-힣]'), '');
+  return kReservedNicknameWords.any(n.contains);
+}
 
 class RiceName {
   final String base;
@@ -23,40 +40,11 @@ class ProfileService {
   final FirebaseFirestore _db;
   final Random _rnd;
 
-  // 웹 profile.js riceData 포팅 (가중치 + 색)
-  static const List<_Rice> _rice = [
-    (name: '현미밥', weight: 50, color: '#FFF9C4'),
-    (name: '백미밥', weight: 50, color: '#FFF59D'),
-    (name: '흑미밥', weight: 50, color: '#FFF176'),
-    (name: '보리밥', weight: 50, color: '#FFEE58'),
-    (name: '콩밥', weight: 50, color: '#FFD54F'),
-    (name: '오곡밥', weight: 50, color: '#FFCA28'),
-    (name: '차조밥', weight: 10, color: '#FFE082'),
-    (name: '기장밥', weight: 10, color: '#FFECB3'),
-    (name: '숭늉', weight: 10, color: '#FFE0B2'),
-    (name: '볶음밥', weight: 10, color: '#FFCC80'),
-    (name: '비빔밥', weight: 10, color: '#FFB74D'),
-    (name: '김밥', weight: 10, color: '#FFF8E1'),
-    (name: '주먹밥', weight: 10, color: '#FFECB3'),
-    (name: '유부초밥', weight: 10, color: '#FFE082'),
-    (name: '덮밥', weight: 10, color: '#FFF59D'),
-    (name: '국밥', weight: 10, color: '#FFCCBC'),
-    (name: '솥밥', weight: 10, color: '#D7CCC8'),
-    (name: '약밥', weight: 10, color: '#CFD8DC'),
-    (name: '죽', weight: 10, color: '#F5F5F5'),
-    (name: '곤드레밥', weight: 10, color: '#C5E1A5'),
-    (name: '영양밥', weight: 10, color: '#E6EE9C'),
-    (name: '치밥', weight: 10, color: '#FFAB91'),
-    (name: '햇반', weight: 10, color: '#FFFFFF'),
-    (name: '고봉밥', weight: 10, color: '#BCAAA4'),
-    (name: '밥아저씨', weight: 1, color: '#81D4FA'),
-  ];
-
   RiceName generate() {
-    final total = _rice.fold<int>(0, (s, r) => s + r.weight);
+    final total = kRiceData.fold<int>(0, (s, r) => s + r.weight);
     var n = _rnd.nextDouble() * total;
-    var sel = _rice.first;
-    for (final r in _rice) {
+    var sel = kRiceData.first;
+    for (final r in kRiceData) {
       if (n < r.weight) {
         sel = r;
         break;
@@ -116,6 +104,20 @@ class ProfileService {
         .limit(1)
         .get();
     return q.docs.isNotEmpty;
+  }
+
+  /// 예약 닉네임을 쓸 수 있는 계정인가 — 운영자(admins) 또는 official_accounts/{uid}.
+  /// 웹 레포 firestore.rules canUseReservedNickname() 과 같은 기준.
+  Future<bool> canUseReservedNickname(String uid) async {
+    try {
+      final r = await Future.wait([
+        _db.collection('admins').doc(uid).get(),
+        _db.collection('official_accounts').doc(uid).get(),
+      ]);
+      return r.any((d) => d.exists);
+    } catch (_) {
+      return false;
+    }
   }
 
   /// 닉네임 변경(full_nickname만). update merge → 화이트리스트 키 유지로 룰 통과.

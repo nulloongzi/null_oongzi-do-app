@@ -1,4 +1,4 @@
-// share_image_screen.dart — 내 네임카드+도시락+식단표를 이미지로 공유.
+// share_image_screen.dart — 포장하기: 네임카드(밥도감) · 식단표 두 장 중 하나를 이미지로 공유.
 // 렌더는 widgets/my_card.dart(1080×1920 Canvas)가 담당 — 클럽 스토리 카드와 같은 미감.
 // 이 화면은 데이터를 모아 MyCardData 로 만들고, 미리보기와 공유 버튼만 제공한다.
 import 'dart:io';
@@ -9,10 +9,13 @@ import 'package:share_plus/share_plus.dart';
 import '../models/club.dart';
 import '../models/profile.dart';
 import '../services/data_repository.dart';
+import '../services/friends_service.dart';
 import '../services/i18n.dart';
 import '../services/lunchbox_service.dart';
 import '../services/profile_service.dart';
+import '../services/rice_dex.dart';
 import '../services/schedule_parse.dart';
+import '../services/analytics.dart';
 import '../services/share_service.dart';
 import '../theme.dart';
 import '../widgets/diet_grid.dart' show DietTeam;
@@ -34,16 +37,29 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
   final Map<String, Club> _clubs = {};
   bool _loading = true;
   bool _sharing = false;
-  bool _feedMode = true; // 포장 형태: 피드형(식단표 포함)↔스토리형(웹 sh_pick_shape)
+  MyCardMode _mode =
+      MyCardMode.card; // 네임카드(기본) ↔ 식단표 — 웹 #previewShape 와 같은 두 칸
   ui.Image? _logo; // 미리보기용 브랜드 로고(한 번만 로드 — 토글마다 다시 읽지 않게)
+
+  // 밥친구 프로필이 늦게 오면 밥도감 칸이 덜 찬 채로 보인다 — 오는 대로 다시 그린다.
+  void _onFriends() {
+    if (mounted) setState(() {});
+  }
 
   @override
   void initState() {
     super.initState();
+    FriendsHub.instance.state.addListener(_onFriends);
     _load();
     loadBrandLogo().then((img) {
       if (mounted) setState(() => _logo = img);
     });
+  }
+
+  @override
+  void dispose() {
+    FriendsHub.instance.state.removeListener(_onFriends);
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -85,6 +101,16 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
       return (name: c.name, isCustom: false, events: ev);
     }
     return null;
+  }
+
+  /// 밥도감: 나 + 밥친구 전체의 밥 종류(웹 loadFriendRices). 친구 프로필은 FriendsHub 가
+  /// 이미 받아 둔다. 카드에 나가는 친구 정보는 밥 종류뿐 — 이름·팀·일정은 없다.
+  RiceDex _dex(String myRice) {
+    final st = FriendsHub.instance.state.value;
+    if (st.uid == null) return RiceDex.build(myRice, const <String>[]);
+    return RiceDex.build(myRice, [
+      for (final l in st.friends) st.profileOf(l.other).rice,
+    ]);
   }
 
   /// 화면 상태 → 카드 렌더 데이터. 미리보기와 공유가 같은 값을 쓴다.
@@ -130,8 +156,15 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
       slots: slots,
       diet: diet,
       url: ShareService.siteBase,
-      feed: _feedMode,
+      mode: _mode,
+      dex: _dex(p?.nickname ?? ''),
     );
+  }
+
+  void _pick(MyCardMode m) {
+    if (m == _mode) return;
+    Track.event('mycard_render', {'mode': m.name});
+    setState(() => _mode = m);
   }
 
   Future<void> _share() async {
@@ -170,20 +203,23 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
                     child: Center(child: _preview()),
                   ),
                 ),
-                // 포장 형태 선택(웹 sh_pick_shape): 피드형=식단표 포함 / 스토리형=카드+도시락
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                // 카드 선택(웹 #previewShape): 네임카드 = 나는 어떤 밥(밥도감) · 식단표 = 이번 주 언제 뛰는지.
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 4,
                   children: [
                     ChoiceChip(
-                      label: Text(t('share_mode_feed')),
-                      selected: _feedMode,
-                      onSelected: (_) => setState(() => _feedMode = true),
+                      key: const ValueKey('share_mode_card'),
+                      label: Text(t('share_mode_card')),
+                      selected: _mode == MyCardMode.card,
+                      onSelected: (_) => _pick(MyCardMode.card),
                     ),
-                    const SizedBox(width: 8),
                     ChoiceChip(
-                      label: Text(t('share_mode_story')),
-                      selected: !_feedMode,
-                      onSelected: (_) => setState(() => _feedMode = false),
+                      key: const ValueKey('share_mode_diet'),
+                      label: Text(t('share_mode_diet')),
+                      selected: _mode == MyCardMode.diet,
+                      onSelected: (_) => _pick(MyCardMode.diet),
                     ),
                   ],
                 ),
@@ -214,8 +250,7 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
     );
   }
 
-  /// 미리보기 — 내보내는 것과 같은 painter를 축소해 그린다(WYSIWYG).
-  /// 규격도 그대로 따라간다(피드형 4:5 / 스토리형 9:16).
+  /// 미리보기 — 내보내는 것과 같은 painter를 축소해 그린다(WYSIWYG). 둘 다 9:16.
   /// 로고가 아직 안 왔으면 노란 타일 폴백으로 그려진다(레이아웃은 동일).
   Widget _preview() {
     final painter = MyCardPainter(_cardData(), logo: _logo);

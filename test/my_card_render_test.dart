@@ -1,15 +1,17 @@
-// 내 카드(공유 이미지) 렌더 테스트 — 골든 대신 '구조 검사'.
+// 내 카드(포장하기) 렌더 테스트 — 골든 대신 '구조 검사'.
 // 이 카드는 Canvas에 좌표를 직접 계산해 그리므로 깨지는 방식이 정해져 있다:
 //   · 레이아웃 산술이 음수/NaN이 되어 paint가 throw
-//   · 블록 합이 세로 예산을 넘어 푸터(QR)를 덮음  ← 실제로 한 번 그렇게 됐다
-// 처음엔 픽셀 프로브로 확인했는데 그 좌표가 QR 모듈 위에 떨어져 헛짚었다.
-// 침범은 좌표로 따지는 게 맞다 → layout()을 직접 본다.
+//   · 블록 합이 세로 예산을 넘어 QR 스텁을 덮음  ← 실제로 한 번 그렇게 됐다
+//   · 신원이 머리글 위로 밀리거나 도시락통이 최소치 아래로 눌림
+// 침범은 좌표로 따진다 → layout()을 직접 본다. 웹 tests/my-card.test.js 와 같은 불변식.
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nulloongzido/services/rice_dex.dart';
 import 'package:nulloongzido/services/schedule_parse.dart';
 import 'package:nulloongzido/widgets/diet_grid.dart' show DietTeam;
 import 'package:nulloongzido/widgets/my_card.dart';
+import 'package:nulloongzido/widgets/share_card_kit.dart';
 
 Future<ui.Image> _render(MyCardData data) async {
   final painter = MyCardPainter(data);
@@ -20,10 +22,13 @@ Future<ui.Image> _render(MyCardData data) async {
 }
 
 MyCardData _data({
-  required bool feed,
+  MyCardMode mode = MyCardMode.card,
   int filled = 3,
   bool withSchedule = true,
-  String nickname = '백미밥-a3z',
+  String nickname = '현미밥-a3k',
+  String rice = '현미밥',
+  List<String> friends = const [],
+  bool team = true,
 }) {
   final slots = <MyCardSlot>[];
   final diet = <DietTeam>[];
@@ -36,7 +41,9 @@ MyCardData _data({
             name: '스파이크클럽 $i',
             isCustom: i == 2,
             slotIdx: i,
-            events: [SchedEvent('월', 19 + i * 0.5, 21.5 + i * 0.5)],
+            events: [
+              SchedEvent(scheduleDays[i + 1], 19 + i * 0.5, 21.5 + i * 0.5),
+            ],
           ),
         );
       }
@@ -46,79 +53,130 @@ MyCardData _data({
   }
   return MyCardData(
     nickname: nickname,
-    riceType: '백미밥',
+    riceType: rice,
     bgColor: const Color(0xFFFFF9C4),
-    joined: '가입 2026.7.1',
-    mainTeam: filled > 0 ? '스파이크클럽 0' : null,
+    joined: '가입일: 2026.7.1',
+    mainTeam: team && filled > 0 ? '스파이크클럽 0' : null,
     slots: slots,
     diet: diet,
-    url: 'https://nulloongzi.github.io/null_oongzi-do/',
-    feed: feed,
+    url: 'https://do.nulloongzi.com/',
+    mode: mode,
+    dex: RiceDex.build(rice, friends),
   );
 }
 
 void main() {
-  test('규격: 스토리형 9:16(1080×1920) / 피드형 4:5(1080×1350)', () async {
-    final story = await _render(_data(feed: false));
-    expect(story.width, 1080);
-    expect(story.height, 1920);
-    // 피드형은 인스타 피드 제 규격 4:5 — 9:16로 내면 피드에서 잘린다.
-    final feed = await _render(_data(feed: true));
-    expect(feed.width, 1080);
-    expect(feed.height, 1350);
+  test('규격: 네임카드·식단표 둘 다 9:16(1080×1920)', () async {
+    for (final m in MyCardMode.values) {
+      final img = await _render(_data(mode: m));
+      expect(img.width, 1080, reason: m.name);
+      expect(img.height, 1920, reason: m.name);
+    }
   });
 
-  test('블록이 푸터(QR/CTA)를 침범하지 않는다 (찜 0~5개, 두 규격)', () async {
-    for (final feed in [true, false]) {
+  test('블록이 QR 스텁을 침범하지 않는다 (찜 0~5개, 두 장)', () async {
+    for (final m in MyCardMode.values) {
       for (var filled = 0; filled <= 5; filled++) {
-        final p = MyCardPainter(_data(feed: feed, filled: filled));
+        final p = MyCardPainter(_data(mode: m, filled: filled));
         expect(
           p.layout().bottom,
-          lessThanOrEqualTo(p.footTop),
-          reason: 'feed=$feed filled=$filled: 마지막 블록이 푸터까지 내려왔다',
+          lessThanOrEqualTo(p.stubTop - ShareCard.gap + 0.01),
+          reason: '${m.name} filled=$filled: 마지막 블록이 스텁까지 내려왔다',
         );
       }
     }
   });
 
-  // 피드 배치가 바뀌었다: 위 [네임카드 | 도시락통], 아래 시간표(전체 폭).
-  // 도시락통이 좁은 열에 갇히면 6열 그리드에서 팀 이름이 잘려서 위로 올렸다.
-  test('피드형: 위 [네임카드 | 도시락통], 아래 시간표가 겹치지 않게', () async {
-    final l = MyCardPainter(_data(feed: true, filled: 5)).layout();
-    expect(l.diet, isNot(Rect.zero));
-    expect(l.hero.right, lessThanOrEqualTo(l.box.left)); // 상단 두 칸은 좌우
-    expect(l.hero.top, l.box.top);
-    expect(l.hero.height, l.box.height);
-    expect(l.diet.top, greaterThanOrEqualTo(l.box.bottom)); // 시간표는 그 아래
-    expect(l.diet.width, greaterThan(l.box.width)); // 전체 폭을 쓴다
-    expect(l.bottom, lessThanOrEqualTo(l.footTop)); // QR 을 덮지 않는다
+  test('네임카드: 신원 → 도시락통 → 밥도감, 밥도감은 스텁 바로 위', () async {
+    for (final d in [
+      _data(),
+      _data(rice: '누룽지', nickname: '누룽지', team: false),
+      _data(filled: 5, friends: ['백미밥', '흑미밥', '밥아저씨']),
+    ]) {
+      final l = MyCardPainter(d).layout();
+      final headBot = l.fmt.top + ShareCard.headerH;
+      expect(l.diet, Rect.zero);
+      expect(l.identity.top, greaterThanOrEqualTo(headBot + 16 - 0.01));
+      expect(l.identity.bottom, lessThanOrEqualTo(l.bento.top - 16 + 0.01));
+      expect(l.bento.height, inInclusiveRange(280, 760));
+      expect(l.bento.bottom + ShareCard.gap, closeTo(l.dex.top, 0.01));
+      expect(l.dex.bottom, closeTo(l.stubTop - ShareCard.gap, 0.01));
+      // 필드는 맨 위부터 본문 카드 윗단을 overlap 만큼 넘어 내려온다
+      expect(l.fieldH, closeTo(l.bento.top + ShareCard.overlap, 0.01));
+    }
   });
 
-  test('스토리형: 시간표 없이 도시락통만, 가운데 정렬', () async {
-    final l = MyCardPainter(_data(feed: false, filled: 5)).layout();
-    expect(l.diet, Rect.zero);
-    expect(l.box.center.dx, closeTo(540, 0.5));
+  test('네임카드: 도감 밖 닉네임은 번호·한 줄이 빠진 만큼 도시락통이 커진다', () {
+    final a = MyCardPainter(_data()).layout();
+    final b = MyCardPainter(_data(rice: '누룽지', nickname: '누룽지')).layout();
+    expect(b.identity.height, lessThan(a.identity.height));
+    expect(b.bento.height, greaterThanOrEqualTo(a.bento.height));
   });
 
-  test('찜 0개 / 일정 0개여도 죽지 않는다', () async {
-    for (final feed in [true, false]) {
-      final img = await _render(
-        _data(feed: feed, filled: 0, withSchedule: false),
+  test('식단표: 신원 아래 시간표가 스텁 위까지, 도시락통·밥도감 없음', () {
+    final l = MyCardPainter(_data(mode: MyCardMode.diet)).layout();
+    expect(l.bento, Rect.zero);
+    expect(l.dex, Rect.zero);
+    expect(l.diet.top, greaterThanOrEqualTo(l.identity.bottom + 24));
+    expect(l.diet.bottom, closeTo(l.stubTop - ShareCard.gap, 0.01));
+    expect(l.diet.height, greaterThanOrEqualTo(600));
+  });
+
+  test('찜 0개 / 일정 0개 / 밥친구 24종이어도 죽지 않는다', () async {
+    final many = [for (final it in RiceDex.list.take(24)) it.name];
+    for (final m in MyCardMode.values) {
+      for (final d in [
+        _data(mode: m, filled: 0, withSchedule: false),
+        _data(mode: m, friends: many),
+      ]) {
+        final img = await _render(d);
+        expect(img.width, 1080);
+      }
+    }
+  });
+
+  test('밥이름이 아주 길어도(축소 + 말줄임) 레이아웃이 버틴다', () async {
+    for (final m in MyCardMode.values) {
+      final data = _data(mode: m, filled: 5, nickname: '아주아주긴밥이름' * 6);
+      final p = MyCardPainter(data);
+      expect(
+        p.layout().bottom,
+        lessThanOrEqualTo(p.stubTop - ShareCard.gap + 0.01),
+        reason: m.name,
       );
+      final img = await _render(data);
       expect(img.width, 1080);
     }
   });
 
-  test('밥이름이 아주 길어도(2줄 말줄임) 레이아웃이 버틴다', () async {
-    for (final feed in [true, false]) {
-      final data = _data(feed: feed, filled: 5, nickname: '아주아주긴밥이름' * 6);
-      final p = MyCardPainter(data);
-      expect(
-        p.layout().bottom,
-        lessThanOrEqualTo(p.footTop),
-        reason: 'feed=$feed',
-      );
-      expect((await _render(data)).width, 1080);
-    }
+  group('식단표 헤드라인 (웹 myCardDietSummary 와 같은 규칙)', () {
+    DietTeam team(int slot, String name, List<SchedEvent> ev) =>
+        DietTeam(name: name, isCustom: false, slotIdx: slot, events: ev);
+
+    test('요일 + 시간대 성향, 횟수·시간, 범례는 도시락 칸 순서', () {
+      final s = dietSummary([
+        team(1, '강동 화요반', [SchedEvent('화', 20, 22)]),
+        team(0, '잠실 배구회', [SchedEvent('목', 19, 22), SchedEvent('토', 14, 17)]),
+      ]);
+      expect(s.head, contains('저녁형'));
+      expect(s.head.split(' ').first.split('·').length, 3);
+      expect(s.sub, contains('3'));
+      expect(s.sub, contains('8'));
+      expect([for (final l in s.legend) l.slot], [0, 1]);
+    });
+
+    test('5일 이상은 "주 N일", 낮이 많으면 낮형, 일정 없으면 기본 제목', () {
+      final s = dietSummary([
+        team(0, 'A', [
+          for (final d in scheduleDays.take(5)) SchedEvent(d, 13, 14.5),
+        ]),
+      ]);
+      expect(s.head, contains('5'));
+      expect(s.head, contains('낮형'));
+      expect(s.sub, contains('7.5'));
+      final e = dietSummary(const []);
+      expect(e.sub, isEmpty);
+      expect(e.legend, isEmpty);
+    });
   });
 }

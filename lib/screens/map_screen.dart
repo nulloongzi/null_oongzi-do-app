@@ -18,6 +18,7 @@ import '../services/club_admin.dart';
 import '../services/club_filter.dart';
 import '../services/deep_link_service.dart';
 import '../services/profile_service.dart';
+import '../services/friends_service.dart';
 import '../services/i18n.dart';
 import '../services/pickup_filter.dart';
 import '../services/region_match.dart';
@@ -34,6 +35,7 @@ import 'lunchbox_screen.dart';
 import 'profile_screen.dart';
 import 'share_image_screen.dart';
 import '../widgets/bounce_tap.dart';
+import '../widgets/warm_avatar.dart';
 import '../widgets/filter_sheet.dart';
 import '../widgets/glass_surface.dart';
 import '../widgets/reel_card.dart';
@@ -112,6 +114,7 @@ class _MapScreenState extends State<MapScreen> {
     super.initState();
     _load();
     _deepLinks.start(_handleDeepLink);
+    FriendsHub.instance.start(); // 밥친구: 로그인(익명 제외)하면 관계 구독 → 🍚 배지
     focusMapRequest.addListener(_onFocusMapRequest);
     // 첫 로그인 시 밥이름 프로필 생성 (조용히, 실패 무시)
     final uid = _repo.currentUid;
@@ -202,6 +205,13 @@ class _MapScreenState extends State<MapScreen> {
     if (!mounted) return;
     if (d.kind == 'capture') {
       if (kCaptureMode) _runCapture(d.id, d.lang);
+      return;
+    }
+    // 밥친구 초대 링크 → 로그인 뒤 🍚 팝업 둘째 장의 추가 화면에서 코드를 바로 찾는다
+    if (d.kind == 'invite') {
+      Track.event('deep_link_open', {'invite': 1});
+      if (!await _ensureLogin() || !mounted) return;
+      showProfileSheet(context, initialPage: 1, inviteCode: d.id);
       return;
     }
     Track.event(
@@ -607,6 +617,7 @@ class _MapScreenState extends State<MapScreen> {
               url: ShareService.clubUrl(c.id),
               shareTitle: c.name,
               onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
+              onFeed: () => shareFeedCard(context, StoryCardData.fromClub(c)),
             );
           }
         }
@@ -887,6 +898,7 @@ class _MapScreenState extends State<MapScreen> {
             url: ShareService.clubUrl(c4.id),
             shareTitle: c4.name,
             onStory: () => shareStoryCard(context, StoryCardData.fromClub(c4)),
+            onFeed: () => shareFeedCard(context, StoryCardData.fromClub(c4)),
           );
         }
         break;
@@ -1054,6 +1066,7 @@ class _MapScreenState extends State<MapScreen> {
       url: ShareService.clubUrl(c.id),
       shareTitle: c.name,
       onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
+      onFeed: () => shareFeedCard(context, StoryCardData.fromClub(c)),
     );
     await _hold(4, 'share');
     _endFlow();
@@ -1756,11 +1769,7 @@ class _MapScreenState extends State<MapScreen> {
                   bottom: 95,
                   child: _fab('🍱', t('fab_lunchbox'), _openLunchbox),
                 ),
-                Positioned(
-                  left: 15,
-                  bottom: 30,
-                  child: _fab('🍚', t('fab_profile'), _openProfile),
-                ),
+                Positioned(left: 15, bottom: 30, child: _profileFab()),
               ] else
                 // 안치기: 픽업(번개) 탭에서만 여는 로컬 배치 도구. 로그인 불필요.
                 // 오른쪽 FAB과 같은 높이로 올려 목록 시트에 덮이지 않게 한다.
@@ -1830,6 +1839,65 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   // 플로팅 글래스 FAB (이모지) — 누르면 spring 축소.
+  /// 🍚 버블 + 받은 밥친구 신청 수 배지.
+  // 🍚 버블: 받은 신청 배지 + 처음 합석하게 된 밥친구가 있으면 단계 색 테두리(밥친구 장을 보면 꺼진다).
+  Widget _profileFab() => ListenableBuilder(
+    listenable: Listenable.merge([
+      FriendsHub.instance.state,
+      FriendsHub.instance.warmth,
+    ]),
+    builder: (ctx, child) {
+      final n = FriendsHub.instance.state.value.incoming.length;
+      final tier = FriendsHub.instance.warmth.value;
+      return Stack(
+        clipBehavior: Clip.none,
+        children: [
+          if (tier > 0)
+            Semantics(
+              label: t('fr_meal_fab'),
+              child: WarmAvatar(size: 52, tier: tier, big: true, child: child!),
+            )
+          else
+            child!,
+          if (n > 0)
+            Positioned(
+              top: -4,
+              right: -4,
+              child: Semantics(
+                label: tf('fr_badge_aria', {'n': '$n'}),
+                child: Container(
+                  constraints: const BoxConstraints(minWidth: 20),
+                  height: 20,
+                  padding: const EdgeInsets.symmetric(horizontal: 5),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD84315),
+                    borderRadius: BorderRadius.circular(999),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x4D5D4037),
+                        blurRadius: 6,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    n > 9 ? '9+' : '$n',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      );
+    },
+    child: _fab('🍚', t('fab_profile'), _openProfile),
+  );
+
   Widget _fab(
     String emoji,
     String label,

@@ -1,8 +1,13 @@
 // lunchbox_service.dart — 도시락(찜한 팀 5칸 + 커스텀 팀). 웹 lunchbox.js 포팅.
 // 네이티브는 로그인 필수(AuthGate) → Firestore 비공개 서브컬렉션 users/{uid}/private/profile 사용.
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'analytics.dart';
 import 'i18n.dart';
+
+/// 도시락이 저장됐다는 신호. 저장할 때마다 올린다 → FriendsHub 가 듣고
+/// 밥친구에게 보이는 사본(friend_share_service.dart)을 맞춘다.
+final lunchboxChanged = ValueNotifier<int>(0);
 
 class LunchboxData {
   final List<String?> bookmarks; // 길이 5
@@ -43,6 +48,7 @@ class LunchboxService {
       'bookmarks': data.bookmarks,
       'customTeams': data.customTeams,
     }, SetOptions(merge: true));
+    lunchboxChanged.value++;
   }
 
   // 트랜잭션 기반 read-modify-write(동시 쓰기 클로버 방지).
@@ -53,32 +59,37 @@ class LunchboxService {
     apply,
   ) async {
     try {
-      return await _db.runTransaction<String?>((txn) async {
-        final ref = _ref(uid);
-        final snap = await txn.get(ref);
-        final d = snap.data() ?? <String, dynamic>{};
-        final slots = List<String?>.filled(5, null);
-        final bm = d['bookmarks'];
-        if (bm is List) {
-          for (var i = 0; i < 5 && i < bm.length; i++) {
-            final v = bm[i];
-            slots[i] = v is String ? v : null;
-          }
-        }
-        final ct = d['customTeams'];
-        final custom = ct is Map
-            ? Map<String, dynamic>.from(
-                ct.map((k, v) => MapEntry(k.toString(), v)),
-              )
-            : <String, dynamic>{};
-        final err = apply(slots, custom);
-        if (err != null) return err; // 검증 실패 → 쓰기 없이 메시지
-        txn.set(ref, {
-          'bookmarks': slots,
-          'customTeams': custom,
-        }, SetOptions(merge: true));
-        return null;
-      });
+      return await _db
+          .runTransaction<String?>((txn) async {
+            final ref = _ref(uid);
+            final snap = await txn.get(ref);
+            final d = snap.data() ?? <String, dynamic>{};
+            final slots = List<String?>.filled(5, null);
+            final bm = d['bookmarks'];
+            if (bm is List) {
+              for (var i = 0; i < 5 && i < bm.length; i++) {
+                final v = bm[i];
+                slots[i] = v is String ? v : null;
+              }
+            }
+            final ct = d['customTeams'];
+            final custom = ct is Map
+                ? Map<String, dynamic>.from(
+                    ct.map((k, v) => MapEntry(k.toString(), v)),
+                  )
+                : <String, dynamic>{};
+            final err = apply(slots, custom);
+            if (err != null) return err; // 검증 실패 → 쓰기 없이 메시지
+            txn.set(ref, {
+              'bookmarks': slots,
+              'customTeams': custom,
+            }, SetOptions(merge: true));
+            return null;
+          })
+          .then((err) {
+            if (err == null) lunchboxChanged.value++;
+            return err;
+          });
     } catch (_) {
       return t('lb_save_err');
     }

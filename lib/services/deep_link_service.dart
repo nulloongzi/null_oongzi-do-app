@@ -2,9 +2,10 @@
 // 콜드스타트 초기 링크 + 실행 중 스트림 둘 다 처리. 미검증 도메인이면 안 열려 웹 폴백(안전).
 import 'dart:async';
 import 'package:app_links/app_links.dart';
+import 'friends_service.dart' show normalizeInviteCode;
 
 class DeepLink {
-  final String kind; // 'club' | 'spot' | 'capture'
+  final String kind; // 'club' | 'spot' | 'invite' | 'capture'
   final String id; //   club/spot id, 또는 capture 명령(map/filter/…)
   final String? lang; // capture 시 강제 언어(ko/en)
   const DeepLink(this.kind, this.id, {this.lang});
@@ -29,6 +30,9 @@ DeepLink? parseDeepLink(Uri uri) {
   if (spot != null && spot.trim().isNotEmpty) {
     return DeepLink('spot', spot.trim());
   }
+  // 밥친구 초대 링크: 형식이 맞는 코드만(웹 friends.js normalizeCode 와 같은 규칙)
+  final invite = normalizeInviteCode(uri.queryParameters['invite']);
+  if (invite.isNotEmpty) return DeepLink('invite', invite);
   return null;
 }
 
