@@ -199,11 +199,11 @@ void main() {
     expect(find.text(t('fr_tt_empty')), findsOneWidget);
   });
 
-  group('겸상 · 익힘 (3단계)', () {
+  group('합석 (3단계)', () {
     FriendTeam team(String? id, List<SchedEvent> ev) =>
         FriendTeam(id ?? '직접', id == null, 0, ev, id: id);
 
-    test('같은 팀 · 같은 요일 · 30분 이상 겹치면 겸상', () {
+    test('같은 팀 · 같은 요일 · 30분 이상 겹치면 합석', () {
       final ov = mealOverlaps(
         [
           team('a', const [SchedEvent('월', 19, 22), SchedEvent('수', 20, 22)]),
@@ -242,7 +242,7 @@ void main() {
       expect((ov.single.start, ov.single.end), (15.0, 17.0));
     });
 
-    test('익힘 단계: 0 생쌀 · 1 뜸 · 2 노릇 · 3회 이상 누룽지', () {
+    test('합석 단계는 같이 다니는 팀 수: 1 한 숟갈 · 2 한 그릇 · 3팀 이상 한솥밥', () {
       expect([0, 1, 2, 3, 4, 9].map(warmthTier), [0, 1, 2, 3, 3, 3]);
     });
 
@@ -284,7 +284,7 @@ void main() {
     });
   });
 
-  testWidgets('FriendTimetable: 겸상 칸과 범례', (tester) async {
+  testWidgets('FriendTimetable: 합석 칸과 범례', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
@@ -308,56 +308,50 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  for (final tier in [1, 2, 3]) {
-    testWidgets('WarmAvatar 익힘 $tier 단계가 그려지고 움직인다', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Center(
-              child: WarmAvatar(
-                size: 48,
-                tier: tier,
-                big: true,
-                child: const SizedBox.square(dimension: 48),
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.pump(const Duration(milliseconds: 1500));
-      expect(tester.takeException(), isNull);
-      expect(tester.hasRunningAnimations, isTrue);
-    });
-  }
-
-  testWidgets('WarmAvatar: 움직임 줄이기면 멈춘다 · 목록(작은 것)은 테두리만', (tester) async {
+  testWidgets('WarmAvatar: 효과 없이 단계 색 테두리만', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
-        home: MediaQuery(
-          data: MediaQueryData(disableAnimations: true),
-          child: Column(
-            children: [
-              WarmAvatar(
-                size: 48,
-                tier: 3,
-                big: true,
-                child: SizedBox.square(dimension: 48),
-              ),
-              WarmAvatar(
-                size: 38,
-                tier: 2,
-                child: SizedBox.square(dimension: 38),
-              ),
-            ],
-          ),
+        home: Column(
+          children: [
+            WarmAvatar(
+              size: 48,
+              tier: 3,
+              big: true,
+              child: SizedBox.square(dimension: 48),
+            ),
+            WarmAvatar(
+              size: 38,
+              tier: 2,
+              child: SizedBox.square(dimension: 38),
+            ),
+            WarmAvatar(
+              size: 38,
+              tier: 0,
+              child: SizedBox.square(dimension: 38),
+            ),
+          ],
         ),
       ),
     );
     expect(tester.hasRunningAnimations, isFalse);
+    final boxes = tester
+        .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+        .map((b) => b.decoration)
+        .whereType<BoxDecoration>()
+        .where((d) => d.shape == BoxShape.circle)
+        .toList();
+    expect(boxes, hasLength(2)); // 0 단계는 테두리 없음
+    expect((boxes[0].border! as Border).top.color, warmRing[3]);
+    expect((boxes[0].border! as Border).top.width, 3);
+    expect((boxes[1].border! as Border).top.color, warmRing[2]);
+    expect(
+      boxes.every((d) => d.boxShadow == null && d.gradient == null),
+      isTrue,
+    );
   });
 
-  group('포장하기 밥친구 · 겸상 목록 (4단계)', () {
-    test('pickCardFriends: 겸상 있는 친구만, 전부 숨긴 친구 제외, 겸상 많은 순 최대 4', () {
+  group('포장하기 밥친구 · 합석 목록 (4단계)', () {
+    test('pickCardFriends: 합석 있는 친구만, 전부 숨긴 친구 제외, 합석 많은 순 최대 4', () {
       CardFriendEntry e(String name, int n, {bool hidden = false}) =>
           CardFriendEntry(
             name: name,
@@ -420,5 +414,35 @@ void main() {
     );
     expect(tester.takeException(), isNull);
     expect(find.text('밤'), findsOneWidget);
+  });
+
+  group('합석 단계는 팀 수로 센다', () {
+    test('주 3회 하는 팀 하나는 팀 하나 — 한 숟갈', () {
+      const m = FriendMeal([
+        MealOverlap('a', '월', 19, 22),
+        MealOverlap('a', '수', 19, 22),
+        MealOverlap('a', '금', 19, 22),
+      ]);
+      expect(m.n, 3);
+      expect(m.teams, 1);
+      expect(m.tier, 1);
+    });
+    test('팀 두 개는 한 그릇, 세 개면 한솥밥', () {
+      expect(
+        const FriendMeal([
+          MealOverlap('a', '월', 19, 21),
+          MealOverlap('b', '수', 19, 21),
+        ]).tier,
+        2,
+      );
+      expect(
+        const FriendMeal([
+          MealOverlap('a', '월', 19, 21),
+          MealOverlap('b', '수', 19, 21),
+          MealOverlap('c', '금', 19, 21),
+        ]).tier,
+        3,
+      );
+    });
   });
 }
