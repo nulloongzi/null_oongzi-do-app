@@ -81,6 +81,10 @@ class Club {
   final List<String> instaReels; // 멀티 릴스(없으면 [instaReel])
   // 릴스 shortcode → 우리 Storage 의 정지 커버 URL(Cloud Function insta-cover.js 가 채움)
   final Map<String, String> instaReelCovers;
+  // 운영자가 릴스를 숨김(reels_hidden) — 챗봇 '신고관리'의 🙈 릴스 숨김.
+  // 켜져 있으면 fromDoc 이 릴스·커버를 비워서 상세·지도·계측 어디에도 나오지 않는다.
+  // 수정 폼은 이 값으로 릴스 칸을 잠근다(firestore.rules 가 관리자·소유자의 변경을 막는다).
+  final bool reelsHidden;
   final bool isVerified;
   final bool isUrgent;
   final String? urgentMsg;
@@ -107,6 +111,7 @@ class Club {
     this.instaReel,
     this.instaReels = const [],
     this.instaReelCovers = const {},
+    this.reelsHidden = false,
     this.isVerified = false,
     this.isUrgent = false,
     this.urgentMsg,
@@ -116,6 +121,7 @@ class Club {
 
   factory Club.fromDoc(DocumentSnapshot doc) {
     final d = (doc.data() as Map<String, dynamic>?) ?? {};
+    final hidden = d['reels_hidden'] == true;
     final coord = d['coordinates'] as Map<String, dynamic>?;
     final contact = d['contact'] as Map<String, dynamic>?;
     return Club(
@@ -133,9 +139,10 @@ class Club {
       lng: _toD(coord?['lng']),
       insta: (d['insta'] ?? contact?['insta']) as String?,
       link: (d['link'] ?? contact?['link']) as String?,
-      instaReel: d['insta_reel'] as String?,
-      instaReels: _reels(d),
-      instaReelCovers: _reelCovers(d),
+      instaReel: hidden ? null : d['insta_reel'] as String?,
+      instaReels: hidden ? const [] : _reels(d),
+      instaReelCovers: hidden ? const {} : _reelCovers(d),
+      reelsHidden: hidden,
       isVerified: (d['is_verified'] ?? false) as bool,
       isUrgent: (d['is_urgent'] ?? false) as bool,
       urgentMsg: d['urgent_msg'] as String?,

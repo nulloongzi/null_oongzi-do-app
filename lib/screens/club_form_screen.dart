@@ -98,6 +98,10 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
   final GlobalKey _optionalKey = GlobalKey();
   final GlobalKey _schedKey = GlobalKey();
   final GlobalKey _reelKey = GlobalKey();
+
+  // 운영자가 릴스를 숨긴 팀(reels_hidden). 모델이 릴스를 비워 두므로 칸을 열어 두면
+  // 저장 한 번에 숨긴 원본이 지워진다 — 잠그고, 저장 때 릴스 필드를 보내지 않는다.
+  bool get _reelsLocked => widget.editing?.reelsHidden == true;
   final GlobalKey _submitKey = GlobalKey();
 
   bool get _isEdit => widget.editing != null;
@@ -448,8 +452,14 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
     }
     // 릴스(선택, 여러 개): 행 분해·permalink 검증·중복 제거는 collectReels가
     // 일괄 처리(웹 registration.js:358-368 멀티 릴스 루프 대응)
-    final reels = Sanitize.collectReels(_reels.map((c) => c.text));
+    // 운영자가 숨긴 팀은 릴스 칸이 잠겨 있고, 릴스 필드를 아예 보내지 않는다.
+    final reels = _reelsLocked
+        ? const <String>[]
+        : Sanitize.collectReels(_reels.map((c) => c.text));
     if (reels == null) return _err(t('f_reel_invalid'));
+    if (reels.length > Sanitize.maxReels) {
+      return _err(tf('f_reel_too_many', {'max': '${Sanitize.maxReels}'}));
+    }
 
     setState(() => _saving = true);
     // 좌표 미확정이면 제출 시 주소 지오코딩 폴백(웹 registration.js:407-432).
@@ -508,8 +518,10 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
       'schedule_raw': ScheduleBlock.toRaw(_blocks),
       'price': price,
       'contact': {'insta': insta, 'link': link},
-      'insta_reel': reels.isNotEmpty ? reels.first : '', // 웹 호환(단일)
-      'insta_reels': reels,
+      if (!_reelsLocked) ...{
+        'insta_reel': reels.isNotEmpty ? reels.first : '', // 웹 호환(단일)
+        'insta_reels': reels,
+      },
     };
 
     try {
@@ -630,10 +642,12 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
                     key: _reelKey,
                     child: _group(
                       t('f_reel_label'),
-                      ReelEditor(
-                        controllers: _reels,
-                        onChanged: () => setState(() {}),
-                      ),
+                      _reelsLocked
+                          ? const ReelsHiddenNotice()
+                          : ReelEditor(
+                              controllers: _reels,
+                              onChanged: () => setState(() {}),
+                            ),
                     ),
                   ),
                   _group(t('cf_link'), _input(_link, t('f_contact_hint'))),
