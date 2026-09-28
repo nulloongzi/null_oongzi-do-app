@@ -194,6 +194,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
     try {
+      if (isReservedNickname(n) && !await _svc.canUseReservedNickname(uid)) {
+        _snack(t('nickname_reserved'));
+        return;
+      }
       if (await _svc.isDuplicate(n)) {
         _snack(t('nickname_dup'));
         return;
