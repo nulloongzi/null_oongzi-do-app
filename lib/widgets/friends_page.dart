@@ -312,7 +312,8 @@ class _FriendsPageState extends State<FriendsPage> {
     );
   }
 
-  Widget _avatar(String color, double size) => Container(
+  /// 밥 색 얼굴 + 밥그릇. [tier] 가 있으면 합석 단계만큼 차오른 그릇.
+  Widget _avatar(String color, double size, {int tier = 0}) => Container(
     width: size,
     height: size,
     decoration: BoxDecoration(
@@ -330,12 +331,12 @@ class _FriendsPageState extends State<FriendsPage> {
     alignment: Alignment.center,
     child: CustomPaint(
       size: Size.square(size * 0.58),
-      painter: const _BowlPainter(),
+      painter: MealBowlPainter(tier),
     ),
   );
 
   String _mealText(FriendMeal m) =>
-      tf('fr_meal_tier', {'tier': t('fr_warm_${m.tier}'), 'n': '${m.n}'});
+      tf('fr_meal_tier', {'tier': t('fr_warm_${m.tier}'), 'n': '${m.teams}'});
 
   Widget _mealCard(FriendState st, FriendLink l, FriendMeal m) {
     final p = st.profileOf(l.other);
@@ -352,12 +353,7 @@ class _FriendsPageState extends State<FriendsPage> {
           ),
           child: Column(
             children: [
-              WarmAvatar(
-                size: 48,
-                tier: m.tier,
-                big: true,
-                child: _avatar(p.color, 48),
-              ),
+              _avatar(p.color, 48, tier: m.tier),
               const SizedBox(height: 6),
               Text(
                 p.name,
@@ -485,9 +481,13 @@ class _FriendsPageState extends State<FriendsPage> {
       }
     }
     if (hub.needsShareConfirm) out.add(_ShareConfirmCard(onDone: _toast));
-    final hot = [
-      for (final l in st.friends) (l: l, m: hub.mealOf(l.other)),
-    ].where((v) => v.m.n > 0).toList()..sort((a, b) => b.m.n - a.m.n);
+    final hot =
+        [
+          for (final l in st.friends) (l: l, m: hub.mealOf(l.other)),
+        ].where((v) => v.m.teams > 0).toList()..sort(
+          (a, b) =>
+              b.m.teams != a.m.teams ? b.m.teams - a.m.teams : b.m.n - a.m.n,
+        );
     if (hot.isNotEmpty) {
       out.add(_label(t('fr_meal_title')));
       // 합석이 낯선 사람에게 한 줄
@@ -544,8 +544,8 @@ class _FriendsPageState extends State<FriendsPage> {
       // 합석 많은 순, 같으면 이름순
       final sorted = [...st.friends]
         ..sort(
-          (a, b) => hub.mealOf(b.other).n != hub.mealOf(a.other).n
-              ? hub.mealOf(b.other).n - hub.mealOf(a.other).n
+          (a, b) => hub.mealOf(b.other).teams != hub.mealOf(a.other).teams
+              ? hub.mealOf(b.other).teams - hub.mealOf(a.other).teams
               : st
                     .profileOf(a.other)
                     .name
@@ -562,17 +562,13 @@ class _FriendsPageState extends State<FriendsPage> {
               padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
               child: Row(
                 children: [
-                  WarmAvatar(
-                    size: 38,
-                    tier: meal.tier,
-                    child: _avatar(p.color, 38),
-                  ),
+                  _avatar(p.color, 38, tier: meal.tier),
                   const SizedBox(width: 12),
                   _meta(
                     p.name,
                     hub.isLunchboxChanged(l.other)
                         ? t('fr_lb_changed')
-                        : (meal.n > 0 ? _mealText(meal) : _since(l)),
+                        : (meal.teams > 0 ? _mealText(meal) : _since(l)),
                   ),
                   if (hub.isLunchboxChanged(l.other))
                     Container(
@@ -890,12 +886,7 @@ class _FriendsPageState extends State<FriendsPage> {
         ),
         child: Row(
           children: [
-            WarmAvatar(
-              size: 56,
-              tier: meal.tier,
-              big: true,
-              child: _avatar('#FFFFFF', 56),
-            ),
+            _avatar('#FFFFFF', 56, tier: meal.tier),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -956,47 +947,6 @@ class _FriendsPageState extends State<FriendsPage> {
       if (_confirm == 'unfriend') _note(t('fr_unfriend_note'), center: true),
     ];
   }
-}
-
-/// 밥그릇 — 웹 friends.js 아바타와 같은 24 viewBox 패스(로고 단순화).
-class _BowlPainter extends CustomPainter {
-  const _BowlPainter();
-
-  @override
-  void paint(Canvas c, Size size) {
-    c.scale(size.width / 24);
-    final paint = Paint()..color = NurungjiColors.dark;
-    c.drawPath(
-      Path()
-        ..moveTo(12, 4.6)
-        ..cubicTo(10.1, 4.6, 8.8, 5.6, 8.1, 6.8)
-        ..cubicTo(7.1, 6.4, 5.7, 7.1, 5.7, 8.5)
-        ..cubicTo(5.7, 9.4, 6.4, 10, 7.1, 10)
-        ..lineTo(16.9, 10)
-        ..cubicTo(17.6, 10, 18.3, 9.4, 18.3, 8.5)
-        ..cubicTo(18.3, 7.1, 16.9, 6.4, 15.9, 6.8)
-        ..cubicTo(15.2, 5.6, 13.9, 4.6, 12, 4.6)
-        ..close(),
-      paint,
-    );
-    c.drawPath(
-      Path()
-        ..moveTo(4.2, 11.6)
-        ..lineTo(19.8, 11.6)
-        ..cubicTo(19.8, 14.7, 17.3, 17.2, 14, 17.8)
-        ..lineTo(14, 18.7)
-        ..cubicTo(14, 19.1, 13.7, 19.4, 13.3, 19.4)
-        ..lineTo(10.7, 19.4)
-        ..cubicTo(10.3, 19.4, 10, 19.1, 10, 18.7)
-        ..lineTo(10, 17.8)
-        ..cubicTo(6.7, 17.2, 4.2, 14.7, 4.2, 11.6)
-        ..close(),
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter old) => false;
 }
 
 // ── 2단계: 식단표 공유 ────────────────────────────────────────────

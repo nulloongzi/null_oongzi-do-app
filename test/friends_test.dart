@@ -264,19 +264,25 @@ void main() {
       hub.state.value = FriendState.empty;
     });
 
-    testWidgets('합석 줄 · 합석 많은 순 · 익힘 문구', (tester) async {
+    testWidgets('합석 줄 · 같은 팀 많은 순 · 단계 문구', (tester) async {
       appLang.value = 'ko';
       final hub = FriendsHub.instance;
       hub.shareSvc = FriendShareService(db: FakeFirebaseFirestore());
       hub.share.value = const FriendShareSettings(shareOk: true);
-      const ev = [SchedEvent('토', 19, 22), SchedEvent('화', 20, 22)];
-      hub.myMeal.value = const [FriendTeam('A', false, 0, ev, id: 'a')];
+      // 같은 팀 두 개(a·b)를 같이 다닌다 → 한 그릇
+      const evA = [SchedEvent('토', 19, 22)];
+      const evB = [SchedEvent('화', 20, 22)];
+      hub.myMeal.value = const [
+        FriendTeam('A', false, 0, evA, id: 'a'),
+        FriendTeam('B', false, 1, evB, id: 'b'),
+      ];
       hub.friendLunchboxes.value = {
         'c': const FriendLunchbox('ok', [
-          FriendTeam('A', false, 0, ev, id: 'a'),
+          FriendTeam('A', false, 0, evA, id: 'a'),
+          FriendTeam('B', false, 1, evB, id: 'b'),
         ], null),
         'd': const FriendLunchbox('ok', [
-          FriendTeam('B', false, 0, ev, id: 'b'),
+          FriendTeam('Z', false, 0, evA, id: 'z'),
         ], null),
       };
       hub.state.value = FriendState(
@@ -363,7 +369,7 @@ void main() {
     );
     await tester.pump();
     await tester.tap(find.text('팥밥-q7'));
-    // 친구 도시락 로드(fake Firestore) → 합석 계산 → 목록. 익힘 애니메이션이 돌아 pumpAndSettle 은 쓰지 않는다.
+    // 친구 도시락 로드(fake Firestore) → 합석 계산 → 목록. pumpAndSettle 대신 몇 프레임만 돌린다.
     for (var i = 0; i < 6; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
@@ -432,7 +438,7 @@ void main() {
       ],
       profiles: const {'c': FriendProfile('팥밥-q7', '#F8BBD0')},
     );
-    expect(hub.unseenMealTier, 2); // 처음 합석 → 알림
+    expect(hub.unseenMealTier, 1); // 처음 합석(같은 팀 1개 → 한 숟갈) → 알림
     await hub.markSeen(); // 밥친구 장을 봤다
     expect(hub.unseenMealTier, 0);
     expect(hub.warmth.value, 0);
@@ -454,7 +460,7 @@ void main() {
       ],
       profiles: const {},
     );
-    expect(hub.unseenMealTier, 2);
+    expect(hub.unseenMealTier, 1);
 
     hub.state.value = FriendState.empty;
     hub.friendLunchboxes.value = {};

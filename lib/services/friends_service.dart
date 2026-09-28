@@ -302,7 +302,7 @@ class FriendsHub {
   /// 2단계: 친구 도시락 사본(uid → 도시락). '도시락 바뀜' 판단에 쓴다.
   final friendLunchboxes = ValueNotifier<Map<String, FriendLunchbox>>({});
 
-  /// 3단계: 합석을 셀 내 팀(친구에게 보이는 동호회 팀) · 🍚 버블에 띄울 가장 높은 익힘 단계.
+  /// 3단계: 합석을 셀 내 팀(친구에게 보이는 동호회 팀) · 🍚 버블에 띄울 가장 높은 합석 단계.
   final myMeal = ValueNotifier<List<FriendTeam>>(const []);
   final warmth = ValueNotifier<int>(0);
   FriendShareService? _shareSvc;
@@ -393,7 +393,7 @@ class FriendsHub {
       if (mealOf(f.other).tier > 0) (uid: f.other, tier: mealOf(f.other).tier),
   ];
 
-  /// 아직 안 본 합석 친구 중 가장 높은 익힘 단계(없으면 0) — 🍚 버블 테두리 색.
+  /// 아직 안 본 합석 친구 중 가장 높은 합석 단계(없으면 0) — 🍚 버블 테두리 색.
   int get unseenMealTier {
     var tier = 0;
     for (final x in _mealFriends) {

@@ -314,7 +314,7 @@ const Map<String, Map<String, String>> kStrings = {
   'mycard_friends_title': {'ko': '이번 주 합석', 'en': 'Eating together this week'},
   'mycard_friends_n': {'ko': '밥친구 {n}', 'en': '{n} friends'},
   'mycard_friends_pill': {'ko': '이번 주 합석 {n}', 'en': 'Together · {n}'},
-  'mycard_meal_n': {'ko': '합석 {n}', 'en': '{n}×/wk'},
+  'mycard_meal_n': {'ko': '같은 팀 {n}', 'en': 'shared teams: {n}'},
   // 공유 카드(my_card.dart)는 Canvas에 직접 그려서 이모지가 tofu(□)로 뜬다.
   // 카드 안에 들어가는 문구는 이모지 없는 별도 키를 쓴다.
   'mycard_lunchbox': {'ko': '도시락', 'en': 'Lunchbox'},
@@ -1433,8 +1433,8 @@ const Map<String, Map<String, String>> kStrings = {
   'fr_tt_meal_legend': {'ko': "합석", 'en': "Together"},
   'fr_meal_title': {'ko': "이번 주 합석", 'en': "Eating together this week"},
   'fr_meal_tier': {
-    'ko': "{tier} · 합석 주 {n}회",
-    'en': "{tier} · together {n}×/week",
+    'ko': "{tier} · 같은 팀 {n}개",
+    'en': "{tier} · shared teams: {n}",
   },
   'fr_meal_zero': {
     'ko': "같은 팀에서 같은 시간에 운동하면 합석이에요.",
@@ -1452,10 +1452,10 @@ const Map<String, Map<String, String>> kStrings = {
     'ko': "이번 주 합석하는 밥친구가 있어요",
     'en': "You play with bap friends this week",
   },
-  'fr_warm_0': {'ko': "생쌀", 'en': "Raw rice"},
-  'fr_warm_1': {'ko': "뜸", 'en': "Steaming"},
-  'fr_warm_2': {'ko': "노릇", 'en': "Golden"},
-  'fr_warm_3': {'ko': "누룽지", 'en': "Nurungji"},
+  'fr_warm_0': {'ko': "", 'en': ""},
+  'fr_warm_1': {'ko': "한 숟갈", 'en': "A spoonful"},
+  'fr_warm_2': {'ko': "한 그릇", 'en': "A bowlful"},
+  'fr_warm_3': {'ko': "한솥밥", 'en': "Same pot"},
   'lb_eye_on': {
     'ko': "밥친구에게 보임 (누르면 숨기기)",
     'en': "Visible to friends (tap to hide)",

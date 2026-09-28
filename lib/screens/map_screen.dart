@@ -1840,7 +1840,7 @@ class _MapScreenState extends State<MapScreen> {
 
   // 플로팅 글래스 FAB (이모지) — 누르면 spring 축소.
   /// 🍚 버블 + 받은 밥친구 신청 수 배지.
-  // 🍚 버블: 받은 신청 배지 + 이번 주 합석 친구가 있으면 금빛 테두리와 김(가장 높은 익힘 단계).
+  // 🍚 버블: 받은 신청 배지 + 처음 합석하게 된 밥친구가 있으면 단계 색 테두리(밥친구 장을 보면 꺼진다).
   Widget _profileFab() => ListenableBuilder(
     listenable: Listenable.merge([
       FriendsHub.instance.state,

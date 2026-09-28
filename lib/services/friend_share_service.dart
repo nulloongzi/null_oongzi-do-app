@@ -118,7 +118,7 @@ class FriendTeam {
   const FriendTeam(this.name, this.isCustom, this.slot, this.events, {this.id});
 }
 
-// ── 합석 · 익힘 (웹 friendSharePure.mealOverlaps / warmthTier 와 같다) ──
+// ── 합석 (웹 friendSharePure.mealOverlaps / warmthTier / mealTeams 와 같다) ──
 
 class MealOverlap {
   final String id;
@@ -155,15 +155,22 @@ List<MealOverlap> mealOverlaps(List<FriendTeam> mine, List<FriendTeam> theirs) {
   return out;
 }
 
-/// 익힘 단계: 한 주 합석 횟수 → 0 생쌀 · 1 뜸 · 2 노릇 · 3 누룽지(3회 이상)
-int warmthTier(int n) => n >= 3 ? 3 : (n >= 2 ? 2 : (n >= 1 ? 1 : 0));
+/// 합석 단계: 같이 다니는 팀 수 → 1 한 숟갈 · 2 한 그릇 · 3 한솥밥(3팀 이상).
+/// 한 주 횟수로 세지 않는다 — 주 3회 하는 팀 하나를 같이 다니는 것도 팀 하나다.
+int warmthTier(int teams) =>
+    teams >= 3 ? 3 : (teams >= 2 ? 2 : (teams >= 1 ? 1 : 0));
 
 class FriendMeal {
   final List<MealOverlap> overlaps;
   const FriendMeal(this.overlaps);
   static const none = FriendMeal([]);
+
+  /// 합석 칸 수(겹쳐 보기·합석 목록용)
   int get n => overlaps.length;
-  int get tier => warmthTier(n);
+
+  /// 같이 다니는 팀 수 — 합석 단계의 기준
+  int get teams => {for (final o in overlaps) o.id}.length;
+  int get tier => warmthTier(teams);
 }
 
 /// 합석 목록 정렬: 요일 → 시작 시각 (웹 friendSharePure.sortOverlaps).
@@ -180,7 +187,7 @@ String _fmtHour(double v) {
   return m == 0 ? '$h' : '$h:${m < 10 ? '0' : ''}$m';
 }
 
-/// 포장하기 카드 후보 한 명(선별용). 나가는 건 이름·색·익힘 단계뿐.
+/// 포장하기 카드 후보 한 명(선별용). 나가는 건 이름·색·합석 단계뿐. [n] 은 같이 다니는 팀 수.
 class CardFriendEntry {
   final String name;
   final String color;

@@ -113,7 +113,7 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
           name: st.profileOf(l.other).name,
           color: st.profileOf(l.other).color,
           tier: hub.mealOf(l.other).tier,
-          n: hub.mealOf(l.other).n,
+          n: hub.mealOf(l.other).teams,
           hidden: hub.friendLunchboxes.value[l.other]?.status == 'hidden',
         ),
     ]);

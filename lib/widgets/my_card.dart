@@ -19,6 +19,7 @@ import '../services/i18n.dart';
 import '../services/schedule_parse.dart';
 import 'diet_grid.dart' show DietTeam;
 import 'share_card_kit.dart';
+import 'warm_avatar.dart' show paintMealBowl, warmInk;
 import 'story_card.dart' show loadBrandLogo;
 
 /// 도시락 한 칸. name이 null이면 빈 칸.
@@ -28,12 +29,12 @@ class MyCardSlot {
   const MyCardSlot({this.name, this.isCustom = false});
 }
 
-/// 카드에 넣는 밥친구 한 명. 나가는 건 밥이름·밥 색·익힘 단계·합석 횟수뿐 —
+/// 카드에 넣는 밥친구 한 명. 나가는 건 밥이름·밥 색·합석 단계·합석 횟수뿐 —
 /// 친구의 팀·요일·시간은 카드에 없다(docs/design-system.md §7-4).
 class MyCardFriend {
   final String name;
   final Color color;
-  final int tier; // 0 생쌀 · 1 뜸 · 2 노릇 · 3 누룽지
+  final int tier; // 합석 단계: 1 한 숟갈 · 2 한 그릇 · 3 한솥밥 (같이 다니는 팀 수)
   final int n; // 이번 주 합석 횟수
   const MyCardFriend({
     required this.name,
@@ -119,19 +120,6 @@ const _frMax = 4;
 const _frStoryH = 264.0, _frStoryAv = 96.0;
 const _frFeedAv = 72.0, _frFeedStep = 48.0, _frFeedGap = 32.0;
 const _frFeedMinW = 168.0; // 얼굴 묶음 폭의 최소 — 아래 알약('이번 주 합석 N')이 넘치지 않게
-// 익힘 단계 색 — 화면(warm_avatar.dart)·웹 css .fr-warm 과 같은 값
-const _warmRing = [
-  Color(0x00000000),
-  Color(0xFFF1D9A6),
-  Color(0xFFF5B82E),
-  Color(0xFFA0522D),
-];
-const _warmInk = [
-  Color(0xFF8D6E63),
-  Color(0xFF8D6E63),
-  Color(0xFFB7791F),
-  Color(0xFF8B4513),
-];
 const _bentoFeedH = 360.0, _bentoFeedMinH = 300.0, _dietMin = 320.0;
 // 스토리 신원(세로 스택)
 const _sEmblem = 136.0, _sGapE = 28.0, _sName = 72.0, _sNameMin = 44.0;
@@ -570,29 +558,7 @@ class MyCardPainter extends CustomPainter {
   }
 
   // ── 밥친구 (4단계) ─────────────────────────────────────────────
-  /// 밥그릇 벡터(friends_page _BowlPainter 와 같은 모양, 24 단위 좌표).
-  static Path _bowlPath() => Path()
-    ..moveTo(12, 4.6)
-    ..cubicTo(10.1, 4.6, 8.8, 5.6, 8.1, 6.8)
-    ..cubicTo(7.1, 6.4, 5.7, 7.1, 5.7, 8.5)
-    ..cubicTo(5.7, 9.4, 6.4, 10, 7.1, 10)
-    ..lineTo(16.9, 10)
-    ..cubicTo(17.6, 10, 18.3, 9.4, 18.3, 8.5)
-    ..cubicTo(18.3, 7.1, 16.9, 6.4, 15.9, 6.8)
-    ..cubicTo(15.2, 5.6, 13.9, 4.6, 12, 4.6)
-    ..close()
-    ..moveTo(4.2, 11.6)
-    ..lineTo(19.8, 11.6)
-    ..cubicTo(19.8, 14.7, 17.3, 17.2, 14, 17.8)
-    ..lineTo(14, 18.7)
-    ..cubicTo(14, 19.1, 13.7, 19.4, 13.3, 19.4)
-    ..lineTo(10.7, 19.4)
-    ..cubicTo(10.3, 19.4, 10, 19.1, 10, 18.7)
-    ..lineTo(10, 17.8)
-    ..cubicTo(6.7, 17.2, 4.2, 14.7, 4.2, 11.6)
-    ..close();
-
-  /// 아바타: 익힘 단계 색 테두리 → 흰 틈 → 밥 색 얼굴 + 밥그릇.
+  /// 아바타: 흰 테두리 → 밥 색 얼굴 + 합석 단계만큼 차오른 밥그릇.
   void _friendAvatar(
     Canvas c,
     Offset o,
@@ -602,11 +568,6 @@ class MyCardPainter extends CustomPainter {
     double gapW,
   ) {
     final r0 = size / 2, tier = f.tier.clamp(0, 3);
-    if (tier > 0) {
-      final rr = r0 + gapW + ringW;
-      // 단계 색으로만 구분(그라데이션·효과 없음)
-      c.drawCircle(o, rr, Paint()..color = _warmRing[tier]);
-    }
     c.drawCircle(o, r0 + gapW, Paint()..color = Colors.white);
     c.drawCircle(o, r0, Paint()..color = f.color);
     c.drawCircle(
@@ -617,18 +578,15 @@ class MyCardPainter extends CustomPainter {
         ..strokeWidth = 2
         ..color = const Color(0x99FFFFFF),
     );
+    // 합석 단계만큼 차오른 밥그릇(화면 아바타와 같은 그림)
     final bs = size * 0.58;
-    c.save();
-    c.translate(o.dx - bs / 2, o.dy - bs / 2);
-    c.scale(bs / 24);
-    c.drawPath(_bowlPath(), Paint()..color = _ink);
-    c.restore();
+    paintMealBowl(c, Rect.fromCenter(center: o, width: bs, height: bs), tier);
   }
 
   String _mealText(MyCardFriend f) =>
       '${t('fr_warm_${f.tier}')} · ${tf('mycard_meal_n', {'n': '${f.n}'})}';
 
-  /// 스토리: 도시락통 아래 '이번 주 합석' 칸. 얼굴 + 밥이름 + 익힘 단계·합석 횟수.
+  /// 스토리: 도시락통 아래 '이번 주 합석' 칸. 얼굴 + 밥이름 + 합석 단계·합석 횟수.
   void _friendsPanel(Canvas c, Rect r) {
     cardPanel(c, r);
     const ip = 32.0;
@@ -656,7 +614,7 @@ class MyCardPainter extends CustomPainter {
         align: TextAlign.center,
         middle: true,
       );
-      final tst = cardStyle(22, FontWeight.w700, _warmInk[f.tier.clamp(0, 3)]);
+      final tst = cardStyle(22, FontWeight.w700, warmInk[f.tier.clamp(0, 3)]);
       cardText(
         c,
         cardEllip(_mealText(f), tst, cw - 16),
@@ -688,7 +646,7 @@ class MyCardPainter extends CustomPainter {
       best = math.max(best, list[i].tier.clamp(0, 3));
     }
     final label = tf('mycard_friends_pill', {'n': '${list.length}'});
-    final st = cardStyle(20, FontWeight.w800, _warmInk[best]);
+    final st = cardStyle(20, FontWeight.w800, warmInk[best]);
     final pw = cardMeasure(label, st) + 28, py = r.top + _frFeedAv + 8;
     // 알약은 본문 폭 안에 (긴 영어 문구도 오른쪽 여백을 넘지 않게)
     final px = (r.center.dx - pw / 2).clamp(
