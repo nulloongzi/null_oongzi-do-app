@@ -108,13 +108,62 @@ class FriendShareSettings {
       );
 }
 
-/// 친구 도시락의 팀 하나(식단표용).
+/// 친구 도시락의 팀 하나(식단표용). [id] 는 동호회 팀만 — 직접 추가한 팀은 null.
 class FriendTeam {
   final String name;
   final bool isCustom;
   final int slot;
   final List<SchedEvent> events;
-  const FriendTeam(this.name, this.isCustom, this.slot, this.events);
+  final String? id;
+  const FriendTeam(this.name, this.isCustom, this.slot, this.events, {this.id});
+}
+
+// ── 겸상 · 익힘 (웹 friendSharePure.mealOverlaps / warmthTier 와 같다) ──
+
+class MealOverlap {
+  final String id;
+  final String day;
+  final double start;
+  final double end;
+  const MealOverlap(this.id, this.day, this.start, this.end);
+}
+
+const _mealMinHours = 0.5;
+
+/// 겸상: 같은 동호회(id) · 같은 요일 · 30분 이상 겹치는 시간. 직접 추가한 팀은 같은 팀인지
+/// 알 수 없어서 넣지 않는다. 양쪽 모두 친구에게 공개한 팀이어야 한다 — 숨긴 팀까지 세면
+/// 두 사람의 숫자가 달라져 숨긴 팀이 드러난다.
+List<MealOverlap> mealOverlaps(List<FriendTeam> mine, List<FriendTeam> theirs) {
+  final out = <MealOverlap>[];
+  final seen = <String>{};
+  for (final m in mine) {
+    for (final o in theirs) {
+      final id = m.id;
+      if (id == null || id.isEmpty || id != o.id) continue;
+      for (final a in m.events) {
+        for (final b in o.events) {
+          if (a.day != b.day) continue;
+          final s = a.start > b.start ? a.start : b.start;
+          final e = a.end < b.end ? a.end : b.end;
+          if (e - s < _mealMinHours) continue;
+          if (!seen.add('$id|${a.day}|$s|$e')) continue;
+          out.add(MealOverlap(id, a.day, s, e));
+        }
+      }
+    }
+  }
+  return out;
+}
+
+/// 익힘 단계: 한 주 겸상 횟수 → 0 생쌀 · 1 뜸 · 2 노릇 · 3 누룽지(3회 이상)
+int warmthTier(int n) => n >= 3 ? 3 : (n >= 2 ? 2 : (n >= 1 ? 1 : 0));
+
+class FriendMeal {
+  final List<MealOverlap> overlaps;
+  const FriendMeal(this.overlaps);
+  static const none = FriendMeal([]);
+  int get n => overlaps.length;
+  int get tier => warmthTier(n);
 }
 
 class FriendLunchbox {
@@ -192,7 +241,9 @@ class FriendShareService {
         final doc = await _db.collection('clubs').doc(id).get();
         if (!doc.exists) continue; // 삭제된 팀
         final c = Club.fromDoc(doc);
-        teams.add(FriendTeam(c.name, false, teams.length, clubEvents(c)));
+        teams.add(
+          FriendTeam(c.name, false, teams.length, clubEvents(c), id: id),
+        );
       } catch (_) {}
     }
     for (final c in sh.custom) {
@@ -229,10 +280,22 @@ class FriendShareService {
         final club = Club.fromDoc(doc);
         out.add((
           id: id,
-          team: FriendTeam(club.name, false, i, clubEvents(club)),
+          team: FriendTeam(club.name, false, i, clubEvents(club), id: id),
         ));
       } catch (_) {}
     }
     return out;
+  }
+
+  /// 겸상을 셀 내 팀: 친구에게 실제로 보이는 동호회 팀만. 확인 전이거나 전부 숨기기면 없다.
+  Future<List<FriendTeam>> myMealTeams(
+    String uid,
+    FriendShareSettings s,
+  ) async {
+    if (!s.shareOk || s.hideAll) return const [];
+    return [
+      for (final x in await myTeams(uid))
+        if (!x.team.isCustom && !s.hidden.contains(x.id)) x.team,
+    ];
   }
 }
