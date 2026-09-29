@@ -41,17 +41,6 @@ Future<void> _maybeShowCoach(BuildContext context) async {
 
 Future<void> shareStoryCard(BuildContext context, StoryCardData data) async {
   final messenger = ScaffoldMessenger.of(context);
-  // 1회 코치: 링크 스티커 붙이는 법 안내
-  await _maybeShowCoach(context);
-  // IG '링크 스티커' 붙여넣기 쉽게 링크 자동 복사 + 매번 안내 스낵바
-  await ShareService.copy(data.url);
-  messenger.showSnackBar(
-    SnackBar(
-      content: Text(t('story_link_hint')),
-      duration: const Duration(seconds: 4),
-    ),
-  );
-
   // 가까운 지하철역 enrich (실패해도 무시 → 지역 라벨 폴백)
   var card = data;
   if (data.lat != null && data.lng != null) {
@@ -67,10 +56,34 @@ Future<void> shareStoryCard(BuildContext context, StoryCardData data) async {
     messenger.showSnackBar(SnackBar(content: Text(t('err_card'))));
     return;
   }
+  if (!context.mounted) return;
+  await shareStoryPng(context, png, data.url);
+}
+
+/// 이미 그린 9:16 PNG 를 인스타 스토리로. 팀·픽업 카드와 포장하기(내 카드)가 같은 흐름을 쓴다:
+/// 첫 1회 '링크 스티커' 안내 → 링크 자동 복사 + 안내 스낵바 → IG 스토리(스티커) →
+/// IG 미설치·실패·iOS 는 OS 공유시트로 폴백.
+Future<void> shareStoryPng(
+  BuildContext context,
+  Uint8List png,
+  String url, {
+  String prefix = 'nurungji_story',
+}) async {
+  final messenger = ScaffoldMessenger.of(context);
+  // 1회 코치: 링크 스티커 붙이는 법 안내
+  await _maybeShowCoach(context);
+  // IG '링크 스티커' 붙여넣기 쉽게 링크 자동 복사 + 매번 안내 스낵바
+  await ShareService.copy(url);
+  messenger.showSnackBar(
+    SnackBar(
+      content: Text(t('story_link_hint')),
+      duration: const Duration(seconds: 4),
+    ),
+  );
 
   final dir = await getTemporaryDirectory();
   final file = File(
-    '${dir.path}/nurungji_story_${DateTime.now().millisecondsSinceEpoch}.png',
+    '${dir.path}/${prefix}_${DateTime.now().millisecondsSinceEpoch}.png',
   );
   await file.writeAsBytes(png);
 
@@ -82,16 +95,16 @@ Future<void> shareStoryCard(BuildContext context, StoryCardData data) async {
         stickerImage: file.path,
         backgroundTopColor: '#fff8e1',
         backgroundBottomColor: '#fac710',
-        attributionURL: data.url,
+        attributionURL: url,
       );
     } else {
       // iOS/기타: PNG를 OS 공유시트로 (네이티브 빌드는 안드로이드 우선)
-      await Share.shareXFiles([XFile(file.path)], text: data.url);
+      await Share.shareXFiles([XFile(file.path)], text: url);
     }
   } catch (e) {
     // IG 미설치 등 → PNG를 OS 공유시트로 폴백
     try {
-      await Share.shareXFiles([XFile(file.path)], text: data.url);
+      await Share.shareXFiles([XFile(file.path)], text: url);
     } catch (_) {
       messenger.showSnackBar(SnackBar(content: Text('${t('err_share')}: $e')));
     }

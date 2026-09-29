@@ -187,6 +187,9 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'share_image_title': {'ko': '이미지로 공유', 'en': 'Share as image'},
   'share_image_btn': {'ko': '이미지로 공유 / 저장', 'en': 'Share / save image'},
+  // 포장하기 공유 버튼: 인스타 스토리 직행 · 다른 앱(OS 공유시트 — 카톡·저장)
+  'mycard_share_story': {'ko': '인스타 스토리로 공유', 'en': 'Share to Instagram Story'},
+  'mycard_share_other': {'ko': '다른 앱', 'en': 'Other apps'},
   'share_wrap': {'ko': '🎁 포장하기', 'en': '🎁 Wrap it up'},
   'change_nickname': {'ko': '닉네임 변경', 'en': 'Change nickname'},
   'logout': {'ko': '로그아웃', 'en': 'Log out'},

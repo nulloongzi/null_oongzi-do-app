@@ -150,6 +150,11 @@ Future<Uint8List?> renderMyCardPng(MyCardData data) async {
   return bytes?.buffer.asUint8List();
 }
 
+// 규격: 9:16(1080×1920)이되 스토리 안전영역(위아래 250)을 다 비우지 않는다 — 위아래 140(웹 FMT 와
+// 같은 값). 스토리에는 스티커로 얹혀 250을 비우면 빈 띠만 남고, 저장본을 배경으로 꽉 채워 올릴 때
+// 진행 바·답장 바에 가리지 않을 만큼만 남긴다.
+const _fmtMine = CardFmt(1920, 140, 140, 172);
+
 // 웹 js/my-card.js 의 BENTO / DEX / ID_CARD / ID_DIET 와 같은 값.
 const _bentoMin = 280.0, _bentoMax = 760.0;
 const _dexH = 324.0, _dexCell = 44.0, _dexGap = 10.0, _dexCols = 5;
@@ -217,7 +222,7 @@ class MyCardPainter extends CustomPainter {
     'mc_side3',
   ];
 
-  CardFmt get _fmt => ShareCard.story;
+  CardFmt get _fmt => _fmtMine;
   Size get canvasSize => Size(ShareCard.w, _fmt.h);
 
   /// QR 스텁 윗단.

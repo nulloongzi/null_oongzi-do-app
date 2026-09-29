@@ -17,6 +17,7 @@ import '../services/rice_dex.dart';
 import '../services/schedule_parse.dart';
 import '../services/analytics.dart';
 import '../services/share_service.dart';
+import '../services/story_share.dart' show shareStoryPng;
 import '../theme.dart';
 import '../widgets/diet_grid.dart' show DietTeam;
 import '../widgets/my_card.dart';
@@ -167,11 +168,27 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
     setState(() => _mode = m);
   }
 
-  Future<void> _share() async {
+  /// story=true: 인스타 스토리로 바로(팀·픽업 카드와 같은 흐름 — 링크 복사 + 링크 스티커 안내).
+  /// story=false: OS 공유시트(카톡·저장 등).
+  Future<void> _share({required bool story}) async {
     setState(() => _sharing = true);
     try {
       final png = await renderMyCardPng(_cardData());
       if (png == null) throw Exception('render failed');
+      Track.event('mycard_share', {
+        'mode': _mode.name,
+        'channel': story ? 'ig_story' : 'system',
+      });
+      if (story) {
+        if (!mounted) return;
+        await shareStoryPng(
+          context,
+          png,
+          ShareService.siteBase,
+          prefix: 'nurungji_card',
+        );
+        return;
+      }
       final dir = await getTemporaryDirectory();
       final file = File(
         '${dir.path}/nurungji_card_${DateTime.now().millisecondsSinceEpoch}.png',
@@ -223,25 +240,41 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
                     ),
                   ],
                 ),
+                // 공유: 인스타 스토리 직행(기본) · 다른 앱으로(OS 공유시트 — 카톡·저장)
                 SafeArea(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: _sharing ? null : _share,
-                        icon: _sharing
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: NurungjiColors.dark,
-                                ),
-                              )
-                            : const Icon(Icons.ios_share),
-                        label: Text(t('share_image_btn')),
-                      ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            key: const ValueKey('share_story_btn'),
+                            onPressed: _sharing
+                                ? null
+                                : () => _share(story: true),
+                            icon: _sharing
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: NurungjiColors.dark,
+                                    ),
+                                  )
+                                : const Icon(Icons.camera_alt_outlined),
+                            label: Text(t('mycard_share_story')),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        OutlinedButton.icon(
+                          key: const ValueKey('share_other_btn'),
+                          onPressed: _sharing
+                              ? null
+                              : () => _share(story: false),
+                          icon: const Icon(Icons.ios_share),
+                          label: Text(t('mycard_share_other')),
+                        ),
+                      ],
                     ),
                   ),
                 ),
