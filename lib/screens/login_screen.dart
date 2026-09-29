@@ -87,9 +87,13 @@ class _LoginScreenState extends State<LoginScreen> {
         idToken: auth.idToken,
         accessToken: auth.accessToken,
       );
-      await FirebaseAuth.instance.signInWithCredential(credential);
+      final cred = await FirebaseAuth.instance.signInWithCredential(credential);
       await SocialAuthService.rememberProvider('google');
       Track.event('login', {'method': 'google'});
+      // 소셜 첫 로그인 = 가입. 예전엔 이메일 가입만 sign_up 을 보내 가입이 과소집계됐다.
+      if (cred.additionalUserInfo?.isNewUser ?? false) {
+        Track.event('sign_up', {'method': 'google'});
+      }
       await _afterLogin();
     } catch (e) {
       if (mounted) setState(() => _error = t('login_google_fail'));
@@ -101,8 +105,9 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _kakaoSignIn() async {
     _startBusy(AuthLoadingTheme.kakao);
     try {
-      await SocialAuthService().loginWithKakao();
+      final isNew = await SocialAuthService().loginWithKakao();
       Track.event('login', {'method': 'kakao'});
+      if (isNew) Track.event('sign_up', {'method': 'kakao'});
       await _afterLogin();
     } on SocialAuthCancelled {
       // 사용자가 취소 — 에러 문구 없이 조용히 복귀
@@ -116,8 +121,9 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _naverSignIn() async {
     _startBusy(AuthLoadingTheme.naver);
     try {
-      await SocialAuthService().loginWithNaver();
+      final isNew = await SocialAuthService().loginWithNaver();
       Track.event('login', {'method': 'naver'});
+      if (isNew) Track.event('sign_up', {'method': 'naver'});
       await _afterLogin();
     } on SocialAuthCancelled {
       // 사용자가 취소

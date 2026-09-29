@@ -19,4 +19,18 @@ class Track {
       await _a.logEvent(name: name, parameters: clean);
     } catch (_) {}
   }
+
+  /// 사용자 속성(모든 이벤트에 붙는 차원). 예: ui_lang — 외국인 교두보를 KO/EN 으로 나눠 본다.
+  static Future<void> userProp(String name, String? value) async {
+    try {
+      await _a.setUserProperty(name: name, value: value);
+    } catch (_) {}
+  }
+
+  /// 수집 끄기(캡처 모드 등). 디버그 빌드는 매니페스트에서 이미 꺼져 있다.
+  static Future<void> disable() async {
+    try {
+      await _a.setAnalyticsCollectionEnabled(false);
+    } catch (_) {}
+  }
 }

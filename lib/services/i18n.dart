@@ -4,6 +4,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../l10n/strings.dart';
+import 'analytics.dart';
 
 final ValueNotifier<String> appLang = ValueNotifier<String>('ko');
 
@@ -171,6 +172,9 @@ Future<void> initLang() async {
 
 Future<void> toggleLang() async {
   appLang.value = appLang.value == 'ko' ? 'en' : 'ko';
+  // 외국인 교두보 계측: 수동 전환 + 이후 모든 이벤트의 화면 언어(웹 i18n.js 와 같은 이름)
+  Track.event('lang_switch', {'to': appLang.value});
+  Track.userProp('ui_lang', appLang.value);
   try {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('lang', appLang.value);

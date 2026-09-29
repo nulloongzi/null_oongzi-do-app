@@ -1619,6 +1619,15 @@ class _MapScreenState extends State<MapScreen> {
   Future<void> _openFilter() async {
     final result = await showFilterSheet(context, _filter);
     if (result != null) {
+      // 6인제(외국인 교두보)·요일("무슨 요일에 할 곳?")이 실제로 쓰이는지. 웹 filters.js 와 같은 스키마.
+      Track.event('filter_apply', {
+        'scope': 'club',
+        'region': result.regions.join(','),
+        'day': result.days.join(','),
+        'target': result.targets.join(','),
+        'six': result.targets.contains('6인제') ? 1 : 0,
+        'has_keyword': result.keyword.trim().isNotEmpty ? 1 : 0,
+      });
       setState(() {
         _filter = result;
         _search.text = result.keyword; // 시트의 키워드 ↔ 상단 검색바 동기화
@@ -2012,6 +2021,7 @@ class _MapScreenState extends State<MapScreen> {
               onPressed: () {
                 setState(() => _pkEnglishOnly = !_pkEnglishOnly);
                 _refreshMarkers();
+                _trackPickupFilter();
               },
               icon: Icon(
                 Icons.language,
@@ -2113,6 +2123,7 @@ class _MapScreenState extends State<MapScreen> {
       onSelected: (v) {
         setState(() => _pkRegion = v);
         _refreshMarkers();
+        _trackPickupFilter();
       },
       itemBuilder: (_) => [
         PopupMenuItem(value: '', child: Text(t('pk_region_all'))),
@@ -2172,6 +2183,7 @@ class _MapScreenState extends State<MapScreen> {
       onSelected: (v) {
         setState(() => _pkLevel = v);
         _refreshMarkers();
+        _trackPickupFilter();
       },
       itemBuilder: (_) => [
         PopupMenuItem(value: '', child: Text(t('pk_level_all'))),
@@ -2222,6 +2234,16 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  // 사용자가 픽업 필터를 바꿀 때마다. 웹 pickup-ui.js 와 같은 스키마.
+  void _trackPickupFilter() {
+    Track.event('filter_apply', {
+      'scope': 'pickup',
+      'region': _pkRegion,
+      'level': _pkLevel,
+      'english': _pkEnglishOnly ? 1 : 0,
+    });
+  }
+
   Future<void> _sharePickupList() async {
     final url = ShareService.pickupListUrl(
       region: _pkRegion,
@@ -2234,7 +2256,7 @@ class _MapScreenState extends State<MapScreen> {
       'level': _pkLevel,
       'english': _pkEnglishOnly,
     });
-    await ShareService.osShare(url);
+    await ShareService.osShare(ShareService.withUtm(url, 'os_sheet'));
   }
 
   Widget _errorBox() => Material(

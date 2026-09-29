@@ -6,6 +6,8 @@ import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:kakao_flutter_sdk_share/kakao_flutter_sdk_share.dart';
 import 'firebase_options.dart';
 import 'theme.dart';
+import 'services/analytics.dart';
+import 'services/deep_link_service.dart' show kCaptureMode;
 import 'services/i18n.dart';
 import 'screens/map_screen.dart';
 
@@ -24,6 +26,9 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
   }
+  // 캡처(스토어 스샷·영상) 빌드는 실사용이 아니다 — 디버그 빌드는 매니페스트에서 이미 꺼져 있다.
+  if (kCaptureMode) await Track.disable();
+  Track.userProp('ui_lang', appLang.value);
   await FlutterNaverMap().init(
     clientId: kNaverMapClientId,
     onAuthFailed: (ex) => debugPrint('네이버지도 인증 실패: $ex'),

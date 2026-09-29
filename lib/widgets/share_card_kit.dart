@@ -11,6 +11,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../services/i18n.dart';
+import '../services/share_service.dart';
 
 /// 공유 카드 규격.
 enum CardFormat { story, feed }
@@ -294,7 +295,8 @@ void cardStub(Canvas c, CardFmt fmt, String url, String cta) {
   final tile = cardRRect(m, tileY, q + 20, q + 20, 18);
   cardShadow(c, Path()..addRRect(tile), small: true);
   c.drawRRect(tile, Paint()..color = Colors.white);
-  cardQr(c, url, m + 10, tileY + 10, q);
+  // QR 로 들어온 사람을 따로 센다(포장하기·팀 카드 = 떠나는 사람이 건네주는 물건). 인쇄 글자는 원래 url.
+  cardQr(c, ShareService.withUtm(url, 'card_qr'), m + 10, tileY + 10, q);
 
   final tx = m + q + 20 + 40, tw = w - m - tx;
   final ctaSt = cardStyle(34, FontWeight.w800, ShareCard.ink);

@@ -6,5 +6,11 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- debug 전용: Firebase Local Emulator(10.0.2.2 평문 http/gRPC) 접속 허용.
          integration_test(e2e)가 에뮬레이터 스위트에 붙기 위해 필요. release엔 미적용. -->
-    <application android:usesCleartextTraffic="true" />
+    <application android:usesCleartextTraffic="true">
+        <!-- debug 전용: GA 수집 끔. e2e(에뮬레이터)·캡처(debug)·로컬 실행이 실제 GA 에
+             first_open·이벤트로 섞이지 않게 한다(2026-09 계측 분석). 스토어 빌드(release)는 그대로. -->
+        <meta-data
+            android:name="firebase_analytics_collection_enabled"
+            android:value="false" />
+    </application>
 </manifest>
