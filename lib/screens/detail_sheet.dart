@@ -16,6 +16,7 @@ import '../services/i18n.dart';
 import '../services/lunchbox_service.dart';
 import '../services/share_service.dart';
 import '../services/story_share.dart';
+import '../services/target_parse.dart' show targetTagParts;
 import '../services/schedule_parse.dart';
 import '../services/verification_service.dart';
 import '../theme.dart';
@@ -1378,10 +1379,9 @@ void showClubDetail(
     'club_name': c.name,
     'has_reel': c.instaReels.isNotEmpty ? 1 : 0,
   });
-  final tags = (c.target ?? '')
-      .split(RegExp(r'[,\s]+'))
-      .where((e) => e.isNotEmpty)
-      .toList();
+  // 모집 대상: 단어는 #해시태그, 괄호 안 메모는 한 덩어리 칩(쪼개지 않는다)
+  final tagParts = targetTagParts(c.target);
+  final tags = tagParts.words;
   // 수정/삭제: 팀 관리자(admins, 최대 3명) OR 운영자.
   // admins 가 비어 있으면 registered_by 한 명으로 폴백한다(Club._admins).
   // 판정은 club_admin.dart 한 곳에만 두고 웹·서버 규칙과 맞춘다.
@@ -1490,21 +1490,22 @@ void showClubDetail(
         ),
       ),
       // 4. 모집 키워드 — 해시태그 느낌(#)
-      if (tags.isNotEmpty)
+      if (tags.isNotEmpty || tagParts.notes.isNotEmpty)
         Padding(
           padding: const EdgeInsets.only(top: 12),
           child: Wrap(
             spacing: 6,
             runSpacing: 6,
-            children: tags
-                .map(
-                  (tag) => _chip(
-                    '#${i18nTarget(tag)}',
-                    NurungjiColors.chipBg,
-                    NurungjiColors.chipFg,
-                  ),
-                )
-                .toList(),
+            children: [
+              for (final tag in tags)
+                _chip(
+                  '#${i18nTarget(tag)}',
+                  NurungjiColors.chipBg,
+                  NurungjiColors.chipFg,
+                ),
+              for (final note in tagParts.notes)
+                _chip(note, NurungjiColors.chipBg, NurungjiColors.chipFg),
+            ],
           ),
         ),
       // 5. 가격

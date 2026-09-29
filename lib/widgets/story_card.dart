@@ -10,6 +10,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import '../models/club.dart';
 import '../models/pickup_spot.dart';
 import '../services/i18n.dart';
+import '../services/target_parse.dart' show targetTagParts;
 import '../services/share_service.dart';
 import 'share_card_kit.dart';
 
@@ -131,18 +132,13 @@ class StoryCardData {
   }
 
   factory StoryCardData.fromClub(Club c) {
-    final tgt = (c.target ?? '')
-        .split(RegExp(r'[,\s]+'))
-        .where((x) => x.isNotEmpty)
-        .toList();
+    // 단어는 하나씩, 괄호 안 메모는 한 덩어리(쪼개지 않는다) — 웹 storyClubData 와 같은 규칙
+    final parts = targetTagParts(c.target);
+    final tgt = [...parts.words.map(i18nTarget), ...parts.notes];
     final tags = <StoryTag>[];
     for (var i = 0; i < tgt.length && i < 4; i++) {
       tags.add(
-        StoryTag(
-          i18nTarget(tgt[i]),
-          const Color(0xFFF0ECE2),
-          const Color(0xFF6D6258),
-        ),
+        StoryTag(tgt[i], const Color(0xFFF0ECE2), const Color(0xFF6D6258)),
       );
     }
     return StoryCardData(
