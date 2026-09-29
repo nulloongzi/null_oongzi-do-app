@@ -178,7 +178,7 @@ English and Korean throughout. Start today! 🏐
 >
 > | versionCode | 상태 |
 > |---|---|
-> | **19 (2.10.0)** | **빌드 예정** (2026-09-29). pubspec `2.10.0+19`. 운영자 릴스 숨김(`reels_hidden`) 반영 + 릴스 10개 상한. 업로드·게시하면 이 줄을 갱신할 것. |
+> | **19 (2.10.0)** | **빌드 예정** (2026-09-29). pubspec `2.10.0+19`. 포장하기 인스타 스토리 직행 공유 + 카드 여백 140 + 운영자 릴스 숨김(`reels_hidden`) 반영 + 릴스 10개 상한. 업로드·게시하면 이 줄을 갱신할 것. |
 > | 18 (2.9.0) | **프로덕션 게시됨** (2026-09-28 사용자 확인). Release AAB run #18(브랜치 `claude/share-bapdogam`, 커밋 `c20f044` — main `4e01aa2` 와 같은 코드) 산출물. 포장하기 개편: 네임카드(밥도감 · 상차림) / 식단표 두 장, 둘 다 9:16. 19 로 대체 예정. |
 > | 17 (2.8.0) | 업로드됨 (2026-09-28 사용자 확인 — 올리고 폰에 받음). Release AAB run #17(브랜치 `claude/release-2.8.0`) 산출물. 밥친구·합석 + 공유 카드 리디자인 + 공식 닉네임 보호 + 앱 링크 루트(`/`) 한정. 18 로 대체됨. |
 > | 16 (2.7.0) | **프로덕션 게시됨** (2026-09-28 사용자 확인). 릴스 커버 카드 + 릴스 계측 + 안치기 6·9인제 개편. 17 로 대체됨.
@@ -195,19 +195,21 @@ English and Korean throughout. Start today! 🏐
 > 아래가 19(2.10.0) 의 노트 — **2.9.0(18) 이후 변경분만**. 18 의 노트는 접어 뒀다.
 
 ```
-🙈 부적절한 릴스는 가려져요
-팀과 상관없거나 부적절한 인스타 릴스를 운영자가 숨길 수 있게 됐어요. 숨긴 릴스는 앱에서도 보이지 않아요.
+📸 포장하기를 인스타 스토리로 바로
+네임카드·식단표를 인스타 스토리에 바로 올릴 수 있어요. 링크는 자동으로 복사돼서 링크 스티커에 붙여넣기만 하면 돼요. 카드 위아래 빈 여백도 줄였어요.
 
-🎞️ 팀 릴스는 최대 10개까지 올릴 수 있어요.
+🙈 부적절한 릴스는 가려져요
+팀과 상관없거나 부적절한 인스타 릴스를 운영자가 숨길 수 있게 됐어요. 숨긴 릴스는 앱에서도 보이지 않아요. 팀 릴스는 최대 10개까지 올릴 수 있어요.
 ```
 
 **EN (en-US)**
 
 ```
-🙈 Off-topic Reels get hidden
-Our team can now hide Instagram Reels that are unrelated or inappropriate. Hidden Reels no longer show in the app.
+📸 Share your cards straight to your Story
+Post your name card or schedule to your Instagram Story in one tap. The link is copied for you — just paste it into a link sticker. Cards also have less empty space at the top and bottom.
 
-🎞️ Teams can add up to 10 Reels.
+🙈 Off-topic Reels get hidden
+Our team can now hide Instagram Reels that are unrelated or inappropriate. Hidden Reels no longer show in the app. Teams can add up to 10 Reels.
 ```
 
 <details><summary>2.9.0(18) 출시 노트 — 18 이 게시될 때 쓴 문안</summary>
