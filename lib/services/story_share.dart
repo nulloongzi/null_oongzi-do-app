@@ -70,6 +70,8 @@ Future<void> shareStoryPng(
   String prefix = 'nurungji_story',
 }) async {
   final messenger = ScaffoldMessenger.of(context);
+  // 스티커·링크로 들어온 사람을 'share / ig_story' 로 센다 (카드 QR 은 card_qr).
+  url = ShareService.withUtm(url, 'ig_story');
   // 1회 코치: 링크 스티커 붙이는 법 안내
   await _maybeShowCoach(context);
   // IG '링크 스티커' 붙여넣기 쉽게 링크 자동 복사 + 매번 안내 스낵바

@@ -12,6 +12,12 @@ class ShareService {
   static String spotUrl(String id) =>
       '$siteBase?spot=${Uri.encodeComponent(id)}';
 
+  /// 공유 링크 출처 표시(UTM). 받은 사람이 들어오면 GA 기본 측정기준(세션·첫 사용자
+  /// 소스/매체)에 `share / <medium>` 으로 잡힌다 → 건네준 링크·카드로 새로 들어온 사람을 센다.
+  /// medium: card_qr · ig_story · kakao · copy · os_sheet. 웹 share.js withShareUtm 과 같은 값.
+  static String withUtm(String url, String medium) =>
+      '$url${url.contains('?') ? '&' : '?'}utm_source=share&utm_medium=$medium';
+
   /// 필터가 걸린 픽업 목록 링크. 앱이 아니라 **웹**으로 보낸다 —
   /// DM 받은 외국인은 앱을 설치하지 않고 브라우저로 열기 때문.
   static String pickupListUrl({

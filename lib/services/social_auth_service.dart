@@ -75,7 +75,8 @@ class SocialAuthService {
   }
 
   /// 카카오 로그인: 톡 앱 설치 시 톡으로, 아니면 계정(웹뷰)으로. 취소는 SocialAuthCancelled.
-  Future<void> loginWithKakao() async {
+  /// 반환: 이번 로그인으로 계정이 새로 생겼는지(= 가입).
+  Future<bool> loginWithKakao() async {
     kakao.OAuthToken token;
     if (await kakao.isKakaoTalkInstalled()) {
       try {
@@ -88,8 +89,12 @@ class SocialAuthService {
     } else {
       token = await _kakaoAccountLogin();
     }
-    await _signInWithCustomToken('kakaoCustomToken', token.accessToken);
+    final isNew = await _signInWithCustomToken(
+      'kakaoCustomToken',
+      token.accessToken,
+    );
     await rememberProvider('kakao');
+    return isNew;
   }
 
   Future<kakao.OAuthToken> _kakaoAccountLogin() async {
@@ -102,7 +107,8 @@ class SocialAuthService {
   }
 
   /// 네이버 로그인. SDK는 취소를 별도 상태 없이 error + 'user_cancel' 메시지로 전달한다.
-  Future<void> loginWithNaver() async {
+  /// 반환: 이번 로그인으로 계정이 새로 생겼는지(= 가입).
+  Future<bool> loginWithNaver() async {
     final res = await FlutterNaverLogin.logIn();
     if (res.status != NaverLoginStatus.loggedIn) {
       final msg = (res.errorMessage ?? '').toLowerCase();
@@ -112,12 +118,14 @@ class SocialAuthService {
     final access =
         res.accessToken?.accessToken ??
         (await FlutterNaverLogin.getCurrentAccessToken()).accessToken;
-    await _signInWithCustomToken('naverCustomToken', access);
+    final isNew = await _signInWithCustomToken('naverCustomToken', access);
     await rememberProvider('naver');
+    return isNew;
   }
 
   /// CF(kakao/naverCustomToken)로 access token 검증 → 커스텀 토큰 → Firebase 로그인.
-  Future<void> _signInWithCustomToken(String fn, String accessToken) async {
+  /// 서버는 토큰만 만들고 계정은 첫 로그인 때 생긴다 → isNewUser 가 곧 가입.
+  Future<bool> _signInWithCustomToken(String fn, String accessToken) async {
     final res = await FirebaseFunctions.instance.httpsCallable(fn).call({
       'accessToken': accessToken,
     });
@@ -126,7 +134,8 @@ class SocialAuthService {
     if (custom == null || custom.isEmpty) {
       throw Exception('custom token 발급 실패');
     }
-    await FirebaseAuth.instance.signInWithCustomToken(custom);
+    final cred = await FirebaseAuth.instance.signInWithCustomToken(custom);
+    return cred.additionalUserInfo?.isNewUser ?? false;
   }
 
   /// 로그아웃 시 제공자 세션도 best-effort로 정리 (다음 로그인 때 계정 선택 가능하게).

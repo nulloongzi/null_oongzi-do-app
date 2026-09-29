@@ -76,7 +76,7 @@ void showShareMenu(
                 try {
                   if (await kakao.ShareClient.instance
                       .isKakaoTalkSharingAvailable()) {
-                    final u = Uri.parse(url);
+                    final u = Uri.parse(ShareService.withUtm(url, 'kakao'));
                     final template = kakao.FeedTemplate(
                       content: kakao.Content(
                         title: shareTitle,
@@ -101,7 +101,9 @@ void showShareMenu(
                 } catch (_) {}
                 if (!sent) {
                   try {
-                    await ShareService.osShare('$shareTitle\n$url');
+                    await ShareService.osShare(
+                      '$shareTitle\n${ShareService.withUtm(url, 'os_sheet')}',
+                    );
                   } catch (_) {}
                 }
               },
@@ -111,7 +113,7 @@ void showShareMenu(
               onTap: () async {
                 Navigator.pop(ctx);
                 Track.event('share', {'method': 'copy', ...idP});
-                await ShareService.copy(url);
+                await ShareService.copy(ShareService.withUtm(url, 'copy'));
                 if (context.mounted) {
                   ScaffoldMessenger.of(
                     context,
@@ -125,7 +127,9 @@ void showShareMenu(
                 Navigator.pop(ctx);
                 Track.event('share', {'method': 'web', ...idP});
                 try {
-                  await ShareService.osShare('$shareTitle\n$url');
+                  await ShareService.osShare(
+                    '$shareTitle\n${ShareService.withUtm(url, 'os_sheet')}',
+                  );
                 } catch (_) {}
               },
             ),
