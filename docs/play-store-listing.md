@@ -171,14 +171,15 @@ English and Korean throughout. Start today! 🏐
 > 게 아니다 — 다음에 보고 "안 맞는다"며 고치지 말 것.
 > **EN 간단한 설명은 여유가 7자뿐이다** — 여기만 손댈 때 상한을 다시 세어볼 것.
 
-### 출시 노트 (What's new · v2.9.0)
+### 출시 노트 (What's new · v2.10.0)
 
 > **번호 이력 (확인한 값만).**
 > 최신 → 과거 순. 모두 콘솔 출시 내역에서 확인한 값이다(2026-09-08).
 >
 > | versionCode | 상태 |
 > |---|---|
-> | **18 (2.9.0)** | **프로덕션 게시됨** (2026-09-28 사용자 확인). Release AAB run #18(브랜치 `claude/share-bapdogam`, 커밋 `c20f044` — main `4e01aa2` 와 같은 코드) 산출물. 포장하기 개편: 네임카드(밥도감 · 상차림) / 식단표 두 장, 둘 다 9:16. 지금 사용자가 받는 버전. |
+> | **19 (2.10.0)** | **빌드 예정** (2026-09-29). pubspec `2.10.0+19`. 운영자 릴스 숨김(`reels_hidden`) 반영 + 릴스 10개 상한. 업로드·게시하면 이 줄을 갱신할 것. |
+> | 18 (2.9.0) | **프로덕션 게시됨** (2026-09-28 사용자 확인). Release AAB run #18(브랜치 `claude/share-bapdogam`, 커밋 `c20f044` — main `4e01aa2` 와 같은 코드) 산출물. 포장하기 개편: 네임카드(밥도감 · 상차림) / 식단표 두 장, 둘 다 9:16. 19 로 대체 예정. |
 > | 17 (2.8.0) | 업로드됨 (2026-09-28 사용자 확인 — 올리고 폰에 받음). Release AAB run #17(브랜치 `claude/release-2.8.0`) 산출물. 밥친구·합석 + 공유 카드 리디자인 + 공식 닉네임 보호 + 앱 링크 루트(`/`) 한정. 18 로 대체됨. |
 > | 16 (2.7.0) | **프로덕션 게시됨** (2026-09-28 사용자 확인). 릴스 커버 카드 + 릴스 계측 + 안치기 6·9인제 개편. 17 로 대체됨.
 > | 15 (2.7.0) | **건너뜀.** run #13 이 15 를 빌드해 뒀는데(커밋 `d489c92`) Play 에 올린 적이 있는지 확인값이 없다. 업로드됐다면 같은 번호가 거부되므로 16 으로 넘겼다 — 번호는 연속일 필요가 없다. 그 산출물엔 안치기 개편도 없다. |
@@ -189,9 +190,27 @@ English and Korean throughout. Start today! 🏐
 > | 10 (2.4.0) | **AAB 를 만든 적이 없다** — 스토어에 나간 적 없음(Release AAB 실행 이력으로 확인). |
 > | 9 (2.3.0) | 12 이전의 라이브. 대체됨. |
 >
-> 번호는 재사용할 수 없다. 18 까지 썼으므로 다음은 19 다(pubspec 을 `2.x.0+19` 로 올리고 빌드).
+> 번호는 재사용할 수 없다. 18 까지 썼으므로 다음은 19 다(pubspec `2.10.0+19` — `build_number` 입력 없이 빌드).
 >
-> 아래가 18(2.9.0) 의 노트 — **2.8.0(17) 이후 변경분만**. 18 이 게시될 때 이 문안을 썼다. 17 의 노트는 접어 뒀다.
+> 아래가 19(2.10.0) 의 노트 — **2.9.0(18) 이후 변경분만**. 18 의 노트는 접어 뒀다.
+
+```
+🙈 부적절한 릴스는 가려져요
+팀과 상관없거나 부적절한 인스타 릴스를 운영자가 숨길 수 있게 됐어요. 숨긴 릴스는 앱에서도 보이지 않아요.
+
+🎞️ 팀 릴스는 최대 10개까지 올릴 수 있어요.
+```
+
+**EN (en-US)**
+
+```
+🙈 Off-topic Reels get hidden
+Our team can now hide Instagram Reels that are unrelated or inappropriate. Hidden Reels no longer show in the app.
+
+🎞️ Teams can add up to 10 Reels.
+```
+
+<details><summary>2.9.0(18) 출시 노트 — 18 이 게시될 때 쓴 문안</summary>
 
 ```
 🍚 밥도감이 생겼어요
@@ -210,6 +229,8 @@ What rice are you? All 25 rice types now have a dex number, a rarity and a one-l
 🖼️ Two cards to share
 Pick your name card (with your Rice-dex) or your weekly schedule ("Tue·Thu·Sat evenings") and post it straight to your story.
 ```
+
+</details>
 
 <details><summary>2.8.0(17) 출시 노트 — 17 이 나갈 때 쓴 문안</summary>
 

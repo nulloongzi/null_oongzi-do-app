@@ -85,6 +85,10 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
 
   bool get _isEdit => widget.editing != null;
 
+  // 운영자가 릴스를 숨긴 스팟(reels_hidden). 모델이 릴스를 비워 두므로 칸을 열어 두면
+  // 저장 한 번에 숨긴 원본이 지워진다 — 잠그고, 저장 때 릴스 필드를 보내지 않는다.
+  bool get _reelsLocked => widget.editing?.reelsHidden == true;
+
   // 주소 → 좌표 (Cloud Function). 실패 시 지도 피커로 폴백 안내.
   Future<void> _geocode() async {
     final addr = _address.text.trim();
@@ -292,9 +296,15 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
 
     // 릴스/게시물(선택, 여러 개): 행마다 permalink 검증 + 중복 제거
     // (웹 pickup-host.js:180-191과 동일 흐름, 검증 순서도 웹과 일치: 인스타 다음)
-    final reels = Sanitize.collectReels(_reels.map((c) => c.text));
+    final reels = _reelsLocked
+        ? const <String>[]
+        : Sanitize.collectReels(_reels.map((c) => c.text));
     if (reels == null) {
       _snack(t('f_reel_invalid'));
+      return;
+    }
+    if (reels.length > Sanitize.maxReels) {
+      _snack(tf('f_reel_too_many', {'max': '${Sanitize.maxReels}'}));
       return;
     }
 
@@ -321,8 +331,10 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
       'fee_info': _fee.text.trim(),
       'contact_link': contact,
       'this_week': _thisWeek.text.trim(),
-      'insta_reel': reels.isNotEmpty ? reels.first : '', // 웹 호환(단일)
-      'insta_reels': reels,
+      if (!_reelsLocked) ...{
+        'insta_reel': reels.isNotEmpty ? reels.first : '', // 웹 호환(단일)
+        'insta_reels': reels,
+      },
       'notes': _notes.text.trim(),
       'expire_at': _computeExpireAt(
         _expire,
@@ -486,7 +498,12 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
               ),
             _group(
               t('f_reel_label'),
-              ReelEditor(controllers: _reels, onChanged: () => setState(() {})),
+              _reelsLocked
+                  ? const ReelsHiddenNotice()
+                  : ReelEditor(
+                      controllers: _reels,
+                      onChanged: () => setState(() {}),
+                    ),
             ),
             _group(t('pf_notes'), _input(_notes, t('pf_notes_hint'))),
             _group(

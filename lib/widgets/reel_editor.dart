@@ -100,3 +100,38 @@ class ReelEditor extends StatelessWidget {
     );
   }
 }
+
+/// 운영자가 릴스를 숨긴 팀·스팟의 수정 폼에서 ReelEditor 자리에 띄우는 안내.
+/// 입력칸을 아예 두지 않는다 — 저장 때 릴스 필드를 보내지 않는 것과 짝.
+class ReelsHiddenNotice extends StatelessWidget {
+  const ReelsHiddenNotice({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: NurungjiColors.brown.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.visibility_off_outlined,
+            size: 18,
+            color: NurungjiColors.brown,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              t('reels_hidden_notice'),
+              style: const TextStyle(fontSize: 13, color: NurungjiColors.brown),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

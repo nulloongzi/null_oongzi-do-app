@@ -61,6 +61,10 @@ class PickupSpot {
   final List<String> instaReels; // 멀티 릴스(없으면 [instaReel])
   // 릴스 shortcode → 우리 Storage 의 정지 커버 URL(Cloud Function insta-cover.js 가 채움)
   final Map<String, String> instaReelCovers;
+  // 운영자가 릴스를 숨김(reels_hidden) — 챗봇 '신고관리'의 🙈 릴스 숨김.
+  // 켜져 있으면 fromDoc 이 릴스·커버를 비워서 상세·지도·계측 어디에도 나오지 않는다.
+  // 수정 폼은 이 값으로 릴스 칸을 잠근다(firestore.rules 가 관리자·소유자의 변경을 막는다).
+  final bool reelsHidden;
   final DateTime? expireAt; // 유효기간(B): 지나면 자동 숨김 + Firestore TTL. null=상시
   // 최종 확인일 — 픽업은 타임스탬프가 문서 최상위에 있다(clubs 는 metadata 안).
   final DateTime? lastVerifiedAt;
@@ -90,12 +94,14 @@ class PickupSpot {
     this.instaReel,
     this.instaReels = const [],
     this.instaReelCovers = const {},
+    this.reelsHidden = false,
     this.expireAt,
     this.lastVerifiedAt,
   });
 
   factory PickupSpot.fromDoc(DocumentSnapshot doc) {
     final d = (doc.data() as Map<String, dynamic>?) ?? {};
+    final hidden = d['reels_hidden'] == true;
     final coord = d['coordinates'] as Map<String, dynamic>?;
     return PickupSpot(
       id: doc.id,
@@ -119,9 +125,10 @@ class PickupSpot {
       contactLink: d['contact_link'] as String?,
       thisWeek: d['this_week'] as String?,
       notes: d['notes'] as String?,
-      instaReel: d['insta_reel'] as String?,
-      instaReels: _reels(d),
-      instaReelCovers: _reelCovers(d),
+      instaReel: hidden ? null : d['insta_reel'] as String?,
+      instaReels: hidden ? const [] : _reels(d),
+      instaReelCovers: hidden ? const {} : _reelCovers(d),
+      reelsHidden: hidden,
       expireAt: (d['expire_at'] as Timestamp?)?.toDate(),
       lastVerifiedAt: _ts(d['updated_at']) ?? _ts(d['created_at']),
     );

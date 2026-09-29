@@ -38,6 +38,10 @@ class Sanitize {
     return s.isEmpty ? 'photo' : s;
   }
 
+  /// 문서 하나에 붙일 수 있는 릴스 수. 웹 js/dom-utils.js 의 MAX_REELS ·
+  /// firestore.rules 의 reelFieldsValid 와 같다 — 어긋나면 폼은 통과했는데 저장이 거부된다.
+  static const int maxReels = 10;
+
   /// 릴스 입력 행들 → 정규화된 permalink 목록 (registration.js:358-368과 동일 흐름):
   /// 행 안의 개행·공백도 분해(여러 링크 붙여넣기 대응), 각각 permalink 검증, 중복 제거.
   /// 무효 토큰이 하나라도 있으면 null (호출부가 f_reel_invalid 에러 표시).

@@ -507,6 +507,15 @@ const Map<String, Map<String, String>> kStrings = {
     'en': 'e.g. https://www.instagram.com/reel/...',
   },
   'reel_add': {'ko': '릴스 추가', 'en': 'Add reel'},
+  'f_reel_too_many': {
+    'ko': '릴스는 최대 {max}개까지 올릴 수 있어요',
+    'en': 'You can add up to {max} reels',
+  },
+  'reels_hidden_notice': {
+    'ko': '운영자가 이 릴스를 숨겼어요. 문의는 누룽지도 운영팀으로 해 주세요.',
+    'en':
+        'Reels were hidden by the moderators. Please contact the Nulloongzido team.',
+  },
   'reel_first_hint': {
     'ko': '맨 위 릴스가 마커 미리보기로 표시돼요 · ≡ 꾹 눌러 순서 변경',
     'en': 'Top reel shows as the marker preview · hold ≡ to reorder',
