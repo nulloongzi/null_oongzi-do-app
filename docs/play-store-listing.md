@@ -171,13 +171,14 @@ English and Korean throughout. Start today! 🏐
 > 게 아니다 — 다음에 보고 "안 맞는다"며 고치지 말 것.
 > **EN 간단한 설명은 여유가 7자뿐이다** — 여기만 손댈 때 상한을 다시 세어볼 것.
 
-### 출시 노트 (What's new · v2.10.0)
+### 출시 노트 (What's new · v2.10.1)
 
 > **번호 이력 (확인한 값만).**
 > 최신 → 과거 순. 모두 콘솔 출시 내역에서 확인한 값이다(2026-09-08).
 >
 > | versionCode | 상태 |
 > |---|---|
+> | **20 (2.10.1)** | **빌드 예정** (2026-09-29). main 머지 후 Release AAB 로 빌드. 모집 대상 괄호 메모를 한 덩어리 칩으로(#64) + 계측 정리(화면 변화 없음 — 필터·화면 언어·공유 출처·소셜 가입 계측, debug 빌드 GA 수집 끔). 업로드·게시는 확인 전. |
 > | **19 (2.10.0)** | **프로덕션 게시됨** (2026-09-29 사용자 확인). Release AAB run #19(main `d29fe81`) 산출물. 포장하기 인스타 스토리 직행 공유 + 카드 여백 140 + 운영자 릴스 숨김(`reels_hidden`) 반영 + 릴스 10개 상한. 지금 사용자가 받는 버전. |
 > | 18 (2.9.0) | **프로덕션 게시됨** (2026-09-28 사용자 확인). Release AAB run #18(브랜치 `claude/share-bapdogam`, 커밋 `c20f044` — main `4e01aa2` 와 같은 코드) 산출물. 포장하기 개편: 네임카드(밥도감 · 상차림) / 식단표 두 장, 둘 다 9:16. 19 로 대체됨. |
 > | 17 (2.8.0) | 업로드됨 (2026-09-28 사용자 확인 — 올리고 폰에 받음). Release AAB run #17(브랜치 `claude/release-2.8.0`) 산출물. 밥친구·합석 + 공유 카드 리디자인 + 공식 닉네임 보호 + 앱 링크 루트(`/`) 한정. 18 로 대체됨. |
@@ -190,9 +191,30 @@ English and Korean throughout. Start today! 🏐
 > | 10 (2.4.0) | **AAB 를 만든 적이 없다** — 스토어에 나간 적 없음(Release AAB 실행 이력으로 확인). |
 > | 9 (2.3.0) | 12 이전의 라이브. 대체됨. |
 >
-> 번호는 재사용할 수 없다. 19 까지 썼으므로 다음은 20 이다(pubspec 을 `2.x.0+20` 으로 올리고 빌드).
+> 번호는 재사용할 수 없다. 20 까지 썼으므로 다음은 21 이다(pubspec 을 `2.x.y+21` 로 올리고 빌드).
 >
-> 아래가 19(2.10.0) 의 노트 — **2.9.0(18) 이후 변경분만**. 19 가 게시될 때 이 문안을 썼다. 18 의 노트는 접어 뒀다.
+> 아래가 20(2.10.1) 의 노트 — **2.10.0(19) 이후 변경분만**. 계측 변경은 사용자에게 보이지 않아 적지 않는다. 19 의 노트는 접어 뒀다.
+
+```
+🏷️ 모집 대상이 깔끔하게
+'(구력 1년 이상)'처럼 괄호로 적은 메모가 조각나지 않고 한 덩어리로 보여요.
+
+🔧 작은 개선
+공유 링크와 앱 안정성을 다듬었어요.
+```
+
+**EN (en-US)**
+
+```
+🏷️ Cleaner "who's it for" tags
+Notes written in brackets, like "(1+ year of play)", now stay together as one tag instead of being split up.
+
+🔧 Small improvements
+Share links and overall stability got a little polish.
+```
+
+<details><summary>2.10.0(19) 출시 노트 — 19 가 게시될 때 쓴 문안</summary>
+
 
 ```
 📸 포장하기를 인스타 스토리로 바로
@@ -211,6 +233,8 @@ Post your name card or schedule to your Instagram Story in one tap. The link is 
 🙈 Off-topic Reels get hidden
 Our team can now hide Instagram Reels that are unrelated or inappropriate. Hidden Reels no longer show in the app. Teams can add up to 10 Reels.
 ```
+
+</details>
 
 <details><summary>2.9.0(18) 출시 노트 — 18 이 게시될 때 쓴 문안</summary>
 
