@@ -150,10 +150,10 @@ Future<Uint8List?> renderMyCardPng(MyCardData data) async {
   return bytes?.buffer.asUint8List();
 }
 
-// 규격: 9:16(1080×1920)이되 위아래 안전영역(250)을 비우지 않고 72 만 둔다(웹 FMT 와 같은 값).
-// 인스타 스토리에는 스티커로 붙고(배경 위에 축소돼 얹힌다) 저장은 이미지 그대로라 인스타 UI 가
-// 위아래를 덮지 않는다 — 250을 비워 두면 위아래 빈 띠만 남는다.
-const _fmtMine = CardFmt(1920, 72, 72, 172);
+// 규격: 9:16(1080×1920)이되 스토리 안전영역(위아래 250)을 다 비우지 않는다 — 위아래 140(웹 FMT 와
+// 같은 값). 스토리에는 스티커로 얹혀 250을 비우면 빈 띠만 남고, 저장본을 배경으로 꽉 채워 올릴 때
+// 진행 바·답장 바에 가리지 않을 만큼만 남긴다.
+const _fmtMine = CardFmt(1920, 140, 140, 172);
 
 // 웹 js/my-card.js 의 BENTO / DEX / ID_CARD / ID_DIET 와 같은 값.
 const _bentoMin = 280.0, _bentoMax = 760.0;
