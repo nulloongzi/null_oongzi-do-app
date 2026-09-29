@@ -150,6 +150,11 @@ Future<Uint8List?> renderMyCardPng(MyCardData data) async {
   return bytes?.buffer.asUint8List();
 }
 
+// 규격: 9:16(1080×1920)이되 위아래 안전영역(250)을 비우지 않고 72 만 둔다(웹 FMT 와 같은 값).
+// 인스타 스토리에는 스티커로 붙고(배경 위에 축소돼 얹힌다) 저장은 이미지 그대로라 인스타 UI 가
+// 위아래를 덮지 않는다 — 250을 비워 두면 위아래 빈 띠만 남는다.
+const _fmtMine = CardFmt(1920, 72, 72, 172);
+
 // 웹 js/my-card.js 의 BENTO / DEX / ID_CARD / ID_DIET 와 같은 값.
 const _bentoMin = 280.0, _bentoMax = 760.0;
 const _dexH = 324.0, _dexCell = 44.0, _dexGap = 10.0, _dexCols = 5;
@@ -217,7 +222,7 @@ class MyCardPainter extends CustomPainter {
     'mc_side3',
   ];
 
-  CardFmt get _fmt => ShareCard.story;
+  CardFmt get _fmt => _fmtMine;
   Size get canvasSize => Size(ShareCard.w, _fmt.h);
 
   /// QR 스텁 윗단.
