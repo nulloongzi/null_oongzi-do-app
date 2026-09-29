@@ -226,6 +226,20 @@ const Map<String, Map<String, String>> kStrings = {
   'copy_address': {'ko': '📍 주소 복사', 'en': '📍 Copy'},
   'address_copied': {'ko': '주소를 복사했어요', 'en': 'Address copied'},
   'share_link': {'ko': '🔗 공유', 'en': '🔗 Share'}, // 컴팩트 액션 줄용
+  // 첫 연락 문구(물꼬) — 웹 i18n.js btn_dm/dm_* 와 같은 문구
+  'dm_btn': {'ko': '💬 인스타 DM 보내기', 'en': '💬 Message on Instagram'},
+  'dm_title': {'ko': '첫 인사, 이렇게 보내볼까요?', 'en': 'Say hi like this?'},
+  'dm_hint': {
+    'ko': '문구는 복사해 둘게요. DM 창에서 붙여넣기만 하면 돼요.',
+    'en': "We'll copy it for you — just paste it in the DM.",
+  },
+  'dm_go': {'ko': '문구 복사하고 DM 열기', 'en': 'Copy & open DM'},
+  'dm_template': {
+    'ko': '안녕하세요! 누룽지도 보고 연락드려요 🏐\n{team} 운동에 한번 가보고 싶은데, 처음 가도 괜찮을까요?',
+    'en':
+        "Hi! I found {team} on Nulloongzi-do 🏐\nI'd love to join a session — is it okay to come as a newcomer?",
+  },
+  'dm_team_fallback': {'ko': '팀', 'en': 'your team'},
   'insta_reel_title': {
     'ko': '📷 인스타 릴스 · 게시물',
     'en': '📷 Instagram reel · post',

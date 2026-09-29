@@ -28,6 +28,7 @@ import '../widgets/schedule_timetable.dart';
 import '../widgets/share_menu.dart';
 import '../widgets/story_card.dart';
 import '../widgets/data_trust_row.dart';
+import '../widgets/dm_sheet.dart';
 import '../widgets/map_detail_panel.dart';
 import 'club_form_screen.dart';
 import 'login_screen.dart';
@@ -1515,6 +1516,27 @@ void showClubDetail(
       if (c.address != null && c.address!.isNotEmpty)
         _infoRow('📍', c.address!),
       if (isAreaOnly(c)) _areaOnlyNote(),
+      // 6.5 첫 연락: 인스타 DM + 첫 인사 문구 (연락의 대부분이 인스타 — 웹 #btnDmClub)
+      if (Sanitize.instaHandle(c.insta).isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: Row(
+            children: [
+              _actionPill(
+                t('dm_btn'),
+                () => showDmSheet(
+                  context,
+                  handle: Sanitize.instaHandle(c.insta),
+                  team: c.name,
+                  clubId: c.id,
+                  hasReel: c.instaReels.isNotEmpty ? 1 : 0,
+                ),
+                bg: NurungjiColors.dark,
+                fg: Colors.white,
+              ),
+            ],
+          ),
+        ),
       // 7. 액션 줄: 주소복사 / 길찾기 / 공유 (컴팩트 3)
       Padding(
         padding: const EdgeInsets.only(top: 12),
