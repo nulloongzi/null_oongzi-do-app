@@ -1,4 +1,4 @@
-# 캡처 원본 목록 (2026-09-23 14:10)
+# 캡처 원본 목록 (2026-09-30 16:22)
 기기:  / 
 
 93378	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/carousel/01.png
@@ -24,6 +24,12 @@
 2130062	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/04.png
 783368	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/05.png
 108267	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/06.png
+123532	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/collect/01.png
+376620	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/collect/02.png
+148250	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/collect/03.png
+341608	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/collect/04.png
+144333	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/collect/05.png
+123194	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/collect/06.png
 79826	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/reels/01.png
 656549	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/reels/02.png
 357689	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/reels/03.png
