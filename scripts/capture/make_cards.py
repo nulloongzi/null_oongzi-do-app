@@ -22,8 +22,13 @@ HTML/CSS 로 짜고 헤드리스 크롬으로 렌더한다. 마커 질감은 han
   POSTS=collect python scripts/capture/make_cards.py
   CHROME=/path/to/chrome python ...
   KEEP_BUILD=1 python ...                          # 중간물(slides.html 등) 남기기
+  SNAPSHOT=1 python ...                            # 캡처 원본에서 다시 뽑아 card-shots/ 갱신
 
-환경변수: ARTIFACTS_DIR, CAP_LANG(ko), CARDS_SCRIPT, POSTS, SETTLE(1.0), CHROME, KEEP_BUILD
+화면 고정(card-shots/): 카드에 쓰는 장면만 폭 1080 JPG 로 레포에 커밋해 둔다. 있으면 그걸
+쓰므로 캡처 원본(stills·녹화본)이 없는 노트북에서도 git pull 만으로 돈다. 다시 촬영했으면
+캡처 PC 에서 SNAPSHOT=1 로 한 번 돌려 갱신하고 커밋한다.
+
+환경변수: ARTIFACTS_DIR, CAP_LANG(ko), CARDS_SCRIPT, POSTS, SETTLE(1.0), CHROME, KEEP_BUILD, SNAPSHOT
 """
 import glob
 import html
@@ -53,6 +58,8 @@ OUT_ROOT = ART / "cards" / "handnote"
 FONTS = ROOT / "assets" / "fonts"
 FONT_FILES = ("NanumPenScript-Regular.ttf", "NanumBrushScript-Regular.ttf", "PoorStory-Regular.ttf")
 JS = HERE / "handnote.js"
+SHOTS = Path(os.environ.get("CARD_SHOTS") or HERE / "card-shots")                 # 카드에 쓰는 장면 고정본(레포에 커밋)
+SNAPSHOT = bool(os.environ.get("SNAPSHOT"))
 SETTLE = float(os.environ.get("SETTLE", "1.0"))  # 전환 애니메이션이 가라앉을 시간
 
 SW, SH, GAP = 1080, 1440, 40                 # 한 장, 렌더 시 장 사이 간격
@@ -184,12 +191,28 @@ def beat_at(flow, label):
     return None
 
 
+def shot_path(src):
+    return SHOTS / (re.sub(r"[^\w.@+-]", "_", src.replace("still:", "")) + ".jpg")
+
+
 def grab(src, out):
+    """화면 한 장 → out(폭 1080). card-shots/ 고정본이 있으면 그걸, 없으면 캡처 원본에서."""
+    shot = shot_path(src)
+    if shot.is_file() and not SNAPSHOT:
+        ffmpeg("-i", str(shot), "-frames:v", "1", str(out))
+        return
+    grab_capture(src, out)
+    if SNAPSHOT:
+        SHOTS.mkdir(exist_ok=True)
+        ffmpeg("-i", str(out), "-frames:v", "1", "-q:v", "2", str(shot))
+
+
+def grab_capture(src, out):
     scale = "scale=1080:-2:flags=lanczos"
     if src.startswith("still:"):
         p = STILLS / f"{src[6:]}.png"
         if not p.is_file():
-            die(f"스틸 없음: {p}")
+            die(f"스틸 없음: {p} (card-shots/ 고정본도 없음)")
         ffmpeg("-i", str(p), "-frames:v", "1", "-vf", scale, str(out))
         return
     m = re.fullmatch(r"([\w-]+)@([\w.-]+?)(?:\+([\d.]+))?", src)
