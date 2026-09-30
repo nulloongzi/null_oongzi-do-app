@@ -178,7 +178,7 @@ Future<Uint8List?> renderStoryCardPng(
 /// 브랜드 로고 비트맵. 팀·픽업 카드·내 카드가 같은 로고를 쓴다.
 Future<ui.Image?> loadBrandLogo() async {
   try {
-    final bd = await rootBundle.load('assets/nulloongzido logo_without bg.png');
+    final bd = await rootBundle.load('assets/logo-512.png');
     final codec = await ui.instantiateImageCodec(bd.buffer.asUint8List());
     final frame = await codec.getNextFrame();
     return frame.image;

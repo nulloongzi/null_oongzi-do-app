@@ -11,6 +11,7 @@
 import 'package:flutter/material.dart';
 import '../models/pickup_spot.dart';
 import '../services/i18n.dart';
+import '../theme.dart';
 import 'map_detail_panel.dart' show DetailPanelScope;
 import 'pickup_list_panel.dart';
 
@@ -127,7 +128,9 @@ class _PickupListSheetState extends State<PickupListSheet> {
         width: double.infinity,
         decoration: const BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(NurungjiRadius.sheet),
+          ),
           boxShadow: [
             BoxShadow(
               color: Color(0x265D4037),
@@ -156,10 +159,10 @@ class _PickupListSheetState extends State<PickupListSheet> {
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 alignment: Alignment.center,
                 child: Container(
-                  width: 40,
+                  width: 44,
                   height: 5,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFD8CFC6),
+                    color: NurungjiColors.handle,
                     borderRadius: BorderRadius.circular(3),
                   ),
                 ),

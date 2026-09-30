@@ -382,7 +382,7 @@ class _MapScreenState extends State<MapScreen> {
                     ),
                     boxShadow: [
                       const BoxShadow(
-                        color: Color(0x33000000),
+                        color: Color(0x335D4037),
                         blurRadius: 3,
                         offset: Offset(0, 1),
                       ),
@@ -460,7 +460,7 @@ class _MapScreenState extends State<MapScreen> {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: Color(0x55000000),
+                color: Color(0x555D4037),
                 blurRadius: 4,
                 offset: Offset(0, 2),
               ),
@@ -1864,7 +1864,13 @@ class _MapScreenState extends State<MapScreen> {
           if (tier > 0)
             Semantics(
               label: t('fr_meal_fab'),
-              child: WarmAvatar(size: 52, tier: tier, big: true, child: child!),
+              child: WarmAvatar(
+                size: 55,
+                tier: tier,
+                big: true,
+                radius: BorderRadius.circular(NurungjiRadius.fabProfile),
+                child: child!,
+              ),
             )
           else
             child!,
@@ -1880,7 +1886,7 @@ class _MapScreenState extends State<MapScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 5),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFD84315),
+                    color: NurungjiColors.today,
                     borderRadius: BorderRadius.circular(999),
                     boxShadow: const [
                       BoxShadow(
@@ -1904,7 +1910,14 @@ class _MapScreenState extends State<MapScreen> {
         ],
       );
     },
-    child: _fab('🍚', t('fab_profile'), _openProfile),
+    // 웹 .fab-profile 처럼 다른 FAB보다 한 치수 크게(55/24).
+    child: _fab(
+      '🍚',
+      t('fab_profile'),
+      _openProfile,
+      size: 55,
+      radius: NurungjiRadius.fabProfile,
+    ),
   );
 
   Widget _fab(
@@ -1912,7 +1925,8 @@ class _MapScreenState extends State<MapScreen> {
     String label,
     VoidCallback onTap, {
     Color? bg,
-    double size = 52,
+    double size = 50,
+    double radius = NurungjiRadius.fab,
   }) {
     return Semantics(
       button: true,
@@ -1920,7 +1934,8 @@ class _MapScreenState extends State<MapScreen> {
       child: BounceTap(
         onTap: onTap,
         child: GlassSurface(
-          radius: BorderRadius.circular(size / 2),
+          // 원이 아니라 웹 .fab-btn 과 같은 둥근 사각형(50/20).
+          radius: BorderRadius.circular(radius),
           color: bg ?? const Color(0xD9FFFFFF),
           child: SizedBox(
             width: size,
@@ -2428,9 +2443,8 @@ class _ReelPeekOverlayState extends State<_ReelPeekOverlay>
                 onTap: widget.onClose,
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 18 * v, sigmaY: 18 * v),
-                  child: Container(
-                    color: Colors.black.withValues(alpha: 0.42 * v),
-                  ),
+                  // 웹 릴스 피크와 같은 갈색 딤 rgba(93,64,55,.45).
+                  child: Container(color: Color.fromRGBO(93, 64, 55, 0.45 * v)),
                 ),
               ),
             ),
@@ -2453,7 +2467,7 @@ class _ReelPeekOverlayState extends State<_ReelPeekOverlay>
           borderRadius: BorderRadius.circular(20),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x55000000),
+              color: Color(0x555D4037),
               blurRadius: 30,
               offset: Offset(0, 12),
             ),

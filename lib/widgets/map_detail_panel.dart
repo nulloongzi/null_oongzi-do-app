@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import '../services/deep_link_service.dart' show kCaptureMode;
 import '../services/i18n.dart';
+import '../theme.dart';
 
 /// 패널의 펼침 비율과 토글을 본문(시간표 morph 등)에 전달하는 스코프.
 class DetailPanelScope extends InheritedWidget {
@@ -151,7 +152,9 @@ class _MapDetailPanelState extends State<MapDetailPanel> {
         width: double.infinity,
         decoration: const BoxDecoration(
           color: Colors.white, // 웹 .bottom-sheet: 흰색
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(NurungjiRadius.sheet),
+          ),
           boxShadow: [
             BoxShadow(
               color: Color(0x265D4037),
@@ -180,7 +183,7 @@ class _MapDetailPanelState extends State<MapDetailPanel> {
                   width: 44,
                   height: 5,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE0E0E0), // 웹 .sheet-handle
+                    color: NurungjiColors.handle, // 웹 .sheet-handle
                     borderRadius: BorderRadius.circular(3),
                   ),
                 ),

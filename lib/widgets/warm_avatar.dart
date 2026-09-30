@@ -94,12 +94,16 @@ class WarmAvatar extends StatelessWidget {
   final double size;
   final int tier;
   final bool big;
+
+  /// 둥근 사각형 테두리(🍚 FAB). null 이면 원.
+  final BorderRadius? radius;
   const WarmAvatar({
     super.key,
     required this.child,
     required this.size,
     required this.tier,
     this.big = false,
+    this.radius,
   });
 
   @override
@@ -108,7 +112,8 @@ class WarmAvatar extends StatelessWidget {
     return DecoratedBox(
       position: DecorationPosition.foreground,
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
+        shape: radius == null ? BoxShape.circle : BoxShape.rectangle,
+        borderRadius: radius,
         border: Border.all(
           color: warmRing[tier.clamp(1, 3)],
           width: big ? 3 : 2,

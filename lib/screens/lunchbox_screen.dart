@@ -432,7 +432,7 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
           border: Border.all(color: const Color(0x22000000)),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x0D000000),
+              color: Color(0x0D5D4037),
               blurRadius: 4,
               offset: Offset(0, 2),
             ),
@@ -467,7 +467,7 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
           ),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x0D000000),
+              color: Color(0x0D5D4037),
               blurRadius: 4,
               offset: Offset(0, 2),
             ),
@@ -611,7 +611,7 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
           boxShadow: filled && !selected
               ? const [
                   BoxShadow(
-                    color: Color(0x0F000000),
+                    color: Color(0x0F5D4037),
                     blurRadius: 8,
                     offset: Offset(0, 3),
                   ),

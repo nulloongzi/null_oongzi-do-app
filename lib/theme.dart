@@ -13,6 +13,20 @@ class NurungjiColors {
   static const chipFg = Color(0xFF6D6258);
   static const teal = Color(0xFF13A89E); // 픽업 핀 색
   static const urgent = Color(0xFFFF7043); // --urgent-color (급구/주의)
+  static const today = Color(0xFFD84315); // --today-color ("오늘" 강조)
+  static const handle = Color(0xFFD8CFC6); // --handle-color (시트 드래그 핸들)
+  static const dim = Color(0x595D4037); // --dim rgba(93,64,55,.35) (모달 딤)
+  // 그림자는 갈색만(검정 금지) — 웹 --shadow 계열과 같은 색. 알파만 바꿔 쓴다.
+  static const shadow = Color(0x265D4037); // --shadow rgba(93,64,55,.15)
+  static const shadowSm = Color(0x1F5D4037); // --shadow-sm rgba(93,64,55,.12)
+}
+
+/// 모양 토큰 — 웹 css/main.css :root 와 같은 값 (docs/design-system.md §3).
+class NurungjiRadius {
+  static const sheet = 28.0; // --radius-sheet (카드/시트)
+  static const button = 14.0;
+  static const fab = 20.0; // 웹 .fab-btn (50px 버튼의 모서리)
+  static const fabProfile = 24.0; // 웹 .fab-profile (55px)
 }
 
 class AppTheme {
@@ -41,14 +55,16 @@ class AppTheme {
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: NurungjiColors.light,
         modalBackgroundColor: NurungjiColors.light,
-        // 웹 오버레이(rgba(93,64,55,.35))처럼 검정이 아닌 따뜻한 갈색 딤.
-        modalBarrierColor: Color(0x4D5D4037),
-        // 드래그 핸들: 웹 .sheet-handle(#d8cfc6, 44x5)과 동일 톤.
+        // 웹 오버레이(--dim rgba(93,64,55,.35))처럼 검정이 아닌 따뜻한 갈색 딤.
+        modalBarrierColor: NurungjiColors.dim,
+        // 드래그 핸들: 웹 .sheet-handle(--handle-color, 44x5)과 같은 값.
         showDragHandle: true,
-        dragHandleColor: Color(0xFFD8CFC6),
+        dragHandleColor: NurungjiColors.handle,
         dragHandleSize: Size(44, 5),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(NurungjiRadius.sheet),
+          ),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
