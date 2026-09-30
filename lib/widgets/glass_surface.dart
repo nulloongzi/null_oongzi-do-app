@@ -2,6 +2,7 @@
 // 검색바/탭바/패널 등 떠있는 chrome 공통. 성능: 과다 중첩 금지 + ClipRRect 격리.
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../theme.dart';
 
 class GlassSurface extends StatelessWidget {
   final Widget child;
@@ -15,7 +16,7 @@ class GlassSurface extends StatelessWidget {
     super.key,
     required this.child,
     this.blur = 8,
-    this.color = const Color(0xD9FFFFFF), // 흰 85%
+    this.color = NurungjiColors.glass, // 흰 85% (웹 --glass-bg)
     this.radius = const BorderRadius.all(Radius.circular(16)),
     this.padding,
     this.shadow = true,
@@ -29,7 +30,7 @@ class GlassSurface extends StatelessWidget {
     this.radius = const BorderRadius.all(Radius.circular(24)),
     this.padding,
     this.shadow = true,
-  }) : color = const Color(0xD9FFF8E1);
+  }) : color = NurungjiColors.glassCream;
 
   @override
   Widget build(BuildContext context) {
@@ -39,11 +40,7 @@ class GlassSurface extends StatelessWidget {
         borderRadius: radius,
         boxShadow: shadow
             ? const [
-                BoxShadow(
-                  color: Color(0x265D4037), // rgba(93,64,55,0.15)
-                  blurRadius: 32,
-                  offset: Offset(0, 8),
-                ),
+                NurungjiShadows.md, // 웹 --shadow
               ]
             : null,
       ),

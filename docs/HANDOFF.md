@@ -19,7 +19,7 @@
 5. Firestore 컬렉션/필드명은 웹과 **100% 동일**(같은 백엔드 공유). localStorage 키 = SharedPreferences 동일.
 
 ## 재사용할 공용 빌딩블록 (이미 구현됨 — 새로 만들지 말 것)
-- `lib/theme.dart` → `NurungjiColors`(yellow/dark/brown/bg/light/chipBg/chipFg/teal/**urgent**/today/handle/dim/shadow) + `NurungjiRadius`(sheet/fab) + `AppTheme`(Pretendard).
+- `lib/theme.dart` → `AppTheme`(Pretendard) + `lib/design_tokens.g.dart` export: `NurungjiColors` · `NurungjiShadows` · `NurungjiRadius`. **토큰은 생성 파일** — 값은 웹 `tokens/design-tokens.json` 에서 고치고 다시 만든다(웹 `docs/design-system.md` §0).
 - `lib/widgets/bounce_tap.dart` → **`BounceTap`** — 모든 탭 요소 누르면 spring 축소(easeOutBack 120ms, Listener 기반이라 자식 탭 비간섭).
 - `lib/widgets/glass_surface.dart` → **`GlassSurface`**(블러+반투명+흰테두리+갈색그림자) / `GlassSurface.cream`.
 - `lib/services/i18n.dart` → `t(key)`, `tf`, `appLang`, 표시 변환 `i18nTarget/i18nPrice/i18nDay/i18nRegion/i18nSchedule`. **새 문자열은 반드시 `lib/l10n/strings.dart`에 `{ko,en}` 키 추가 후 `t()`로** (하드코딩 KO 금지).
