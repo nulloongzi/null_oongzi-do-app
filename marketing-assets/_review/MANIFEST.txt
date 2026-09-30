@@ -1,4 +1,4 @@
-# 캡처 원본 목록 (2026-09-30 16:22)
+# 캡처 원본 목록 (2026-09-30 16:48)
 기기:  / 
 
 93378	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/carousel/01.png
@@ -24,12 +24,38 @@
 2130062	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/04.png
 783368	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/05.png
 108267	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/discover/06.png
-123532	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/collect/01.png
-376620	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/collect/02.png
-148250	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/collect/03.png
-341608	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/collect/04.png
-144333	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/collect/05.png
-123194	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/collect/06.png
+123621	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/collect/01.png
+376684	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/collect/02.png
+148176	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/collect/03.png
+341548	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/collect/04.png
+144429	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/collect/05.png
+123335	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/collect/06.png
+633782	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/discover/01.png
+613871	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/discover/02.png
+488374	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/discover/03.png
+110074	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/discover/04.png
+121131	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/discover/05.png
+461404	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/discover/06.png
+560067	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/reels/01.png
+268026	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/reels/02.png
+232543	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/reels/03.png
+563603	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/reels/04.png
+248083	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/register/01.png
+1107042	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/register/02.png
+249540	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/register/03.png
+246667	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/register/04.png
+262037	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/register/05.png
+727666	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/register/06.png
+342400	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/share/01.png
+364141	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/share/02.png
+130779	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/share/03.png
+103997	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/share/04.png
+131061	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/share/05.png
+256349	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/verify/01.png
+253995	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/verify/02.png
+237910	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/verify/03.png
+265617	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/verify/04.png
+144065	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/handnote/verify/05.png
 79826	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/reels/01.png
 656549	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/reels/02.png
 357689	/c/Users/user/null_oongzi-do-app/marketing-assets/cards/reels/03.png
