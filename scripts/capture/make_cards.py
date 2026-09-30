@@ -119,17 +119,38 @@ def load_posts():
         f += [""] * (8 - len(f))
         if kind == "cover":
             _, src, y0, kick, title, side, marks = f[:7]
-            cur["slides"].append(dict(kind=kind, src=src, y0=int(y0), kick=kick,
+            cur["slides"].append(dict(kind=kind, src=src, crop=parse_crop(y0, ln), kick=kick,
                                       title=title, side=side, marks=marks))
         else:
             _, src, y0, title, cap, marks = f[:6]
-            cur["slides"].append(dict(kind=kind, src=src, y0=int(y0), title=title,
+            cur["slides"].append(dict(kind=kind, src=src, crop=parse_crop(y0, ln), title=title,
                                       cap=cap, marks=marks))
     if ONLY:
         posts = [p for p in posts if p["id"] in ONLY]
     if not posts:
         die(f"만들 편이 없습니다: {CARDS_FILE}" + (f" (POSTS={' '.join(ONLY)})" if ONLY else ""))
     return posts
+
+
+def parse_crop(v, ln):
+    """'y0' → 폭 그대로 카드 틀(972x900)에 1:1. 'x0,y0,x1,y1' → 그 패널만 잘라 틀 안에 맞춤."""
+    try:
+        p = [int(x) for x in v.split(",")]
+    except ValueError:
+        die(f"화면 위치 형식 오류: {ln}")
+    if len(p) == 1:
+        return (CX0, p[0], CX1, p[0] + CH)
+    if len(p) == 4 and p[2] > p[0] and p[3] > p[1]:
+        return tuple(p)
+    die(f"화면 위치 형식 오류: {ln}")
+
+
+def card_geom(crop):
+    """원본 영역 → 슬라이드 위 카드(left, top, w, h, 배율). 틀 안에서 가운데."""
+    x0, y0, x1, y1 = crop
+    s = min((CX1 - CX0) / (x1 - x0), CH / (y1 - y0))
+    w, h = (x1 - x0) * s, (y1 - y0) * s
+    return CX0 + ((CX1 - CX0) - w) / 2, CT + (CH - h) / 2, w, h, s
 
 
 _seed = [0]
@@ -191,8 +212,11 @@ def grab(src, out):
 
 
 # ── 슬라이드 HTML ────────────────────────────────────────────
-def marks_html(marks, y0, base_seed):
+def marks_html(marks, crop, base_seed):
     """'circle x y w h [pad]; word 여기! x y' → 측정용 표식(원본 좌표 → 슬라이드 좌표)."""
+    left, top, _, _, s = card_geom(crop)
+    X = lambda x: left + (x - crop[0]) * s
+    Y = lambda y: top + (y - crop[1]) * s
     out = []
     for i, m in enumerate(x.strip() for x in marks.split(";") if x.strip()):
         p = m.split()
@@ -201,10 +225,10 @@ def marks_html(marks, y0, base_seed):
             x, y, w, h = map(int, p[1:5])
             pad = int(p[5]) if len(p) > 5 else 20
             out.append(f'<i class=t data-mark=circle data-seed={seed} data-pad={pad} '
-                       f'style="left:{x}px;top:{CT + y - y0}px;width:{w}px;height:{h}px"></i>')
+                       f'style="left:{X(x):.0f}px;top:{Y(y):.0f}px;width:{w * s:.0f}px;height:{h * s:.0f}px"></i>')
         elif p[0] == "word" and len(p) >= 4:
             word, x, y = p[1], int(p[2]), int(p[3])
-            out.append(f'<div class="hw red" data-mark=word style="left:{x}px;top:{CT + y - y0}px;'
+            out.append(f'<div class="hw red" data-mark=word style="left:{X(x):.0f}px;top:{Y(y):.0f}px;'
                        f'transform:rotate(-4deg)">{html.escape(word)}</div>')
         else:
             die(f"표시 형식 오류: {m}")
@@ -212,10 +236,12 @@ def marks_html(marks, y0, base_seed):
 
 
 def slide_html(i, n, s):
-    card = (f'<div class=card style="background-image:url(img/{i:02d}.png);'
-            f'background-position:-{CX0}px -{s["y0"]}px"></div>')
+    left, top, w, h, k = card_geom(s["crop"])
+    card = (f'<div class=card style="left:{left:.0f}px;top:{top:.0f}px;width:{w:.0f}px;height:{h:.0f}px;'
+            f'background-image:url(img/{i:02d}.png);background-size:{1080 * k:.1f}px auto;'
+            f'background-position:-{s["crop"][0] * k:.1f}px -{s["crop"][1] * k:.1f}px"></div>')
     page = f'<div class="hw page">{i}/{n}</div>'
-    marks = marks_html(s["marks"], s["y0"], i)
+    marks = marks_html(s["marks"], s["crop"], i)
     if s["kind"] == "cover":
         body = (f'<div class="hw red kick">{txt(s["kick"])}</div>'
                 f'<div class="hw cover">{txt(s["title"])}</div>'
@@ -236,9 +262,8 @@ body{background:#888}
 /* 도트 노트 종이 */
 .slide{position:relative;width:1080px;height:1440px;overflow:hidden;margin:0 0 __GAP__px;
  background:radial-gradient(circle,rgba(141,110,99,.22) 1.6px,transparent 2px) 18px 18px/36px 36px,var(--bg)}
-/* 화면 카드 — 전 장 같은 자리. 라운드는 앱 패널 모서리보다 커서 뒤 배경이 안 비친다 */
-.card{position:absolute;left:__CX0__px;top:__CT__px;width:__CW__px;height:__CH__px;
- background-size:1080px auto;background-repeat:no-repeat;border-radius:70px;
+/* 화면 카드 — 틀(x54~1026, y400~1300) 안 같은 자리. 라운드는 앱 패널 모서리보다 커서 뒤 배경이 안 비친다 */
+.card{position:absolute;background-repeat:no-repeat;border-radius:70px;
  box-shadow:0 8px 32px rgba(93,64,55,.15),0 1px 3px rgba(93,64,55,.12)}
 i.t{position:absolute;display:block}
 svg.layer{position:absolute;inset:0;width:1080px;height:1440px;pointer-events:none}
@@ -257,8 +282,7 @@ svg.over{z-index:4;mix-blend-mode:multiply}
 
 
 def build_html(slides):
-    css = (CSS.replace("__GAP__", str(GAP)).replace("__CX0__", str(CX0)).replace("__CT__", str(CT))
-           .replace("__CW__", str(CX1 - CX0)).replace("__CH__", str(CH)))
+    css = CSS.replace("__GAP__", str(GAP))
     n = len(slides)
     body = "\n".join(slide_html(i + 1, n, s) for i, s in enumerate(slides))
     return (f"<!doctype html><html lang=ko><head><meta charset=utf-8><style>{css}</style></head>"
