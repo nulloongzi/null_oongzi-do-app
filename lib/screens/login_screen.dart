@@ -10,6 +10,7 @@ import '../services/analytics.dart';
 import '../services/i18n.dart';
 import '../services/profile_service.dart';
 import '../services/social_auth_service.dart';
+import '../theme.dart';
 import '../widgets/auth_loading_layer.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -268,7 +269,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         padding: const EdgeInsets.only(bottom: 12),
                         child: Text(
                           _error!,
-                          style: const TextStyle(color: Colors.red),
+                          style: fieldErrorStyle, // 웹 .field-error 와 같은 색·크기
                           textAlign: TextAlign.center,
                         ),
                       ),

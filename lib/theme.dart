@@ -88,6 +88,40 @@ class AppTheme {
           ),
         ),
       ),
+      // 팝업(AlertDialog): 웹 js/dialog.js(.nz-dialog)와 같은 모양 — 흰 바탕, 모서리 dialog(20), 17/800 제목
+      dialogTheme: const DialogThemeData(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(
+            Radius.circular(NurungjiRadius.dialog),
+          ),
+        ),
+        titleTextStyle: TextStyle(
+          fontFamily: 'Pretendard',
+          color: NurungjiColors.dark,
+          fontSize: 17,
+          fontWeight: FontWeight.w800,
+          height: 1.4,
+        ),
+        contentTextStyle: TextStyle(
+          fontFamily: 'Pretendard',
+          color: NurungjiColors.dark,
+          fontSize: 14,
+          height: 1.55,
+        ),
+      ),
+      // 글자 버튼: 기본값(primary = 옐로)은 흰 바탕에서 1.6:1 이라 안 읽힌다 → 다크
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: NurungjiColors.dark,
+          textStyle: const TextStyle(
+            fontFamily: 'Pretendard',
+            fontWeight: FontWeight.w700,
+            fontSize: 15,
+          ),
+        ),
+      ),
       // 토스트(SnackBar): 웹 js/toast.js(.nz-toast)와 같은 모양 — 다크 브라운 + 크림 글자, 떠 있는 카드.
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,

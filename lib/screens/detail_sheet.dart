@@ -653,7 +653,14 @@ Future<void> _confirmDelete(
         ),
         TextButton(
           onPressed: () => Navigator.pop(dctx, true),
-          child: Text(t('delete'), style: const TextStyle(color: Colors.red)),
+          child: Text(
+            t('delete'),
+            // 되돌릴 수 없는 일 — 웹 .nz-btn-danger 와 같은 색
+            style: const TextStyle(
+              color: NurungjiColors.urgentInk,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
         ),
       ],
     ),
