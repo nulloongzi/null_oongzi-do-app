@@ -121,7 +121,7 @@ const Map<String, Map<String, String>> kStrings = {
 
   // 자가 선택 가이드 — 미국 오픈짐들이 공통으로 붙이는 문구. 레벨 제도를 굴러가게 하는 장치다.
   'pk_level_hint': {
-    'ko': '애매하면 낮은 쪽을 골라주세요. 남과 비교하지 말고 설명 기준으로요.',
+    'ko': '애매하면 낮은 쪽을 골라 주세요. 남과 비교하지 말고 설명 기준으로요.',
     'en':
         'When in doubt, pick the lower level. Judge by the description, not by other players.',
   },
@@ -152,12 +152,15 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'vf_submitting': {'ko': '사진 올리는 중…', 'en': 'Uploading photo…'},
   'vf_pending': {
-    'ko': '⏳ 인증 심사 중입니다. 관리자 확인 후 인증 배지가 부여됩니다.',
-    'en': '⏳ Verification under review. A badge is granted after admin review.',
+    'ko': '⏳ 인증을 확인하고 있어요. 운영자가 확인하면 인증 배지가 붙어요.',
+    'en': '⏳ Verification under review. A badge is added after review.',
   },
-  'vf_rejected': {'ko': '❌ 인증이 거절되었습니다', 'en': '❌ Verification rejected'},
+  'vf_rejected': {
+    'ko': '❌ 인증이 받아들여지지 않았어요',
+    'en': '❌ Verification was not accepted',
+  },
   'vf_reason': {'ko': '사유: ', 'en': 'Reason: '},
-  'vf_no_reason': {'ko': '사유가 기재되지 않았습니다.', 'en': 'No reason was provided.'},
+  'vf_no_reason': {'ko': '적힌 사유가 없어요.', 'en': 'No reason given.'},
   'vf_reapply': {'ko': '🔄 인증 재신청', 'en': '🔄 Re-apply'},
   'urgent_on': {'ko': '🔥 급구 올리기', 'en': '🔥 Post an urgent call'},
   'urgent_off': {'ko': '급구 내리기', 'en': 'Remove urgent'},
@@ -245,7 +248,7 @@ const Map<String, Map<String, String>> kStrings = {
     'en': "Couldn't change your name. Please try again in a moment.",
   },
   'nickname_reserved': {
-    'ko': '누룽지도 공식 계정만 쓸 수 있는 이름이에요. 다른 이름을 골라주세요.',
+    'ko': '누룽지도 공식 계정만 쓸 수 있는 이름이에요. 다른 이름을 골라 주세요.',
     'en':
         'That name is reserved for official Nulloongzi accounts. Please pick another.',
   },
@@ -300,8 +303,8 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'detail_pull_hint': {'ko': '▴ 위로 올려 시간표 보기', 'en': '▴ Pull up for schedule'},
   'detail_collapse_hint': {'ko': '▾ 접기', 'en': '▾ Collapse'},
-  'lb_slot_rice': {'ko': '밥을\n담아주세요🍚', 'en': 'Add rice 🍚'},
-  'lb_slot_soup': {'ko': '국을\n담아주세요🥘', 'en': 'Add soup 🥘'},
+  'lb_slot_rice': {'ko': '밥을\n담아 주세요🍚', 'en': 'Add rice 🍚'},
+  'lb_slot_soup': {'ko': '국을\n담아 주세요🥘', 'en': 'Add soup 🥘'},
   'lb_slot_side1': {'ko': '반찬1🍳', 'en': 'Side 1 🍳'},
   'lb_slot_side2': {'ko': '반찬2🥗', 'en': 'Side 2 🥗'},
   'lb_slot_side3': {'ko': '반찬3🥢', 'en': 'Side 3 🥢'},
@@ -367,9 +370,9 @@ const Map<String, Map<String, String>> kStrings = {
   },
   // 웹 reg_tip 대응 — 요일별 체육관이 다르면 장소별 개별 등록 안내
   'cf_tip': {
-    'ko': 'tip: 요일별로 체육관 위치가 다른 경우, 정확한 핀 표시를 위해 장소별로 각각 등록 부탁드립니다!',
+    'ko': 'tip: 요일마다 체육관이 다르면 장소마다 따로 등록해 주세요. 그래야 지도 핀이 정확해요.',
     'en':
-        'Tip: If your gym location differs by day, please register each location separately so the map pins are accurate!',
+        'Tip: If your gym changes by day, register each location separately so the map pins are accurate.',
   },
   // 웹 reg_error/pk_create_err 대응 — 실패 원문 앞에 붙는 현지화 프리픽스
   'cf_save_err': {
@@ -565,8 +568,9 @@ const Map<String, Map<String, String>> kStrings = {
   'cf_updated': {'ko': '팀 정보를 고쳤어요', 'en': 'Team info updated'},
   'pf_updated': {'ko': '게임 정보를 고쳤어요', 'en': 'Game updated'},
   'f_reel_invalid': {
-    'ko': '인스타 게시물/릴스 링크 형식이 올바르지 않아요',
-    'en': 'Invalid Instagram post/reel link',
+    'ko': '인스타 공개 게시물/릴스 링크 형식이 아니에요. (예: https://www.instagram.com/reel/...)',
+    'en':
+        'That doesn’t look like a public Instagram post/reel link (e.g. https://www.instagram.com/reel/...).',
   },
   'cf_optional_summary': {
     'ko': '추가 정보 입력 (선택)',
@@ -657,9 +661,9 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'pf_curated_hint': {
     'ko':
-        '켜면 상세에 "공개 인스타 정보로 모은 크루" 안내와 수정/삭제 요청 링크가 표시됩니다. 남의 크루를 대신 올릴 때만 켜세요.',
+        '켜면 상세에 "공개 인스타 정보로 모은 크루" 안내와 수정/삭제 요청 링크가 보여요. 남의 크루를 대신 올릴 때만 켜 주세요.',
     'en':
-        'Shows a "collected from public Instagram info" notice plus an edit/removal request link. Only for crews you add on their behalf.',
+        'Shows a "collected from public Instagram info" notice plus an edit/removal request link on the detail sheet. Only for crews you add on their behalf.',
   },
   'pf_insta': {'ko': '인스타 아이디 (선택)', 'en': 'Instagram handle (optional)'},
   'pf_insta_hint': {
@@ -1426,7 +1430,7 @@ const Map<String, Map<String, String>> kStrings = {
   'dt_report': {'ko': '정보가 틀렸어요', 'en': 'Report incorrect info'},
   'rp_title': {'ko': '잘못된 정보 신고', 'en': 'Report incorrect info'},
   'rp_intro': {
-    'ko': '확인 후 영업일 기준 7일 이내에 처리 결과를 반영합니다. 신고자 정보는 남기지 않습니다.',
+    'ko': '확인하고 영업일 7일 안에 반영해요. 신고한 사람의 정보는 남기지 않아요.',
     'en':
         'We review reports within 7 business days. No personal information is stored.',
   },
@@ -1443,7 +1447,7 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'rp_submit': {'ko': '신고 보내기', 'en': 'Send report'},
   'rp_sending': {'ko': '보내는 중…', 'en': 'Sending…'},
-  'rp_need_reason': {'ko': '사유를 선택해주세요.', 'en': 'Please choose a reason.'},
+  'rp_need_reason': {'ko': '어떤 문제인지 골라 주세요', 'en': "Choose what's wrong."},
   'rp_done': {
     'ko': '신고를 받았어요. 확인하고 반영할게요. 고마워요!',
     'en': "Report received. Thanks — we'll review it.",
@@ -1454,7 +1458,7 @@ const Map<String, Map<String, String>> kStrings = {
   },
 
   // 포장하기 도시락 칸 라벨 — 웹 js/my-card.js 의 mc_* 와 같은 문구.
-  // 화면 UI 의 '밥을 담아주세요🍚' 에서 명령형만 뺐다(공유물은 남에게 가는 이미지다).
+  // 화면 UI 의 '밥을 담아 주세요🍚' 에서 명령형만 뺐다(공유물은 남에게 가는 이미지다).
   'mc_rice': {'ko': '밥 🍚', 'en': 'Rice 🍚'},
   'mc_soup': {'ko': '국 🥘', 'en': 'Soup 🥘'},
   'mc_side1': {'ko': '반찬1 🍳', 'en': 'Side 1 🍳'},
@@ -1465,7 +1469,7 @@ const Map<String, Map<String, String>> kStrings = {
   'ad_title': {'ko': '팀 관리자 신청', 'en': 'Request team admin'},
   'ad_desc': {
     'ko':
-        '관리자가 되면 이 팀 정보를 직접 고칠 수 있어요.\n본인이 이 팀 사람이라는 걸 알 수 있는 사진을 올려주세요.\n\n예) 팀 단톡방 화면 · 팀 유니폼 입고 찍은 사진 · 팀 인스타 계정 관리 화면\n※ 다른 분 이름이나 연락처는 가리고 올려주세요.',
+        '관리자가 되면 이 팀 정보를 직접 고칠 수 있어요.\n본인이 이 팀 사람이라는 걸 알 수 있는 사진을 올려 주세요.\n\n예) 팀 단톡방 화면 · 팀 유니폼 입고 찍은 사진 · 팀 인스타 계정 관리 화면\n※ 다른 분 이름이나 연락처는 가리고 올려 주세요.',
     'en':
         'Admins can edit this team\'s information directly.\nUpload a photo showing that you belong to this team.\n\ne.g. your team group chat, you in the team uniform, the team\'s Instagram account screen\n※ Please mask other people\'s names and contact details.',
   },
@@ -1484,11 +1488,11 @@ const Map<String, Map<String, String>> kStrings = {
     'en': "Couldn't send the request. Please try again in a moment.",
   },
   'ad_pending': {
-    'ko': '⏳ 관리자 신청을 확인하고 있습니다.',
+    'ko': '⏳ 관리자 신청을 확인하고 있어요',
     'en': '⏳ Your admin request is under review.',
   },
   'ad_rejected': {
-    'ko': '❌ 관리자 신청이 받아들여지지 않았습니다',
+    'ko': '❌ 관리자 신청이 받아들여지지 않았어요',
     'en': '❌ Admin request was not accepted',
   },
   'ad_reapply': {'ko': '🔄 다시 신청', 'en': '🔄 Apply again'},
@@ -1516,20 +1520,20 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'reg_area_only_desc': {
     'ko':
-        '지도에 정확한 핀 대신 동네 범위로 표시하고, 주소는 시·군·구까지만 보입니다. 체육관 이름과 상세 주소는 저장하지 않습니다. 학교나 공공 체육관을 빌려 쓰는 팀에 권합니다.',
+        '지도에 정확한 핀 대신 동네 범위로 표시하고, 주소는 시·군·구까지만 보여요. 체육관 이름과 상세 주소는 저장하지 않아요. 학교나 공공 체육관을 빌려 쓰는 팀에 권해요.',
     'en':
         'Shows a neighbourhood area instead of an exact pin, and the address only down to the district. The venue name and full address are not stored. Recommended for teams renting school or public gyms.',
   },
   'reg_area_label_fail': {
-    'ko': '이 주소로는 동네 범위를 만들 수 없습니다. 지도에서 위치를 찍어주세요.',
+    'ko': '이 주소로는 동네 범위를 만들지 못했어요. 지도에서 위치를 찍어 주세요.',
     'en':
-        'Could not derive an area from this address. Please pick the location on the map.',
+        "Couldn't work out the area from this address. Pick the location on the map.",
   },
   'cd_area_only': {'ko': '대략 위치', 'en': 'Approximate'},
   'cd_area_only_note': {
-    'ko': '이 팀은 대략적인 위치만 공개합니다. 정확한 장소는 팀에 문의해주세요.',
+    'ko': '이 팀은 대략적인 위치만 공개해요. 정확한 장소는 팀에 물어봐 주세요.',
     'en':
-        'This team shares only an approximate location. Please contact them for the exact venue.',
+        'This team shares only an approximate location. Ask them for the exact venue.',
   },
 
   // ── 밥친구 (웹 js/i18n.js fr_* 와 같은 문구) ──
@@ -1609,7 +1613,7 @@ const Map<String, Map<String, String>> kStrings = {
     'en': "They already sent you a request",
   },
   'fr_share_title': {
-    'ko': "밥친구에게 보일 팀을 골라주세요",
+    'ko': '밥친구에게 보일 팀을 골라 주세요',
     'en': "Choose teams your bap friends can see",
   },
   'fr_share_body': {
@@ -1666,7 +1670,7 @@ const Map<String, Map<String, String>> kStrings = {
     'en': "Friends on the same team at the same time",
   },
   'fr_err_daily': {
-    'ko': "신청은 하루 30건까지예요. 내일 다시 해주세요.",
+    'ko': '신청은 하루 30건까지예요. 내일 다시 해 주세요.',
     'en': "Up to 30 requests a day. Try again tomorrow.",
   },
   'fr_meal_fab': {
@@ -1694,7 +1698,7 @@ const Map<String, Map<String, String>> kStrings = {
   'fr_unfriended': {'ko': "밥친구를 끊었어요", 'en': "Friend removed"},
   'fr_retry': {'ko': "다시 시도", 'en': "Retry"},
   'fr_err_generic': {
-    'ko': "잠시 후 다시 시도해 주세요.",
+    'ko': '잠시 후 다시 해 주세요.',
     'en': "Please try again in a moment.",
   },
   'fr_err_full': {
