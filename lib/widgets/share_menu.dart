@@ -27,7 +27,9 @@ void showShareMenu(
     builder: (ctx) => Dialog(
       backgroundColor: Colors.white,
       insetPadding: const EdgeInsets.symmetric(horizontal: 36, vertical: 24),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(NurungjiRadius.dialog),
+      ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
         child: Column(
