@@ -492,8 +492,8 @@ const Map<String, Map<String, String>> kStrings = {
   // 웹 reg_map_loc 대응 — 역지오코딩 실패 시 주소칸 기본 문구
   'f_map_loc': {'ko': '지도에서 선택된 위치', 'en': 'Location picked on map'},
   'f_link_invalid': {
-    'ko': '링크 형식이 올바르지 않아요 (http/https)',
-    'en': 'Invalid link (http/https)',
+    'ko': '링크는 http:// 나 https:// 로 시작해야 해요',
+    'en': 'Links need to start with http:// or https://',
   },
   'f_reel_invalid': {
     'ko': '인스타 게시물/릴스 링크 형식이 올바르지 않아요',
@@ -505,6 +505,13 @@ const Map<String, Map<String, String>> kStrings = {
     'en': 'Add more details (optional)',
   },
   'cf_field_required': {'ko': '필수', 'en': 'Required'},
+  // 입력 칸 아래 오류(웹 js/field-error.js 와 같은 문구)
+  'cf_err_name': {'ko': '팀 이름을 적어 주세요', 'en': 'Enter the team name.'},
+  'cf_err_target': {
+    'ko': '누구를 모집하는지 골라 주세요',
+    'en': 'Pick who the team is for.',
+  },
+  'cf_err_addr': {'ko': '체육관 주소를 적어 주세요', 'en': 'Enter the gym address.'},
   'f_reel_label': {'ko': '릴스/게시물 링크 (선택)', 'en': 'Reel/post link (optional)'},
   'f_reel_hint': {
     'ko': '예: https://www.instagram.com/reel/...',
@@ -604,7 +611,7 @@ const Map<String, Map<String, String>> kStrings = {
   'pk_exp_1m': {'ko': '1개월', 'en': '1 month'},
   'pk_exp_3m': {'ko': '3개월', 'en': '3 months'},
   'pk_exp_always': {'ko': '상시', 'en': 'Always'},
-  'pf_req': {'ko': '게임 이름은 필수예요', 'en': 'A name is required'},
+  'pf_req': {'ko': '픽업 이름을 적어 주세요', 'en': 'Enter a name for the game.'},
   'pf_created': {'ko': '픽업이 등록됐어요!', 'en': 'Pickup posted!'},
   // 동호회 폼
   'cf_title': {'ko': '동호회 등록', 'en': 'Register a club'},
@@ -637,14 +644,25 @@ const Map<String, Map<String, String>> kStrings = {
   'cf_req': {'ko': '이름·대상·주소는 필수예요', 'en': 'Name, target, address required'},
   'cf_created': {'ko': '동호회가 등록됐어요!', 'en': 'Club registered!'},
   'cf_insta_invalid': {
-    'ko': '인스타그램 핸들은 영문/숫자/언더스코어/점 1~30자만 가능합니다. (@ 제외)',
-    'en':
-        'Instagram handle allows only letters/numbers/underscore/dot, 1–30 chars. (no @)',
+    'ko': '인스타 아이디는 영문·숫자·밑줄(_)·점(.)으로 30자까지 적어 주세요 (@ 없이)',
+    'en': 'Use letters, numbers, _ or . — up to 30, without @.',
   },
-  'cf_name_max': {'ko': '팀 이름은 60자 이하로', 'en': 'Name must be ≤ 60 chars'},
-  'cf_target_max': {'ko': '대상은 80자 이하로', 'en': 'Target must be ≤ 80 chars'},
-  'cf_addr_max': {'ko': '주소는 200자 이하로', 'en': 'Address must be ≤ 200 chars'},
-  'cf_price_max': {'ko': '회비는 100자 이하로', 'en': 'Dues must be ≤ 100 chars'},
+  'cf_name_max': {
+    'ko': '팀 이름은 60자까지 쓸 수 있어요',
+    'en': 'Team names can be up to 60 characters.',
+  },
+  'cf_target_max': {
+    'ko': '대상은 80자까지 쓸 수 있어요',
+    'en': "Who it's for can be up to 80 characters.",
+  },
+  'cf_addr_max': {
+    'ko': '주소는 200자까지 쓸 수 있어요',
+    'en': 'Addresses can be up to 200 characters.',
+  },
+  'cf_price_max': {
+    'ko': '회비 설명은 100자까지 쓸 수 있어요',
+    'en': 'Fee notes can be up to 100 characters.',
+  },
   // 영어모드 필터 힌트 (외국인 6s 안내, KO는 미표시)
   'fs_en_hint': {
     'ko':

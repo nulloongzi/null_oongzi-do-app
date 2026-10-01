@@ -12,6 +12,7 @@ import '../services/i18n.dart';
 import '../services/pickup_filter.dart';
 import '../services/region_match.dart';
 import '../services/sanitize.dart';
+import '../widgets/field_error_text.dart';
 import '../theme.dart';
 import '../widgets/app_sheet.dart';
 import '../widgets/chip_select.dart';
@@ -53,6 +54,8 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
 
   // 텍스트 입력 (웹 TEXT_FIELDS 대응)
   final _title = TextEditingController();
+  // 칸별 입력 오류 — 칸 바로 아래에(웹 js/field-error.js · pickup-host.js 와 같은 규칙)
+  final Map<String, String> _fieldErr = {};
   final _venue = TextEditingController();
   final _address = TextEditingController();
   final _scheduleMemo = TextEditingController(); // 일정 메모(비정기)
@@ -262,13 +265,17 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
     }
   }
 
+  void _fieldError(String key, String msg) =>
+      setState(() => _fieldErr[key] = msg);
+
   Future<void> _submit() async {
+    setState(() => _fieldErr.clear()); // 다시 누르면 지난 표시부터 지운다
     final title = _title.text.trim();
     final address = _address.text.trim();
     // 주소·좌표는 선택 — 장소가 유동적인 크루(인스타로만 굴러가는 모임)를 막지 않는다.
     // 좌표 없이 등록하면 지도 마커 없이 목록에만 뜬다.
     if (title.isEmpty) {
-      _snack(t('pf_req'));
+      _fieldError('title', t('pf_req'));
       return;
     }
 
@@ -277,7 +284,7 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
     if (contact.isNotEmpty) {
       final s = Sanitize.url(contact);
       if (s.isEmpty) {
-        _snack(t('f_link_invalid'));
+        _fieldError('contact', t('f_link_invalid'));
         return;
       }
       contact = s;
@@ -288,7 +295,7 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
     if (insta.isNotEmpty) {
       final s = Sanitize.instaHandle(insta);
       if (s.isEmpty) {
-        _snack(t('cf_insta_invalid'));
+        _fieldError('insta', t('cf_insta_invalid'));
         return;
       }
       insta = s;
@@ -300,11 +307,14 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
         ? const <String>[]
         : Sanitize.collectReels(_reels.map((c) => c.text));
     if (reels == null) {
-      _snack(t('f_reel_invalid'));
+      _fieldError('reels', t('f_reel_invalid'));
       return;
     }
     if (reels.length > Sanitize.maxReels) {
-      _snack(tf('f_reel_too_many', {'max': '${Sanitize.maxReels}'}));
+      _fieldError(
+        'reels',
+        tf('f_reel_too_many', {'max': '${Sanitize.maxReels}'}),
+      );
       return;
     }
 
@@ -389,7 +399,10 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SheetTitle(_isEdit ? t('pf_edit_title') : t('pf_title')),
-            _group(t('pf_name'), _input(_title, t('pf_name_hint'))),
+            _group(
+              t('pf_name'),
+              _input(_title, t('pf_name_hint'), errKey: 'title'),
+            ),
             _group(
               t('pf_sport'),
               SingleChoiceChips(
@@ -470,8 +483,14 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
             ),
             _group(t('pf_thisweek'), _input(_thisWeek, t('pf_thisweek_hint'))),
             _group(t('pf_fee'), _input(_fee, t('pf_fee_hint'))),
-            _group(t('pf_contact'), _input(_contact, t('f_contact_hint'))),
-            _group(t('pf_insta'), _input(_insta, t('pf_insta_hint'))),
+            _group(
+              t('pf_contact'),
+              _input(_contact, t('f_contact_hint'), errKey: 'contact'),
+            ),
+            _group(
+              t('pf_insta'),
+              _input(_insta, t('pf_insta_hint'), errKey: 'insta'),
+            ),
             // 관리자 전용: 공개 정보로 남의 크루를 대신 올릴 때만.
             if (_isAdmin)
               _group(
@@ -502,8 +521,10 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
                   ? const ReelsHiddenNotice()
                   : ReelEditor(
                       controllers: _reels,
-                      onChanged: () => setState(() {}),
+                      onChanged: () =>
+                          setState(() => _fieldErr.remove('reels')),
                     ),
+              error: _fieldErr['reels'],
             ),
             _group(t('pf_notes'), _input(_notes, t('pf_notes_hint'))),
             _group(
@@ -534,7 +555,8 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
     );
   }
 
-  Widget _group(String label, Widget child) {
+  // error: 칸이 아닌 묶음(릴스 목록)의 오류 — 묶음 아래에 같은 모양으로
+  Widget _group(String label, Widget child, {String? error}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 18),
       child: Column(
@@ -542,22 +564,28 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
         children: [
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w700,
-              color: NurungjiColors.dark,
+              color: error != null ? NurungjiColors.error : NurungjiColors.dark,
             ),
           ),
           const SizedBox(height: 8),
           child,
+          if (error != null) FieldErrorText(error),
         ],
       ),
     );
   }
 
-  Widget _input(TextEditingController c, String hint) {
+  // errKey: 이 칸의 오류 키 — 오류가 있으면 칸 아래에 적고, 고치기 시작하면 지운다
+  Widget _input(TextEditingController c, String hint, {String? errKey}) {
+    final error = errKey == null ? null : _fieldErr[errKey];
     return TextField(
       controller: c,
-      decoration: InputDecoration(hintText: hint),
+      onChanged: error == null
+          ? null
+          : (_) => setState(() => _fieldErr.remove(errKey)),
+      decoration: InputDecoration(hintText: hint, errorText: error),
     );
   }
 

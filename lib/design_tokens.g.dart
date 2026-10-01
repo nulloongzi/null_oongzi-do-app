@@ -15,6 +15,7 @@ class NurungjiColors {
   static const urgent = Color(0xFFFF7043); // --urgent-color
   static const urgentInk = Color(0xFFBF360C); // --urgent-ink
   static const today = Color(0xFFD84315); // --today-color
+  static const error = Color(0xFFD32F2F); // --error-color
   static const chipBg = Color(0xFFF0ECE2); // --chip-bg
   static const chipFg = Color(0xFF6D6258); // --chip-fg
   static const teal = Color(0xFF13A89E); // --pickup-teal

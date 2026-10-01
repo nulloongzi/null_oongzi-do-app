@@ -8,12 +8,26 @@ import 'design_tokens.g.dart';
 // 값을 바꾸려면 그 JSON 을 고치고 다시 만든다 — design_tokens.g.dart 머리말 참고.
 export 'design_tokens.g.dart';
 
+/// 입력 칸 아래 오류 글자 — 웹 .field-error(13px/600, --error-color)와 같은 값.
+const fieldErrorStyle = TextStyle(
+  fontFamily: 'Pretendard',
+  color: NurungjiColors.error,
+  fontSize: 13,
+  fontWeight: FontWeight.w600,
+  height: 1.4,
+);
+
 class AppTheme {
   static ThemeData get light {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: NurungjiColors.yellow,
-      brightness: Brightness.light,
-    ).copyWith(primary: NurungjiColors.yellow, surface: Colors.white);
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: NurungjiColors.yellow,
+          brightness: Brightness.light,
+        ).copyWith(
+          primary: NurungjiColors.yellow,
+          surface: Colors.white,
+          error: NurungjiColors.error,
+        );
 
     // fontFamily: Pretendard → 전 textTheme에 적용. 가변폰트라 각 스타일의
     // fontWeight가 wght 축으로 매핑됨(w400~w900).
@@ -101,6 +115,17 @@ class AppTheme {
           borderRadius: BorderRadius.circular(NurungjiRadius.input),
           borderSide: const BorderSide(color: NurungjiColors.yellow, width: 2),
         ),
+        // 입력 오류: 빨간 테두리 + 칸 아래 이유 한 줄(웹 .field-invalid · .field-error 와 같은 색·크기)
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(NurungjiRadius.input),
+          borderSide: const BorderSide(color: NurungjiColors.error),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(NurungjiRadius.input),
+          borderSide: const BorderSide(color: NurungjiColors.error, width: 2),
+        ),
+        errorStyle: fieldErrorStyle,
+        errorMaxLines: 3,
       ),
     );
   }
