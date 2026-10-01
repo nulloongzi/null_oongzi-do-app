@@ -196,10 +196,11 @@ class _ShareImageScreenState extends State<ShareImageScreen> {
       await file.writeAsBytes(png);
       await Share.shareXFiles([XFile(file.path)]);
     } catch (e) {
+      debugPrint('share image: $e');
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('${t('share_title')}: $e')));
+        ).showSnackBar(SnackBar(content: Text(t('err_share'))));
       }
     } finally {
       if (mounted) setState(() => _sharing = false);

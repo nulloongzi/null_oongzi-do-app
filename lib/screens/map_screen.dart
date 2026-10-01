@@ -285,6 +285,7 @@ class _MapScreenState extends State<MapScreen> {
         if (mounted && v != _isAdmin) setState(() => _isAdmin = v);
       });
     } catch (e) {
+      debugPrint('data load: $e');
       if (mounted) {
         setState(() {
           _error = '$e';
@@ -2277,7 +2278,7 @@ class _MapScreenState extends State<MapScreen> {
     child: Padding(
       padding: const EdgeInsets.all(12),
       child: Text(
-        '${t('data_load_err')}: $_error',
+        t('data_load_err'),
         style: TextStyle(color: Colors.red.shade900, fontSize: 12),
       ),
     ),

@@ -635,17 +635,22 @@ NLatLng _centerOf(double? lat, double? lng) => (lat != null && lng != null)
     : const NLatLng(37.5559, 127.0838);
 
 // 삭제 확인 → 삭제 → 패널 닫기(close) → onChanged. context=호출측(다이얼로그·스낵바).
+// 문구는 웹 nzConfirm 과 같다: 제목에 무엇을 지우는지, 버튼엔 누르면 일어나는 일(팀 지우기·게임 지우기).
 Future<void> _confirmDelete(
   BuildContext context,
   Future<void> Function()? onChanged,
   VoidCallback close,
-  Future<void> Function() doDelete,
-) async {
+  Future<void> Function() doDelete, {
+  required String title,
+  String? body,
+  required String action,
+  required String error,
+}) async {
   final ok = await showDialog<bool>(
     context: context,
     builder: (dctx) => AlertDialog(
-      title: Text(t('modify_delete_title')),
-      content: Text(t('modify_delete_body')),
+      title: Text(title),
+      content: body == null ? null : Text(body),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(dctx, false),
@@ -654,7 +659,7 @@ Future<void> _confirmDelete(
         TextButton(
           onPressed: () => Navigator.pop(dctx, true),
           child: Text(
-            t('delete'),
+            action,
             // 되돌릴 수 없는 일 — 웹 .nz-btn-danger 와 같은 색
             style: const TextStyle(
               color: NurungjiColors.urgentInk,
@@ -669,10 +674,11 @@ Future<void> _confirmDelete(
   try {
     await doDelete();
   } catch (e) {
+    debugPrint('delete: $e');
     if (context.mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('${t('err_delete')}: $e')));
+      ).showSnackBar(SnackBar(content: Text(error)));
     }
     return;
   }
@@ -694,10 +700,11 @@ Widget _urgentToggle(
         'urgent_msg': urgent ? msg : '',
       });
     } catch (e) {
+      debugPrint('urgent toggle: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('${t('err_generic')}: $e')));
+        ).showSnackBar(SnackBar(content: Text(t('cd_update_error'))));
       }
       return;
     }
@@ -722,6 +729,7 @@ Widget _urgentToggle(
               context,
               title: t('urgent_on'),
               hint: t('urgent_msg_hint'),
+              action: t('cd_urgent_btn'),
             );
             if (msg != null && msg.trim().isNotEmpty) {
               await apply(true, msg.trim());
@@ -1114,6 +1122,7 @@ Future<String?> _promptText(
   BuildContext ctx, {
   required String title,
   required String hint,
+  required String action,
 }) {
   final ctrl = TextEditingController();
   return showDialog<String>(
@@ -1133,7 +1142,7 @@ Future<String?> _promptText(
         ),
         TextButton(
           onPressed: () => Navigator.pop(dctx, ctrl.text),
-          child: Text(t('confirm')),
+          child: Text(action),
         ),
       ],
     ),
@@ -1366,6 +1375,9 @@ List<Widget> _spotDetailChildren(
                 onChanged,
                 close,
                 () => DataRepository().deletePickup(s.id),
+                title: t('pk_delete_confirm'),
+                action: t('pk_delete_btn'),
+                error: t('pk_delete_error'),
               ),
             ),
         ],
@@ -1619,6 +1631,10 @@ void showClubDetail(
                   onChanged,
                   close,
                   () => DataRepository().deleteClub(c.id),
+                  title: t('cd_delete_confirm').replaceAll('{name}', c.name),
+                  body: t('modify_delete_body'),
+                  action: t('cd_delete_btn'),
+                  error: t('cd_delete_error'),
                 ),
               ),
           ],

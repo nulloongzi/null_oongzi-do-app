@@ -41,6 +41,18 @@ void main() {
     expect(_hits(black), isEmpty, reason: '딤 → NurungjiColors.dim');
   });
 
+  test('알림에 오류 원문(\$e)을 붙이지 않는다 (voice-and-tone)', () {
+    // 웹과 같은 규칙: 사용자에겐 "…하지 못했어요. 잠시 후 다시 해 주세요." 한 문장, 원문은 debugPrint 로.
+    final raw = RegExp(
+      r"(Text|_snack|_toast|_err)\(\s*'(?:\$\{[^}]*\}|[^'\n])*\$\{?(e|err|error)\b",
+    );
+    expect(
+      _hits(raw),
+      isEmpty,
+      reason: 'strings.dart 의 한 문장 + debugPrint(\'…: \$e\')',
+    );
+  });
+
   test('토큰 클래스는 생성 파일에만 있다 (§0)', () {
     final defs = RegExp(r'class Nurungji(Colors|Shadows|Radius)\b');
     expect(_hits(defs).map((h) => h.split(':').first).toSet(), {

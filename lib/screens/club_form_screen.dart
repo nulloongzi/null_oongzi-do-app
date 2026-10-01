@@ -565,13 +565,13 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
       }
       if (!mounted) return;
       Track.event('club_register', {'mode': _isEdit ? 'edit' : 'create'});
-      _snack(_isEdit ? t('f_updated') : t('cf_created'));
+      _snack(_isEdit ? t('cf_updated') : t('cf_created'));
       Navigator.pop(context, true);
     } catch (e) {
       setState(() => _saving = false);
-      // 저장 실패 현지화(웹 reg_save_err 대응): FirebaseException은 message 우선
-      final msg = e is FirebaseException ? (e.message ?? '$e') : '$e';
-      _err(t('cf_save_err') + msg);
+      // 원문 오류는 로그로, 사용자에겐 한 문장(웹 reg_error 와 같은 문구)
+      debugPrint('club save: $e');
+      _err(t('cf_save_err'));
     }
   }
 

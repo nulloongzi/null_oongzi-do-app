@@ -1,6 +1,5 @@
 // pickup_form_screen.dart — 픽업 스팟 등록/수정 폼. 웹 pickup-host.js 포팅.
 // 누구나 등록(무로그인=익명 인증). 좌표는 선택 — 없으면 지도 마커 없이 목록에만 뜬다.
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import '../models/pickup_spot.dart';
@@ -376,13 +375,13 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
       }
       if (!mounted) return;
       Track.event('pickup_create', {'mode': _isEdit ? 'edit' : 'create'});
-      _snack(_isEdit ? t('f_updated') : t('pf_created'));
+      _snack(_isEdit ? t('pf_updated') : t('pf_created'));
       Navigator.pop(context, true);
     } catch (e) {
       setState(() => _saving = false);
-      // 원문 그대로 대신 현지화 접두 + 간결한 메시지(웹 pickup-host.js:253-255)
-      final msg = e is FirebaseException ? (e.message ?? e.code) : '$e';
-      _snack('${t('pf_save_err')}$msg');
+      // 원문 오류는 로그로, 사용자에겐 한 문장(웹 pk_create_err 와 같은 문구)
+      debugPrint('pickup save: $e');
+      _snack(t('pf_save_err'));
     }
   }
 

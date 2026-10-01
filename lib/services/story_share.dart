@@ -108,7 +108,8 @@ Future<void> shareStoryPng(
     try {
       await Share.shareXFiles([XFile(file.path)], text: url);
     } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text('${t('err_share')}: $e')));
+      debugPrint('story share: $e');
+      messenger.showSnackBar(SnackBar(content: Text(t('err_share'))));
     }
   }
 }
@@ -138,6 +139,7 @@ Future<void> shareFeedCard(BuildContext context, StoryCardData data) async {
     await file.writeAsBytes(png);
     await Share.shareXFiles([XFile(file.path)], text: data.url);
   } catch (e) {
-    messenger.showSnackBar(SnackBar(content: Text('${t('err_share')}: $e')));
+    debugPrint('feed share: $e');
+    messenger.showSnackBar(SnackBar(content: Text(t('err_share'))));
   }
 }

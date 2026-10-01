@@ -18,9 +18,15 @@ const Map<String, Map<String, String>> kStrings = {
   'login_kakao': {'ko': '카카오로 로그인', 'en': 'Sign in with Kakao'},
   'login_naver': {'ko': '네이버로 로그인', 'en': 'Sign in with Naver'},
   'login_last_used': {'ko': '지난번에 사용', 'en': 'Last used'},
-  'login_cancelled': {'ko': '로그인이 취소되었어요.', 'en': 'Login was cancelled.'},
-  'login_kakao_fail': {'ko': '카카오 로그인 실패', 'en': 'Kakao sign-in failed'},
-  'login_naver_fail': {'ko': '네이버 로그인 실패', 'en': 'Naver sign-in failed'},
+  'login_cancelled': {'ko': '로그인을 취소했어요', 'en': 'Login cancelled'},
+  'login_kakao_fail': {
+    'ko': '카카오로 로그인하지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't sign in with Kakao. Please try again in a moment.",
+  },
+  'login_naver_fail': {
+    'ko': '네이버로 로그인하지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't sign in with Naver. Please try again in a moment.",
+  },
 
   // 로그인 진행 안내 레이어 (widgets/auth_loading_layer.dart)
   'auth_signing_in': {'ko': '로그인 중이에요', 'en': 'Signing you in…'},
@@ -46,7 +52,10 @@ const Map<String, Map<String, String>> kStrings = {
   'search_ph': {'ko': '팀명, 지역으로 검색...', 'en': 'Search by team or area...'},
   'search_filter': {'ko': '검색·필터', 'en': 'Search & filter'},
   'english_only': {'ko': 'English OK만', 'en': 'English OK only'},
-  'data_load_err': {'ko': '데이터 로드 오류', 'en': 'Data load error'},
+  'data_load_err': {
+    'ko': '팀 정보를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.',
+    'en': "Couldn't load teams. Check your internet connection.",
+  },
   'map_view': {'ko': '지도', 'en': 'Map'},
   'list_view': {'ko': '목록', 'en': 'List'},
   'pk_empty': {'ko': '주변에 등록된 픽업이 없어요', 'en': 'No pickups registered yet'},
@@ -130,8 +139,16 @@ const Map<String, Map<String, String>> kStrings = {
   'directions_btn': {'ko': '🚀 길찾기', 'en': '🚀 Directions'},
   'verify_btn': {'ko': '인증 신청 (사진 제출)', 'en': 'Apply for verification'},
   'verify_done': {
-    'ko': '인증 신청 완료! 검토 후 반영돼요',
-    'en': 'Verification requested! Pending review',
+    'ko': '인증 신청을 받았어요.\n운영자가 확인하면 인증 배지가 붙어요.',
+    'en': 'Verification request received.\nA badge is added after review.',
+  },
+  'vf_login_required': {
+    'ko': '인증 신청은 로그인하면 할 수 있어요',
+    'en': 'Log in to request verification.',
+  },
+  'vf_error': {
+    'ko': '인증 신청을 보내지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't send the request. Please try again in a moment.",
   },
   'vf_submitting': {'ko': '사진 올리는 중…', 'en': 'Uploading photo…'},
   'vf_pending': {
@@ -142,16 +159,32 @@ const Map<String, Map<String, String>> kStrings = {
   'vf_reason': {'ko': '사유: ', 'en': 'Reason: '},
   'vf_no_reason': {'ko': '사유가 기재되지 않았습니다.', 'en': 'No reason was provided.'},
   'vf_reapply': {'ko': '🔄 인증 재신청', 'en': '🔄 Re-apply'},
-  'urgent_on': {'ko': '🔥 급구 올리기', 'en': '🔥 Post urgent'},
+  'urgent_on': {'ko': '🔥 급구 올리기', 'en': '🔥 Post an urgent call'},
   'urgent_off': {'ko': '급구 내리기', 'en': 'Remove urgent'},
   'urgent_msg_hint': {
     'ko': '예: 이번주 토 세터 1명 급구!',
     'en': 'e.g. Need 1 setter this Sat!',
   },
-  'modify_delete_title': {'ko': '삭제할까요?', 'en': 'Delete?'},
-  'modify_delete_body': {
-    'ko': '이 작업은 되돌릴 수 없어요.',
-    'en': "This can't be undone.",
+  'modify_delete_body': {'ko': '지우면 되돌릴 수 없어요.', 'en': "This can't be undone."},
+  'cd_delete_confirm': {'ko': '[{name}] 팀을 지울까요?', 'en': 'Delete [{name}]?'},
+  'cd_delete_btn': {'ko': '팀 지우기', 'en': 'Delete team'},
+  'cd_delete_error': {
+    'ko': '팀을 지우지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't delete the team. Please try again in a moment.",
+  },
+  'pk_delete_confirm': {
+    'ko': '이 게임을 지울까요? 참가자 정보도 함께 사라져요.',
+    'en': 'Delete this game? Player info will be removed too.',
+  },
+  'pk_delete_btn': {'ko': '게임 지우기', 'en': 'Delete game'},
+  'pk_delete_error': {
+    'ko': '게임을 지우지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't delete the game. Please try again in a moment.",
+  },
+  'cd_urgent_btn': {'ko': '급구 올리기', 'en': 'Post'},
+  'cd_update_error': {
+    'ko': '바꾸지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't save the change. Please try again in a moment.",
   },
 
   // 공유 메뉴
@@ -164,7 +197,7 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'share_copy': {'ko': '🔗 링크 복사', 'en': '🔗 Copy link'},
   'share_more': {'ko': '📤 다른 앱으로 공유', 'en': '📤 Share to other apps'},
-  'link_copied': {'ko': '링크가 복사됐어요', 'en': 'Link copied'},
+  'link_copied': {'ko': '링크를 복사했어요', 'en': 'Link copied'},
   'story_link_hint': {
     'ko': '링크 복사됨 — 스토리에 "링크 스티커"로 붙여넣으면 탭 1번에 입장돼요',
     'en': 'Link copied — paste as a "link sticker" in your Story',
@@ -191,19 +224,26 @@ const Map<String, Map<String, String>> kStrings = {
   'mycard_share_story': {'ko': '인스타 스토리로 공유', 'en': 'Share to Instagram Story'},
   'mycard_share_other': {'ko': '다른 앱', 'en': 'Other apps'},
   'share_wrap': {'ko': '🎁 포장하기', 'en': '🎁 Wrap it up'},
-  'change_nickname': {'ko': '닉네임 변경', 'en': 'Change nickname'},
+  'change_nickname': {'ko': '이름 바꾸기', 'en': 'Change your name'},
   'logout': {'ko': '로그아웃', 'en': 'Log out'},
   'joined': {'ko': '가입', 'en': 'Joined'},
-  'nickname_hint': {'ko': '새 닉네임 (하이픈 - 금지)', 'en': 'New nickname (no hyphen)'},
+  'nickname_hint': {'ko': '새 이름 (하이픈 - 없이)', 'en': 'New name (no hyphen)'},
   'nickname_hyphen': {
-    'ko': '하이픈(-)은 밥아저씨가 지어준 이름에만 쓸 수 있어요',
-    'en': 'Hyphens are only for auto-generated names',
+    'ko': "이름에 하이픈(-)은 쓸 수 없어요. 하이픈은 '밥아저씨'가 지어 준 이름에만 들어가요",
+    'en':
+        "Names can't include a hyphen (-). Only auto-generated rice names have one.",
   },
   'nickname_dup': {
-    'ko': '이미 누군가 쓰고 있는 이름이에요',
-    'en': 'That name is already taken',
+    'ko': '이미 누가 쓰고 있는 이름이에요',
+    'en': 'Someone is already using that name.',
   },
-  'nickname_done': {'ko': '닉네임 변경 완료!', 'en': 'Nickname updated!'},
+  'nickname_done': {'ko': '이름을 바꿨어요', 'en': 'Name updated'},
+  'nick_btn': {'ko': '바꾸기', 'en': 'Change'},
+  'nick_empty': {'ko': '새 이름을 적어 주세요', 'en': 'Enter a new name.'},
+  'nick_change_error': {
+    'ko': '이름을 바꾸지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't change your name. Please try again in a moment.",
+  },
   'nickname_reserved': {
     'ko': '누룽지도 공식 계정만 쓸 수 있는 이름이에요. 다른 이름을 골라주세요.',
     'en':
@@ -218,9 +258,25 @@ const Map<String, Map<String, String>> kStrings = {
   'collapse': {'ko': '접기', 'en': 'Collapse'},
   'add_custom': {'ko': '커스텀 팀 추가', 'en': 'Add custom team'},
   'deleted_team': {'ko': '삭제된 팀', 'en': 'Deleted team'},
-  'lb_full': {'ko': '도시락이 가득 찼어요 (5칸)', 'en': 'Lunchbox is full (5)'},
-  'lb_already': {'ko': '이미 도시락에 담겨 있어요', 'en': 'Already in your lunchbox'},
-  'lb_added': {'ko': '도시락에 담았어요!', 'en': 'Added to lunchbox!'},
+  'lb_full': {
+    'ko': '도시락이 꽉 찼어요(5칸). 한 팀을 빼면 담을 수 있어요',
+    'en': 'Your lunchbox is full (5). Take one out to add another.',
+  },
+  'lb_already': {'ko': '이미 도시락에 있어요', 'en': 'Already in your lunchbox'},
+  'lb_added': {'ko': '도시락에 담았어요 🍱', 'en': 'Packed into your lunchbox 🍱'},
+  'lb_added_custom': {
+    'ko': '나만의 메뉴를 담았어요 🍙',
+    'en': 'Packed into your menu 🍙',
+  },
+  'lb_add_title': {'ko': '🍙 직접 담기', 'en': '🍙 Pack your own'},
+  'lb_add_name_label': {'ko': '팀·일정 이름', 'en': 'Team or session name'},
+  'lb_add_time_label': {'ko': '시간', 'en': 'Time'},
+  'lb_add_btn': {'ko': '도시락에 담기', 'en': 'Pack it'},
+  'lb_add_name_empty': {'ko': '이름을 적어 주세요', 'en': 'Enter a name.'},
+  'lb_add_time_empty': {
+    'ko': '시간을 적어 주세요 (예: 월 19:00~21:00)',
+    'en': 'Enter a time (e.g. 월 19:00~21:00).',
+  },
   'lb_removed': {'ko': '도시락에서 뺐어요', 'en': 'Removed from lunchbox'},
   // 상세 시트(보완): 주소 복사 · 시간표 morph 펼침 힌트
   'copy_address': {'ko': '📍 주소 복사', 'en': '📍 Copy'},
@@ -249,22 +305,25 @@ const Map<String, Map<String, String>> kStrings = {
   'lb_slot_side1': {'ko': '반찬1🍳', 'en': 'Side 1 🍳'},
   'lb_slot_side2': {'ko': '반찬2🥗', 'en': 'Side 2 🥗'},
   'lb_slot_side3': {'ko': '반찬3🥢', 'en': 'Side 3 🥢'},
-  'lb_save_fail': {'ko': '저장 실패', 'en': 'Save failed'},
   'lb_save_err': {
-    'ko': '저장에 실패했어요. 잠시 후 다시 시도해 주세요',
-    'en': 'Save failed. Please try again.',
+    'ko': '도시락을 저장하지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't save your lunchbox. Please try again in a moment.",
   },
   'err_anon_auth': {
-    'ko': '로그인 처리에 실패했어요. 잠시 후 다시 시도해 주세요',
-    'en': 'Sign-in failed. Please try again shortly.',
+    'ko': '로그인하지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't log you in. Please try again in a moment.",
   },
   'sched_add': {'ko': '시간대 추가', 'en': 'Add time'},
   'map_pick_title': {'ko': '위치 선택', 'en': 'Pick location'},
   'map_pick_set': {'ko': '이 위치로 설정', 'en': 'Use this location'},
-  'err_card': {'ko': '카드 생성에 실패했어요', 'en': "Couldn't create the card"},
-  'err_share': {'ko': '공유 실패', 'en': 'Share failed'},
-  'err_delete': {'ko': '삭제 실패', 'en': 'Delete failed'},
-  'err_generic': {'ko': '오류', 'en': 'Error'},
+  'err_card': {
+    'ko': '카드를 만들지 못했어요. 다시 해 주세요.',
+    'en': "Couldn't make the card. Please try again.",
+  },
+  'err_share': {
+    'ko': '공유하지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't share. Please try again in a moment.",
+  },
   'back_exit_hint': {'ko': '한 번 더 누르면 종료돼요', 'en': 'Press back again to exit'},
   // 공유 카드(캔버스) 문구 — 웹 sh_club_fallback · sh_card_cta 와 같다. 이모지 금지(□로 깨짐).
   'card_title_fallback': {'ko': '배구 동호회', 'en': 'Volleyball club'},
@@ -272,8 +331,14 @@ const Map<String, Map<String, String>> kStrings = {
     'ko': 'QR 찍으면 누룽지도에서 열려요',
     'en': 'Scan to open in Nulloongzi-do',
   },
-  'login_google_fail': {'ko': '구글 로그인 실패', 'en': 'Google sign-in failed'},
-  'login_err': {'ko': '로그인 오류가 발생했어요', 'en': 'A sign-in error occurred'},
+  'login_google_fail': {
+    'ko': '구글로 로그인하지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't sign in with Google. Please try again in a moment.",
+  },
+  'login_err': {
+    'ko': '로그인하지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't log you in. Please try again in a moment.",
+  },
   'fab_lunchbox': {'ko': '도시락', 'en': 'Lunchbox'},
   'fab_profile': {'ko': '프로필', 'en': 'Profile'},
   'fab_register': {'ko': '등록', 'en': 'Register'},
@@ -282,8 +347,8 @@ const Map<String, Map<String, String>> kStrings = {
   'lb_add_name_hint': {'ko': '예: 우리 동호회', 'en': 'e.g. Our club'},
   'lb_add_sched_hint': {'ko': '토 14:00~17:00', 'en': 'Sat 14:00~17:00'},
   'lb_custom_team': {'ko': '커스텀 팀', 'en': 'Custom team'},
-  'lb_remove': {'ko': '빼기', 'en': 'Remove'},
-  'login_required': {'ko': '로그인이 필요해요', 'en': 'Login required'},
+  'lb_remove': {'ko': '빼기', 'en': 'Take out'},
+  'login_required': {'ko': '로그인하면 쓸 수 있어요', 'en': 'Log in to use this.'},
   'login_later': {'ko': '나중에 할게요 (둘러보기)', 'en': 'Maybe later (keep browsing)'},
   'pk_search_ph': {'ko': '픽업, 장소로 검색...', 'en': 'Search pickups or venues...'},
   'cf_owner_email': {
@@ -308,11 +373,14 @@ const Map<String, Map<String, String>> kStrings = {
   },
   // 웹 reg_error/pk_create_err 대응 — 실패 원문 앞에 붙는 현지화 프리픽스
   'cf_save_err': {
-    'ko': '등록 중 오류가 발생했습니다: ',
-    'en': 'An error occurred during registration: ',
+    'ko': '팀을 저장하지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't save the team. Please try again in a moment.",
   },
-  'pf_save_err': {'ko': '게임 처리 중 오류: ', 'en': 'Something went wrong: '},
-  'logout_confirm': {'ko': '로그아웃 하시겠습니까?', 'en': 'Log out?'},
+  'pf_save_err': {
+    'ko': '게임을 저장하지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't save the game. Please try again in a moment.",
+  },
+  'logout_confirm': {'ko': '로그아웃할까요?', 'en': 'Log out?'},
   'share_mode_card': {'ko': '네임카드', 'en': 'Name card'},
   'share_mode_diet': {'ko': '식단표', 'en': 'Schedule'},
   // 공유 카드(my_card.dart)는 Canvas에 직접 그려서 이모지가 tofu(□)로 뜬다.
@@ -463,11 +531,6 @@ const Map<String, Map<String, String>> kStrings = {
     'en': 'Tap Edit to reorder or remove',
   },
   'no_saved_team': {'ko': '아직 찜한 팀이 없어요', 'en': 'No saved teams yet'},
-  'lb_team_name': {'ko': '팀 이름', 'en': 'Team name'},
-  'lb_sched_hint': {
-    'ko': '일정 (예: 토 14:00~17:00)',
-    'en': 'Schedule (e.g. Sat 14:00~17:00)',
-  },
 
   // 필터
   'filter_title': {'ko': '검색 · 필터', 'en': 'Search & filter'},
@@ -482,24 +545,29 @@ const Map<String, Map<String, String>> kStrings = {
   'f_addr_search': {'ko': '주소로 검색', 'en': 'Search by address'},
   'f_addr_map': {'ko': '지도에서', 'en': 'On map'},
   'f_loc_set': {'ko': '위치 선택됨', 'en': 'Location set'},
-  'f_addr_empty': {'ko': '주소를 입력해주세요', 'en': 'Enter an address'},
+  'f_addr_empty': {'ko': '주소를 적어 주세요', 'en': 'Enter an address.'},
   'f_addr_found': {'ko': '주소를 찾았어요!', 'en': 'Address found!'},
   'f_addr_notfound': {
-    'ko': '주소를 못 찾았어요 — 지도에서 선택해주세요',
-    'en': "Couldn't find it — pick on the map",
+    'ko': '이 주소로는 위치를 못 찾았어요. 도로명 주소로 적거나 지도에서 찍어 주세요',
+    'en':
+        "We couldn't find that address. Try a street address or pick it on the map.",
   },
-  'f_pick_loc': {'ko': '지도에서 위치를 선택해주세요', 'en': 'Pick a location on the map'},
+  'f_pick_loc': {
+    'ko': '지도에서 위치를 찍어 주세요',
+    'en': 'Pick the location on the map.',
+  },
   // 웹 reg_map_loc 대응 — 역지오코딩 실패 시 주소칸 기본 문구
   'f_map_loc': {'ko': '지도에서 선택된 위치', 'en': 'Location picked on map'},
   'f_link_invalid': {
     'ko': '링크는 http:// 나 https:// 로 시작해야 해요',
     'en': 'Links need to start with http:// or https://',
   },
+  'cf_updated': {'ko': '팀 정보를 고쳤어요', 'en': 'Team info updated'},
+  'pf_updated': {'ko': '게임 정보를 고쳤어요', 'en': 'Game updated'},
   'f_reel_invalid': {
     'ko': '인스타 게시물/릴스 링크 형식이 올바르지 않아요',
     'en': 'Invalid Instagram post/reel link',
   },
-  'f_updated': {'ko': '수정됐어요!', 'en': 'Updated!'},
   'cf_optional_summary': {
     'ko': '추가 정보 입력 (선택)',
     'en': 'Add more details (optional)',
@@ -612,7 +680,7 @@ const Map<String, Map<String, String>> kStrings = {
   'pk_exp_3m': {'ko': '3개월', 'en': '3 months'},
   'pk_exp_always': {'ko': '상시', 'en': 'Always'},
   'pf_req': {'ko': '픽업 이름을 적어 주세요', 'en': 'Enter a name for the game.'},
-  'pf_created': {'ko': '픽업이 등록됐어요!', 'en': 'Pickup posted!'},
+  'pf_created': {'ko': '픽업 게임이 열렸어요! 🏐', 'en': 'Your pickup game is live! 🏐'},
   // 동호회 폼
   'cf_title': {'ko': '동호회 등록', 'en': 'Register a club'},
   'cf_edit_title': {'ko': '동호회 수정', 'en': 'Edit club'},
@@ -642,7 +710,10 @@ const Map<String, Map<String, String>> kStrings = {
   'cf_insta_hint': {'ko': '예: gvt__official', 'en': 'e.g. gvt__official'},
   'cf_link': {'ko': '가입/문의 링크 (선택)', 'en': 'Join/contact link (optional)'},
   'cf_req': {'ko': '이름·대상·주소는 필수예요', 'en': 'Name, target, address required'},
-  'cf_created': {'ko': '동호회가 등록됐어요!', 'en': 'Club registered!'},
+  'cf_created': {
+    'ko': '팀을 올렸어요! 이제 지도에서 보여요',
+    'en': 'Your team is on the map!',
+  },
   'cf_insta_invalid': {
     'ko': '인스타 아이디는 영문·숫자·밑줄(_)·점(.)으로 30자까지 적어 주세요 (@ 없이)',
     'en': 'Use letters, numbers, _ or . — up to 30, without @.',
@@ -1374,12 +1445,12 @@ const Map<String, Map<String, String>> kStrings = {
   'rp_sending': {'ko': '보내는 중…', 'en': 'Sending…'},
   'rp_need_reason': {'ko': '사유를 선택해주세요.', 'en': 'Please choose a reason.'},
   'rp_done': {
-    'ko': '신고가 접수됐습니다. 확인 후 반영할게요. 감사합니다!',
-    'en': 'Report received. Thanks — we\'ll review it.',
+    'ko': '신고를 받았어요. 확인하고 반영할게요. 고마워요!',
+    'en': "Report received. Thanks — we'll review it.",
   },
   'rp_fail': {
-    'ko': '전송에 실패했어요. 잠시 후 다시 시도해주세요.',
-    'en': 'Sending failed. Please try again shortly.',
+    'ko': '신고를 보내지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't send the report. Please try again in a moment.",
   },
 
   // 포장하기 도시락 칸 라벨 — 웹 js/my-card.js 의 mc_* 와 같은 문구.
@@ -1401,16 +1472,16 @@ const Map<String, Map<String, String>> kStrings = {
   'ad_submit': {'ko': '관리자 신청하기', 'en': 'Submit request'},
   'ad_apply_btn': {'ko': '🙋 이 팀 관리자 신청', 'en': '🙋 Request team admin'},
   'ad_login_required': {
-    'ko': '관리자 신청은 로그인 후 가능합니다.',
-    'en': 'Please log in to request admin access.',
+    'ko': '관리자 신청은 로그인하면 할 수 있어요',
+    'en': 'Log in to request admin access.',
   },
   'ad_done': {
-    'ko': '관리자 신청이 접수되었습니다!\n확인 후 권한이 부여됩니다.',
-    'en': 'Request submitted!\nAccess is granted after review.',
+    'ko': '관리자 신청을 받았어요.\n확인되면 팀 정보를 고칠 수 있어요.',
+    'en': "Request received.\nYou can edit the team once it's approved.",
   },
   'ad_error': {
-    'ko': '관리자 신청 중 오류가 발생했습니다: ',
-    'en': 'An error occurred during the request: ',
+    'ko': '관리자 신청을 보내지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't send the request. Please try again in a moment.",
   },
   'ad_pending': {
     'ko': '⏳ 관리자 신청을 확인하고 있습니다.',
@@ -1422,18 +1493,21 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'ad_reapply': {'ko': '🔄 다시 신청', 'en': '🔄 Apply again'},
   'ad_full': {
-    'ko': '이 팀은 관리자가 이미 3명입니다.',
+    'ko': '이 팀은 관리자가 벌써 3명이에요',
     'en': 'This team already has 3 admins.',
   },
   'ad_count': {'ko': '관리자 {n}/3명', 'en': 'Admins {n}/3'},
   'ad_leave': {'ko': '관리자에서 빠지기', 'en': 'Leave as admin'},
   'ad_leave_confirm': {
-    'ko': '이 팀의 관리자에서 빠질까요?\n더 이상 팀 정보를 고칠 수 없게 됩니다.',
+    'ko': '이 팀의 관리자에서 빠질까요?\n빠지면 팀 정보를 고칠 수 없어요.',
     'en':
-        'Leave as an admin of this team?\nYou will no longer be able to edit its information.',
+        "Leave as an admin of this team?\nYou won't be able to edit it anymore.",
   },
-  'ad_leave_done': {'ko': '관리자에서 빠졌습니다.', 'en': 'You are no longer an admin.'},
-  'ad_leave_error': {'ko': '처리 중 오류가 발생했습니다.', 'en': 'Something went wrong.'},
+  'ad_leave_done': {'ko': '관리자에서 빠졌어요', 'en': "You're no longer an admin"},
+  'ad_leave_error': {
+    'ko': '처리하지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': 'Something went wrong. Please try again in a moment.',
+  },
 
   // ── 위치 공개 수준 ──
   'reg_area_only': {

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -53,7 +54,7 @@ class VerificationService {
     required String clubName,
   }) async {
     final uid = _auth.currentUser?.uid;
-    if (uid == null) return t('login_required');
+    if (uid == null) return t('vf_login_required');
 
     // 캡처 시연은 시스템 사진 선택기를 조종할 수 없다(앱 밖 UI). 홍보 영상에 넣을
     // 화면도 아니라 번들 이미지를 쓴다 — 업로드와 요청 문서 생성은 실제 그대로다.
@@ -90,7 +91,8 @@ class VerificationService {
       });
       return null;
     } catch (e) {
-      return '$e';
+      debugPrint('verification request: $e');
+      return t('vf_error');
     }
   }
 

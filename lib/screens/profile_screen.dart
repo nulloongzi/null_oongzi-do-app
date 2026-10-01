@@ -180,7 +180,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(dctx, ctrl.text),
-            child: Text(t('confirm')),
+            child: Text(t('nick_btn')),
           ),
         ],
       ),
@@ -215,7 +215,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
       _snack(t('nickname_done'));
     } catch (e) {
-      _snack('${t('err_generic')}: $e');
+      debugPrint('rename: $e');
+      _snack(t('nick_change_error'));
     }
   }
 
