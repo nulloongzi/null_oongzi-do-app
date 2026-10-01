@@ -53,6 +53,22 @@ void main() {
     );
   });
 
+  test('영어 서비스 이름은 Nulloongzi-do 하나 (웹 design-system §4)', () {
+    final files = ['lib/l10n/strings.dart', 'ios/Runner/Info.plist'];
+    // 대문자로 시작하는 표기만 — 소문자 내부 이름(CFBundleName nulloongzido 등)은 화면 이름이 아니다
+    final bad = RegExp(r'Nurungji-?do|Nulloongzido|Nulloongzi do\b');
+    final hits = <String>[];
+    for (final f in files) {
+      final lines = File(f).readAsLinesSync();
+      for (var i = 0; i < lines.length; i++) {
+        if (bad.hasMatch(lines[i])) {
+          hits.add('$f:${i + 1}');
+        }
+      }
+    }
+    expect(hits, isEmpty, reason: 'Nulloongzi-do 로');
+  });
+
   test('글자는 10 이상 (design-references U8)', () {
     // 표 칸처럼 빽빽한 곳도 10 까지 — 웹 tests/design-rules.test.js 와 같은 바닥.
     // 예외: 네임카드 스탬프(provider_stamp.dart)의 'TALK' 각인은 글자가 아니라 그림이다.
