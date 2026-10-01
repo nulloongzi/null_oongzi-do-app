@@ -376,7 +376,7 @@ class _MapScreenState extends State<MapScreen> {
                     borderRadius: BorderRadius.circular(9),
                     border: Border.all(
                       color: urgent
-                          ? const Color(0xFFE53935)
+                          ? NurungjiColors.urgent
                           : const Color(0x22000000),
                       width: urgent ? 1.5 : 1,
                     ),
@@ -386,12 +386,10 @@ class _MapScreenState extends State<MapScreen> {
                         blurRadius: 3,
                         offset: Offset(0, 1),
                       ),
-                      // 급구: 붉은 글로우로 시선 끌기
+                      // 급구: 주황 글로우로 시선 끌기(웹 .label.urgent 맥박과 같은 색)
                       if (urgent)
                         BoxShadow(
-                          color: const Color(
-                            0xFFE53935,
-                          ).withValues(alpha: 0.55),
+                          color: NurungjiColors.urgent.withValues(alpha: 0.55),
                           blurRadius: 8,
                           spreadRadius: 1,
                         ),
@@ -408,8 +406,9 @@ class _MapScreenState extends State<MapScreen> {
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
+                            // 급구 글자는 urgentInk(흰 바탕 5.6:1) — 웹과 같은 색
                             color: urgent
-                                ? const Color(0xFFD32F2F)
+                                ? NurungjiColors.urgentInk
                                 : NurungjiColors.dark,
                           ),
                         ),

@@ -460,10 +460,13 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
-          color: _editing ? NurungjiColors.urgent : Colors.white,
+          // 흰 글자를 얹으므로 urgentInk(5.6:1). urgent 주황 위 흰 글자는 2.7:1.
+          color: _editing ? NurungjiColors.urgentInk : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: _editing ? NurungjiColors.urgent : const Color(0x22000000),
+            color: _editing
+                ? NurungjiColors.urgentInk
+                : const Color(0x22000000),
           ),
           boxShadow: const [
             BoxShadow(

@@ -76,7 +76,8 @@ Widget _banner(String badge, String text) => Container(
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
-          color: NurungjiColors.urgent,
+          // 흰 글자를 얹으므로 urgentInk(5.6:1). urgent 주황 위 흰 글자는 2.7:1.
+          color: NurungjiColors.urgentInk,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
