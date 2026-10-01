@@ -278,6 +278,7 @@ const Map<String, Map<String, String>> kStrings = {
   'fab_profile': {'ko': '프로필', 'en': 'Profile'},
   'fab_register': {'ko': '등록', 'en': 'Register'},
   'fab_my_location': {'ko': '내 위치', 'en': 'My location'},
+  'sheet_close': {'ko': '닫기', 'en': 'Close'}, // 시트 손잡이(화면 낭독기용 이름)
   'lb_add_name_hint': {'ko': '예: 우리 동호회', 'en': 'e.g. Our club'},
   'lb_add_sched_hint': {'ko': '토 14:00~17:00', 'en': 'Sat 14:00~17:00'},
   'lb_custom_team': {'ko': '커스텀 팀', 'en': 'Custom team'},
