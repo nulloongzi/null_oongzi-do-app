@@ -293,7 +293,8 @@ class AnchigiCourt extends StatelessWidget {
             Text(
               label,
               style: const TextStyle(
-                fontSize: 9,
+                fontSize: 10,
+                height: 1.1, // 10 으로 키운 만큼 줄 간격을 줄여 칸 높이를 지킨다
                 fontWeight: FontWeight.w700,
                 color: NurungjiColors.brown,
               ),
@@ -339,7 +340,8 @@ class AnchigiCourt extends StatelessWidget {
             Text(
               label,
               style: const TextStyle(
-                fontSize: 9,
+                fontSize: 10,
+                height: 1.1, // 10 으로 키운 만큼 줄 간격을 줄여 칸 높이를 지킨다
                 fontWeight: FontWeight.w700,
                 color: NurungjiColors.brown,
               ),
@@ -365,7 +367,8 @@ class AnchigiCourt extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 9,
+                        fontSize: 10,
+                        height: 1.1,
                         fontWeight: FontWeight.w700,
                         color: NurungjiColors.urgent,
                       ),
@@ -389,7 +392,8 @@ class AnchigiCourt extends StatelessWidget {
     child: Text(
       t('ag_posx_$pos'),
       style: const TextStyle(
-        fontSize: 9,
+        fontSize: 10,
+        height: 1.1,
         fontWeight: FontWeight.w900,
         color: Colors.white,
       ),

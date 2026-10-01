@@ -121,7 +121,7 @@ class DietGrid extends StatelessWidget {
               child: Text(
                 getHourLabel(h),
                 style: const TextStyle(
-                  fontSize: 9,
+                  fontSize: 10,
                   color: NurungjiColors.brown,
                 ),
               ),
@@ -214,7 +214,7 @@ class DietGrid extends StatelessWidget {
         child: Text(
           team.isCustom ? '🍙${team.name}' : team.name,
           style: const TextStyle(
-            fontSize: 9,
+            fontSize: 10,
             height: 1.1,
             color: NurungjiColors.dark,
           ),

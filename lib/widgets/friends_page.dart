@@ -280,8 +280,9 @@ class _FriendsPageState extends State<FriendsPage> {
     bool danger = false,
     bool small = false,
   }) {
+    // 위험 버튼은 흰 글자 바탕이라 urgentInk — 웹 .fr-btn.danger 와 같은 색(#d84315 는 4.44:1)
     final bg = danger
-        ? const Color(0xFFD84315)
+        ? NurungjiColors.urgentInk
         : (yellow ? NurungjiColors.yellow : const Color(0xFFF5EFE3));
     final fg = danger
         ? Colors.white
@@ -1381,7 +1382,7 @@ class FriendTimetable extends StatelessWidget {
                               maxLines: 3,
                               overflow: TextOverflow.clip,
                               style: const TextStyle(
-                                fontSize: 9,
+                                fontSize: 10,
                                 fontWeight: FontWeight.w800,
                                 height: 1.15,
                                 color: NurungjiColors.dark,
@@ -1441,7 +1442,7 @@ class FriendTimetable extends StatelessWidget {
                                 '$h',
                                 textAlign: TextAlign.right,
                                 style: const TextStyle(
-                                  fontSize: 9,
+                                  fontSize: 10,
                                   color: Color(0xFFA99A8C),
                                 ),
                               ),
@@ -1477,7 +1478,7 @@ class FriendTimetable extends StatelessWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.clip,
                                   style: const TextStyle(
-                                    fontSize: 9,
+                                    fontSize: 10,
                                     fontWeight: FontWeight.w900,
                                     color: Color(0xFF5D4037),
                                   ),

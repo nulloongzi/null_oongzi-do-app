@@ -1767,6 +1767,14 @@ class _MapScreenState extends State<MapScreen> {
                 right: 0,
                 child: Center(child: _tabPill()),
               ),
+              // 검색·필터 결과 0 — 지도가 왜 비었는지 + '필터 지우기'(웹 #emptyResult, U13)
+              if (_noFilterResult)
+                Positioned(
+                  top: _hasUrgent ? 174 : 122,
+                  left: 16,
+                  right: 16,
+                  child: Center(child: _emptyResult()),
+                ),
               // 플로팅 FAB (design §2.4): 좌(도시락/프로필) · 우(등록/내위치)
               // 픽업 탭: 도시락/프로필(로그인 기능)은 숨기고(웹 parity),
               // 등록/내위치는 항상 노출하되 목록 시트 peek(42%) 위로 올린다.
@@ -2056,9 +2064,10 @@ class _MapScreenState extends State<MapScreen> {
 
   // 동호회/픽업 — 큰 알약 안에 작은 알약 둘(숫자 없음).
   Widget _tabPill() {
+    // 위아래 4 는 각 탭의 누르는 곳에 넣었다 — 보이는 모양은 같고 누르는 곳은 44(웹 .tab-btn::before 와 같음, U5)
     return GlassSurface(
       radius: BorderRadius.circular(22),
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -2072,24 +2081,93 @@ class _MapScreenState extends State<MapScreen> {
 
   Widget _tabBtn(String label, String key) {
     final on = _tab == key;
-    return BounceTap(
-      onTap: () => _onTab(key),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: on ? NurungjiColors.yellow : NurungjiColors.chipBg,
-          borderRadius: BorderRadius.circular(18), // 작은 알약
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontWeight: on ? FontWeight.w800 : FontWeight.w600,
-            color: NurungjiColors.dark,
+    return Semantics(
+      button: true,
+      selected: on,
+      child: BounceTap(
+        onTap: () => _onTab(key),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: on ? NurungjiColors.yellow : NurungjiColors.chipBg,
+              borderRadius: BorderRadius.circular(18), // 작은 알약
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontWeight: on ? FontWeight.w800 : FontWeight.w600,
+                color: NurungjiColors.dark,
+              ),
+            ),
           ),
         ),
       ),
     );
+  }
+
+  // 글자를 칠 때마다 다시 그려지므로 스낵바 대신 떠 있는 안내(웹과 같은 방식)
+  bool get _noFilterResult =>
+      _tab == 'clubs' &&
+      !_loading &&
+      _error == null &&
+      !_filter.isEmpty &&
+      !_clubs.any(_filter.matches);
+
+  Widget _emptyResult() {
+    return Semantics(
+      liveRegion: true,
+      child: GlassSurface(
+        radius: BorderRadius.circular(999),
+        padding: const EdgeInsets.fromLTRB(16, 6, 6, 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                t('empty_result'),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: NurungjiColors.dark,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            BounceTap(
+              onTap: _clearFilter,
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 36),
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                  color: NurungjiColors.yellow,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  t('empty_result_reset'),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: NurungjiColors.dark,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _clearFilter() async {
+    setState(() {
+      _filter = const ClubFilter();
+      _search.text = '';
+    });
+    await _refreshMarkers();
   }
 
   // 급구 티커 (verified 무관, is_urgent+메시지 있는 클럽). 탭 → 상세.

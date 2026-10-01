@@ -261,7 +261,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 6),
                     Text(
                       t('login_subtitle'),
-                      style: const TextStyle(color: Color(0xFF8D6E63)),
+                      style: const TextStyle(color: NurungjiColors.brown),
                     ),
                     const SizedBox(height: 28),
                     if (_error != null)
@@ -366,7 +366,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               : () => Navigator.of(context).pop(false),
                           child: Text(
                             t('login_later'),
-                            style: const TextStyle(color: Color(0xFF8D6E63)),
+                            style: const TextStyle(color: NurungjiColors.brown),
                           ),
                         ),
                       ),

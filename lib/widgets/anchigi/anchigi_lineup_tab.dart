@@ -683,7 +683,7 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
               t(tpl.descKey),
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 9,
+                fontSize: 10,
                 height: 1.3,
                 fontWeight: FontWeight.w600,
                 color: on
@@ -879,7 +879,7 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
                               child: Text(
                                 t('ag_now_word'),
                                 style: const TextStyle(
-                                  fontSize: 9,
+                                  fontSize: 10,
                                   fontWeight: FontWeight.w800,
                                   color: Colors.white,
                                 ),

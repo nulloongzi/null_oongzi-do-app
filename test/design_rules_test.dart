@@ -53,6 +53,19 @@ void main() {
     );
   });
 
+  test('글자는 10 이상 (design-references U8)', () {
+    // 표 칸처럼 빽빽한 곳도 10 까지 — 웹 tests/design-rules.test.js 와 같은 바닥.
+    // 예외: 네임카드 스탬프(provider_stamp.dart)의 'TALK' 각인은 글자가 아니라 그림이다.
+    final tiny = RegExp(r'fontSize:\s*[0-9](\.[0-9]+)?\b');
+    expect(
+      _hits(
+        tiny,
+      ).where((h) => !h.startsWith('lib/widgets/provider_stamp.dart')),
+      isEmpty,
+      reason: '10 미만 글자',
+    );
+  });
+
   test('토큰 클래스는 생성 파일에만 있다 (§0)', () {
     final defs = RegExp(r'class Nurungji(Colors|Shadows|Radius)\b');
     expect(_hits(defs).map((h) => h.split(':').first).toSet(), {
