@@ -98,7 +98,7 @@ class ScheduleTimetable extends StatelessWidget {
               child: Text(
                 getHourLabel(h),
                 style: const TextStyle(
-                  fontSize: 9,
+                  fontSize: 10,
                   color: NurungjiColors.brown,
                 ),
               ),
@@ -162,7 +162,7 @@ class ScheduleTimetable extends StatelessWidget {
                         Text(
                           time12(e.start),
                           style: const TextStyle(
-                            fontSize: 8,
+                            fontSize: 10,
                             height: 1.1,
                             fontWeight: FontWeight.w800,
                             color: NurungjiColors.dark,
@@ -174,7 +174,7 @@ class ScheduleTimetable extends StatelessWidget {
                           Text(
                             '${time12(e.end)}\n(${durLabel(e.end - e.start)})',
                             style: TextStyle(
-                              fontSize: 7,
+                              fontSize: 10,
                               height: 1.15,
                               fontWeight: FontWeight.w600,
                               color: NurungjiColors.dark.withValues(alpha: 0.7),

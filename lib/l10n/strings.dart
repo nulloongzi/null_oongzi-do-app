@@ -354,6 +354,9 @@ const Map<String, Map<String, String>> kStrings = {
   'login_required': {'ko': '로그인하면 쓸 수 있어요', 'en': 'Log in to use this.'},
   'login_later': {'ko': '나중에 할게요 (둘러보기)', 'en': 'Maybe later (keep browsing)'},
   'pk_search_ph': {'ko': '픽업, 장소로 검색...', 'en': 'Search pickups or venues...'},
+  // 검색·필터 결과 0 — 웹 i18n.js 와 같은 키
+  'empty_result': {'ko': '조건에 맞는 팀이 없어요', 'en': 'No teams match'},
+  'empty_result_reset': {'ko': '필터 지우기', 'en': 'Clear filters'},
   'cf_owner_email': {
     'ko': '소유자 지정 (관리자 전용)',
     'en': 'Reassign owner (admin only)',

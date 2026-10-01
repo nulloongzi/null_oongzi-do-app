@@ -8,13 +8,13 @@ import 'package:flutter/painting.dart';
 /// 누룽지 색 — 웹 css/main.css :root 와 같은 값.
 class NurungjiColors {
   static const yellow = Color(0xFFFAC710); // --nurungji-yellow
-  static const brown = Color(0xFF8D6E63); // --nurungji-brown
+  static const brown = Color(0xFF84675D); // --nurungji-brown
   static const dark = Color(0xFF4E342E); // --nurungji-dark
   static const bg = Color(0xFFFFF8E1); // --nurungji-bg
   static const light = Color(0xFFFFFDE7); // --nurungji-light
   static const urgent = Color(0xFFFF7043); // --urgent-color
   static const urgentInk = Color(0xFFBF360C); // --urgent-ink
-  static const today = Color(0xFFD84315); // --today-color
+  static const today = Color(0xFFCF4014); // --today-color
   static const error = Color(0xFFD32F2F); // --error-color
   static const chipBg = Color(0xFFF0ECE2); // --chip-bg
   static const chipFg = Color(0xFF6D6258); // --chip-fg

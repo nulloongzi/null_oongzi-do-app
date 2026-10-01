@@ -397,7 +397,7 @@ class _AnchigiRosterTabState extends State<AnchigiRosterTab> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (tier == 'main')
-                    const Text('★ ', style: TextStyle(fontSize: 8)),
+                    const Text('★ ', style: TextStyle(fontSize: 10)),
                   Flexible(
                     child: Text(
                       t('ag_posx_$pos'),
@@ -415,7 +415,7 @@ class _AnchigiRosterTabState extends State<AnchigiRosterTab> {
               Text(
                 tier == null ? '·' : t('ag_tier_$tier'),
                 style: TextStyle(
-                  fontSize: 9,
+                  fontSize: 10,
                   fontWeight: FontWeight.w700,
                   color: _tierFg(tier).withValues(alpha: .75),
                 ),
@@ -519,7 +519,7 @@ class _AnchigiRosterTabState extends State<AnchigiRosterTab> {
             Text(
               tier == null ? '·' : t('ag_tier_$tier'),
               style: TextStyle(
-                fontSize: 9,
+                fontSize: 10,
                 fontWeight: FontWeight.w700,
                 color: _tierFg(tier).withValues(alpha: .75),
               ),
