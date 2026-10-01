@@ -1384,9 +1384,7 @@ class _MapScreenState extends State<MapScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
-        behavior: kCaptureMode
-            ? SnackBarBehavior.floating
-            : SnackBarBehavior.fixed,
+        // 모양·떠 있는 방식은 theme.dart snackBarTheme(웹 토스트와 같음)
         margin: kCaptureMode
             ? const EdgeInsets.only(left: 24, right: 24, bottom: 180)
             : null,

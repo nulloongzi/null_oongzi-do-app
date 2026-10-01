@@ -48,6 +48,7 @@ class NurungjiRadius {
   static const button = 14.0; // --radius-button · 버튼
   static const input = 12.0; // --radius-input · 입력창
   static const dialog = 20.0; // --radius-dialog · 가운데 팝업(공유·등록·신고)
+  static const toast = 12.0; // --radius-toast · 토스트(웹 showToast · 앱 SnackBar)
   static const fab = 20.0; // --radius-fab · 지도 위 버튼 50px
   static const fabProfile = 24.0; // --radius-fab-profile · 🍚 버튼 55px
 }

@@ -74,6 +74,22 @@ class AppTheme {
           ),
         ),
       ),
+      // 토스트(SnackBar): 웹 js/toast.js(.nz-toast)와 같은 모양 — 다크 브라운 + 크림 글자, 떠 있는 카드.
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: NurungjiColors.dark,
+        contentTextStyle: const TextStyle(
+          fontFamily: 'Pretendard',
+          color: NurungjiColors.bg,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          height: 1.45,
+        ),
+        actionTextColor: NurungjiColors.yellow,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(NurungjiRadius.toast),
+        ),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
