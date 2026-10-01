@@ -18,9 +18,15 @@ const Map<String, Map<String, String>> kStrings = {
   'login_kakao': {'ko': '카카오로 로그인', 'en': 'Sign in with Kakao'},
   'login_naver': {'ko': '네이버로 로그인', 'en': 'Sign in with Naver'},
   'login_last_used': {'ko': '지난번에 사용', 'en': 'Last used'},
-  'login_cancelled': {'ko': '로그인이 취소되었어요.', 'en': 'Login was cancelled.'},
-  'login_kakao_fail': {'ko': '카카오 로그인 실패', 'en': 'Kakao sign-in failed'},
-  'login_naver_fail': {'ko': '네이버 로그인 실패', 'en': 'Naver sign-in failed'},
+  'login_cancelled': {'ko': '로그인을 취소했어요', 'en': 'Login cancelled'},
+  'login_kakao_fail': {
+    'ko': '카카오로 로그인하지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't sign in with Kakao. Please try again in a moment.",
+  },
+  'login_naver_fail': {
+    'ko': '네이버로 로그인하지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't sign in with Naver. Please try again in a moment.",
+  },
 
   // 로그인 진행 안내 레이어 (widgets/auth_loading_layer.dart)
   'auth_signing_in': {'ko': '로그인 중이에요', 'en': 'Signing you in…'},
@@ -46,7 +52,10 @@ const Map<String, Map<String, String>> kStrings = {
   'search_ph': {'ko': '팀명, 지역으로 검색...', 'en': 'Search by team or area...'},
   'search_filter': {'ko': '검색·필터', 'en': 'Search & filter'},
   'english_only': {'ko': 'English OK만', 'en': 'English OK only'},
-  'data_load_err': {'ko': '데이터 로드 오류', 'en': 'Data load error'},
+  'data_load_err': {
+    'ko': '팀 정보를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.',
+    'en': "Couldn't load teams. Check your internet connection.",
+  },
   'map_view': {'ko': '지도', 'en': 'Map'},
   'list_view': {'ko': '목록', 'en': 'List'},
   'pk_empty': {'ko': '주변에 등록된 픽업이 없어요', 'en': 'No pickups registered yet'},
@@ -112,7 +121,7 @@ const Map<String, Map<String, String>> kStrings = {
 
   // 자가 선택 가이드 — 미국 오픈짐들이 공통으로 붙이는 문구. 레벨 제도를 굴러가게 하는 장치다.
   'pk_level_hint': {
-    'ko': '애매하면 낮은 쪽을 골라주세요. 남과 비교하지 말고 설명 기준으로요.',
+    'ko': '애매하면 낮은 쪽을 골라 주세요. 남과 비교하지 말고 설명 기준으로요.',
     'en':
         'When in doubt, pick the lower level. Judge by the description, not by other players.',
   },
@@ -130,28 +139,55 @@ const Map<String, Map<String, String>> kStrings = {
   'directions_btn': {'ko': '🚀 길찾기', 'en': '🚀 Directions'},
   'verify_btn': {'ko': '인증 신청 (사진 제출)', 'en': 'Apply for verification'},
   'verify_done': {
-    'ko': '인증 신청 완료! 검토 후 반영돼요',
-    'en': 'Verification requested! Pending review',
+    'ko': '인증 신청을 받았어요.\n운영자가 확인하면 인증 배지가 붙어요.',
+    'en': 'Verification request received.\nA badge is added after review.',
+  },
+  'vf_login_required': {
+    'ko': '인증 신청은 로그인하면 할 수 있어요',
+    'en': 'Log in to request verification.',
+  },
+  'vf_error': {
+    'ko': '인증 신청을 보내지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't send the request. Please try again in a moment.",
   },
   'vf_submitting': {'ko': '사진 올리는 중…', 'en': 'Uploading photo…'},
   'vf_pending': {
-    'ko': '⏳ 인증 심사 중입니다. 관리자 확인 후 인증 배지가 부여됩니다.',
-    'en': '⏳ Verification under review. A badge is granted after admin review.',
+    'ko': '⏳ 인증을 확인하고 있어요. 운영자가 확인하면 인증 배지가 붙어요.',
+    'en': '⏳ Verification under review. A badge is added after review.',
   },
-  'vf_rejected': {'ko': '❌ 인증이 거절되었습니다', 'en': '❌ Verification rejected'},
+  'vf_rejected': {
+    'ko': '❌ 인증이 받아들여지지 않았어요',
+    'en': '❌ Verification was not accepted',
+  },
   'vf_reason': {'ko': '사유: ', 'en': 'Reason: '},
-  'vf_no_reason': {'ko': '사유가 기재되지 않았습니다.', 'en': 'No reason was provided.'},
+  'vf_no_reason': {'ko': '적힌 사유가 없어요.', 'en': 'No reason given.'},
   'vf_reapply': {'ko': '🔄 인증 재신청', 'en': '🔄 Re-apply'},
-  'urgent_on': {'ko': '🔥 급구 올리기', 'en': '🔥 Post urgent'},
+  'urgent_on': {'ko': '🔥 급구 올리기', 'en': '🔥 Post an urgent call'},
   'urgent_off': {'ko': '급구 내리기', 'en': 'Remove urgent'},
   'urgent_msg_hint': {
     'ko': '예: 이번주 토 세터 1명 급구!',
     'en': 'e.g. Need 1 setter this Sat!',
   },
-  'modify_delete_title': {'ko': '삭제할까요?', 'en': 'Delete?'},
-  'modify_delete_body': {
-    'ko': '이 작업은 되돌릴 수 없어요.',
-    'en': "This can't be undone.",
+  'modify_delete_body': {'ko': '지우면 되돌릴 수 없어요.', 'en': "This can't be undone."},
+  'cd_delete_confirm': {'ko': '[{name}] 팀을 지울까요?', 'en': 'Delete [{name}]?'},
+  'cd_delete_btn': {'ko': '팀 지우기', 'en': 'Delete team'},
+  'cd_delete_error': {
+    'ko': '팀을 지우지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't delete the team. Please try again in a moment.",
+  },
+  'pk_delete_confirm': {
+    'ko': '이 게임을 지울까요? 참가자 정보도 함께 사라져요.',
+    'en': 'Delete this game? Player info will be removed too.',
+  },
+  'pk_delete_btn': {'ko': '게임 지우기', 'en': 'Delete game'},
+  'pk_delete_error': {
+    'ko': '게임을 지우지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't delete the game. Please try again in a moment.",
+  },
+  'cd_urgent_btn': {'ko': '급구 올리기', 'en': 'Post'},
+  'cd_update_error': {
+    'ko': '바꾸지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't save the change. Please try again in a moment.",
   },
 
   // 공유 메뉴
@@ -164,7 +200,7 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'share_copy': {'ko': '🔗 링크 복사', 'en': '🔗 Copy link'},
   'share_more': {'ko': '📤 다른 앱으로 공유', 'en': '📤 Share to other apps'},
-  'link_copied': {'ko': '링크가 복사됐어요', 'en': 'Link copied'},
+  'link_copied': {'ko': '링크를 복사했어요', 'en': 'Link copied'},
   'story_link_hint': {
     'ko': '링크 복사됨 — 스토리에 "링크 스티커"로 붙여넣으면 탭 1번에 입장돼요',
     'en': 'Link copied — paste as a "link sticker" in your Story',
@@ -191,21 +227,28 @@ const Map<String, Map<String, String>> kStrings = {
   'mycard_share_story': {'ko': '인스타 스토리로 공유', 'en': 'Share to Instagram Story'},
   'mycard_share_other': {'ko': '다른 앱', 'en': 'Other apps'},
   'share_wrap': {'ko': '🎁 포장하기', 'en': '🎁 Wrap it up'},
-  'change_nickname': {'ko': '닉네임 변경', 'en': 'Change nickname'},
+  'change_nickname': {'ko': '이름 바꾸기', 'en': 'Change your name'},
   'logout': {'ko': '로그아웃', 'en': 'Log out'},
   'joined': {'ko': '가입', 'en': 'Joined'},
-  'nickname_hint': {'ko': '새 닉네임 (하이픈 - 금지)', 'en': 'New nickname (no hyphen)'},
+  'nickname_hint': {'ko': '새 이름 (하이픈 - 없이)', 'en': 'New name (no hyphen)'},
   'nickname_hyphen': {
-    'ko': '하이픈(-)은 밥아저씨가 지어준 이름에만 쓸 수 있어요',
-    'en': 'Hyphens are only for auto-generated names',
+    'ko': "이름에 하이픈(-)은 쓸 수 없어요. 하이픈은 '밥아저씨'가 지어 준 이름에만 들어가요",
+    'en':
+        "Names can't include a hyphen (-). Only auto-generated rice names have one.",
   },
   'nickname_dup': {
-    'ko': '이미 누군가 쓰고 있는 이름이에요',
-    'en': 'That name is already taken',
+    'ko': '이미 누가 쓰고 있는 이름이에요',
+    'en': 'Someone is already using that name.',
   },
-  'nickname_done': {'ko': '닉네임 변경 완료!', 'en': 'Nickname updated!'},
+  'nickname_done': {'ko': '이름을 바꿨어요', 'en': 'Name updated'},
+  'nick_btn': {'ko': '바꾸기', 'en': 'Change'},
+  'nick_empty': {'ko': '새 이름을 적어 주세요', 'en': 'Enter a new name.'},
+  'nick_change_error': {
+    'ko': '이름을 바꾸지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't change your name. Please try again in a moment.",
+  },
   'nickname_reserved': {
-    'ko': '누룽지도 공식 계정만 쓸 수 있는 이름이에요. 다른 이름을 골라주세요.',
+    'ko': '누룽지도 공식 계정만 쓸 수 있는 이름이에요. 다른 이름을 골라 주세요.',
     'en':
         'That name is reserved for official Nulloongzi accounts. Please pick another.',
   },
@@ -218,9 +261,25 @@ const Map<String, Map<String, String>> kStrings = {
   'collapse': {'ko': '접기', 'en': 'Collapse'},
   'add_custom': {'ko': '커스텀 팀 추가', 'en': 'Add custom team'},
   'deleted_team': {'ko': '삭제된 팀', 'en': 'Deleted team'},
-  'lb_full': {'ko': '도시락이 가득 찼어요 (5칸)', 'en': 'Lunchbox is full (5)'},
-  'lb_already': {'ko': '이미 도시락에 담겨 있어요', 'en': 'Already in your lunchbox'},
-  'lb_added': {'ko': '도시락에 담았어요!', 'en': 'Added to lunchbox!'},
+  'lb_full': {
+    'ko': '도시락이 꽉 찼어요(5칸). 한 팀을 빼면 담을 수 있어요',
+    'en': 'Your lunchbox is full (5). Take one out to add another.',
+  },
+  'lb_already': {'ko': '이미 도시락에 있어요', 'en': 'Already in your lunchbox'},
+  'lb_added': {'ko': '도시락에 담았어요 🍱', 'en': 'Packed into your lunchbox 🍱'},
+  'lb_added_custom': {
+    'ko': '나만의 메뉴를 담았어요 🍙',
+    'en': 'Packed into your menu 🍙',
+  },
+  'lb_add_title': {'ko': '🍙 직접 담기', 'en': '🍙 Pack your own'},
+  'lb_add_name_label': {'ko': '팀·일정 이름', 'en': 'Team or session name'},
+  'lb_add_time_label': {'ko': '시간', 'en': 'Time'},
+  'lb_add_btn': {'ko': '도시락에 담기', 'en': 'Pack it'},
+  'lb_add_name_empty': {'ko': '이름을 적어 주세요', 'en': 'Enter a name.'},
+  'lb_add_time_empty': {
+    'ko': '시간을 적어 주세요 (예: 월 19:00~21:00)',
+    'en': 'Enter a time (e.g. 월 19:00~21:00).',
+  },
   'lb_removed': {'ko': '도시락에서 뺐어요', 'en': 'Removed from lunchbox'},
   // 상세 시트(보완): 주소 복사 · 시간표 morph 펼침 힌트
   'copy_address': {'ko': '📍 주소 복사', 'en': '📍 Copy'},
@@ -244,27 +303,30 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'detail_pull_hint': {'ko': '▴ 위로 올려 시간표 보기', 'en': '▴ Pull up for schedule'},
   'detail_collapse_hint': {'ko': '▾ 접기', 'en': '▾ Collapse'},
-  'lb_slot_rice': {'ko': '밥을\n담아주세요🍚', 'en': 'Add rice 🍚'},
-  'lb_slot_soup': {'ko': '국을\n담아주세요🥘', 'en': 'Add soup 🥘'},
+  'lb_slot_rice': {'ko': '밥을\n담아 주세요🍚', 'en': 'Add rice 🍚'},
+  'lb_slot_soup': {'ko': '국을\n담아 주세요🥘', 'en': 'Add soup 🥘'},
   'lb_slot_side1': {'ko': '반찬1🍳', 'en': 'Side 1 🍳'},
   'lb_slot_side2': {'ko': '반찬2🥗', 'en': 'Side 2 🥗'},
   'lb_slot_side3': {'ko': '반찬3🥢', 'en': 'Side 3 🥢'},
-  'lb_save_fail': {'ko': '저장 실패', 'en': 'Save failed'},
   'lb_save_err': {
-    'ko': '저장에 실패했어요. 잠시 후 다시 시도해 주세요',
-    'en': 'Save failed. Please try again.',
+    'ko': '도시락을 저장하지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't save your lunchbox. Please try again in a moment.",
   },
   'err_anon_auth': {
-    'ko': '로그인 처리에 실패했어요. 잠시 후 다시 시도해 주세요',
-    'en': 'Sign-in failed. Please try again shortly.',
+    'ko': '로그인하지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't log you in. Please try again in a moment.",
   },
   'sched_add': {'ko': '시간대 추가', 'en': 'Add time'},
   'map_pick_title': {'ko': '위치 선택', 'en': 'Pick location'},
   'map_pick_set': {'ko': '이 위치로 설정', 'en': 'Use this location'},
-  'err_card': {'ko': '카드 생성에 실패했어요', 'en': "Couldn't create the card"},
-  'err_share': {'ko': '공유 실패', 'en': 'Share failed'},
-  'err_delete': {'ko': '삭제 실패', 'en': 'Delete failed'},
-  'err_generic': {'ko': '오류', 'en': 'Error'},
+  'err_card': {
+    'ko': '카드를 만들지 못했어요. 다시 해 주세요.',
+    'en': "Couldn't make the card. Please try again.",
+  },
+  'err_share': {
+    'ko': '공유하지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't share. Please try again in a moment.",
+  },
   'back_exit_hint': {'ko': '한 번 더 누르면 종료돼요', 'en': 'Press back again to exit'},
   // 공유 카드(캔버스) 문구 — 웹 sh_club_fallback · sh_card_cta 와 같다. 이모지 금지(□로 깨짐).
   'card_title_fallback': {'ko': '배구 동호회', 'en': 'Volleyball club'},
@@ -272,17 +334,24 @@ const Map<String, Map<String, String>> kStrings = {
     'ko': 'QR 찍으면 누룽지도에서 열려요',
     'en': 'Scan to open in Nulloongzi-do',
   },
-  'login_google_fail': {'ko': '구글 로그인 실패', 'en': 'Google sign-in failed'},
-  'login_err': {'ko': '로그인 오류가 발생했어요', 'en': 'A sign-in error occurred'},
+  'login_google_fail': {
+    'ko': '구글로 로그인하지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't sign in with Google. Please try again in a moment.",
+  },
+  'login_err': {
+    'ko': '로그인하지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't log you in. Please try again in a moment.",
+  },
   'fab_lunchbox': {'ko': '도시락', 'en': 'Lunchbox'},
   'fab_profile': {'ko': '프로필', 'en': 'Profile'},
   'fab_register': {'ko': '등록', 'en': 'Register'},
   'fab_my_location': {'ko': '내 위치', 'en': 'My location'},
+  'sheet_close': {'ko': '닫기', 'en': 'Close'}, // 시트 손잡이(화면 낭독기용 이름)
   'lb_add_name_hint': {'ko': '예: 우리 동호회', 'en': 'e.g. Our club'},
   'lb_add_sched_hint': {'ko': '토 14:00~17:00', 'en': 'Sat 14:00~17:00'},
   'lb_custom_team': {'ko': '커스텀 팀', 'en': 'Custom team'},
-  'lb_remove': {'ko': '빼기', 'en': 'Remove'},
-  'login_required': {'ko': '로그인이 필요해요', 'en': 'Login required'},
+  'lb_remove': {'ko': '빼기', 'en': 'Take out'},
+  'login_required': {'ko': '로그인하면 쓸 수 있어요', 'en': 'Log in to use this.'},
   'login_later': {'ko': '나중에 할게요 (둘러보기)', 'en': 'Maybe later (keep browsing)'},
   'pk_search_ph': {'ko': '픽업, 장소로 검색...', 'en': 'Search pickups or venues...'},
   'cf_owner_email': {
@@ -301,17 +370,20 @@ const Map<String, Map<String, String>> kStrings = {
   },
   // 웹 reg_tip 대응 — 요일별 체육관이 다르면 장소별 개별 등록 안내
   'cf_tip': {
-    'ko': 'tip: 요일별로 체육관 위치가 다른 경우, 정확한 핀 표시를 위해 장소별로 각각 등록 부탁드립니다!',
+    'ko': 'tip: 요일마다 체육관이 다르면 장소마다 따로 등록해 주세요. 그래야 지도 핀이 정확해요.',
     'en':
-        'Tip: If your gym location differs by day, please register each location separately so the map pins are accurate!',
+        'Tip: If your gym changes by day, register each location separately so the map pins are accurate.',
   },
   // 웹 reg_error/pk_create_err 대응 — 실패 원문 앞에 붙는 현지화 프리픽스
   'cf_save_err': {
-    'ko': '등록 중 오류가 발생했습니다: ',
-    'en': 'An error occurred during registration: ',
+    'ko': '팀을 저장하지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't save the team. Please try again in a moment.",
   },
-  'pf_save_err': {'ko': '게임 처리 중 오류: ', 'en': 'Something went wrong: '},
-  'logout_confirm': {'ko': '로그아웃 하시겠습니까?', 'en': 'Log out?'},
+  'pf_save_err': {
+    'ko': '게임을 저장하지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't save the game. Please try again in a moment.",
+  },
+  'logout_confirm': {'ko': '로그아웃할까요?', 'en': 'Log out?'},
   'share_mode_card': {'ko': '네임카드', 'en': 'Name card'},
   'share_mode_diet': {'ko': '식단표', 'en': 'Schedule'},
   // 공유 카드(my_card.dart)는 Canvas에 직접 그려서 이모지가 tofu(□)로 뜬다.
@@ -462,11 +534,6 @@ const Map<String, Map<String, String>> kStrings = {
     'en': 'Tap Edit to reorder or remove',
   },
   'no_saved_team': {'ko': '아직 찜한 팀이 없어요', 'en': 'No saved teams yet'},
-  'lb_team_name': {'ko': '팀 이름', 'en': 'Team name'},
-  'lb_sched_hint': {
-    'ko': '일정 (예: 토 14:00~17:00)',
-    'en': 'Schedule (e.g. Sat 14:00~17:00)',
-  },
 
   // 필터
   'filter_title': {'ko': '검색 · 필터', 'en': 'Search & filter'},
@@ -481,29 +548,42 @@ const Map<String, Map<String, String>> kStrings = {
   'f_addr_search': {'ko': '주소로 검색', 'en': 'Search by address'},
   'f_addr_map': {'ko': '지도에서', 'en': 'On map'},
   'f_loc_set': {'ko': '위치 선택됨', 'en': 'Location set'},
-  'f_addr_empty': {'ko': '주소를 입력해주세요', 'en': 'Enter an address'},
+  'f_addr_empty': {'ko': '주소를 적어 주세요', 'en': 'Enter an address.'},
   'f_addr_found': {'ko': '주소를 찾았어요!', 'en': 'Address found!'},
   'f_addr_notfound': {
-    'ko': '주소를 못 찾았어요 — 지도에서 선택해주세요',
-    'en': "Couldn't find it — pick on the map",
+    'ko': '이 주소로는 위치를 못 찾았어요. 도로명 주소로 적거나 지도에서 찍어 주세요',
+    'en':
+        "We couldn't find that address. Try a street address or pick it on the map.",
   },
-  'f_pick_loc': {'ko': '지도에서 위치를 선택해주세요', 'en': 'Pick a location on the map'},
+  'f_pick_loc': {
+    'ko': '지도에서 위치를 찍어 주세요',
+    'en': 'Pick the location on the map.',
+  },
   // 웹 reg_map_loc 대응 — 역지오코딩 실패 시 주소칸 기본 문구
   'f_map_loc': {'ko': '지도에서 선택된 위치', 'en': 'Location picked on map'},
   'f_link_invalid': {
-    'ko': '링크 형식이 올바르지 않아요 (http/https)',
-    'en': 'Invalid link (http/https)',
+    'ko': '링크는 http:// 나 https:// 로 시작해야 해요',
+    'en': 'Links need to start with http:// or https://',
   },
+  'cf_updated': {'ko': '팀 정보를 고쳤어요', 'en': 'Team info updated'},
+  'pf_updated': {'ko': '게임 정보를 고쳤어요', 'en': 'Game updated'},
   'f_reel_invalid': {
-    'ko': '인스타 게시물/릴스 링크 형식이 올바르지 않아요',
-    'en': 'Invalid Instagram post/reel link',
+    'ko': '인스타 공개 게시물/릴스 링크 형식이 아니에요. (예: https://www.instagram.com/reel/...)',
+    'en':
+        'That doesn’t look like a public Instagram post/reel link (e.g. https://www.instagram.com/reel/...).',
   },
-  'f_updated': {'ko': '수정됐어요!', 'en': 'Updated!'},
   'cf_optional_summary': {
     'ko': '추가 정보 입력 (선택)',
     'en': 'Add more details (optional)',
   },
   'cf_field_required': {'ko': '필수', 'en': 'Required'},
+  // 입력 칸 아래 오류(웹 js/field-error.js 와 같은 문구)
+  'cf_err_name': {'ko': '팀 이름을 적어 주세요', 'en': 'Enter the team name.'},
+  'cf_err_target': {
+    'ko': '누구를 모집하는지 골라 주세요',
+    'en': 'Pick who the team is for.',
+  },
+  'cf_err_addr': {'ko': '체육관 주소를 적어 주세요', 'en': 'Enter the gym address.'},
   'f_reel_label': {'ko': '릴스/게시물 링크 (선택)', 'en': 'Reel/post link (optional)'},
   'f_reel_hint': {
     'ko': '예: https://www.instagram.com/reel/...',
@@ -581,9 +661,9 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'pf_curated_hint': {
     'ko':
-        '켜면 상세에 "공개 인스타 정보로 모은 크루" 안내와 수정/삭제 요청 링크가 표시됩니다. 남의 크루를 대신 올릴 때만 켜세요.',
+        '켜면 상세에 "공개 인스타 정보로 모은 크루" 안내와 수정/삭제 요청 링크가 보여요. 남의 크루를 대신 올릴 때만 켜 주세요.',
     'en':
-        'Shows a "collected from public Instagram info" notice plus an edit/removal request link. Only for crews you add on their behalf.',
+        'Shows a "collected from public Instagram info" notice plus an edit/removal request link on the detail sheet. Only for crews you add on their behalf.',
   },
   'pf_insta': {'ko': '인스타 아이디 (선택)', 'en': 'Instagram handle (optional)'},
   'pf_insta_hint': {
@@ -603,8 +683,8 @@ const Map<String, Map<String, String>> kStrings = {
   'pk_exp_1m': {'ko': '1개월', 'en': '1 month'},
   'pk_exp_3m': {'ko': '3개월', 'en': '3 months'},
   'pk_exp_always': {'ko': '상시', 'en': 'Always'},
-  'pf_req': {'ko': '게임 이름은 필수예요', 'en': 'A name is required'},
-  'pf_created': {'ko': '픽업이 등록됐어요!', 'en': 'Pickup posted!'},
+  'pf_req': {'ko': '픽업 이름을 적어 주세요', 'en': 'Enter a name for the game.'},
+  'pf_created': {'ko': '픽업 게임이 열렸어요! 🏐', 'en': 'Your pickup game is live! 🏐'},
   // 동호회 폼
   'cf_title': {'ko': '동호회 등록', 'en': 'Register a club'},
   'cf_edit_title': {'ko': '동호회 수정', 'en': 'Edit club'},
@@ -634,16 +714,30 @@ const Map<String, Map<String, String>> kStrings = {
   'cf_insta_hint': {'ko': '예: gvt__official', 'en': 'e.g. gvt__official'},
   'cf_link': {'ko': '가입/문의 링크 (선택)', 'en': 'Join/contact link (optional)'},
   'cf_req': {'ko': '이름·대상·주소는 필수예요', 'en': 'Name, target, address required'},
-  'cf_created': {'ko': '동호회가 등록됐어요!', 'en': 'Club registered!'},
-  'cf_insta_invalid': {
-    'ko': '인스타그램 핸들은 영문/숫자/언더스코어/점 1~30자만 가능합니다. (@ 제외)',
-    'en':
-        'Instagram handle allows only letters/numbers/underscore/dot, 1–30 chars. (no @)',
+  'cf_created': {
+    'ko': '팀을 올렸어요! 이제 지도에서 보여요',
+    'en': 'Your team is on the map!',
   },
-  'cf_name_max': {'ko': '팀 이름은 60자 이하로', 'en': 'Name must be ≤ 60 chars'},
-  'cf_target_max': {'ko': '대상은 80자 이하로', 'en': 'Target must be ≤ 80 chars'},
-  'cf_addr_max': {'ko': '주소는 200자 이하로', 'en': 'Address must be ≤ 200 chars'},
-  'cf_price_max': {'ko': '회비는 100자 이하로', 'en': 'Dues must be ≤ 100 chars'},
+  'cf_insta_invalid': {
+    'ko': '인스타 아이디는 영문·숫자·밑줄(_)·점(.)으로 30자까지 적어 주세요 (@ 없이)',
+    'en': 'Use letters, numbers, _ or . — up to 30, without @.',
+  },
+  'cf_name_max': {
+    'ko': '팀 이름은 60자까지 쓸 수 있어요',
+    'en': 'Team names can be up to 60 characters.',
+  },
+  'cf_target_max': {
+    'ko': '대상은 80자까지 쓸 수 있어요',
+    'en': "Who it's for can be up to 80 characters.",
+  },
+  'cf_addr_max': {
+    'ko': '주소는 200자까지 쓸 수 있어요',
+    'en': 'Addresses can be up to 200 characters.',
+  },
+  'cf_price_max': {
+    'ko': '회비 설명은 100자까지 쓸 수 있어요',
+    'en': 'Fee notes can be up to 100 characters.',
+  },
   // 영어모드 필터 힌트 (외국인 6s 안내, KO는 미표시)
   'fs_en_hint': {
     'ko':
@@ -673,7 +767,7 @@ const Map<String, Map<String, String>> kStrings = {
   // HTML 태그는 제거하고 강조는 위젯 스타일로 처리한다.
   'ag_title': {'ko': '안치기', 'en': 'Lineup'},
   'ag_hero_sub': {
-    'ko': '온 사람을 솥에 안치듯 넣으면 라운드 배치가 나옵니다.',
+    'ko': '온 사람을 솥에 안치듯 넣으면 라운드 배치가 나와요.',
     'en': 'Add who showed up and it draws round-by-round lineups.',
   },
   'ag_tab_lineup': {'ko': '배치', 'en': 'Lineup'},
@@ -687,7 +781,7 @@ const Map<String, Map<String, String>> kStrings = {
     'ko': '명단 탭에서 사람을 추가하세요',
     'en': 'Add players on the Roster tab',
   },
-  'ag_intro_s2': {'ko': '포지션을 골라주세요', 'en': 'Pick their positions'},
+  'ag_intro_s2': {'ko': '포지션을 골라 주세요', 'en': 'Pick their positions'},
   'ag_intro_s3': {
     'ko': '참석 체크하고 여기서 뽑기!',
     'en': 'Check attendance and Draw here!',
@@ -724,13 +818,13 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_feel_exp': {'ko': '경험', 'en': 'Try it'},
   'ag_feel_exp_sub': {'ko': '자리 제한 없음', 'en': 'No restriction'},
   'ag_feel_hint': {
-    'ko': '실험 자리 = 주 포지션이 아닌 사람이 서는 자리. 이 수만큼만 열립니다.',
+    'ko': '실험 자리 = 주 포지션이 아닌 사람이 서는 자리. 이 수만큼만 열려요.',
     'en':
         'An open slot is one filled by someone off their main position. Only this many are allowed.',
   },
   'ag_tpl_title': {'ko': '팀 구성', 'en': 'Team format'},
   'ag_tpl_hint': {
-    'ko': '(여러 개 고르면 그중에서 골라 씁니다)',
+    'ko': '(여러 개 고르면 그중에서 골라 써요)',
     'en': '(pick several to choose among)',
   },
   'ag_tpl_mb2': {'ko': 'MB 2', 'en': 'MB 2'},
@@ -752,14 +846,14 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_draw_btn': {'ko': '배치 뽑기', 'en': 'Draw lineup'},
   'ag_drawing': {'ko': '뽑는 중…', 'en': 'Drawing…'},
   'ag_draw_hint': {
-    'ko': '명단 탭에서 온 사람만 체크하고 뽑으세요. 마음에 안 들면 다시 뽑으면 됩니다.',
+    'ko': '명단 탭에서 온 사람만 체크하고 뽑으세요. 마음에 안 들면 다시 뽑으면 돼요.',
     'en':
         'On the Roster tab, check who came, then draw. Not happy? Just redraw.',
   },
   'ag_again': {'ko': '다시 뽑기', 'en': 'Redraw'},
   'ag_confirm_next': {'ko': '확정 · 다음 라운드', 'en': 'Confirm · next round'},
   'ag_confirm_hint': {
-    'ko': '확정하면 기록에 반영돼 다음 라운드에서 출전 · 대기 · 포지션이 더 고르게 분배됩니다.',
+    'ko': '확정하면 기록에 반영돼 다음 라운드에서 출전 · 대기 · 포지션이 더 고르게 분배돼요.',
     'en':
         'Confirming logs it, so play, bench, and positions spread more evenly next round.',
   },
@@ -767,16 +861,16 @@ const Map<String, Map<String, String>> kStrings = {
   // 결과 안내
   'ag_ok_done': {'ko': '{r}R 배치 완료', 'en': 'Round {r} set'},
   'ag_ok_abc': {
-    'ko': 'A · B · C 코어를 정하고 안 뛰는 팀에서 차출해 채웠습니다. 차출 표시가 붙은 사람은 원래 다른 팀입니다.',
+    'ko': 'A · B · C 코어를 정하고 안 뛰는 팀에서 차출해 채웠어요. 차출 표시가 붙은 사람은 원래 다른 팀이에요.',
     'en':
         'Set A · B · C cores and filled gaps by borrowing from the team sitting out. Players marked borrowed belong to another team.',
   },
   'ag_ok_free': {
-    'ko': '매 경기 두 팀을 새로 짰습니다.',
+    'ko': '매 경기 두 팀을 새로 짰어요.',
     'en': 'Drafted two fresh teams for each game.',
   },
   'ag_relaxed': {
-    'ko': '주 포지션만으로는 팀이 안 짜여서 실험 자리를 팀당 {n}개까지 열었습니다.',
+    'ko': '주 포지션만으로는 팀이 안 짜여서 실험 자리를 팀당 {n}개까지 열었어요.',
     'en':
         'Main positions alone could not fill the teams, so up to {n} open slot(s) per team were allowed.',
   },
@@ -784,12 +878,12 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_core_none': {'ko': '없음 (전원 차출)', 'en': 'none (all borrowed)'},
   'ag_no_c_core': {
     'ko':
-        '참석 인원이 팀 인원의 정확히 2배라 C 코어가 없습니다. C는 안 뛰는 팀에서 전원 차출되므로 세 경기 모두 같은 두 팀이 붙습니다. 경기마다 상대를 섞으려면 자유 편성으로 바꿔주세요.',
+        '참석 인원이 팀 인원의 정확히 2배라 C 코어가 없어요. C는 안 뛰는 팀에서 전원 차출되므로 세 경기 모두 같은 두 팀이 붙어요. 경기마다 상대를 섞으려면 자유 편성으로 바꿔 주세요.',
     'en':
         'Attendance is exactly twice a team size, so there is no C core. C is fully borrowed from the sitting-out team, so all three games pit the same two teams. To mix opponents, switch to Free draft.',
   },
   'ag_infeasible': {
-    'ko': '이 인원 · 설정으로는 배치를 만들 수 없습니다.',
+    'ko': '이 인원 · 설정으로는 배치를 만들 수 없어요.',
     'en': "Can't build a lineup with these players and settings.",
   },
 
@@ -805,11 +899,11 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_team_swap': {'ko': '후위 센터와 교대', 'en': 'swaps with back-row center'},
   'ag_team_word': {'ko': 'TEAM', 'en': 'TEAM'},
   'ag_fitgap_even': {
-    'ko': '두 팀 자리 적합도가 고릅니다.',
+    'ko': '두 팀 자리 적합도가 비슷해요.',
     'en': 'Both teams sit at similar position fit.',
   },
   'ag_fitgap_off': {
-    'ko': '한쪽 팀이 낯선 자리를 더 맡았습니다.',
+    'ko': '한쪽 팀이 낯선 자리를 더 맡았어요.',
     'en': 'One team took more unfamiliar slots.',
   },
 
@@ -817,7 +911,7 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_past_title': {'ko': '확정된 라운드', 'en': 'Confirmed rounds'},
   'ag_past_unit': {'ko': '개', 'en': ''},
   'ag_past_hint': {
-    'ko': '지난 라운드 배치입니다. 제목을 눌러 펼치거나 접습니다.',
+    'ko': '지난 라운드 배치예요. 제목을 눌러 펼치거나 접어요.',
     'en': 'Past round lineups. Tap a title to expand or collapse.',
   },
   'ag_past_round_suf': {'ko': 'R 배치', 'en': ' lineup'},
@@ -826,7 +920,7 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_roster': {'ko': '명단', 'en': 'Roster'},
   'ag_roster_total': {'ko': '전체', 'en': 'total'},
   'ag_roster_empty': {
-    'ko': '아직 명단이 없습니다. 아래에서 사람을 추가하세요.',
+    'ko': '아직 명단이 없어요. 아래에서 사람을 추가하세요.',
     'en': 'No players yet. Add someone below.',
   },
   'ag_add_person': {'ko': '사람 추가', 'en': 'Add player'},
@@ -834,8 +928,8 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_add_btn': {'ko': '추가', 'en': 'Add'},
   'ag_add_hint': {
     'ko':
-        '자리를 고르고 추가하세요. 처음 고른 자리가 주가 됩니다. 안 고르면 어디든 설 수 있는 사람으로 '
-        '들어갑니다 — 나중에 칩을 눌러 정하면 됩니다.',
+        '자리를 고르고 추가하세요. 처음 고른 자리가 주가 돼요. 안 고르면 어디든 설 수 있는 사람으로 '
+        '들어가요 — 나중에 칩을 눌러 정하면 돼요.',
     'en':
         'Pick seats and add. Your first pick is the main. Pick none and they join as able to '
         'play anywhere — set it later by tapping the chips.',
@@ -846,8 +940,8 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_set_main': {'ko': '주 포지션으로', 'en': 'Set as main'},
   'ag_tier_hint': {
     'ko':
-        '처음 고른 자리가 주 자리예요. 더 누르면 가능 → 도전 → 해제로 바뀌고, 길게 누르면 주 자리를 바꿉니다. '
-        '자리를 다 지우면 어디든 설 수 있는 사람이 됩니다.',
+        '처음 고른 자리가 주 자리예요. 더 누르면 가능 → 도전 → 해제로 바뀌고, 길게 누르면 주 자리를 바꿔요. '
+        '자리를 다 지우면 어디든 설 수 있는 사람이 돼요.',
     'en':
         'Your first pick is your Main. Tap again for Can → Want → off; long-press to change your '
         'main. Clear every seat and they can play anywhere.',
@@ -857,7 +951,7 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_all_off': {'ko': '전원 해제', 'en': 'All out'},
   'ag_to_default': {'ko': '명단 비우기', 'en': 'Clear roster'},
   'ag_clear_confirm': {
-    'ko': '명단을 전부 비웁니다. 계속할까요?',
+    'ko': '명단을 전부 비워요. 계속할까요?',
     'en': 'This clears the whole roster. Continue?',
   },
   'ag_del_confirm': {
@@ -865,7 +959,7 @@ const Map<String, Map<String, String>> kStrings = {
     'en': '{name} — remove from roster?',
   },
   'ag_dup_name': {
-    'ko': '같은 이름이 이미 있습니다. 다른 사람으로 추가할까요?',
+    'ko': '같은 이름이 이미 있어요. 다른 사람으로 추가할까요?',
     'en': 'That name already exists. Add as a different person?',
   },
   'ag_leave_title': {'ko': '퇴장 시간', 'en': 'Leave time'},
@@ -878,23 +972,23 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_th_bench': {'ko': '대기', 'en': 'Bench'},
   'ag_rounds_confirmed': {'ko': '{n}개 라운드 확정', 'en': '{n} rounds confirmed'},
   'ag_stat_empty': {
-    'ko': '아직 확정한 라운드가 없습니다. 배치를 뽑고 확정을 누르면 여기에 쌓입니다.',
+    'ko': '아직 확정한 라운드가 없어요. 배치를 뽑고 확정을 누르면 여기에 쌓여요.',
     'en':
         'No rounds confirmed yet. Draw a lineup and hit Confirm to log it here.',
   },
   'ag_stat_hint': {
-    'ko': '이 기록을 보고 다음 라운드에서 출전 · 대기 · 포지션을 고르게 나눕니다.',
+    'ko': '이 기록을 보고 다음 라운드에서 출전 · 대기 · 포지션을 고르게 나눠요.',
     'en':
         'This record spreads play, bench, and positions evenly across next rounds.',
   },
   'ag_reset_title': {'ko': '초기화', 'en': 'Reset'},
   'ag_reset_btn': {'ko': '기록 지우기', 'en': 'Clear record'},
   'ag_reset_hint': {
-    'ko': '다음 모임을 시작할 때 눌러주세요. 명단은 남습니다.',
+    'ko': '다음 모임을 시작할 때 눌러 주세요. 명단은 남아요.',
     'en': 'Hit this when starting the next meetup. The roster stays.',
   },
   'ag_reset_confirm': {
-    'ko': '누적 기록을 지우고 1R부터 다시 시작합니다.',
+    'ko': '누적 기록을 지우고 1R부터 다시 시작해요.',
     'en': 'Clear the cumulative record and restart from R1.',
   },
 
@@ -956,8 +1050,8 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'ag_tactic_hint': {
     'ko':
-        '5-1 은 세터 한 명이 여섯 자리를 다 돌고, 6-2 는 세터 둘이 후위에서 번갈아 토스합니다. '
-        '6-2 의 전위 세터는 라이트 자리에서 공격합니다.',
+        '5-1 은 세터 한 명이 여섯 자리를 다 돌고, 6-2 는 세터 둘이 후위에서 번갈아 토스해요. '
+        '6-2 의 전위 세터는 라이트 자리에서 공격해요.',
     'en':
         'In 5-1 one setter runs all six rotations; in 6-2 two setters take turns setting '
         'from the back row, and the front-row setter attacks from the right.',
@@ -966,7 +1060,7 @@ const Map<String, Map<String, String>> kStrings = {
   // 9인제 포메이션
   'ag_form_title': {'ko': '포메이션', 'en': 'Formation'},
   'ag_form_hint': {
-    'ko': '(속공 수에 따라 리시브 줄이 갈립니다)',
+    'ko': '(속공 수에 따라 리시브 줄이 갈려요)',
     'en': '(the number of quicks decides the receive rows)',
   },
   'ag_tpl_q1': {'ko': '속공 1 · 2-4-3', 'en': '1 quick · 2-4-3'},
@@ -985,12 +1079,12 @@ const Map<String, Map<String, String>> kStrings = {
     'en': 'front 4 · middle 3 · back 2',
   },
   'ag_note_q2': {
-    'ko': '앞차 · 빽차 중 한 명은 수비 때 뒤로 빠져 가운데를 보고, 거기서 공격에 들어갑니다.',
+    'ko': '앞차 · 빽차 중 한 명은 수비 때 뒤로 빠져 가운데를 보고, 거기서 공격에 들어가요.',
     'en':
         'On defence one of the two mids drops back to cover the centre, and attacks from there.',
   },
   'ag_note_q3': {
-    'ko': '차는 수비 때 뒤로 빠져 가운데를 보고, 거기서 공격에 들어갑니다.',
+    'ko': '차는 수비 때 뒤로 빠져 가운데를 보고, 거기서 공격에 들어가요.',
     'en':
         'On defence the mid drops back to cover the centre, and attacks from there.',
   },
@@ -1010,8 +1104,8 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_prio_variety_sub': {'ko': '안 해본 자리부터', 'en': 'unplayed seats first'},
   'ag_prio_hint': {
     'ko':
-        '맞춘 자리 우선은 고정(📌)해 둔 자리와 각자 고른 주 자리를 먼저 지킵니다. '
-        '사람에게 등급을 매기는 게 아니라, 진행하는 사람이 자리를 직접 지정하는 것입니다.',
+        '맞춘 자리 우선은 고정(📌)해 둔 자리와 각자 고른 주 자리를 먼저 지켜요. '
+        '사람에게 등급을 매기는 게 아니라, 진행하는 사람이 자리를 직접 지정하는 거예요.',
     'en':
         '"Set seats first" keeps pinned (📌) seats and each player\'s main seat '
         'as much as possible. It is not a skill grade — the organizer picks the seats.',
@@ -1019,7 +1113,7 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_adv_title': {'ko': '고급 설정', 'en': 'Advanced'},
   'ag_flex_title': {'ko': '실험 자리(팀당)', 'en': 'Open slots (per team)'},
   'ag_flex_hint': {
-    'ko': '주 자리가 아닌 사람이 설 수 있는 자리 수입니다. 0이면 전원 주 자리로만 짭니다.',
+    'ko': '주 자리가 아닌 사람이 설 수 있는 자리 수예요. 0이면 전원 주 자리로만 짜요.',
     'en':
         'How many players may stand off their main seat. 0 means main seats only.',
   },
@@ -1030,14 +1124,14 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_pin_team_any': {'ko': '팀 자동', 'en': 'Auto'},
   'ag_pin_hint': {
     'ko':
-        '📌 를 누르면 그 사람은 주 자리에만 섭니다. 옆 칸에서 A · B · C 코어도 지정할 수 있어요'
+        '📌 를 누르면 그 사람은 주 자리에만 서요. 옆 칸에서 A · B · C 코어도 지정할 수 있어요'
         '(A · B · C 고정 모드).',
     'en':
         'Tap 📌 and that player only takes their main seat. The box next to it '
         'pins them to an A · B · C core (A · B · C mode).',
   },
   'ag_pin_relaxed': {
-    'ko': '고정(📌)을 전부 지키면 배치가 안 나와서, 이번 라운드는 고정을 풀고 짰습니다.',
+    'ko': '고정(📌)을 전부 지키면 배치가 안 나와서, 이번 라운드는 고정을 풀고 짰어요.',
     'en':
         'Pins (📌) could not all be kept, so this round was drawn without them.',
   },
@@ -1047,26 +1141,26 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_needs_title': {'ko': '비는 자리', 'en': 'Open seats'},
   'ag_shortage_note': {
     'ko':
-        '지금 인원으로는 자리가 빕니다. 그래도 배치는 뽑고 빈 자리를 (필요)로 표시합니다 — '
+        '지금 인원으로는 자리가 비어요. 그래도 배치는 뽑고 빈 자리를 (필요)로 표시해요 — '
         '어떤 자리를 더 구해야 하는지 보이라고요.',
     'en':
         'There aren\'t enough players for every seat. The lineup is still drawn and '
         'empty seats are marked (needed), so you can see what to recruit.',
   },
   'ag_abc_fallback': {
-    'ko': 'A · B · C 는 참석이 팀 인원의 2~3배일 때만 됩니다. 이번 라운드는 자유 편성으로 짰습니다.',
+    'ko': 'A · B · C 는 참석이 팀 인원의 2~3배일 때만 돼요. 이번 라운드는 자유 편성으로 짰어요.',
     'en':
         'A · B · C needs 2×–3× a team size. This round was drawn as a free draft instead.',
   },
   'ag_ok_done_need': {
-    'ko': '채울 수 있는 자리는 다 채웠고, 사람이 없는 자리는 (필요)로 남겼습니다.',
+    'ko': '채울 수 있는 자리는 다 채웠고, 사람이 없는 자리는 (필요)로 남겼어요.',
     'en': 'Every fillable seat is filled; the rest are left as (needed).',
   },
 
   // 명단
   'ag_flex_badge': {'ko': '어디든', 'en': 'anywhere'},
   'ag_flex_player_hint': {
-    'ko': '자리를 하나도 안 고르면 어디든 설 수 있는 사람으로 봅니다. 급할 땐 이름만 넣고 시작하세요.',
+    'ko': '자리를 하나도 안 고르면 어디든 설 수 있는 사람으로 봐요. 급할 땐 이름만 넣고 시작하세요.',
     'en':
         'A player with no seat picked is treated as able to play anywhere. '
         'In a hurry, just add names and go.',
@@ -1077,7 +1171,7 @@ const Map<String, Map<String, String>> kStrings = {
     'en': 'Paste names separated by new lines or commas',
   },
   'ag_bulk_btn': {'ko': '한 번에 추가', 'en': 'Add all'},
-  'ag_bulk_added': {'ko': '{n}명 추가했습니다.', 'en': 'Added {n}.'},
+  'ag_bulk_added': {'ko': '{n}명 추가했어요.', 'en': 'Added {n}.'},
 
   // 보기 전환
   'ag_now_word': {'ko': '지금', 'en': 'now'},
@@ -1088,18 +1182,18 @@ const Map<String, Map<String, String>> kStrings = {
 
   // 모임 보관 · 백업
   'ag_meet_title': {'ko': '지난 모임', 'en': 'Past meetups'},
-  'ag_meet_none': {'ko': '보관한 모임이 없습니다.', 'en': 'No meetups archived yet.'},
+  'ag_meet_none': {'ko': '보관한 모임이 없어요.', 'en': 'No meetups archived yet.'},
   'ag_meet_archive': {
     'ko': '이번 모임 보관하고 새로 시작',
     'en': 'Archive this meetup · start fresh',
   },
   'ag_meet_archive_confirm': {
-    'ko': '이번 모임 기록을 보관하고 1R부터 새로 시작합니다. 명단은 그대로 남습니다.',
+    'ko': '이번 모임 기록을 보관하고 1R부터 새로 시작해요. 명단은 그대로 남아요.',
     'en':
         'Archive this meetup\'s record and restart from R1. The roster stays.',
   },
   'ag_meet_archive_empty': {
-    'ko': '보관할 기록이 없습니다. 라운드를 확정한 뒤에 눌러주세요.',
+    'ko': '보관할 기록이 없어요. 라운드를 확정한 뒤에 눌러 주세요.',
     'en': 'Nothing to archive yet — confirm a round first.',
   },
   'ag_meet_rounds_suf': {'ko': '개 라운드', 'en': ' rounds'},
@@ -1108,7 +1202,7 @@ const Map<String, Map<String, String>> kStrings = {
     'en': 'Delete this archived meetup?',
   },
   'ag_meet_hint': {
-    'ko': '모임을 보관해 두면 누적 기록은 새로 시작하고, 지난 모임은 여기 남습니다.',
+    'ko': '모임을 보관해 두면 누적 기록은 새로 시작하고, 지난 모임은 여기 남아요.',
     'en':
         'Archiving resets the cumulative record while keeping the meetup here.',
   },
@@ -1116,13 +1210,13 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_backup_export': {'ko': '내보내기', 'en': 'Export'},
   'ag_backup_import': {'ko': '불러오기', 'en': 'Import'},
   'ag_backup_import_hint': {
-    'ko': '내보낸 JSON 을 붙여넣으세요. 지금 명단 · 기록은 사라집니다.',
+    'ko': '내보낸 JSON 을 붙여넣으세요. 지금 명단 · 기록은 사라져요.',
     'en': 'Paste exported JSON. This replaces the current roster and record.',
   },
-  'ag_backup_bad': {'ko': '읽을 수 없는 내용입니다.', 'en': 'Could not read that.'},
-  'ag_backup_done': {'ko': '불러왔습니다.', 'en': 'Imported.'},
+  'ag_backup_bad': {'ko': '읽을 수 없는 내용이에요.', 'en': 'Could not read that.'},
+  'ag_backup_done': {'ko': '불러왔어요.', 'en': 'Imported.'},
   'ag_backup_hint': {
-    'ko': '기기를 바꾸기 전에 내보내 두세요. 불러오면 지금 내용은 사라집니다.',
+    'ko': '기기를 바꾸기 전에 내보내 두세요. 불러오면 지금 내용은 사라져요.',
     'en':
         'Export before switching devices. Importing replaces what you have now.',
   },
@@ -1130,28 +1224,28 @@ const Map<String, Map<String, String>> kStrings = {
 
   // 진단 (뽑기 불가 사유)
   'ag_dg_short': {
-    'ko': '지금 설정으로는 한 경기에 {mc}명이 필요합니다. 참석 {n}명 — {gap}명 부족합니다.',
+    'ko': '지금 설정으로는 한 경기에 {mc}명이 필요해요. 참석 {n}명 — {gap}명 부족해요.',
     'en':
         'This setup needs {mc} on court per game. Present: {n} — {gap} short.',
   },
   'ag_dg_only': {
     'ko':
-        '{pos}({posko}) 전용이 {cnt}명({names})인데, 코트에 {pos} 자리는 최대 {max}개이고 대기는 {bench}명뿐입니다.',
+        '{pos}({posko}) 전용이 {cnt}명({names})인데, 코트에 {pos} 자리는 최대 {max}개이고 대기는 {bench}명뿐이에요.',
     'en':
         '{cnt} players are {pos}-only ({names}), but there are at most {max} {pos} slots on court and only {bench} bench spots.',
   },
   'ag_dg_few': {
-    'ko': '{pos}({posko})를 볼 수 있는 사람이 {able}명뿐입니다. 한 경기에 최소 {min}명이 필요합니다.',
+    'ko': '{pos}({posko})를 볼 수 있는 사람이 {able}명뿐이에요. 한 경기에 최소 {min}명이 필요해요.',
     'en': 'Only {able} players can play {pos}. Each game needs at least {min}.',
   },
   'ag_dg_abc': {
     'ko':
-        'A · B · C 모드는 팀 인원의 2배 이상 3배 이하일 때만 됩니다. {ranges}명 — 지금 {n}명입니다. 자유 편성으로 바꾸거나 팀 구성을 조정해 주세요.',
+        'A · B · C 모드는 팀 인원의 2배 이상 3배 이하일 때만 돼요. {ranges}명 — 지금 {n}명이에요. 자유 편성으로 바꾸거나 팀 구성을 조정해 주세요.',
     'en':
         'A · B · C mode needs attendance 2× to 3× a team size. {ranges} — currently {n}. Switch to Free draft or adjust the team format.',
   },
   'ag_dg_generic': {
-    'ko': '포지션 조합이 맞아떨어지지 않습니다. 가능 포지션을 늘리거나 팀 구성 · 인원을 조정해 주세요.',
+    'ko': '포지션 조합이 맞아떨어지지 않아요. 가능 포지션을 늘리거나 팀 구성 · 인원을 조정해 주세요.',
     'en':
         "The position mix doesn't work out. Add more eligible positions, or adjust team format / headcount.",
   },
@@ -1160,25 +1254,25 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_help_h1': {'ko': '배치가 정해지는 순서', 'en': 'How lineups are decided'},
   'ag_help_1sport': {
     'ko':
-        '먼저 종목을 고릅니다. 6인제는 로테이션이 있어 존(1~6)으로 서고, 5-1(세터 1) 과 '
-        '6-2(세터 2 · 전위 세터는 라이트)로 갈립니다. 9인제는 로테이션이 없고 속공 수로 '
-        '리시브 줄이 갈립니다 — 속공 1명이면 2-4-3, 2명이면 3-4-2, 3명이면 4-3-2. '
-        '명단에서는 역할 6종(세터 · 속공 · 레프트 · 라이트 · 차 · 백)만 고르면 됩니다.',
+        '먼저 종목을 골라요. 6인제는 로테이션이 있어 존(1~6)으로 서고, 5-1(세터 1) 과 '
+        '6-2(세터 2 · 전위 세터는 라이트)로 갈려요. 9인제는 로테이션이 없고 속공 수로 '
+        '리시브 줄이 갈려요 — 속공 1명이면 2-4-3, 2명이면 3-4-2, 3명이면 4-3-2. '
+        '명단에서는 역할 6종(세터 · 속공 · 레프트 · 라이트 · 차 · 백)만 고르면 돼요.',
     'en':
         'Pick the format first. 6-a-side rotates through zones 1–6 and splits into 5-1 and 6-2; '
         '9-a-side does not rotate, and the number of quicks decides the receive rows.',
   },
   'ag_help_1pin': {
     'ko':
-        '고정(📌)을 가장 먼저 지킵니다. 고정한 사람은 주 자리에만 서고, 팀을 지정했으면 그 코어로 갑니다. '
-        '다 지킬 수 없으면 고정을 풀고 뽑은 뒤 그 사실을 알려 줍니다.',
+        '고정(📌)을 가장 먼저 지켜요. 고정한 사람은 주 자리에만 서고, 팀을 지정했으면 그 코어로 가요. '
+        '다 지킬 수 없으면 고정을 풀고 뽑은 뒤 그 사실을 알려 줘요.',
     'en':
         'Pins (📌) are kept first: a pinned player only takes their main seat, and a pinned '
         'team sends them to that core. If they cannot all be kept, the round is drawn without them and says so.',
   },
   'ag_help_1need': {
     'ko':
-        '인원이 모자라면 못 뽑는다고 막지 않고, 못 채운 자리를 (필요)로 비워 둡니다 — '
+        '인원이 모자라면 못 뽑는다고 막지 않고, 못 채운 자리를 (필요)로 비워 둬요 — '
         '어떤 자리를 더 구해야 하는지 보이라고요.',
     'en':
         'If there are not enough players, unfillable seats are left as (needed) instead of '
@@ -1190,36 +1284,36 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'ag_help_4a': {
     'ko':
-        '맞춘 자리 우선은 고정과 각자 고른 주 자리를 지켜 게임이 매끄럽게 굴러가게 합니다. '
-        '다양성 우선은 아직 안 해본 자리를 먼저 나눠 줍니다.',
+        '맞춘 자리 우선은 고정과 각자 고른 주 자리를 지켜 게임이 매끄럽게 굴러가게 해요. '
+        '다양성 우선은 아직 안 해본 자리를 먼저 나눠 줘요.',
     'en':
         '"Set seats first" keeps pins and each player\'s own main seat so games run smoothly. '
         '"Variety first" hands out seats people have not played yet.',
   },
   'ag_help_4b': {
     'ko':
-        '둘 다 실력 등급이 아닙니다. 주 · 가능 · 도전은 본인이 고르는 것이고, 고정은 진행하는 사람이 '
-        '지정하는 것입니다 — 사람에게 순위를 매기지 않습니다.',
+        '둘 다 실력 등급이 아니에요. 주 · 가능 · 도전은 본인이 고르는 것이고, 고정은 진행하는 사람이 '
+        '지정하는 거예요 — 사람에게 순위를 매기지 않아요.',
     'en':
         'Neither is a skill grade. Tiers are what each player picks for themselves, and pins are '
         'what the organizer sets — nobody is ranked.',
   },
   'ag_help_4c': {
     'ko':
-        '실험 자리(고급 설정)는 팀당 몇 명까지 주 자리가 아닌 자리에 설 수 있는지입니다. '
-        '0이면 전원 주 자리로만 짜고, 그걸로 안 되면 자동으로 한 칸씩 열립니다.',
+        '실험 자리(고급 설정)는 팀당 몇 명까지 주 자리가 아닌 자리에 설 수 있는지예요. '
+        '0이면 전원 주 자리로만 짜고, 그걸로 안 되면 자동으로 한 칸씩 열려요.',
     'en':
         'Open slots (Advanced) is how many players per team may stand off their main seat. '
         '0 means main seats only; it opens up automatically if a lineup is otherwise impossible.',
   },
   'ag_help_q5': {
-    'ko': '인원이 모자라면 어떻게 되나?',
+    'ko': '인원이 모자라면 어떻게 돼요?',
     'en': 'Not enough people — what happens?',
   },
   'ag_help_a5': {
     'ko':
-        '그래도 뽑습니다. 못 채운 자리가 (필요)로 자리 이름과 함께 뜨니, 세터가 필요한지 센터가 '
-        '필요한지 보고 단톡방에 올리면 됩니다.',
+        '그래도 뽑아요. 못 채운 자리가 (필요)로 자리 이름과 함께 뜨니, 세터가 필요한지 센터가 '
+        '필요한지 보고 단톡방에 올리면 돼요.',
     'en':
         'It still draws. Empty seats show as (needed) with the seat name, so you know what to '
         'ask the group chat for.',
@@ -1227,37 +1321,37 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_help_q6': {'ko': '다음 모임은?', 'en': 'Next meetup?'},
   'ag_help_a6': {
     'ko':
-        '기록 탭에서 이번 모임을 보관하면 누적 기록은 1R부터 다시 시작하고 지난 모임은 목록에 남습니다. '
+        '기록 탭에서 이번 모임을 보관하면 누적 기록은 1R부터 다시 시작하고 지난 모임은 목록에 남아요. '
         '기기를 바꾸기 전에는 백업 내보내기를 하세요.',
     'en':
         'On the Record tab, archive this meetup: the cumulative record restarts while the meetup '
         'stays in the list. Export a backup before changing devices.',
   },
   'ag_help_1a': {
-    'ko': '참석자 중 경기가 끝나기 전에 퇴장하는 사람을 그 경기에서 뺍니다.',
+    'ko': '참석자 중 경기가 끝나기 전에 퇴장하는 사람을 그 경기에서 빼요.',
     'en':
         'Among attendees, anyone leaving before a game ends is removed from it.',
   },
   'ag_help_1b': {
     'ko':
-        'A · B · C 고정 — 라운드 시작에 세 팀 코어를 정합니다. 경기는 A vs B → B vs C → C vs A 순서이고, 코어는 자기 팀 경기에 반드시 출전합니다. 모자란 자리는 안 뛰는 팀에서 차출합니다. 참석이 팀 인원의 2~3배여야 하고, 그보다 적으면 자유 편성으로 내려갑니다.',
+        'A · B · C 고정 — 라운드 시작에 세 팀 코어를 정해요. 경기는 A vs B → B vs C → C vs A 순서이고, 코어는 자기 팀 경기에 반드시 출전해요. 모자란 자리는 안 뛰는 팀에서 차출해요. 참석이 팀 인원의 2~3배여야 하고, 그보다 적으면 자유 편성으로 내려가요.',
     'en':
         'A · B · C fixed — three team cores are set at round start. Games run A vs B → B vs C → C vs A, and cores always play their own team\'s game. Missing spots are borrowed from the team sitting out. It needs attendance of 2×–3× a team size; below that it falls back to a free draft.',
   },
   'ag_help_1c': {
-    'ko': '자유 편성 — 경기마다 참석자 전원 중에서 두 팀을 새로 짭니다.',
+    'ko': '자유 편성 — 경기마다 참석자 전원 중에서 두 팀을 새로 짜요.',
     'en':
         'Free draft — two fresh teams are drafted from all attendees each game.',
   },
   'ag_help_1d': {
     'ko':
-        '모든 자리가 그 사람의 가능 자리 안이어야 합니다. 6인제는 여기에 더해 팀마다 세터 1명 · '
-        '대각(S↔OP, OH↔OH, MB↔Li)을 맞춥니다. 자리를 하나도 안 고른 사람은 어디든 설 수 있는 사람으로 봅니다.',
+        '모든 자리가 그 사람의 가능 자리 안이어야 해요. 6인제는 여기에 더해 팀마다 세터 1명 · '
+        '대각(S↔OP, OH↔OH, MB↔Li)을 맞춰요. 자리를 하나도 안 고른 사람은 어디든 설 수 있는 사람으로 봐요.',
     'en':
         'Every seat must be within a player\'s eligible seats; 6-a-side also needs one setter per team with a valid diagonal (S↔OP, OH↔OH, MB↔Li). A player with no seat picked can play anywhere.',
   },
   'ag_help_1e': {
-    'ko': '조건을 만족하는 배치를 여러 개 뽑아 아래 공정성 점수가 가장 좋은 것을 고릅니다.',
+    'ko': '조건을 만족하는 배치를 여러 개 뽑아 아래 공정성 점수가 가장 좋은 것을 골라요.',
     'en':
         'Several valid lineups are drawn and the one with the best fairness score below is chosen.',
   },
@@ -1266,41 +1360,41 @@ const Map<String, Map<String, String>> kStrings = {
     'en': 'Who plays first (fairness score)',
   },
   'ag_help_2intro': {
-    'ko': '점수가 낮은 사람이 먼저 코트에 들어갑니다. 확정한 라운드의 누적 기록과 이번 라운드 안의 기록을 합쳐서 봅니다.',
+    'ko': '점수가 낮은 사람이 먼저 코트에 들어가요. 확정한 라운드의 누적 기록과 이번 라운드 안의 기록을 합쳐서 봐요.',
     'en':
         'Lower score goes on court first. It combines the confirmed cumulative record with what\'s happened within this round.',
   },
   'ag_help_2a': {'ko': '출전 횟수가 적을수록 먼저.', 'en': 'Fewer games played → sooner.'},
   'ag_help_2b': {
-    'ko': '대기 횟수가 많을수록 먼저. 특히 연달아 두 번 쉬지 않게 큰 벌점을 겁니다.',
+    'ko': '대기 횟수가 많을수록 먼저. 특히 연달아 두 번 쉬지 않게 큰 벌점을 걸어요.',
     'en':
         'More times benched → sooner, and being benched twice in a row is penalized hard.',
   },
   'ag_help_2c': {
     'ko':
-        '가능 포지션이 적은 사람이 먼저. 세터만 되는 사람은 세터 자리에 우선 들어갑니다. 그래야 그 사람이 대기로 밀리지 않습니다.',
+        '가능 포지션이 적은 사람이 먼저. 세터만 되는 사람은 세터 자리에 우선 들어가요. 그래야 그 사람이 대기로 밀리지 않아요.',
     'en':
         'Fewer eligible positions → sooner. Setter-only players get the setter slot first, so they don\'t get benched.',
   },
   'ag_help_2d': {
     'ko':
-        '같은 포지션 반복은 피합니다. 단, 포지션을 고를 수 있는 사람에게만 적용되고, 한 포지션만 되는 사람은 반복해도 벌점이 없습니다.',
+        '같은 포지션 반복은 피해요. 단, 포지션을 고를 수 있는 사람에게만 적용되고, 한 포지션만 되는 사람은 반복해도 벌점이 없어요.',
     'en':
         'Repeating the same position is avoided — but only for players who can pick; single-position players get no penalty for repeating.',
   },
   'ag_help_2e': {
-    'ko': '운동 종료 전에 가는 사람은 있는 동안 거의 무조건 출전합니다. 어차피 뒤 경기를 못 뛰기 때문입니다.',
+    'ko': '운동 종료 전에 가는 사람은 있는 동안 거의 무조건 출전해요. 어차피 뒤 경기를 못 뛰기 때문이에요.',
     'en':
         'Players leaving before session end play almost every game while present, since they can\'t play later ones.',
   },
   'ag_help_h3': {'ko': '자주 묻는 것', 'en': 'FAQ'},
   'ag_help_q1': {
-    'ko': '세터 전용이 있으면 다른 사람 S를 꺼야 하나?',
+    'ko': '세터 전용이 있으면 다른 사람 S를 꺼야 해요?',
     'en': 'If there\'s a setter-only player, should I turn off S for others?',
   },
   'ag_help_a1': {
     'ko':
-        '아니요. 세터 전용이 있으면 어차피 그 사람이 세터 자리를 먼저 가져갑니다. S를 켜둬야 세터 전용이 대기 중이거나 일찍 갔을 때 대신 들어갈 수 있습니다.',
+        '아니요. 세터 전용이 있으면 어차피 그 사람이 세터 자리를 먼저 가져가요. S를 켜둬야 세터 전용이 대기 중이거나 일찍 갔을 때 대신 들어갈 수 있어요.',
     'en':
         'No. A setter-only player takes the setter slot first anyway. Keep S on so someone can cover when that setter is benched or has left.',
   },
@@ -1310,21 +1404,21 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'ag_help_a2': {
     'ko':
-        '참석 인원이 팀 인원의 2배~3배 사이여야 합니다 (6인 팀 12~18명, 7인 팀 14~21명). 인원이 맞는데도 안 되면 특정 포지션 전용 인원이 코트 자리보다 많은 경우입니다. 에러 안내를 확인하거나 자유 편성으로 바꿔 보세요.',
+        '참석 인원이 팀 인원의 2배~3배 사이여야 해요 (6인 팀 12~18명, 7인 팀 14~21명). 인원이 맞는데도 안 되면 특정 포지션 전용 인원이 코트 자리보다 많은 경우예요. 에러 안내를 확인하거나 자유 편성으로 바꿔 보세요.',
     'en':
         'Attendance must be 2×–3× a team size (6-team: 12–18, 7-team: 14–21). If the count fits but it still fails, some position-only group outnumbers the court slots. Check the error note or switch to Free draft.',
   },
   'ag_help_q3': {'ko': 'C 코어가 없다고 나와요.', 'en': 'It says there\'s no C core.'},
   'ag_help_a3': {
     'ko':
-        '참석이 팀 인원의 정확히 2배일 때입니다. C는 전원 차출이라 세 경기 모두 같은 두 팀이 붙습니다. 상대를 섞으려면 자유 편성을 쓰세요.',
+        '참석이 팀 인원의 정확히 2배일 때예요. C는 전원 차출이라 세 경기 모두 같은 두 팀이 붙어요. 상대를 섞으려면 자유 편성을 쓰세요.',
     'en':
         'That\'s when attendance is exactly 2× a team size. C is fully borrowed, so all three games pit the same two teams. Use Free draft to mix opponents.',
   },
-  'ag_help_q4': {'ko': '확정은 언제 누르나?', 'en': 'When do I hit Confirm?'},
+  'ag_help_q4': {'ko': '확정은 언제 눌러요?', 'en': 'When do I hit Confirm?'},
   'ag_help_a4': {
     'ko':
-        '그 라운드를 실제로 뛰고 나서요. 확정해야 기록에 쌓이고 다음 라운드 공정성에 반영됩니다. 마음에 안 들면 확정 전에 다시 뽑으면 됩니다.',
+        '그 라운드를 실제로 뛰고 나서요. 확정해야 기록에 쌓이고 다음 라운드 공정성에 반영돼요. 마음에 안 들면 확정 전에 다시 뽑으면 돼요.',
     'en':
         'After actually playing that round. Confirming logs it and feeds next round\'s fairness. Not happy? Redraw before confirming.',
   },
@@ -1336,7 +1430,7 @@ const Map<String, Map<String, String>> kStrings = {
   'dt_report': {'ko': '정보가 틀렸어요', 'en': 'Report incorrect info'},
   'rp_title': {'ko': '잘못된 정보 신고', 'en': 'Report incorrect info'},
   'rp_intro': {
-    'ko': '확인 후 영업일 기준 7일 이내에 처리 결과를 반영합니다. 신고자 정보는 남기지 않습니다.',
+    'ko': '확인하고 영업일 7일 안에 반영해요. 신고한 사람의 정보는 남기지 않아요.',
     'en':
         'We review reports within 7 business days. No personal information is stored.',
   },
@@ -1353,18 +1447,18 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'rp_submit': {'ko': '신고 보내기', 'en': 'Send report'},
   'rp_sending': {'ko': '보내는 중…', 'en': 'Sending…'},
-  'rp_need_reason': {'ko': '사유를 선택해주세요.', 'en': 'Please choose a reason.'},
+  'rp_need_reason': {'ko': '어떤 문제인지 골라 주세요', 'en': "Choose what's wrong."},
   'rp_done': {
-    'ko': '신고가 접수됐습니다. 확인 후 반영할게요. 감사합니다!',
-    'en': 'Report received. Thanks — we\'ll review it.',
+    'ko': '신고를 받았어요. 확인하고 반영할게요. 고마워요!',
+    'en': "Report received. Thanks — we'll review it.",
   },
   'rp_fail': {
-    'ko': '전송에 실패했어요. 잠시 후 다시 시도해주세요.',
-    'en': 'Sending failed. Please try again shortly.',
+    'ko': '신고를 보내지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't send the report. Please try again in a moment.",
   },
 
   // 포장하기 도시락 칸 라벨 — 웹 js/my-card.js 의 mc_* 와 같은 문구.
-  // 화면 UI 의 '밥을 담아주세요🍚' 에서 명령형만 뺐다(공유물은 남에게 가는 이미지다).
+  // 화면 UI 의 '밥을 담아 주세요🍚' 에서 명령형만 뺐다(공유물은 남에게 가는 이미지다).
   'mc_rice': {'ko': '밥 🍚', 'en': 'Rice 🍚'},
   'mc_soup': {'ko': '국 🥘', 'en': 'Soup 🥘'},
   'mc_side1': {'ko': '반찬1 🍳', 'en': 'Side 1 🍳'},
@@ -1375,46 +1469,49 @@ const Map<String, Map<String, String>> kStrings = {
   'ad_title': {'ko': '팀 관리자 신청', 'en': 'Request team admin'},
   'ad_desc': {
     'ko':
-        '관리자가 되면 이 팀 정보를 직접 고칠 수 있어요.\n본인이 이 팀 사람이라는 걸 알 수 있는 사진을 올려주세요.\n\n예) 팀 단톡방 화면 · 팀 유니폼 입고 찍은 사진 · 팀 인스타 계정 관리 화면\n※ 다른 분 이름이나 연락처는 가리고 올려주세요.',
+        '관리자가 되면 이 팀 정보를 직접 고칠 수 있어요.\n본인이 이 팀 사람이라는 걸 알 수 있는 사진을 올려 주세요.\n\n예) 팀 단톡방 화면 · 팀 유니폼 입고 찍은 사진 · 팀 인스타 계정 관리 화면\n※ 다른 분 이름이나 연락처는 가리고 올려 주세요.',
     'en':
         'Admins can edit this team\'s information directly.\nUpload a photo showing that you belong to this team.\n\ne.g. your team group chat, you in the team uniform, the team\'s Instagram account screen\n※ Please mask other people\'s names and contact details.',
   },
   'ad_submit': {'ko': '관리자 신청하기', 'en': 'Submit request'},
   'ad_apply_btn': {'ko': '🙋 이 팀 관리자 신청', 'en': '🙋 Request team admin'},
   'ad_login_required': {
-    'ko': '관리자 신청은 로그인 후 가능합니다.',
-    'en': 'Please log in to request admin access.',
+    'ko': '관리자 신청은 로그인하면 할 수 있어요',
+    'en': 'Log in to request admin access.',
   },
   'ad_done': {
-    'ko': '관리자 신청이 접수되었습니다!\n확인 후 권한이 부여됩니다.',
-    'en': 'Request submitted!\nAccess is granted after review.',
+    'ko': '관리자 신청을 받았어요.\n확인되면 팀 정보를 고칠 수 있어요.',
+    'en': "Request received.\nYou can edit the team once it's approved.",
   },
   'ad_error': {
-    'ko': '관리자 신청 중 오류가 발생했습니다: ',
-    'en': 'An error occurred during the request: ',
+    'ko': '관리자 신청을 보내지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't send the request. Please try again in a moment.",
   },
   'ad_pending': {
-    'ko': '⏳ 관리자 신청을 확인하고 있습니다.',
+    'ko': '⏳ 관리자 신청을 확인하고 있어요',
     'en': '⏳ Your admin request is under review.',
   },
   'ad_rejected': {
-    'ko': '❌ 관리자 신청이 받아들여지지 않았습니다',
+    'ko': '❌ 관리자 신청이 받아들여지지 않았어요',
     'en': '❌ Admin request was not accepted',
   },
   'ad_reapply': {'ko': '🔄 다시 신청', 'en': '🔄 Apply again'},
   'ad_full': {
-    'ko': '이 팀은 관리자가 이미 3명입니다.',
+    'ko': '이 팀은 관리자가 벌써 3명이에요',
     'en': 'This team already has 3 admins.',
   },
   'ad_count': {'ko': '관리자 {n}/3명', 'en': 'Admins {n}/3'},
   'ad_leave': {'ko': '관리자에서 빠지기', 'en': 'Leave as admin'},
   'ad_leave_confirm': {
-    'ko': '이 팀의 관리자에서 빠질까요?\n더 이상 팀 정보를 고칠 수 없게 됩니다.',
+    'ko': '이 팀의 관리자에서 빠질까요?\n빠지면 팀 정보를 고칠 수 없어요.',
     'en':
-        'Leave as an admin of this team?\nYou will no longer be able to edit its information.',
+        "Leave as an admin of this team?\nYou won't be able to edit it anymore.",
   },
-  'ad_leave_done': {'ko': '관리자에서 빠졌습니다.', 'en': 'You are no longer an admin.'},
-  'ad_leave_error': {'ko': '처리 중 오류가 발생했습니다.', 'en': 'Something went wrong.'},
+  'ad_leave_done': {'ko': '관리자에서 빠졌어요', 'en': "You're no longer an admin"},
+  'ad_leave_error': {
+    'ko': '처리하지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': 'Something went wrong. Please try again in a moment.',
+  },
 
   // ── 위치 공개 수준 ──
   'reg_area_only': {
@@ -1423,20 +1520,20 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'reg_area_only_desc': {
     'ko':
-        '지도에 정확한 핀 대신 동네 범위로 표시하고, 주소는 시·군·구까지만 보입니다. 체육관 이름과 상세 주소는 저장하지 않습니다. 학교나 공공 체육관을 빌려 쓰는 팀에 권합니다.',
+        '지도에 정확한 핀 대신 동네 범위로 표시하고, 주소는 시·군·구까지만 보여요. 체육관 이름과 상세 주소는 저장하지 않아요. 학교나 공공 체육관을 빌려 쓰는 팀에 권해요.',
     'en':
         'Shows a neighbourhood area instead of an exact pin, and the address only down to the district. The venue name and full address are not stored. Recommended for teams renting school or public gyms.',
   },
   'reg_area_label_fail': {
-    'ko': '이 주소로는 동네 범위를 만들 수 없습니다. 지도에서 위치를 찍어주세요.',
+    'ko': '이 주소로는 동네 범위를 만들지 못했어요. 지도에서 위치를 찍어 주세요.',
     'en':
-        'Could not derive an area from this address. Please pick the location on the map.',
+        "Couldn't work out the area from this address. Pick the location on the map.",
   },
   'cd_area_only': {'ko': '대략 위치', 'en': 'Approximate'},
   'cd_area_only_note': {
-    'ko': '이 팀은 대략적인 위치만 공개합니다. 정확한 장소는 팀에 문의해주세요.',
+    'ko': '이 팀은 대략적인 위치만 공개해요. 정확한 장소는 팀에 물어봐 주세요.',
     'en':
-        'This team shares only an approximate location. Please contact them for the exact venue.',
+        'This team shares only an approximate location. Ask them for the exact venue.',
   },
 
   // ── 밥친구 (웹 js/i18n.js fr_* 와 같은 문구) ──
@@ -1516,7 +1613,7 @@ const Map<String, Map<String, String>> kStrings = {
     'en': "They already sent you a request",
   },
   'fr_share_title': {
-    'ko': "밥친구에게 보일 팀을 골라주세요",
+    'ko': '밥친구에게 보일 팀을 골라 주세요',
     'en': "Choose teams your bap friends can see",
   },
   'fr_share_body': {
@@ -1573,7 +1670,7 @@ const Map<String, Map<String, String>> kStrings = {
     'en': "Friends on the same team at the same time",
   },
   'fr_err_daily': {
-    'ko': "신청은 하루 30건까지예요. 내일 다시 해주세요.",
+    'ko': '신청은 하루 30건까지예요. 내일 다시 해 주세요.',
     'en': "Up to 30 requests a day. Try again tomorrow.",
   },
   'fr_meal_fab': {
@@ -1601,7 +1698,7 @@ const Map<String, Map<String, String>> kStrings = {
   'fr_unfriended': {'ko': "밥친구를 끊었어요", 'en': "Friend removed"},
   'fr_retry': {'ko': "다시 시도", 'en': "Retry"},
   'fr_err_generic': {
-    'ko': "잠시 후 다시 시도해 주세요.",
+    'ko': '잠시 후 다시 해 주세요.',
     'en': "Please try again in a moment.",
   },
   'fr_err_full': {

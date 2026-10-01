@@ -189,7 +189,7 @@ class _FriendsPageState extends State<FriendsPage> {
       borderRadius: BorderRadius.circular(22),
       boxShadow: const [
         BoxShadow(
-          color: Color(0x22000000),
+          color: Color(0x225D4037),
           blurRadius: 16,
           offset: Offset(0, 6),
         ),

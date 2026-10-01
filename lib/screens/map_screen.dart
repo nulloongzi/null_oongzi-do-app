@@ -285,6 +285,7 @@ class _MapScreenState extends State<MapScreen> {
         if (mounted && v != _isAdmin) setState(() => _isAdmin = v);
       });
     } catch (e) {
+      debugPrint('data load: $e');
       if (mounted) {
         setState(() {
           _error = '$e';
@@ -376,22 +377,20 @@ class _MapScreenState extends State<MapScreen> {
                     borderRadius: BorderRadius.circular(9),
                     border: Border.all(
                       color: urgent
-                          ? const Color(0xFFE53935)
+                          ? NurungjiColors.urgent
                           : const Color(0x22000000),
                       width: urgent ? 1.5 : 1,
                     ),
                     boxShadow: [
                       const BoxShadow(
-                        color: Color(0x33000000),
+                        color: Color(0x335D4037),
                         blurRadius: 3,
                         offset: Offset(0, 1),
                       ),
-                      // 급구: 붉은 글로우로 시선 끌기
+                      // 급구: 주황 글로우로 시선 끌기(웹 .label.urgent 맥박과 같은 색)
                       if (urgent)
                         BoxShadow(
-                          color: const Color(
-                            0xFFE53935,
-                          ).withValues(alpha: 0.55),
+                          color: NurungjiColors.urgent.withValues(alpha: 0.55),
                           blurRadius: 8,
                           spreadRadius: 1,
                         ),
@@ -408,8 +407,9 @@ class _MapScreenState extends State<MapScreen> {
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
+                            // 급구 글자는 urgentInk(흰 바탕 5.6:1) — 웹과 같은 색
                             color: urgent
-                                ? const Color(0xFFD32F2F)
+                                ? NurungjiColors.urgentInk
                                 : NurungjiColors.dark,
                           ),
                         ),
@@ -460,7 +460,7 @@ class _MapScreenState extends State<MapScreen> {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: Color(0x55000000),
+                color: Color(0x555D4037),
                 blurRadius: 4,
                 offset: Offset(0, 2),
               ),
@@ -1385,9 +1385,7 @@ class _MapScreenState extends State<MapScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
-        behavior: kCaptureMode
-            ? SnackBarBehavior.floating
-            : SnackBarBehavior.fixed,
+        // 모양·떠 있는 방식은 theme.dart snackBarTheme(웹 토스트와 같음)
         margin: kCaptureMode
             ? const EdgeInsets.only(left: 24, right: 24, bottom: 180)
             : null,
@@ -1864,7 +1862,13 @@ class _MapScreenState extends State<MapScreen> {
           if (tier > 0)
             Semantics(
               label: t('fr_meal_fab'),
-              child: WarmAvatar(size: 52, tier: tier, big: true, child: child!),
+              child: WarmAvatar(
+                size: 55,
+                tier: tier,
+                big: true,
+                radius: BorderRadius.circular(NurungjiRadius.fabProfile),
+                child: child!,
+              ),
             )
           else
             child!,
@@ -1880,7 +1884,7 @@ class _MapScreenState extends State<MapScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 5),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFD84315),
+                    color: NurungjiColors.today,
                     borderRadius: BorderRadius.circular(999),
                     boxShadow: const [
                       BoxShadow(
@@ -1904,7 +1908,14 @@ class _MapScreenState extends State<MapScreen> {
         ],
       );
     },
-    child: _fab('🍚', t('fab_profile'), _openProfile),
+    // 웹 .fab-profile 처럼 다른 FAB보다 한 치수 크게(55/24).
+    child: _fab(
+      '🍚',
+      t('fab_profile'),
+      _openProfile,
+      size: 55,
+      radius: NurungjiRadius.fabProfile,
+    ),
   );
 
   Widget _fab(
@@ -1912,7 +1923,8 @@ class _MapScreenState extends State<MapScreen> {
     String label,
     VoidCallback onTap, {
     Color? bg,
-    double size = 52,
+    double size = 50,
+    double radius = NurungjiRadius.fab,
   }) {
     return Semantics(
       button: true,
@@ -1920,7 +1932,8 @@ class _MapScreenState extends State<MapScreen> {
       child: BounceTap(
         onTap: onTap,
         child: GlassSurface(
-          radius: BorderRadius.circular(size / 2),
+          // 원이 아니라 웹 .fab-btn 과 같은 둥근 사각형(50/20).
+          radius: BorderRadius.circular(radius),
           color: bg ?? const Color(0xD9FFFFFF),
           child: SizedBox(
             width: size,
@@ -2265,7 +2278,7 @@ class _MapScreenState extends State<MapScreen> {
     child: Padding(
       padding: const EdgeInsets.all(12),
       child: Text(
-        '${t('data_load_err')}: $_error',
+        t('data_load_err'),
         style: TextStyle(color: Colors.red.shade900, fontSize: 12),
       ),
     ),
@@ -2428,9 +2441,8 @@ class _ReelPeekOverlayState extends State<_ReelPeekOverlay>
                 onTap: widget.onClose,
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 18 * v, sigmaY: 18 * v),
-                  child: Container(
-                    color: Colors.black.withValues(alpha: 0.42 * v),
-                  ),
+                  // 웹 릴스 피크와 같은 갈색 딤 rgba(93,64,55,.45).
+                  child: Container(color: Color.fromRGBO(93, 64, 55, 0.45 * v)),
                 ),
               ),
             ),
@@ -2453,7 +2465,7 @@ class _ReelPeekOverlayState extends State<_ReelPeekOverlay>
           borderRadius: BorderRadius.circular(20),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x55000000),
+              color: Color(0x555D4037),
               blurRadius: 30,
               offset: Offset(0, 12),
             ),

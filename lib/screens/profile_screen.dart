@@ -180,7 +180,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(dctx, ctrl.text),
-            child: Text(t('confirm')),
+            child: Text(t('nick_btn')),
           ),
         ],
       ),
@@ -215,7 +215,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
       _snack(t('nickname_done'));
     } catch (e) {
-      _snack('${t('err_generic')}: $e');
+      debugPrint('rename: $e');
+      _snack(t('nick_change_error'));
     }
   }
 
@@ -287,7 +288,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x14000000),
+              color: Color(0x145D4037),
               blurRadius: 12,
               offset: Offset(0, 4),
             ),
@@ -316,7 +317,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(22),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x22000000),
+            color: Color(0x225D4037),
             blurRadius: 16,
             offset: Offset(0, 6),
           ),

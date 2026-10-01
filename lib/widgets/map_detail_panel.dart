@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import '../services/deep_link_service.dart' show kCaptureMode;
 import '../services/i18n.dart';
+import '../theme.dart';
 
 /// 패널의 펼침 비율과 토글을 본문(시간표 morph 등)에 전달하는 스코프.
 class DetailPanelScope extends InheritedWidget {
@@ -43,6 +44,10 @@ final ValueNotifier<int> detailPanelDemoExpand = ValueNotifier<int>(0);
 /// 화면 맨 위, 자막 띠(위 14~27%) 뒤로 들어간다 — 담기를 눌러도 아이콘이
 /// 바뀌는 게 영상에 안 보였다(실측: 7차 촬영본 10~13초).
 final ValueNotifier<int> detailPanelDemoPeek = ValueNotifier<int>(0);
+
+/// 쓸어내려 닫는 기준: 접힌 높이의 60% 아래에서 놓으면 닫힌다.
+/// 웹 club-detail.js SHEET_CLOSE_RATIO 와 같은 값(design-system §3-1).
+const kSheetCloseRatio = 0.6;
 
 class MapDetailPanel extends StatefulWidget {
   final Widget child; // 스크롤될 상세 본문
@@ -90,7 +95,7 @@ class _MapDetailPanelState extends State<MapDetailPanel> {
   }
 
   void _onDragEnd() {
-    if (_height < _peek * 0.6) {
+    if (_height < _peek * kSheetCloseRatio) {
       widget.onClose(); // 아래로 충분히 내리면 닫힘
       return;
     }
@@ -151,7 +156,9 @@ class _MapDetailPanelState extends State<MapDetailPanel> {
         width: double.infinity,
         decoration: const BoxDecoration(
           color: Colors.white, // 웹 .bottom-sheet: 흰색
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(NurungjiRadius.sheet),
+          ),
           boxShadow: [
             BoxShadow(
               color: Color(0x265D4037),
@@ -163,25 +170,32 @@ class _MapDetailPanelState extends State<MapDetailPanel> {
         clipBehavior: Clip.antiAlias,
         child: Column(
           children: [
-            // 드래그 핸들 (여기만 끌어 높이 조절 — 본문 스크롤과 비간섭)
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onVerticalDragStart: (_) => setState(() => _dragging = true),
-              onVerticalDragUpdate: (d) => setState(
-                () => _apply((_height - d.delta.dy).clamp(0.0, _expanded)),
-              ),
-              onVerticalDragEnd: (_) => _onDragEnd(),
-              child: Container(
-                width: double.infinity,
-                // 터치 영역 ≥44px 확보(시각 바는 5px 유지) — 드래그 잡기 쉽게.
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                alignment: Alignment.center,
+            // 드래그 핸들 (여기만 끌어 높이 조절 — 본문 스크롤과 비간섭).
+            // 손가락으론 쓸어내려 닫고, 화면 낭독기(TalkBack·VoiceOver)엔 '닫기' 버튼으로 읽힌다.
+            // Semantics.onTap 은 접근성 동작만 추가한다 — 손가락 탭 동작은 그대로(웹 #sheetHandle 과 같음)
+            Semantics(
+              button: true,
+              label: t('sheet_close'),
+              onTap: widget.onClose,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onVerticalDragStart: (_) => setState(() => _dragging = true),
+                onVerticalDragUpdate: (d) => setState(
+                  () => _apply((_height - d.delta.dy).clamp(0.0, _expanded)),
+                ),
+                onVerticalDragEnd: (_) => _onDragEnd(),
                 child: Container(
-                  width: 44,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE0E0E0), // 웹 .sheet-handle
-                    borderRadius: BorderRadius.circular(3),
+                  width: double.infinity,
+                  // 터치 영역 ≥44px 확보(시각 바는 5px 유지) — 드래그 잡기 쉽게.
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  alignment: Alignment.center,
+                  child: Container(
+                    width: 44,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: NurungjiColors.handle, // 웹 .sheet-handle
+                      borderRadius: BorderRadius.circular(3),
+                    ),
                   ),
                 ),
               ),

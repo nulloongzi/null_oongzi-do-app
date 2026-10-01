@@ -4,23 +4,22 @@
 
 ## 브랜치 / 소스 오브 트루스
 - **앱 개발 브랜치**: `claude/gifted-hamilton-UaSAK` — 여기에 계속 커밋·푸시. **main 직접 push 금지.**
-- **디자인·기능 기준 문서**(웹 레포 `nulloongzi/null_oongzi-do`, 브랜치 `claude/html-flutter-design-docs-Flr2x`):
-  - `docs/design.md` — 시각 마스터(토큰·전 화면 명세)
+- **디자인·기능 기준 문서**(웹 레포 `nulloongzi/null_oongzi-do` `main`):
+  - `docs/design-system.md` — 시각 규칙의 **유일한 원본**(토큰·모양·공유 카드). 이 레포 `docs/design-system.md` 는 안내만.
   - `docs/PHILOSOPHY.md` — 제품 철학(노스스타)
-  - `docs/flutter/00-overview.md` — 아키텍처·Firestore 스키마·localStorage·애널리틱스·새니타이즈
-  - `docs/flutter/10-instagram-flywheel.md` — **먼저 읽기**(차별점)
-  - `docs/flutter/01~09` — 기능별 동작 명세
+  - 기능별 동작은 웹 `docs/*.md`(map · filters · registration · lunchbox …)와 이 레포 `docs/feature-parity.md`.
+  - (예전 `docs/design.md` · `docs/flutter/*` 는 없어졌다 — 위 문서가 대신한다.)
 - 앱 HEAD 기준: 전 작업 **CI 전부 green**, 최신 APK는 GitHub Actions `build-apk.yml` 아티팩트(`nulloongzido-debug-apk`).
 
 ## 절대 불변 (바꾸지 말 것)
 1. **환대 > 위상 — 랭킹/별점/순위 UI 금지.** 모든 클럽·스팟 동등하게 보이게.
-2. 디자인 토큰 박제: 옐로 `#fac710` · 다크 `#4e342e` · 브라운 `#8d6e63` · 크림 배경 `#fff8e1` · 픽업 틸 `#13a89e` · 급구 `#ff7043`. **그림자는 갈색 `rgba(93,64,55,.15)`(검정 아님).**
+2. 디자인 토큰 박제: 옐로 `#fac710` · 다크 `#4e342e` · 브라운 `#8d6e63` · 크림 배경 `#fff8e1` · 픽업 틸 `#13a89e` · 급구 `#ff7043`. **그림자는 갈색 `rgba(93,64,55,.15)`(검정 아님).** 전체 값은 웹 `docs/design-system.md` §1·§3.
 3. 플라이휠 3축: 딥링크 `?club=`/`?spot=` · 스토리카드+링크스티커 · `insta_reel` 임베드. 하나라도 끊으면 차별점 소멸.
 4. 외국인 축: **저장은 KO, 표시만 EN.** 영어모드에서 6s 강조 + English-OK 1급.
 5. Firestore 컬렉션/필드명은 웹과 **100% 동일**(같은 백엔드 공유). localStorage 키 = SharedPreferences 동일.
 
 ## 재사용할 공용 빌딩블록 (이미 구현됨 — 새로 만들지 말 것)
-- `lib/theme.dart` → `NurungjiColors`(yellow/dark/brown/bg/light/chipBg/chipFg/teal/**urgent**) + `AppTheme`(Noto Sans KR).
+- `lib/theme.dart` → `AppTheme`(Pretendard) + `lib/design_tokens.g.dart` export: `NurungjiColors` · `NurungjiShadows` · `NurungjiRadius`. **토큰은 생성 파일** — 값은 웹 `tokens/design-tokens.json` 에서 고치고 다시 만든다(웹 `docs/design-system.md` §0).
 - `lib/widgets/bounce_tap.dart` → **`BounceTap`** — 모든 탭 요소 누르면 spring 축소(easeOutBack 120ms, Listener 기반이라 자식 탭 비간섭).
 - `lib/widgets/glass_surface.dart` → **`GlassSurface`**(블러+반투명+흰테두리+갈색그림자) / `GlassSurface.cream`.
 - `lib/services/i18n.dart` → `t(key)`, `tf`, `appLang`, 표시 변환 `i18nTarget/i18nPrice/i18nDay/i18nRegion/i18nSchedule`. **새 문자열은 반드시 `lib/l10n/strings.dart`에 `{ko,en}` 키 추가 후 `t()`로** (하드코딩 KO 금지).

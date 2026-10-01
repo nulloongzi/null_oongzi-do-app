@@ -23,11 +23,13 @@ void showShareMenu(
   };
   showDialog(
     context: context,
-    barrierColor: const Color(0x4D5D4037), // 따뜻한 갈색 딤
+    barrierColor: NurungjiColors.dim, // 따뜻한 갈색 딤 (웹 --dim)
     builder: (ctx) => Dialog(
       backgroundColor: Colors.white,
       insetPadding: const EdgeInsets.symmetric(horizontal: 36, vertical: 24),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(NurungjiRadius.dialog),
+      ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
         child: Column(

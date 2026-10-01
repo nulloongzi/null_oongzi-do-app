@@ -175,7 +175,8 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
       await _svc.save(uid, d);
       return true;
     } catch (e) {
-      _snack('${t('lb_save_fail')}: $e');
+      debugPrint('lunchbox save: $e');
+      _snack(t('lb_save_err'));
       return false;
     }
   }
@@ -223,42 +224,85 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
   Future<void> _addCustom() async {
     final uid = _repo.currentUid;
     if (uid == null) return;
-    final name = await _prompt(t('lb_team_name'), t('lb_add_name_hint'));
-    if (name == null || name.trim().isEmpty) return;
-    final sched = await _prompt(t('lb_sched_hint'), t('lb_add_sched_hint'));
-    if (sched == null || sched.trim().isEmpty) return;
-    final err = await _svc.addCustomTeam(uid, name.trim(), sched.trim());
+    final v = await _addCustomDialog();
+    if (v == null) return;
+    final err = await _svc.addCustomTeam(uid, v.name, v.sched);
     if (err != null) {
       _snack(err);
       return;
     }
     await _load();
-    _snack(t('lb_added'));
+    _snack(t('lb_added_custom'));
   }
 
-  Future<String?> _prompt(String title, String hint) {
-    final c = TextEditingController();
-    return showDialog<String>(
+  // 직접 담기: 이름·시간을 한 팝업에서(웹 lunchbox.js addCustomTeam 의 nzPrompt 와 같은 칸·문구).
+  // 빈 칸은 팝업을 닫지 않고 그 칸 아래에 알린다.
+  Future<({String name, String sched})?> _addCustomDialog() {
+    final name = TextEditingController();
+    final sched = TextEditingController();
+    String? nameErr;
+    String? schedErr;
+    return showDialog<({String name, String sched})>(
       context: context,
-      builder: (dctx) => AlertDialog(
-        title: Text(title),
-        content: TextField(
-          controller: c,
-          autofocus: true,
-          decoration: InputDecoration(hintText: hint),
+      builder: (dctx) => StatefulBuilder(
+        builder: (dctx, setLocal) => AlertDialog(
+          title: Text(t('lb_add_title')),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: name,
+                autofocus: true,
+                maxLength: 40,
+                onChanged: (_) {
+                  if (nameErr != null) setLocal(() => nameErr = null);
+                },
+                decoration: InputDecoration(
+                  labelText: t('lb_add_name_label'),
+                  hintText: t('lb_add_name_hint'),
+                  errorText: nameErr,
+                ),
+              ),
+              TextField(
+                controller: sched,
+                maxLength: 60,
+                onChanged: (_) {
+                  if (schedErr != null) setLocal(() => schedErr = null);
+                },
+                decoration: InputDecoration(
+                  labelText: t('lb_add_time_label'),
+                  hintText: t('lb_add_sched_hint'),
+                  errorText: schedErr,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dctx),
+              child: Text(t('cancel')),
+            ),
+            TextButton(
+              onPressed: () {
+                final n = name.text.trim();
+                final s = sched.text.trim();
+                setLocal(() {
+                  nameErr = n.isEmpty ? t('lb_add_name_empty') : null;
+                  schedErr = s.isEmpty ? t('lb_add_time_empty') : null;
+                });
+                if (nameErr == null && schedErr == null) {
+                  Navigator.pop(dctx, (name: n, sched: s));
+                }
+              },
+              child: Text(t('lb_add_btn')),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dctx),
-            child: Text(t('cancel')),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(dctx, c.text),
-            child: Text(t('confirm')),
-          ),
-        ],
       ),
-    ).whenComplete(c.dispose);
+    ).whenComplete(() {
+      name.dispose();
+      sched.dispose();
+    });
   }
 
   ({String name, bool isCustom, List<SchedEvent> events})? _resolve(String id) {
@@ -432,7 +476,7 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
           border: Border.all(color: const Color(0x22000000)),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x0D000000),
+              color: Color(0x0D5D4037),
               blurRadius: 4,
               offset: Offset(0, 2),
             ),
@@ -460,14 +504,17 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
-          color: _editing ? NurungjiColors.urgent : Colors.white,
+          // 흰 글자를 얹으므로 urgentInk(5.6:1). urgent 주황 위 흰 글자는 2.7:1.
+          color: _editing ? NurungjiColors.urgentInk : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: _editing ? NurungjiColors.urgent : const Color(0x22000000),
+            color: _editing
+                ? NurungjiColors.urgentInk
+                : const Color(0x22000000),
           ),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x0D000000),
+              color: Color(0x0D5D4037),
               blurRadius: 4,
               offset: Offset(0, 2),
             ),
@@ -611,7 +658,7 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
           boxShadow: filled && !selected
               ? const [
                   BoxShadow(
-                    color: Color(0x0F000000),
+                    color: Color(0x0F5D4037),
                     blurRadius: 8,
                     offset: Offset(0, 3),
                   ),

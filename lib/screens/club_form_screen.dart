@@ -16,6 +16,7 @@ import '../services/analytics.dart';
 import '../services/geocoding_service.dart';
 import '../services/i18n.dart';
 import '../services/sanitize.dart';
+import '../widgets/field_error_text.dart';
 import '../theme.dart';
 import '../widgets/app_sheet.dart';
 import '../widgets/chip_select.dart';
@@ -89,7 +90,10 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
 
   // 인라인 에러(웹 regError 대응): 폼 상단 배너 + 미입력 필수 필드 하이라이트.
   String? _formError;
-  final Set<String> _invalid = {};
+  // 칸별 입력 오류 — 칸 바로 아래에 이유를 적는다(웹 js/field-error.js 와 같은 규칙)
+  final Map<String, String> _fieldErr = {};
+  // 선택 정보(접힘) 안의 칸에 오류가 나면 펼친다
+  bool _optionalErr = false;
 
   // 캡처 시연: '선택 정보' 접힘 섹션을 코드로 펼치기 위한 상태/앵커.
   // ExpansionTileController 는 현재 stable 에서 deprecated 라 --fatal-infos 게이트에
@@ -106,10 +110,19 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
 
   bool get _isEdit => widget.editing != null;
 
-  // 검증 실패를 스낵바 대신 폼 상단 배너로 표시(웹 showRegError 대응).
+  // 칸 하나에 묶이지 않는 흐름 안내(위치 고르기·동네 범위 실패)는 폼 상단 배너로(웹 showRegError 대응).
   void _err(String msg) {
     if (!mounted) return;
     setState(() => _formError = msg);
+  }
+
+  // 칸의 입력 실수는 그 칸 아래에(웹 window.fieldError 대응). optional: 접힌 '선택 정보' 안의 칸
+  void _fieldError(String key, String msg, {bool optional = false}) {
+    if (!mounted) return;
+    setState(() {
+      _fieldErr[key] = msg;
+      if (optional) _optionalErr = true;
+    });
   }
 
   // 주소 → 좌표 (Cloud Function). 실패 시 지도 피커로 폴백 안내.
@@ -413,41 +426,47 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
     // 재검증 전에 이전 에러 상태 초기화(웹 clearRegError 대응)
     setState(() {
       _formError = null;
-      _invalid.clear();
+      _fieldErr.clear();
     });
     final name = _name.text.trim();
     final target = _targetValue();
     final address = _address.text.trim();
     if (name.isEmpty || target.isEmpty || address.isEmpty) {
       setState(() {
-        _invalid.addAll([
-          if (name.isEmpty) 'name',
-          if (target.isEmpty) 'target',
-          if (address.isEmpty) 'address',
-        ]);
+        if (name.isEmpty) _fieldErr['name'] = t('cf_err_name');
+        if (target.isEmpty) _fieldErr['target'] = t('cf_err_target');
+        if (address.isEmpty) _fieldErr['address'] = t('cf_err_addr');
       });
-      return _err(t('cf_req'));
+      return;
     }
     // 길이 가드(웹과 동일 · permission-denied 예방)
-    if (name.length > 60) return _err(t('cf_name_max'));
-    if (target.length > 80) return _err(t('cf_target_max'));
-    if (address.length > 200) return _err(t('cf_addr_max'));
+    if (name.length > 60) return _fieldError('name', t('cf_name_max'));
+    if (target.length > 80) return _fieldError('target', t('cf_target_max'));
+    if (address.length > 200) {
+      return _fieldError('address', t('cf_addr_max'));
+    }
 
     final price = _price.text.trim();
-    if (price.length > 100) return _err(t('cf_price_max'));
+    if (price.length > 100) {
+      return _fieldError('price', t('cf_price_max'), optional: true);
+    }
 
     // insta 핸들(선택)
     var insta = _insta.text.trim();
     if (insta.isNotEmpty) {
       final s = Sanitize.instaHandle(insta);
-      if (s.isEmpty) return _err(t('cf_insta_invalid'));
+      if (s.isEmpty) {
+        return _fieldError('insta', t('cf_insta_invalid'), optional: true);
+      }
       insta = s;
     }
     // 가입/문의 링크(선택)
     var link = _link.text.trim();
     if (link.isNotEmpty) {
       final s = Sanitize.url(link);
-      if (s.isEmpty) return _err(t('f_link_invalid'));
+      if (s.isEmpty) {
+        return _fieldError('link', t('f_link_invalid'), optional: true);
+      }
       link = s;
     }
     // 릴스(선택, 여러 개): 행 분해·permalink 검증·중복 제거는 collectReels가
@@ -456,9 +475,15 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
     final reels = _reelsLocked
         ? const <String>[]
         : Sanitize.collectReels(_reels.map((c) => c.text));
-    if (reels == null) return _err(t('f_reel_invalid'));
+    if (reels == null) {
+      return _fieldError('reels', t('f_reel_invalid'), optional: true);
+    }
     if (reels.length > Sanitize.maxReels) {
-      return _err(tf('f_reel_too_many', {'max': '${Sanitize.maxReels}'}));
+      return _fieldError(
+        'reels',
+        tf('f_reel_too_many', {'max': '${Sanitize.maxReels}'}),
+        optional: true,
+      );
     }
 
     setState(() => _saving = true);
@@ -540,13 +565,13 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
       }
       if (!mounted) return;
       Track.event('club_register', {'mode': _isEdit ? 'edit' : 'create'});
-      _snack(_isEdit ? t('f_updated') : t('cf_created'));
+      _snack(_isEdit ? t('cf_updated') : t('cf_created'));
       Navigator.pop(context, true);
     } catch (e) {
       setState(() => _saving = false);
-      // 저장 실패 현지화(웹 reg_save_err 대응): FirebaseException은 message 우선
-      final msg = e is FirebaseException ? (e.message ?? '$e') : '$e';
-      _err(t('cf_save_err') + msg);
+      // 원문 오류는 로그로, 사용자에겐 한 문장(웹 reg_error 와 같은 문구)
+      debugPrint('club save: $e');
+      _err(t('cf_save_err'));
     }
   }
 
@@ -567,11 +592,7 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
             if (_formError != null) _errorBanner(_formError!),
             _group(
               t('cf_name'),
-              _input(
-                _name,
-                t('cf_name_hint'),
-                invalid: _invalid.contains('name'),
-              ),
+              _input(_name, t('cf_name_hint'), error: _fieldErr['name']),
             ),
             _group(
               t('cf_target'),
@@ -585,20 +606,21 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
                       _targets
                         ..clear()
                         ..addAll(s);
+                      _fieldErr.remove('target');
                     }),
                   ),
                   const SizedBox(height: 8),
                   _input(_targetNote, t('cf_target_note')),
                 ],
               ),
-              invalid: _invalid.contains('target'),
+              error: _fieldErr['target'],
             ),
             _group(
               t('cf_addr'),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _addressRow(invalid: _invalid.contains('address')),
+                  _addressRow(error: _fieldErr['address']),
                   _areaOnlyRow(),
                 ],
               ),
@@ -611,8 +633,8 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
               ).copyWith(dividerColor: Colors.transparent),
               child: ExpansionTile(
                 // 시연이 펼칠 때 key 가 바뀌어 initiallyExpanded 가 다시 먹는다.
-                key: ValueKey('cf_optional_$_demoOptionalOpen'),
-                initiallyExpanded: _isEdit || _demoOptionalOpen,
+                key: ValueKey('cf_optional_${_demoOptionalOpen}_$_optionalErr'),
+                initiallyExpanded: _isEdit || _demoOptionalOpen || _optionalErr,
                 tilePadding: EdgeInsets.zero,
                 childrenPadding: EdgeInsets.zero,
                 expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
@@ -636,8 +658,22 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
                       ),
                     ),
                   ),
-                  _group(t('cf_price'), _input(_price, t('cf_price_hint'))),
-                  _group(t('cf_insta'), _input(_insta, t('cf_insta_hint'))),
+                  _group(
+                    t('cf_price'),
+                    _input(
+                      _price,
+                      t('cf_price_hint'),
+                      error: _fieldErr['price'],
+                    ),
+                  ),
+                  _group(
+                    t('cf_insta'),
+                    _input(
+                      _insta,
+                      t('cf_insta_hint'),
+                      error: _fieldErr['insta'],
+                    ),
+                  ),
                   KeyedSubtree(
                     key: _reelKey,
                     child: _group(
@@ -646,11 +682,20 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
                           ? const ReelsHiddenNotice()
                           : ReelEditor(
                               controllers: _reels,
-                              onChanged: () => setState(() {}),
+                              onChanged: () =>
+                                  setState(() => _fieldErr.remove('reels')),
                             ),
+                      error: _fieldErr['reels'],
                     ),
                   ),
-                  _group(t('cf_link'), _input(_link, t('f_contact_hint'))),
+                  _group(
+                    t('cf_link'),
+                    _input(
+                      _link,
+                      t('f_contact_hint'),
+                      error: _fieldErr['link'],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -729,7 +774,8 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
     );
   }
 
-  Widget _group(String label, Widget child, {bool invalid = false}) {
+  // error: 칸이 아닌 묶음(대상 칩·릴스)의 오류 — 묶음 아래에 같은 모양으로 적는다
+  Widget _group(String label, Widget child, {String? error}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 18),
       child: Column(
@@ -739,24 +785,34 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
             label,
             style: TextStyle(
               fontWeight: FontWeight.w700,
-              color: invalid ? const Color(0xFFD32F2F) : NurungjiColors.dark,
+              color: error != null ? NurungjiColors.error : NurungjiColors.dark,
             ),
           ),
           const SizedBox(height: 8),
           child,
+          if (error != null) FieldErrorText(error),
         ],
       ),
     );
   }
 
-  Widget _input(TextEditingController c, String hint, {bool invalid = false}) {
+  Widget _input(TextEditingController c, String hint, {String? error}) {
     return TextField(
       controller: c,
-      decoration: InputDecoration(
-        hintText: hint,
-        errorText: invalid ? t('cf_field_required') : null,
-      ),
+      // 고치기 시작하면 표시를 지운다(웹 field-error.js 와 같음)
+      onChanged: error == null ? null : (_) => setState(() => _clearErr(c)),
+      decoration: InputDecoration(hintText: hint, errorText: error),
     );
+  }
+
+  void _clearErr(TextEditingController c) {
+    final key = {
+      _name: 'name',
+      _price: 'price',
+      _insta: 'insta',
+      _link: 'link',
+    }[c];
+    if (key != null) _fieldErr.remove(key);
   }
 
   // 대략적인 위치만 공개 — 주소칸 바로 아래. 여기 말고 '선택 정보' 안으로
@@ -811,7 +867,7 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
     ),
   );
 
-  Widget _addressRow({bool invalid = false}) {
+  Widget _addressRow({String? error}) {
     final picked = _lat != null && _lng != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -820,16 +876,17 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
           controller: _address,
           // 주소를 직접 고치면 이전 좌표 무효화(웹 동일) → 재검색/피커 유도
           onChanged: (_) {
-            if (_lat != null) {
+            if (_lat != null || _fieldErr.containsKey('address')) {
               setState(() {
                 _lat = null;
                 _lng = null;
+                _fieldErr.remove('address');
               });
             }
           },
           decoration: InputDecoration(
             hintText: t('cf_addr_hint'),
-            errorText: invalid ? t('cf_field_required') : null,
+            errorText: error,
           ),
         ),
         const SizedBox(height: 8),
