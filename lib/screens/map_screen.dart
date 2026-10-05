@@ -17,7 +17,6 @@ import '../services/data_repository.dart';
 import '../services/club_admin.dart';
 import '../services/club_filter.dart';
 import '../services/contact_source.dart';
-import '../services/urgent.dart';
 import '../services/deep_link_service.dart';
 import '../services/profile_service.dart';
 import '../services/friends_service.dart';
@@ -26,6 +25,7 @@ import '../services/pickup_filter.dart';
 import '../services/region_match.dart';
 import '../services/share_service.dart';
 import '../services/story_share.dart';
+import '../services/this_week.dart';
 import '../services/lunchbox_service.dart';
 import '../theme.dart';
 import 'detail_sheet.dart';
@@ -44,6 +44,7 @@ import '../widgets/reel_card.dart';
 import '../widgets/map_detail_panel.dart';
 import '../widgets/map_picker.dart' show mapPickerDemoConfirm;
 import '../widgets/pickup_list_sheet.dart';
+import '../widgets/room_sheet.dart';
 import '../widgets/share_menu.dart';
 import '../widgets/story_card.dart';
 
@@ -1711,6 +1712,7 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final roomItems = _roomItems; // 🍚 여기 자리 있어요? — 입구 띠·아래 칸 자리 계산
     // 시스템 뒤로가기: 인앱 오버레이(릴스 피크 → 상세 패널)를 먼저 닫고, 없을 때만 앱 종료.
     // (상세 패널·피크는 route가 아닌 Stack 오버레이라 처리 없인 back이 곧장 앱을 종료함)
     return PopScope(
@@ -1775,26 +1777,26 @@ class _MapScreenState extends State<MapScreen> {
               ),
               // 검색바 (design §2.1)
               Positioned(top: 12, left: 15, right: 15, child: _searchBar()),
-              // 급구 티커(동호회) / 지도·목록 토글(픽업) — 검색바 바로 아래(우선 노출)
-              if (_tab == 'clubs' && _hasUrgent)
+              // 🍚 여기 자리 있어요? 입구 띠(두 탭 모두, 7일 안에 갈 곳이 있을 때만) —
+              // 검색바 바로 아래(우선 노출). 예전 급구 티커 자리.
+              if (roomItems.isNotEmpty)
                 Positioned(
-                  top: 70,
+                  top: _roomTop,
                   left: 15,
                   right: 15,
-                  child: _urgentTicker(),
+                  child: RoomStrip(items: roomItems, onTap: _openRoom),
                 ),
+              // 픽업 탭: 지역·레벨·공유 바
               if (_tab == 'pickup')
                 Positioned(
-                  top: 70,
+                  top: _pickupBarTop(roomItems),
                   left: 0,
                   right: 0,
                   child: Center(child: _pickupToggle()),
                 ),
-              // 동호회/픽업 탭 — 위 컨텍스트바가 있으면 122, 없으면 70.
+              // 동호회/픽업 탭 — 위 띠·바 아래로 차례대로.
               Positioned(
-                top: (_tab == 'pickup' || (_tab == 'clubs' && _hasUrgent))
-                    ? 122
-                    : 70,
+                top: _tabPillTop(roomItems),
                 left: 0,
                 right: 0,
                 child: Center(child: _tabPill()),
@@ -1802,7 +1804,7 @@ class _MapScreenState extends State<MapScreen> {
               // 검색·필터 결과 0 — 지도가 왜 비었는지 + '필터 지우기'(웹 #emptyResult, U13)
               if (_noFilterResult)
                 Positioned(
-                  top: _hasUrgent ? 174 : 122,
+                  top: _tabPillTop(roomItems) + 52,
                   left: 16,
                   right: 16,
                   child: Center(child: _emptyResult()),
@@ -2089,9 +2091,74 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  // ── 🍚 여기 자리 있어요? ──
+  // 지도 위 칸들의 세로 자리: 검색바(12) → 자리 있어요 띠(48) → 픽업 바 → 탭 알약.
+  static const double _roomTop = 70;
+  static const double _roomStripStep = 56; // 띠 높이 48 + 간격 8
+  static const double _barStep = 52; // 픽업 바·탭 알약 한 칸
+
+  double _pickupBarTop(List<ThisWeekItem> room) =>
+      _roomTop + (room.isNotEmpty ? _roomStripStep : 0);
+
+  double _tabPillTop(List<ThisWeekItem> room) =>
+      _pickupBarTop(room) + (_tab == 'pickup' ? _barStep : 0);
+
+  // 항목은 데이터가 바뀌거나 분이 바뀔 때만 다시 만든다(검색 글자마다 build 가 돈다).
+  List<ThisWeekItem> _roomCache = const [];
+  List<Club>? _roomClubs;
+  List<PickupSpot>? _roomSpots;
+  int _roomMinute = -1;
+
+  List<ThisWeekItem> get _roomItems {
+    final now = DateTime.now();
+    final minute = now.millisecondsSinceEpoch ~/ 60000;
+    if (!identical(_roomClubs, _clubs) ||
+        !identical(_roomSpots, _spots) ||
+        _roomMinute != minute) {
+      _roomClubs = _clubs;
+      _roomSpots = _spots;
+      _roomMinute = minute;
+      _roomCache = buildThisWeek(clubs: _clubs, spots: _spots, now: now);
+    }
+    return _roomCache;
+  }
+
+  void _openRoom() {
+    showRoomSheet(
+      context,
+      items: _roomItems,
+      onOpen: _openRoomItem,
+      onContact: _contactRoomItem,
+    );
+  }
+
+  // 줄 → 그 팀·크루 상세. 크루 상세는 픽업 목록 시트 안의 모드라 탭을 먼저 옮긴다.
+  Future<void> _openRoomItem(ThisWeekItem e) async {
+    if (e.refType == 'club') {
+      final c = _clubs.where((x) => x.id == e.refId).firstOrNull;
+      if (c == null) return;
+      _onTab('clubs');
+      await _focusAndShowClub(c);
+    } else {
+      final s = _spots.where((x) => x.id == e.refId).firstOrNull;
+      if (s == null) return;
+      _onTab('pickup');
+      await _focusAndShowSpot(s);
+    }
+  }
+
+  // 연락하기 → 상세의 첫 연락 버튼과 같은 일(via:'this_week').
+  void _contactRoomItem(ThisWeekItem e) {
+    if (e.refType == 'club') {
+      final c = _clubs.where((x) => x.id == e.refId).firstOrNull;
+      if (c != null) openClubPrimaryContact(c, via: kViaThisWeek);
+    } else {
+      final s = _spots.where((x) => x.id == e.refId).firstOrNull;
+      if (s != null) openSpotPrimaryContact(s, via: kViaThisWeek);
+    }
+  }
+
   // 탭 pill (동호회 | 픽업) — 글래스.
-  // 급구(메시지 있는) 동호회가 하나라도 있는지 — 상단 티커/탭 배치에 사용.
-  bool get _hasUrgent => _clubs.any((c) => c.urgentActive);
 
   // 동호회/픽업 — 큰 알약 안에 작은 알약 둘(숫자 없음).
   Widget _tabPill() {
@@ -2201,14 +2268,6 @@ class _MapScreenState extends State<MapScreen> {
     await _refreshMarkers();
   }
 
-  // 급구 티커 (verified 무관, is_urgent+메시지 있는 클럽). 탭 → 상세.
-  Widget _urgentTicker() {
-    final urgent = sortByUrgentDeadline(_clubs.where((c) => c.urgentActive));
-    if (urgent.isEmpty) return const SizedBox.shrink();
-    // 롤링 티커: 여러 급구 팀을 일정 간격으로 위로 굴려 보여줌. 탭 → 핀 이동 + 상세.
-    return _UrgentTicker(clubs: urgent, onTap: _focusAndShowClub);
-  }
-
   // 픽업 탭: 지역·레벨·공유 필터 바(목록은 상시 드래그 시트라 지도/목록 토글은 없앴다).
   Widget _pickupToggle() {
     return GlassSurface(
@@ -2283,12 +2342,12 @@ class _MapScreenState extends State<MapScreen> {
       'sport': s.sport,
       'has_reel': s.instaReels.isNotEmpty ? 1 : 0,
     });
-    // NSM 전용 이벤트 — 웹 pickup-ui.js와 동일 스키마
-    Track.event('contact_click', {
-      'channel': 'instagram',
-      'id': s.id,
-      'source': 'pickup',
-    });
+    // NSM 전용 이벤트 — 웹 pickup-ui.js와 동일 스키마(+ via·flag). 목록 줄의 인스타는
+    // 상세 연락과 같은 '기존 연락 길'로 보아 via:'detail'(계약: 기존 호출은 모두 detail).
+    Track.event(
+      'contact_click',
+      spotContactParams(s.id, channel: 'instagram', via: kViaDetail),
+    );
     final u = Uri.parse('https://instagram.com/$handle');
     if (await canLaunchUrl(u)) {
       await launchUrl(u, mode: LaunchMode.externalApplication);
@@ -2390,128 +2449,6 @@ class _MapScreenState extends State<MapScreen> {
       ),
     ),
   );
-}
-
-// 상단 급구 롤링 티커: 여러 급구 팀을 4초마다 위로 굴려 노출. 탭 → 핀 이동 + 상세.
-class _UrgentTicker extends StatefulWidget {
-  final List<Club> clubs;
-  final void Function(Club) onTap;
-  const _UrgentTicker({required this.clubs, required this.onTap});
-
-  @override
-  State<_UrgentTicker> createState() => _UrgentTickerState();
-}
-
-class _UrgentTickerState extends State<_UrgentTicker> {
-  int _i = 0;
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _start();
-  }
-
-  void _start() {
-    _timer?.cancel();
-    // 캡처 빌드에선 배너를 고정한다. 4초마다 문구가 바뀌면 스틸마다 상단 배너가
-    // 달라져(예: [GVT] → [피터팬]) 스틸을 이어 붙일 때 배너가 깜빡이고,
-    // 그 순간 합성 티가 난다. 캡처는 항상 첫 항목으로 고정.
-    if (kCaptureMode) return;
-    if (widget.clubs.length > 1) {
-      _timer = Timer.periodic(const Duration(seconds: 4), (_) {
-        if (!mounted) return;
-        setState(() => _i = (_i + 1) % widget.clubs.length);
-      });
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant _UrgentTicker old) {
-    super.didUpdateWidget(old);
-    if (_i >= widget.clubs.length) _i = 0;
-    _start();
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (widget.clubs.isEmpty) return const SizedBox.shrink();
-    final c = widget.clubs[_i % widget.clubs.length];
-    return GlassSurface(
-      color: const Color(0xD9FFFBF0), // 크림-오렌지 0.85
-      blur: 10,
-      radius: BorderRadius.circular(12),
-      child: Material(
-        type: MaterialType.transparency,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => widget.onTap(c),
-          child: SizedBox(
-            height: 40,
-            child: Row(
-              children: [
-                const SizedBox(width: 12),
-                const Text('🔥', style: TextStyle(fontSize: 16)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 400),
-                    transitionBuilder: (child, anim) => SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0, 1),
-                        end: Offset.zero,
-                      ).animate(anim),
-                      child: FadeTransition(opacity: anim, child: child),
-                    ),
-                    // 마감 표기는 문구가 길어도 잘리지 않게 오른쪽에 따로 둔다.
-                    child: Row(
-                      key: ValueKey('${c.id}_$_i'),
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '[${c.name}] ${c.urgentMsg!.trim()}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: NurungjiColors.dark,
-                            ),
-                          ),
-                        ),
-                        if (c.urgentUntil != null)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 8),
-                            child: Text(
-                              urgentDeadlineLabel(
-                                c.urgentUntil!,
-                                DateTime.now(),
-                              ),
-                              maxLines: 1,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800,
-                                color: NurungjiColors.urgentInk,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 // 마커 롱프레스 릴스 미리보기 데이터(제목·릴스 URL·팀 상태 표시).
