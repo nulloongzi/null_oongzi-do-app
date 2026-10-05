@@ -447,13 +447,17 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
   // 비편집 셀 탭 → 도시락(및 아래 모달) 닫고 해당 팀 상세 열기(웹 openClubDetail 대응).
   // 상세 패널은 route가 아닌 전역 notifier(MapScreen Stack)라, 모달을 모두 닫은 뒤
   // 루트 내비게이터 컨텍스트(pop 후에도 유효)로 연다. 커스텀/삭제된 팀은 상세 없음.
-  void _openTeamDetail(int i) {
+  Future<void> _openTeamDetail(int i) async {
     final id = _data?.bookmarks[i];
     if (id == null) return;
     final c = _clubs[id];
     if (c == null) return; // 커스텀 팀·삭제된 팀
     final nav = Navigator.of(context, rootNavigator: true);
     final uid = _repo.currentUid;
+    // 지도에서 연 상세와 같은 대접: 운영자면 수정·삭제 버튼을 주고 관리자 신청 칸은 뺀다.
+    // 예전엔 isAdmin 을 넘기지 않아 운영자가 여기서 열면 남의 팀처럼 보였다(uid별 캐시라 대개 즉시).
+    final isAdmin = await _repo.isAdmin();
+    if (!mounted) return;
     nav.popUntil((r) => r.isFirst); // 도시락(+프로필 경유 시 그것까지) 닫기
     // 마커 탭과 같은 대접을 해준다: 지도도 그 팀으로 옮긴다. 예전엔 시트만 뜨고
     // 지도는 그대로여서 어느 동네 팀인지 알 수 없었다(웹은 openClubDetail 안에서
@@ -461,7 +465,14 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
     if (c.lat != null && c.lng != null) {
       focusMapRequest.value = (lat: c.lat!, lng: c.lng!);
     }
-    showClubDetail(nav.context, c, currentUid: uid);
+    showClubDetail(
+      nav.context,
+      c,
+      currentUid: uid,
+      isAdmin: isAdmin,
+      // 여기서 팀을 고쳐도 지도 목록이 다시 읽히게(MapScreen 의 _load 로 이어진다).
+      onChanged: requestClubsReload,
+    );
   }
 
   // 직접추가 버튼(웹 lb-add-btn) — 연노랑 pill.
