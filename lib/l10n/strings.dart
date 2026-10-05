@@ -131,7 +131,7 @@ const Map<String, Map<String, String>> kStrings = {
 
   // 상세
   'this_week': {'ko': '이번주', 'en': 'This week'},
-  'urgent': {'ko': '🔥 급구', 'en': '🔥 Urgent'},
+  'urgent': {'ko': '🔥 게스트 급구', 'en': '🔥 Guests needed'},
   'chat_join': {'ko': '💬 단톡 들어가기', 'en': '💬 Join chat'},
   'share_btn': {'ko': '📤 공유하기', 'en': '📤 Share'},
   'bookmark_btn': {'ko': '🍱 도시락에 담기', 'en': '🍱 Add to lunchbox'},
@@ -163,8 +163,8 @@ const Map<String, Map<String, String>> kStrings = {
   'vf_reason': {'ko': '사유: ', 'en': 'Reason: '},
   'vf_no_reason': {'ko': '적힌 사유가 없어요.', 'en': 'No reason given.'},
   'vf_reapply': {'ko': '🔄 인증 재신청', 'en': '🔄 Re-apply'},
-  'urgent_on': {'ko': '🔥 급구 올리기', 'en': '🔥 Post an urgent call'},
-  'urgent_off': {'ko': '급구 내리기', 'en': 'Remove urgent'},
+  'urgent_on': {'ko': '🔥 게스트 급구 올리기', 'en': '🔥 Post a guest call'},
+  'urgent_off': {'ko': '게스트 급구 내리기', 'en': 'End guest call'},
   'urgent_msg_hint': {
     'ko': '예: 이번주 토 세터 1명 급구!',
     'en': 'e.g. Need 1 setter this Sat!',
@@ -190,8 +190,8 @@ const Map<String, Map<String, String>> kStrings = {
     'ko': '바꾸지 못했어요. 잠시 후 다시 해 주세요.',
     'en': "Couldn't save the change. Please try again in a moment.",
   },
-  'cd_urgent_posted': {'ko': '🔥 급구를 올렸어요', 'en': '🔥 Urgent call posted'},
-  'cd_urgent_closed': {'ko': '급구를 마감했어요', 'en': 'Urgent call closed'},
+  'cd_urgent_posted': {'ko': '🔥 게스트 급구를 올렸어요', 'en': '🔥 Guest call posted'},
+  'cd_urgent_closed': {'ko': '게스트 급구를 마감했어요', 'en': 'Guest call closed'},
 
   // 급구 — 운동 한 회차에 묶어 올리고, 그 운동이 끝나면 내려간다(서버 postUrgent).
   // 웹 js/i18n.js 와 키·문구가 같다(급구·회원 모집 계약).
@@ -211,7 +211,7 @@ const Map<String, Map<String, String>> kStrings = {
     'en': 'It comes down automatically when that session ends.',
   },
   'ug_submit': {'ko': '급구 올리기', 'en': 'Post'},
-  'ug_edit': {'ko': '급구 수정', 'en': 'Edit urgent call'},
+  'ug_edit': {'ko': '게스트 급구 수정', 'en': 'Edit guest call'},
   'ug_err_unverified': {
     'ko': '인증된 팀만 급구를 올릴 수 있어요',
     'en': 'Only verified teams can post urgent calls.',
@@ -254,7 +254,7 @@ const Map<String, Map<String, String>> kStrings = {
     'ko': 'D-{n} · {day} {time}까지',
     'en': 'D-{n} · until {day} {time}',
   },
-  'ug_filter': {'ko': '🔥 급구만', 'en': '🔥 Urgent only'},
+  'ug_filter': {'ko': '🔥 게스트 급구만', 'en': '🔥 Guest calls only'},
 
   // 회원 모집 중 — 급구와 따로, 인증 여부와 상관없이 팀 관리자가 켠다.
   'rc_badge': {'ko': '🙋 회원 모집 중', 'en': '🙋 Recruiting'},
