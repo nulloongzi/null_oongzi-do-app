@@ -65,8 +65,18 @@ double? _hm(String? s) {
   return int.parse(m.group(1)!) + int.parse(m.group(2)!) / 60.0;
 }
 
+/// 끝이 시작보다 이른 칸(22:00~01:00)은 자정을 넘겨 다음 날 끝나는 운동이다.
+/// [overnight] 이면 끝을 +24시간(예: 25.0)으로 살려 둔다 — 실제 회차를 셀 때(급구 회차 칩 ·
+/// 여기 자리 있어요?) 쓴다. 시간표·카드처럼 0~24시 칸에 그리는 곳은 기본값(false)이라
+/// 지금처럼 그런 칸을 건너뛴다(그리면 칸 밖으로 넘친다). 웹 twOccurrences 와 같은 해석.
+double? _overnightEnd(double s, double e, bool overnight) {
+  if (e > s) return e;
+  if (overnight && e < s) return e + 24;
+  return null;
+}
+
 /// schedule_raw: [{day,start,end}] (네이티브 클럽/픽업) — 가장 정확.
-List<SchedEvent> eventsFromRaw(List? raw) {
+List<SchedEvent> eventsFromRaw(List? raw, {bool overnight = false}) {
   final out = <SchedEvent>[];
   if (raw == null) return out;
   for (final r in raw) {
@@ -74,13 +84,11 @@ List<SchedEvent> eventsFromRaw(List? raw) {
     final day = r['day'] as String?;
     final s = _hm(r['start'] as String?);
     final e = _hm(r['end'] as String?);
-    if (day != null &&
-        scheduleDays.contains(day) &&
-        s != null &&
-        e != null &&
-        e > s) {
-      out.add(SchedEvent(day, s, e));
+    if (day == null || !scheduleDays.contains(day) || s == null || e == null) {
+      continue;
     }
+    final end = _overnightEnd(s, e, overnight);
+    if (end != null) out.add(SchedEvent(day, s, end));
   }
   return out;
 }
@@ -96,7 +104,7 @@ List<SchedEvent> eventsFromRaw(List? raw) {
 ///  · 한 덩어리에 시간이 2개 이상이면, 각 시간 **바로 앞** 구간이 그 시간의 요일.
 ///  · 시간이 하나뿐이면 덩어리 전체에서 요일을 찾는다 — 요일이 시간 뒤에 오는
 ///    `19:00~22:00 월수금` 같은 예전 표기를 살리기 위해서다.
-List<SchedEvent> eventsFromText(String? text) {
+List<SchedEvent> eventsFromText(String? text, {bool overnight = false}) {
   final out = <SchedEvent>[];
   if (text == null || text.trim().isEmpty) return out;
   final timeReg = RegExp(r'(\d{1,2}):(\d{2})\s*[~-]\s*(\d{1,2}):(\d{2})');
@@ -104,9 +112,10 @@ List<SchedEvent> eventsFromText(String? text) {
   void emit(String daySource, RegExpMatch m) {
     final s = int.parse(m.group(1)!) + int.parse(m.group(2)!) / 60.0;
     final e = int.parse(m.group(3)!) + int.parse(m.group(4)!) / 60.0;
-    if (e <= s) return;
+    final end = _overnightEnd(s, e, overnight);
+    if (end == null) return;
     for (final d in scheduleDays) {
-      if (daySource.contains(d)) out.add(SchedEvent(d, s, e));
+      if (daySource.contains(d)) out.add(SchedEvent(d, s, end));
     }
   }
 

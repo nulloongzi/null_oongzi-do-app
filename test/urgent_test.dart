@@ -1,5 +1,6 @@
 // 급구·회원 모집 순수 로직 테스트 — 문구 검사 정규식은 서버(functions/lib/pure.js)·웹과
 // 같아야 하고, 회차·마감 표기는 웹과 같은 말을 해야 한다(급구·회원 모집 계약).
+import 'package:cloud_firestore/cloud_firestore.dart' show FieldValue;
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nulloongzido/l10n/strings.dart';
@@ -162,6 +163,14 @@ void main() {
         SchedEvent('월', 19, 21),
       ], DateTime(2026, 10, 30, 12)); // 금요일
       expect(s.single.start, DateTime(2026, 11, 2, 19));
+    });
+
+    test('max — 기본 3개, 숫자로 바꾸거나 null 이면 7일 안 모두', () {
+      final daily = [for (final d in scheduleDays) SchedEvent(d, 19, 21)];
+      expect(nextSessions(daily, fri20), hasLength(3));
+      expect(nextSessions(daily, fri20, max: 5), hasLength(5));
+      // 금 20:00 기준 오늘 회차(21:00 끝)부터 다음 금 19~21 직전까지 = 7회
+      expect(nextSessions(daily, fri20, max: null), hasLength(7));
     });
 
     test('일정이 없으면 빈 목록', () {
@@ -340,6 +349,80 @@ void main() {
       await svc.setRecruiting('c1', on: false);
       c = Club.fromDoc(await ref.get());
       expect(c.recruitingActive, isFalse);
+    });
+
+    test('식구 모집 켜기·고치기 — 맛보기도 함께 쓰고, 끄기는 문구·맛보기를 남긴다', () async {
+      final db = FakeFirebaseFirestore();
+      final ref = db.collection('clubs').doc('c1');
+      await ref.set({'name': 'A'});
+      final svc = UrgentService(db: db);
+      await svc.setRecruiting('c1', on: true, msg: '초보 환영', dropIn: true);
+      var d = (await ref.get()).data()!;
+      expect(d['is_recruiting'], true);
+      expect(d['recruit_drop_in'], true);
+      expect(d['recruit_at'], isNotNull);
+      expect(Club.fromDoc(await ref.get()).dropInActive, isTrue);
+      // 고치기(맛보기 끄기)도 같은 길 — recruit_at 을 다시 찍는다
+      await svc.setRecruiting('c1', on: true, msg: '초보 환영', dropIn: false);
+      d = (await ref.get()).data()!;
+      expect(d['recruit_drop_in'], false);
+      await svc.setRecruiting('c1', on: true, msg: '', dropIn: true);
+      await svc.setRecruiting('c1', on: false);
+      d = (await ref.get()).data()!;
+      expect(d['is_recruiting'], false);
+      expect(d['recruit_drop_in'], true); // 남아 있다
+      expect(Club.fromDoc(await ref.get()).dropInActive, isFalse);
+    });
+
+    test('켜기 필드 집합(계약) · 끄기는 is_recruiting 하나', () {
+      expect(recruitOnFields(' x ', dropIn: true).keys.toSet(), {
+        'is_recruiting',
+        'recruit_msg',
+        'recruit_drop_in',
+        'recruit_at',
+      });
+      expect(recruitOnFields(' x ')['recruit_msg'], 'x');
+      expect(recruitOnFields('x')['recruit_drop_in'], false);
+      expect(recruitOnFields('x')['recruit_at'], isA<FieldValue>());
+      expect(recruitOffFields(), {'is_recruiting': false});
+    });
+  });
+
+  group('자정을 넘기는 운동(22:00~01:00)', () {
+    test('파서 기본값은 지금처럼 건너뛴다 — 0~24시 칸에 그리는 시간표용', () {
+      expect(eventsFromText('금 22:00~01:00'), isEmpty);
+      expect(
+        eventsFromRaw([
+          {'day': '금', 'start': '22:00', 'end': '01:00'},
+        ]),
+        isEmpty,
+      );
+    });
+
+    test('overnight 이면 끝을 +24 로 살린다(글·일정표 둘 다)', () {
+      final t = eventsFromText('금 22:00~01:00', overnight: true).single;
+      expect((t.day, t.start, t.end), ('금', 22.0, 25.0));
+      final r = eventsFromRaw([
+        {'day': '금', 'start': '22:30', 'end': '00:30'},
+      ], overnight: true).single;
+      expect((r.day, r.start, r.end), ('금', 22.5, 24.5));
+      // 시작과 끝이 같으면 운동이 아니다 — 여전히 건너뛴다.
+      expect(eventsFromText('금 19:00~19:00', overnight: true), isEmpty);
+    });
+
+    test('회차는 다음 날 새벽에 끝나고, 어제 시작해 진행 중인 회차도 잡힌다', () {
+      final events = eventsFromText('목 22:00~01:00', overnight: true);
+      // 2026-10-09(금) 00:30 — 목요일 22시에 시작한 운동이 아직 진행 중
+      final s = nextSessions(events, DateTime(2026, 10, 9, 0, 30));
+      // 다음 주 목요일 회차는 끝(10/16 01:00)이 지금+7일(10/16 00:30)을 넘어 빠진다.
+      expect(s, [
+        UrgentSession(DateTime(2026, 10, 8, 22), DateTime(2026, 10, 9, 1)),
+      ]);
+      // 낮에 보면 이번 주 목요일 밤 회차가 다음 날 새벽에 끝난다.
+      expect(
+        nextSessions(events, DateTime(2026, 10, 9, 12)).first,
+        UrgentSession(DateTime(2026, 10, 15, 22), DateTime(2026, 10, 16, 1)),
+      );
     });
   });
 }

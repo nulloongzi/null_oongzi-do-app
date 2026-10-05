@@ -1,4 +1,4 @@
-// urgent_service.dart — 급구 올리기(서버 postUrgent)·내리기, 회원 모집 켜기·끄기.
+// urgent_service.dart — 급구 올리기(서버 postUrgent)·내리기, 식구 모집 켜기·고치기·끄기.
 //
 // 급구를 켜는 건 서버 callable 만 할 수 있다(규칙이 클라이언트의 켜기를 막는다) —
 // 인증 팀·관리자·마감·문구 검사를 서버가 한 번 더 하고 기록(urgent_log)을 남긴다.
@@ -44,16 +44,18 @@ class UrgentService {
   Future<void> turnOff(String clubId) =>
       _db.collection('clubs').doc(clubId).update(urgentOffFields());
 
-  /// 회원 모집 켜기·끄기. 켤 때마다 recruit_at 을 서버 시각으로 새로 찍는다
-  /// (규칙이 켜거나 문구를 바꿀 때 recruit_at == request.time 을 요구한다).
+  /// 식구 모집 켜기(수정도 같은 길)·끄기. 켜거나 고칠 때마다 recruit_at 을 서버 시각으로
+  /// 새로 찍는다(규칙이 켜거나 문구를 바꿀 때 recruit_at == request.time 을 요구하고,
+  /// 늘 찍어도 받아 준다 — 맛보기만 바꿔도 그대로 찍는다).
   Future<void> setRecruiting(
     String clubId, {
     required bool on,
     String msg = '',
+    bool dropIn = false,
   }) => _db
       .collection('clubs')
       .doc(clubId)
-      .update(on ? recruitOnFields(msg) : recruitOffFields());
+      .update(on ? recruitOnFields(msg, dropIn: dropIn) : recruitOffFields());
 }
 
 /// 급구 끄기 필드(웹·계약과 같은 집합).
@@ -64,12 +66,13 @@ Map<String, dynamic> urgentOffFields() => {
   'urgent_at': FieldValue.delete(),
 };
 
-/// 회원 모집 켜기 필드.
-Map<String, dynamic> recruitOnFields(String msg) => {
+/// 식구 모집 켜기·수정 필드(웹·계약과 같은 집합).
+Map<String, dynamic> recruitOnFields(String msg, {bool dropIn = false}) => {
   'is_recruiting': true,
   'recruit_msg': msg.trim(),
+  'recruit_drop_in': dropIn,
   'recruit_at': FieldValue.serverTimestamp(),
 };
 
-/// 회원 모집 끄기 필드 — 문구는 남겨 두고(다시 켤 때 채워 보이기 쉽게) 깃발만 내린다.
+/// 식구 모집 끄기 필드 — 문구·맛보기는 남겨 두고(다시 켤 때 채워 보이기 쉽게) 깃발만 내린다.
 Map<String, dynamic> recruitOffFields() => {'is_recruiting': false};

@@ -10,6 +10,7 @@ import '../models/club.dart';
 import '../models/pickup_spot.dart';
 import '../services/club_admin.dart';
 import '../services/club_admin_service.dart';
+import '../services/contact_source.dart';
 import '../services/data_repository.dart';
 import '../services/deep_link_service.dart' show kCaptureMode;
 import '../services/i18n.dart';
@@ -17,6 +18,7 @@ import '../services/lunchbox_service.dart';
 import '../services/share_service.dart';
 import '../services/story_share.dart';
 import '../services/target_parse.dart' show targetTagParts;
+import '../services/this_week.dart' show clubContactChannel, spotContactChannel;
 import '../services/urgent.dart';
 import '../services/urgent_service.dart';
 import '../services/schedule_parse.dart';
@@ -29,6 +31,7 @@ import '../widgets/reel_card.dart';
 import '../widgets/schedule_timetable.dart';
 import '../widgets/share_menu.dart';
 import '../widgets/story_card.dart';
+import '../widgets/recruit_sheet.dart';
 import '../widgets/urgent_sheet.dart';
 import '../widgets/data_trust_row.dart';
 import '../widgets/map_detail_panel.dart';
@@ -55,6 +58,45 @@ Future<void> _open(String? url) async {
   } catch (_) {}
 }
 
+/// 팀의 주 연락처로 바로 연락 — 상세 제목 줄의 첫 아이콘(인스타 → 홈페이지)과 같은 일:
+/// club_contact + contact_click(via·flag) 을 남기고 연다. 🍚 여기 자리 있어요? 의 '연락하기'가 쓴다.
+/// 연락처가 없으면 아무것도 하지 않는다.
+Future<void> openClubPrimaryContact(Club c, {required String via}) async {
+  final channel = clubContactChannel(c);
+  if (channel == null) return;
+  Track.event('club_contact', {
+    'type': channel == 'instagram' ? 'insta' : 'link',
+    'club_id': c.id,
+    'has_reel': c.instaReels.isNotEmpty ? 1 : 0,
+  });
+  Track.event(
+    'contact_click',
+    clubContactParams(c, channel: channel, via: via),
+  );
+  await _open(
+    channel == 'instagram' ? 'https://instagram.com/${c.insta}' : c.link,
+  );
+}
+
+/// 크루의 주 연락처로 바로 연락 — 상세 버튼(인스타 → 단톡 링크)과 같은 일.
+Future<void> openSpotPrimaryContact(PickupSpot s, {required String via}) async {
+  final channel = spotContactChannel(s);
+  if (channel == null) return;
+  Track.event('pickup_contact', {
+    'id': s.id,
+    'type': channel == 'instagram' ? 'insta' : 'link',
+    'sport': s.sport,
+    'has_reel': s.instaReels.isNotEmpty ? 1 : 0,
+  });
+  Track.event(
+    'contact_click',
+    spotContactParams(s.id, channel: channel, via: via),
+  );
+  await _open(
+    channel == 'instagram' ? 'https://instagram.com/${s.insta}' : s.contactLink,
+  );
+}
+
 // 웹 .tag/.ps-tags 톤: 작고 아담한 칩.
 Widget _chip(String text, Color bg, Color fg) => Container(
   padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
@@ -66,70 +108,92 @@ Widget _chip(String text, Color bg, Color fg) => Container(
 );
 
 // 급구/이번주 배너 — 웹처럼 컴팩트(작은 크림-오렌지). 텍스트 크기 명시.
+// [desc] 는 문구 위 작은 설명(급구가 무엇인지 처음 보는 사람에게 — ug_badge_desc),
 // [sub] 는 문구 아래 작은 줄(급구 마감 '오늘 21:00까지' 등).
-Widget _banner(String badge, String text, {String? sub}) => Container(
-  width: double.infinity,
-  margin: const EdgeInsets.only(top: 8, bottom: 12),
-  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-  decoration: BoxDecoration(
-    color: const Color(0xFFFFF3E0),
-    borderRadius: BorderRadius.circular(12),
-  ),
-  child: Row(
-    children: [
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          // 흰 글자를 얹으므로 urgentInk(5.6:1). urgent 주황 위 흰 글자는 2.7:1.
-          color: NurungjiColors.urgentInk,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          badge,
-          style: const TextStyle(
-            fontWeight: FontWeight.w800,
-            fontSize: 11,
-            color: Colors.white,
-          ),
-        ),
+Widget _banner(String badge, String text, {String? desc, String? sub}) =>
+    Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 8, bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF3E0),
+        borderRadius: BorderRadius.circular(12),
       ),
-      const SizedBox(width: 8),
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              text,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              // 흰 글자를 얹으므로 urgentInk(5.6:1). urgent 주황 위 흰 글자는 2.7:1.
+              color: NurungjiColors.urgentInk,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              badge,
               style: const TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 13.5,
-                height: 1.3,
-                color: NurungjiColors.dark,
+                fontWeight: FontWeight.w800,
+                fontSize: 11,
+                color: Colors.white,
               ),
             ),
-            if (sub != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Text(
-                  sub,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (desc != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Text(
+                      desc,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        height: 1.3,
+                        color: NurungjiColors.brown,
+                      ),
+                    ),
+                  ),
+                Text(
+                  text,
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                    color: NurungjiColors.urgentInk,
+                    fontSize: 13.5,
+                    height: 1.3,
+                    color: NurungjiColors.dark,
                   ),
                 ),
-              ),
-          ],
-        ),
+                if (sub != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      sub,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                        color: NurungjiColors.urgentInk,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
-    ],
-  ),
-);
+    );
 
-// 회원 모집 중 — 배지 + (있으면) 문구. 급구보다 차분한 초록 톤.
-Widget _recruitBanner(String? msg) {
-  final text = msg?.trim() ?? '';
+// 🍚 식구 모집 — 배지 + 설명 + (있으면) 문구, 🥄 맛보기 환영이면 그 줄. 급구보다 차분한 초록 톤.
+const _recruitInk = Color(0xFF2E7D32); // 흰 글자 대비 — 진한 초록(흰 바탕 5.1:1)
+
+Widget _recruitBanner(Club c) {
+  final text = c.recruitMsg?.trim() ?? '';
+  const descStyle = TextStyle(
+    fontSize: 12.5,
+    height: 1.3,
+    color: NurungjiColors.brown,
+  );
   return Container(
+    key: const ValueKey('recruit_banner'),
     width: double.infinity,
     margin: const EdgeInsets.only(top: 10),
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
@@ -137,27 +201,33 @@ Widget _recruitBanner(String? msg) {
       color: const Color(0xFFE8F5E9),
       borderRadius: BorderRadius.circular(12),
     ),
-    child: Row(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            // 흰 글자 대비 — 진한 초록(#2E7D32, 흰 바탕 5.1:1)
-            color: const Color(0xFF2E7D32),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            t('rc_badge'),
-            style: const TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 11,
-              color: Colors.white,
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: _recruitInk,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                t('rc_badge'),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 11,
+                  color: Colors.white,
+                ),
+              ),
             ),
-          ),
+            const SizedBox(width: 8),
+            Expanded(child: Text(t('rc_badge_desc'), style: descStyle)),
+          ],
         ),
-        if (text.isNotEmpty) ...[
-          const SizedBox(width: 8),
-          Expanded(
+        if (text.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
             child: Text(
               text,
               style: const TextStyle(
@@ -168,7 +238,26 @@ Widget _recruitBanner(String? msg) {
               ),
             ),
           ),
-        ],
+        if (c.dropInActive)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: t('rc_drop_in'),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: _recruitInk,
+                    ),
+                  ),
+                  const TextSpan(text: '  '),
+                  TextSpan(text: t('rc_drop_in_desc')),
+                ],
+              ),
+              style: descStyle.copyWith(fontSize: 13),
+            ),
+          ),
       ],
     ),
   );
@@ -843,8 +932,8 @@ Widget _urgentToggle(
   );
 }
 
-// 회원 모집 켜기·끄기 — 팀 관리자(인증 여부 무관) 또는 운영자. 직접 쓴다.
-// 켤 때 문구는 선택(비워도 된다), 급구와 같은 링크·전화번호 검사.
+// 🍚 식구 모집 시작·수정·마감 — 팀 관리자(인증 여부 무관) 또는 운영자. 직접 쓴다.
+// 시작·수정은 시트(문구 선택·🥄 맛보기 환영), 급구와 같은 링크·전화번호 검사.
 // 60일 동안 팀 정보를 고치지 않으면 서버가 끈다 — 관리자에게만 그 안내를 보인다.
 Widget _recruitToggle(
   Club c,
@@ -852,11 +941,46 @@ Widget _recruitToggle(
   Future<void> Function()? onChanged,
   VoidCallback close,
 ) {
-  Future<void> apply(bool on, String msg) async {
+  final service = UrgentService();
+
+  Future<void> done(String msgKey) async {
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t(msgKey))));
+    }
+    close();
+    await onChanged?.call();
+  }
+
+  Future<void> openSheet() async {
+    final ok = await showRecruitSheet(
+      context,
+      c,
+      save: (msg, dropIn) async {
+        try {
+          await service.setRecruiting(c.id, on: true, msg: msg, dropIn: dropIn);
+          // 웹 club-detail.js 의 recruit_on 과 같은 이름·파라미터.
+          Track.event('recruit_on', {
+            'club_id': c.id,
+            'mode': c.recruitingActive ? 'edit' : 'create',
+            'drop_in': dropIn ? 1 : 0,
+          });
+          return null;
+        } catch (e) {
+          debugPrint('recruit save: $e');
+          return t('cd_update_error');
+        }
+      },
+    );
+    if (ok) await done('rc_saved');
+  }
+
+  Future<void> turnOff() async {
     try {
-      await UrgentService().setRecruiting(c.id, on: on, msg: msg);
+      await service.setRecruiting(c.id, on: false);
     } catch (e) {
-      debugPrint('recruit toggle: $e');
+      debugPrint('recruit off: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
@@ -864,13 +988,7 @@ Widget _recruitToggle(
       }
       return;
     }
-    if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(on ? t('rc_badge') : t('rc_off'))));
-    }
-    close();
-    await onChanged?.call();
+    await done('rc_closed');
   }
 
   final on = c.recruitingActive;
@@ -879,28 +997,28 @@ Widget _recruitToggle(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        OutlinedButton(
-          onPressed: () async {
-            if (on) {
-              await apply(false, '');
-              return;
-            }
-            final msg = await _promptText(
-              context,
-              title: t('rc_on'),
-              hint: t('rc_msg_hint'),
-              action: t('rc_on'),
-              initial: c.recruitMsg ?? '',
-              maxLength: kUrgentMsgMax,
-              validate: (v) {
-                final p = recruitMsgProblem(v);
-                return p == null ? null : t(urgentErrorKey(p));
-              },
-            );
-            if (msg != null) await apply(true, msg.trim());
-          },
-          child: Text(on ? t('rc_off') : t('rc_on')),
-        ),
+        if (on)
+          // 켜져 있으면: 수정(같은 시트, 채워진 채로) + 마감
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: openSheet,
+                  icon: const Icon(Icons.edit, size: 18),
+                  label: Text(t('rc_edit')),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: turnOff,
+                  child: Text(t('rc_off')),
+                ),
+              ),
+            ],
+          )
+        else
+          OutlinedButton(onPressed: openSheet, child: Text(t('rc_on'))),
         Padding(
           padding: const EdgeInsets.only(top: 6),
           child: Text(
@@ -1349,54 +1467,6 @@ class _VerificationSectionState extends State<_VerificationSection> {
   }
 }
 
-Future<String?> _promptText(
-  BuildContext ctx, {
-  required String title,
-  required String hint,
-  required String action,
-  String initial = '',
-  int maxLength = 200,
-  // 확인을 눌렀을 때 검사 — 오류 문구를 돌려주면 칸 아래에 보이고 창은 닫히지 않는다.
-  String? Function(String)? validate,
-}) {
-  final ctrl = TextEditingController(text: initial);
-  String? error;
-  return showDialog<String>(
-    context: ctx,
-    builder: (dctx) => StatefulBuilder(
-      builder: (dctx, setLocal) => AlertDialog(
-        title: Text(title),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          maxLength: maxLength,
-          onChanged: (_) {
-            if (error != null) setLocal(() => error = null);
-          },
-          decoration: InputDecoration(hintText: hint, errorText: error),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dctx),
-            child: Text(t('cancel')),
-          ),
-          TextButton(
-            onPressed: () {
-              final err = validate?.call(ctrl.text);
-              if (err != null) {
-                setLocal(() => error = err);
-                return;
-              }
-              Navigator.pop(dctx, ctrl.text);
-            },
-            child: Text(action),
-          ),
-        ],
-      ),
-    ),
-  ).whenComplete(ctrl.dispose);
-}
-
 // 상세 패널: OverlayEntry(모든 라우트 위) 대신 MapScreen Stack에서 렌더되도록 notifier로
 // 전달한다 → 상세에서 띄우는 공유/삭제확인/스토리카드 등 모달이 패널보다 위에 나타남.
 // 비모달(지도 조작 가능)은 MapDetailPanel(Align)이 그대로 유지. 한 번에 하나만.
@@ -1556,12 +1626,11 @@ List<Widget> _spotDetailChildren(
           'sport': s.sport,
           'has_reel': s.instaReels.isNotEmpty ? 1 : 0,
         });
-        // NSM 전용 이벤트 — 웹 pickup-detail.js와 동일 스키마
-        Track.event('contact_click', {
-          'channel': 'instagram',
-          'id': s.id,
-          'source': 'pickup',
-        });
+        // NSM 전용 이벤트 — 웹 pickup-detail.js와 동일 스키마(+ via·flag)
+        Track.event(
+          'contact_click',
+          spotContactParams(s.id, channel: 'instagram', via: kViaDetail),
+        );
         _open('https://instagram.com/${s.insta}');
       }),
     if (s.contactLink != null && s.contactLink!.isNotEmpty)
@@ -1573,11 +1642,10 @@ List<Widget> _spotDetailChildren(
           'has_reel': s.instaReels.isNotEmpty ? 1 : 0,
         });
         // NSM 전용 이벤트 — 단톡 링크도 연락 전환이므로 channel:'link'로 집계
-        Track.event('contact_click', {
-          'channel': 'link',
-          'id': s.id,
-          'source': 'pickup',
-        });
+        Track.event(
+          'contact_click',
+          spotContactParams(s.id, channel: 'link', via: kViaDetail),
+        );
         _open(s.contactLink);
       }),
     _primaryBtn(
@@ -1692,6 +1760,7 @@ void showClubDetail(
         _banner(
           t('urgent'),
           c.urgentMsg!.trim(),
+          desc: t('ug_badge_desc'),
           sub: c.urgentUntil == null
               ? null
               : urgentDeadlineLabel(c.urgentUntil!, DateTime.now()),
@@ -1713,11 +1782,11 @@ void showClubDetail(
                 'has_reel': c.instaReels.isNotEmpty ? 1 : 0,
               });
               // NSM 전용 이벤트 — 웹 club-detail.js와 동일 스키마로 병행 발화
-              Track.event('contact_click', {
-                'channel': 'instagram',
-                'club_id': c.id,
-                'source': 'club',
-              });
+              // (via·flag: 어디서·누른 순간 팀 상태 — contact_source.dart)
+              Track.event(
+                'contact_click',
+                clubContactParams(c, channel: 'instagram', via: kViaDetail),
+              );
               _open('https://instagram.com/${c.insta}');
             }),
           if (c.link != null && c.link!.isNotEmpty)
@@ -1728,11 +1797,10 @@ void showClubDetail(
                 'has_reel': c.instaReels.isNotEmpty ? 1 : 0,
               });
               // NSM 전용 이벤트 — 홈페이지 링크도 연락 전환으로 집계
-              Track.event('contact_click', {
-                'channel': 'link',
-                'club_id': c.id,
-                'source': 'club',
-              });
+              Track.event(
+                'contact_click',
+                clubContactParams(c, channel: 'link', via: kViaDetail),
+              );
               _open(c.link);
             }),
           if (currentUid != null)
@@ -1772,8 +1840,8 @@ void showClubDetail(
           accent: NurungjiColors.yellow,
         ),
       ),
-      // 회원 모집 중 — 배지 + 문구(일정 바로 아래, 모집 키워드 앞)
-      if (c.recruitingActive) _recruitBanner(c.recruitMsg),
+      // 🍚 식구 모집 — 배지 + 설명 + 문구 + 🥄 맛보기(일정 바로 아래, 모집 키워드 앞)
+      if (c.recruitingActive) _recruitBanner(c),
       // 4. 모집 키워드 — 해시태그 느낌(#)
       if (tags.isNotEmpty || tagParts.notes.isNotEmpty)
         Padding(
@@ -1885,7 +1953,7 @@ void showClubDetail(
             // 급구는 인증팀만(웹 정책 통일 · A10)
             if (canModify && c.isVerified)
               _urgentToggle(c, context, onChanged, close),
-            // 회원 모집은 인증 여부와 상관없이 팀 관리자가 켠다
+            // 식구 모집은 인증 여부와 상관없이 팀 관리자가 켠다
             if (canModify) _recruitToggle(c, context, onChanged, close),
             if (canModify)
               _modifyRow(

@@ -93,10 +93,13 @@ class Club {
   // 없으면 예전 급구 — 서버 정리(sweep)가 지금+7일을 채워 넣을 때까지 마감 없이 보인다.
   final DateTime? urgentUntil;
   final DateTime? urgentAt; // 급구를 올린 시각(서버 시각)
-  // 회원 모집 중 — 급구와 따로, 인증 여부와 상관없이 팀 관리자가 켠다.
+  // 🍚 식구 모집(예전 '회원 모집 중') — 급구와 따로, 인증 여부와 상관없이 팀 관리자가 켠다.
   final bool isRecruiting;
   final String? recruitMsg; // 비어 있을 수 있다
   final DateTime? recruitAt; // 켜거나 문구를 바꾼 시각(서버 시각)
+  // 🥄 맛보기 환영 — 한 번 와서 뛰어 봐도 된다(체험·게스트). 식구 모집이 켜져 있을 때만 뜻이 있다.
+  // 모집을 꺼도 값은 남는다(다시 켤 때 채워 보이려고) — 그래서 표시는 recruitDropInActive 로만 본다.
+  final bool recruitDropIn;
 
   /// 급구를 실제로 보여 줄지 — 켜져 있고, 문구가 비어 있지 않고, 마감이 안 지났을 때만.
   /// 지도 마커·티커·상세 배너·릴스 미리보기가 모두 이 하나만 본다(웹과 같은 판정).
@@ -110,8 +113,11 @@ class Club {
       (urgentMsg?.trim().isNotEmpty ?? false) &&
       (urgentUntil == null || urgentUntil!.isAfter(now));
 
-  /// 회원 모집 중 표시 여부 — is_recruiting 이 bool true 일 때만(웹과 같은 판정).
+  /// 🍚 식구 모집 표시 여부 — is_recruiting 이 bool true 일 때만(웹과 같은 판정).
   bool get recruitingActive => isRecruiting;
+
+  /// 🥄 맛보기 환영 표시 여부 — 식구 모집이 켜져 있고 recruit_drop_in 이 bool true 일 때만.
+  bool get dropInActive => recruitingActive && recruitDropIn;
   // 데이터 신뢰도(웹 guidelines.html 2-3). last_verified_at 이 없는 레거시 문서는
   // metadata.updated_at → created_at 으로 폴백하므로 마이그레이션 없이 값이 나온다.
   final DateTime? lastVerifiedAt;
@@ -144,6 +150,7 @@ class Club {
     this.isRecruiting = false,
     this.recruitMsg,
     this.recruitAt,
+    this.recruitDropIn = false,
     this.lastVerifiedAt,
     this.dataStatus,
   });
@@ -184,6 +191,7 @@ class Club {
           ? d['recruit_msg'] as String
           : null,
       recruitAt: _ts(d['recruit_at']),
+      recruitDropIn: d['recruit_drop_in'] == true,
       lastVerifiedAt: _verifiedAt(d),
       dataStatus: d['data_status'] as String?,
     );

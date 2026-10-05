@@ -75,13 +75,13 @@ DateTime _at(DateTime day, double hours) {
   return DateTime(day.year, day.month, day.day, 0, minutes);
 }
 
-/// 팀 일정 → 급구로 고를 수 있는 다음 회차들(가까운 순, 최대 [max]개).
+/// 팀 일정 → 급구로 고를 수 있는 다음 회차들(가까운 순, 최대 [max]개 — null 이면 모두).
 /// 끝나는 시각이 지금+5분보다 뒤이고 지금+7일 안인 것만 — 진행 중인 운동도
 /// 끝나기 5분 전까지는 고를 수 있다. 같은 회차가 두 번 적혀 있으면 하나만.
 List<UrgentSession> nextSessions(
   List<SchedEvent> events,
   DateTime now, {
-  int max = 3,
+  int? max = 3,
 }) {
   final today = DateTime(now.year, now.month, now.day);
   final minEnd = now.add(kUrgentMinLead);
@@ -90,8 +90,9 @@ List<UrgentSession> nextSessions(
   for (final e in events) {
     final wd = scheduleDays.indexOf(e.day) + 1; // 월=1 … 일=7 (DateTime.weekday)
     if (wd <= 0) continue;
-    // 오늘부터 8일째까지 — 7일 뒤 같은 요일의 이른 회차까지 범위에 걸칠 수 있다.
-    for (var d = 0; d <= 7; d++) {
+    // 어제부터 8일째까지 — 7일 뒤 같은 요일의 이른 회차까지 범위에 걸칠 수 있고,
+    // 어제 시작해 오늘 새벽에 끝나는(자정을 넘는) 회차도 아직 진행 중일 수 있다.
+    for (var d = -1; d <= 7; d++) {
       final day = DateTime(today.year, today.month, today.day + d);
       if (day.weekday != wd) continue;
       final s = UrgentSession(_at(day, e.start), _at(day, e.end));
@@ -103,7 +104,7 @@ List<UrgentSession> nextSessions(
       final c = a.start.compareTo(b.start);
       return c != 0 ? c : a.end.compareTo(b.end);
     });
-  return list.length > max ? list.sublist(0, max) : list;
+  return (max != null && list.length > max) ? list.sublist(0, max) : list;
 }
 
 const _wdKo = ['월', '화', '수', '목', '금', '토', '일'];
