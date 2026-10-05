@@ -195,4 +195,37 @@ void main() {
       expect(none.recruitAt, isNull);
     });
   });
+
+  group('🥄 맛보기 환영 파싱', () {
+    test('식구 모집이 켜져 있고 recruit_drop_in 이 bool true 일 때만 보인다', () async {
+      final c = await clubFrom({
+        'name': 'A',
+        'is_recruiting': true,
+        'recruit_drop_in': true,
+      });
+      expect(c.recruitDropIn, isTrue);
+      expect(c.dropInActive, isTrue);
+    });
+
+    test('모집을 끄면 값이 남아 있어도 보이지 않는다(다시 켤 때 채워 보이는 용도)', () async {
+      final c = await clubFrom({
+        'name': 'A',
+        'is_recruiting': false,
+        'recruit_drop_in': true,
+      });
+      expect(c.recruitDropIn, isTrue);
+      expect(c.dropInActive, isFalse);
+    });
+
+    test('bool 이 아닌 값·필드 없음은 false', () async {
+      for (final v in ['true', 1, null]) {
+        final c = await clubFrom({
+          'name': 'A',
+          'is_recruiting': true,
+          'recruit_drop_in': v,
+        });
+        expect(c.dropInActive, isFalse, reason: '$v');
+      }
+    });
+  });
 }

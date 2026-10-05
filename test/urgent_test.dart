@@ -1,5 +1,6 @@
 // 급구·회원 모집 순수 로직 테스트 — 문구 검사 정규식은 서버(functions/lib/pure.js)·웹과
 // 같아야 하고, 회차·마감 표기는 웹과 같은 말을 해야 한다(급구·회원 모집 계약).
+import 'package:cloud_firestore/cloud_firestore.dart' show FieldValue;
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nulloongzido/l10n/strings.dart';
@@ -340,6 +341,42 @@ void main() {
       await svc.setRecruiting('c1', on: false);
       c = Club.fromDoc(await ref.get());
       expect(c.recruitingActive, isFalse);
+    });
+
+    test('식구 모집 켜기·고치기 — 맛보기도 함께 쓰고, 끄기는 문구·맛보기를 남긴다', () async {
+      final db = FakeFirebaseFirestore();
+      final ref = db.collection('clubs').doc('c1');
+      await ref.set({'name': 'A'});
+      final svc = UrgentService(db: db);
+      await svc.setRecruiting('c1', on: true, msg: '초보 환영', dropIn: true);
+      var d = (await ref.get()).data()!;
+      expect(d['is_recruiting'], true);
+      expect(d['recruit_drop_in'], true);
+      expect(d['recruit_at'], isNotNull);
+      expect(Club.fromDoc(await ref.get()).dropInActive, isTrue);
+      // 고치기(맛보기 끄기)도 같은 길 — recruit_at 을 다시 찍는다
+      await svc.setRecruiting('c1', on: true, msg: '초보 환영', dropIn: false);
+      d = (await ref.get()).data()!;
+      expect(d['recruit_drop_in'], false);
+      await svc.setRecruiting('c1', on: true, msg: '', dropIn: true);
+      await svc.setRecruiting('c1', on: false);
+      d = (await ref.get()).data()!;
+      expect(d['is_recruiting'], false);
+      expect(d['recruit_drop_in'], true); // 남아 있다
+      expect(Club.fromDoc(await ref.get()).dropInActive, isFalse);
+    });
+
+    test('켜기 필드 집합(계약) · 끄기는 is_recruiting 하나', () {
+      expect(recruitOnFields(' x ', dropIn: true).keys.toSet(), {
+        'is_recruiting',
+        'recruit_msg',
+        'recruit_drop_in',
+        'recruit_at',
+      });
+      expect(recruitOnFields(' x ')['recruit_msg'], 'x');
+      expect(recruitOnFields('x')['recruit_drop_in'], false);
+      expect(recruitOnFields('x')['recruit_at'], isA<FieldValue>());
+      expect(recruitOffFields(), {'is_recruiting': false});
     });
   });
 }
