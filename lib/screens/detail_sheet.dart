@@ -1412,6 +1412,14 @@ final ValueNotifier<Widget?> detailPanel = ValueNotifier<Widget?>(null);
 final ValueNotifier<({double lat, double lng})?> focusMapRequest =
     ValueNotifier<({double lat, double lng})?>(null);
 
+/// 다른 화면(도시락통 등)에서 연 상세가 팀을 고친 뒤 "지도 목록을 다시 읽어 줘" 하고 올리는 신호.
+/// MapScreen 밖에서 연 상세엔 onChanged(_load)를 직접 넘길 수 없어서, focusMapRequest 처럼
+/// 전역 신호로 MapScreen 에 넘긴다. 값은 의미 없이 1씩 올린다.
+final ValueNotifier<int> clubsReloadRequest = ValueNotifier<int>(0);
+
+/// [clubsReloadRequest] 를 올린다 — showClubDetail 의 onChanged 로 그대로 넘길 수 있는 모양.
+Future<void> requestClubsReload() async => clubsReloadRequest.value++;
+
 void _showDetailSheet(
   BuildContext context,
   List<Widget> Function(VoidCallback close) content,

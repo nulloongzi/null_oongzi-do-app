@@ -117,6 +117,7 @@ class _MapScreenState extends State<MapScreen> {
     _deepLinks.start(_handleDeepLink);
     FriendsHub.instance.start(); // 밥친구: 로그인(익명 제외)하면 관계 구독 → 🍚 배지
     focusMapRequest.addListener(_onFocusMapRequest);
+    clubsReloadRequest.addListener(_onClubsReloadRequest);
     // 첫 로그인 시 밥이름 프로필 생성 (조용히, 실패 무시)
     final uid = _repo.currentUid;
     if (uid != null) {
@@ -127,6 +128,7 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void dispose() {
     focusMapRequest.removeListener(_onFocusMapRequest);
+    clubsReloadRequest.removeListener(_onClubsReloadRequest);
     detailPanel.value = null; // 화면 떠날 때 잔존 패널 정리
     _labelFadeTimer?.cancel();
     _search.dispose();
@@ -537,6 +539,11 @@ class _MapScreenState extends State<MapScreen> {
     if (r == null || !mounted) return;
     focusMapRequest.value = null; // 한 번 쓰고 비운다(같은 좌표 재요청도 먹히게)
     _centerOnPin(r.lat, r.lng);
+  }
+
+  // 다른 화면(도시락통 등)에서 연 상세가 팀을 고쳤다 — 마커·자리 목록이 낡지 않게 다시 읽는다.
+  void _onClubsReloadRequest() {
+    if (mounted) _load();
   }
 
   // 마커/티커 탭 → 핀을 보이는 영역 중앙으로 이동 + 상세 시트 오픈.
