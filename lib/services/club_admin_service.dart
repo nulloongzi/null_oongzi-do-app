@@ -123,12 +123,24 @@ class ClubAdminService {
   /// 반환: null=성공, 그 외=사용자에게 보일 오류 메시지.
   Future<String?> leave(String clubId) async {
     try {
-      await FirebaseFunctions.instance.httpsCallable('leaveClubAdmin').call({
-        'clubId': clubId,
-      });
-      return null;
+      final res = await FirebaseFunctions.instance
+          .httpsCallable('leaveClubAdmin')
+          .call({'clubId': clubId});
+      // 호출이 성공해도 '원래 관리자가 아니었다'(not_admin)면 빠진 게 아니다.
+      return leaveClubAdminSucceeded(res.data) ? null : t('ad_leave_error');
     } catch (_) {
       return t('ad_leave_error');
+    }
+  }
+
+  /// 팀 문서를 새로 읽는다. 승인 직후처럼 손에 든 admins 가 낡았을 때만 쓴다.
+  /// 없거나 읽기 실패면 null.
+  Future<Club?> fetchClub(String clubId) async {
+    try {
+      final doc = await _db.collection('clubs').doc(clubId).get();
+      return doc.exists ? Club.fromDoc(doc) : null;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -139,4 +151,11 @@ class ClubAdminService {
     if (n.endsWith('.gif')) return 'image/gif';
     return 'image/jpeg';
   }
+}
+
+/// 관리자 신청 거절 사유 코드 → 화면에 보일 말. 모르는 코드·사유 없음이면 null
+/// (이때는 사유 줄 자체를 그리지 않는다 — 'error' 같은 코드를 그대로 보이지 않도록).
+String? adminRejectReasonText(String? code) {
+  final key = adminRejectReasonKey(code);
+  return key == null ? null : t(key);
 }

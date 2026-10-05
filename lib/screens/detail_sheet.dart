@@ -786,10 +786,10 @@ Future<bool> confirmClubAdminRequest(BuildContext context) async {
   return ok == true;
 }
 
-// 인증 신청/상태 영역(웹 verifyStatusArea 대응) — 소유자 & 미인증일 때만.
-// 최신 요청 조회: 이력 없음→신청 버튼 / 심사 중→안내 / 거절→사유+재신청.
 // 팀 관리자 영역 — 관리자 수 / 빠지기(관리자일 때) / 신청·대기·재신청(아닐 때).
-// 웹 club-detail.js 의 #clubAdminArea 와 같은 구성.
+// 웹 club-detail.js 의 #clubAdminArea 와 같은 구성. 최신 신청 조회:
+// 이력 없음→신청 버튼 / 심사 중→안내 / 거절→사유(아는 코드만)+재신청 /
+// 승인됐는데 손에 든 admins 에 내가 없음→팀 문서를 한 번 다시 읽는다.
 class _ClubAdminSection extends StatefulWidget {
   final Club club;
   final String? currentUid;
@@ -809,19 +809,35 @@ class _ClubAdminSection extends StatefulWidget {
 class _ClubAdminSectionState extends State<_ClubAdminSection> {
   ({String status, String? reason})? _req;
   bool _busy = false;
+  // 승인 직후 다시 읽은 팀 문서. 없으면 시트를 열 때 받은 것을 쓴다.
+  Club? _fresh;
+
+  Club get _club => _fresh ?? widget.club;
 
   bool get _isAdmin =>
-      widget.currentUid != null &&
-      widget.club.admins.contains(widget.currentUid);
+      widget.currentUid != null && _club.admins.contains(widget.currentUid);
 
   @override
   void initState() {
     super.initState();
     // 관리자면 신청 이력을 볼 필요가 없다 — 쿼리도 아끼고 화면도 단순해진다.
-    if (!_isAdmin) {
-      ClubAdminService().latestRequest(widget.club.id).then((r) {
-        if (mounted && r != null) setState(() => _req = r);
-      });
+    if (!_isAdmin) unawaited(_loadRequest());
+  }
+
+  Future<void> _loadRequest() async {
+    final svc = ClubAdminService();
+    final r = await svc.latestRequest(widget.club.id);
+    if (!mounted || r == null) return;
+    setState(() => _req = r);
+    // 승인됐는데 내가 admins 에 없다 = 목록을 읽은 뒤에 승인됐다. 한 번만 다시 읽는다.
+    // 그래도 없으면(승인 뒤 스스로 빠진 경우 등) 아래 build 가 신청 버튼을 그린다.
+    if (!adminApprovalNeedsRefresh(_club, widget.currentUid, r.status)) return;
+    final fresh = await svc.fetchClub(widget.club.id);
+    if (!mounted || fresh == null) return;
+    setState(() => _fresh = fresh);
+    // 이제 관리자면 지도 목록도 새로 읽게 한다 — 다음에 열 때 수정 버튼이 보인다.
+    if (canManageClub(fresh, widget.currentUid)) {
+      await widget.onChanged?.call();
     }
   }
 
@@ -832,7 +848,7 @@ class _ClubAdminSectionState extends State<_ClubAdminSection> {
     if (_busy) return;
     setState(() => _busy = true);
     final err = await ClubAdminService().submit(
-      widget.club,
+      _club,
       confirm: () => confirmClubAdminRequest(context),
     );
     if (!mounted) return;
@@ -861,7 +877,7 @@ class _ClubAdminSectionState extends State<_ClubAdminSection> {
     );
     if (ok != true || !mounted || _busy) return;
     setState(() => _busy = true);
-    final err = await ClubAdminService().leave(widget.club.id);
+    final err = await ClubAdminService().leave(_club.id);
     if (!mounted) return;
     setState(() => _busy = false);
     _toast(err ?? t('ad_leave_done'));
@@ -873,9 +889,10 @@ class _ClubAdminSectionState extends State<_ClubAdminSection> {
 
   @override
   Widget build(BuildContext context) {
-    final count = widget.club.admins.length;
+    final count = _club.admins.length;
     final full = count >= kMaxClubAdmins;
     final r = _req;
+    final reason = adminRejectReasonText(r?.reason);
 
     final Widget action;
     if (_isAdmin) {
@@ -916,10 +933,11 @@ class _ClubAdminSectionState extends State<_ClubAdminSection> {
                     color: Color(0xFFD32F2F),
                   ),
                 ),
-                if (r.reason != null && r.reason!.isNotEmpty) ...[
+                // 아는 코드만 말로 바꿔 보인다. 모르는 코드는 줄째 뺀다.
+                if (reason != null) ...[
                   const SizedBox(height: 4),
                   Text(
-                    '${t('vf_reason')}${r.reason}',
+                    '${t('vf_reason')}$reason',
                     style: const TextStyle(
                       fontSize: 13,
                       height: 1.5,
@@ -961,12 +979,20 @@ class _ClubAdminSectionState extends State<_ClubAdminSection> {
     );
   }
 
+  // 사진 업로드 중엔 버튼이 그대로라 눌린 건지 알 수 없다 — 인증 신청 칸처럼
+  // 작은 원과 '올리는 중' 문구로 바꿔 보인다.
   Widget _adminApplyBtn(String label) => SizedBox(
     width: double.infinity,
     child: OutlinedButton.icon(
       onPressed: _busy ? null : _apply,
-      icon: const Icon(Icons.person_add_alt, size: 18),
-      label: Text(label),
+      icon: _busy
+          ? const SizedBox(
+              height: 18,
+              width: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.person_add_alt, size: 18),
+      label: Text(_busy ? t('vf_submitting') : label),
     ),
   );
 
@@ -1437,7 +1463,8 @@ void showClubDetail(
   final tagParts = targetTagParts(c.target);
   final tags = tagParts.words;
   // 수정/삭제: 팀 관리자(admins, 최대 3명) OR 운영자.
-  // admins 가 비어 있으면 registered_by 한 명으로 폴백한다(Club._admins).
+  // admins 필드가 없을 때만 registered_by 한 명으로 폴백한다(Club._admins) —
+  // 빈 배열은 '관리자 없음'이다.
   // 판정은 club_admin.dart 한 곳에만 두고 웹·서버 규칙과 맞춘다.
   final canModify = canManageClub(c, currentUid, isOperator: isAdmin);
   // 일정 이벤트(요약·그리드 공용으로 1회 파싱)
@@ -1465,8 +1492,7 @@ void showClubDetail(
     context,
     (close) => [
       // 1. 급구 배너 (맨 위, 컴팩트)
-      if (c.isUrgent && c.urgentMsg != null && c.urgentMsg!.isNotEmpty)
-        _banner(t('urgent'), c.urgentMsg!),
+      if (c.urgentActive) _banner(t('urgent'), c.urgentMsg!.trim()),
       // 2. 타이틀: ✓ + 이름 + 인스타 아이콘 + 🍱 북마크
       Row(
         children: [
@@ -1636,10 +1662,15 @@ void showClubDetail(
                 id: c.id,
               ),
             if (canModify && !c.isVerified) _VerificationSection(club: c),
-            // 관리자 영역은 로그인한 사람 모두에게 보인다 — 관리자면 '빠지기',
-            // 아니면 '신청'. 인증 안 된 팀은 인증 신청이 곧 관리자 신청이라
-            // (승인 시 grantClubAdmin) 중복으로 묻지 않는다.
-            if (currentUid != null && c.isVerified)
+            // 관리자 영역은 실명 로그인한 사람에게 보인다(익명·운영자 제외, 웹과 같은
+            // 조건) — 관리자면 '빠지기', 아니면 '신청'. 인증 여부와 무관하다:
+            // 등록자가 없는 미인증 팀도 실제 운영자가 손을 들 수 있어야 한다.
+            // 미인증 팀의 관리자는 위 인증 신청 칸과 이 칸을 함께 본다.
+            if (showClubAdminArea(
+              uid: currentUid,
+              isAnonymous: DataRepository().isAnonymous,
+              isOperator: isAdmin,
+            ))
               _ClubAdminSection(
                 club: c,
                 currentUid: currentUid,

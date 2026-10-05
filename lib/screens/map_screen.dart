@@ -575,7 +575,7 @@ class _MapScreenState extends State<MapScreen> {
     Club? pick() {
       if (_clubs.isEmpty) return null;
       for (final c in _clubs) {
-        if (c.isUrgent && (c.urgentMsg?.isNotEmpty ?? false)) return c;
+        if (c.urgentActive) return c;
       }
       for (final c in _clubs) {
         if (c.isVerified) return c;
@@ -699,7 +699,7 @@ class _MapScreenState extends State<MapScreen> {
       if (_stillPreset.matches(c)) return c;
     }
     for (final c in _clubs) {
-      if (c.isUrgent && (c.urgentMsg?.isNotEmpty ?? false)) return c;
+      if (c.urgentActive) return c;
     }
     return _clubs.first;
   }
@@ -1343,7 +1343,7 @@ class _MapScreenState extends State<MapScreen> {
           reel = club.instaReels.isNotEmpty ? club.instaReels.first : null;
           cover = club.instaReelCovers[Sanitize.instaReelCode(reel) ?? ''];
           peekId = club.id;
-          urgent = club.isUrgent && (club.urgentMsg?.isNotEmpty ?? false);
+          urgent = club.urgentActive;
         }
       }
     } else {
@@ -1402,7 +1402,7 @@ class _MapScreenState extends State<MapScreen> {
     if (_tab == 'clubs') {
       for (final club in _clubs.where(_filter.matches)) {
         if (club.lat == null || club.lng == null) continue;
-        final urgent = club.isUrgent && (club.urgentMsg?.isNotEmpty ?? false);
+        final urgent = club.urgentActive;
         items.add(
           _MarkerSpec(
             id: 'c_${club.id}',
@@ -2059,8 +2059,7 @@ class _MapScreenState extends State<MapScreen> {
 
   // 탭 pill (동호회 | 픽업) — 글래스.
   // 급구(메시지 있는) 동호회가 하나라도 있는지 — 상단 티커/탭 배치에 사용.
-  bool get _hasUrgent =>
-      _clubs.any((c) => c.isUrgent && (c.urgentMsg?.isNotEmpty ?? false));
+  bool get _hasUrgent => _clubs.any((c) => c.urgentActive);
 
   // 동호회/픽업 — 큰 알약 안에 작은 알약 둘(숫자 없음).
   Widget _tabPill() {
@@ -2172,9 +2171,7 @@ class _MapScreenState extends State<MapScreen> {
 
   // 급구 티커 (verified 무관, is_urgent+메시지 있는 클럽). 탭 → 상세.
   Widget _urgentTicker() {
-    final urgent = _clubs
-        .where((c) => c.isUrgent && (c.urgentMsg?.isNotEmpty ?? false))
-        .toList();
+    final urgent = _clubs.where((c) => c.urgentActive).toList();
     if (urgent.isEmpty) return const SizedBox.shrink();
     // 롤링 티커: 여러 급구 팀을 일정 간격으로 위로 굴려 보여줌. 탭 → 핀 이동 + 상세.
     return _UrgentTicker(clubs: urgent, onTap: _focusAndShowClub);
@@ -2441,7 +2438,7 @@ class _UrgentTickerState extends State<_UrgentTicker> {
                       child: FadeTransition(opacity: anim, child: child),
                     ),
                     child: Text(
-                      '[${c.name}] ${c.urgentMsg}',
+                      '[${c.name}] ${c.urgentMsg!.trim()}',
                       key: ValueKey('${c.id}_$_i'),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

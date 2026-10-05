@@ -22,24 +22,44 @@ class VerificationService {
   final FirebaseFirestore _db;
   final FirebaseAuth _auth;
 
-  /// 이 클럽의 최신 인증 요청 상태(웹 verifyStatusArea 조회와 동일 쿼리).
-  /// null=이력 없음 또는 조회 실패(→ 신청 버튼 폴백, 웹 동일).
+  /// 이 계정이 이 클럽에 낸 최신 인증 요청 상태. null=이력 없음·비로그인·조회 실패
+  /// (→ 신청 버튼 폴백).
+  ///
+  /// 규칙상 verification_requests 는 신청자 본인만 읽을 수 있다. club_id 로 거르면
+  /// 남의 문서까지 범위에 들어가 쿼리째 거부된다 — 그래서 늘 '이력 없음'으로 보여
+  /// 심사 중에도 신청 버튼이 다시 떴다. requested_by 한 필드로만 뽑고 club_id 와
+  /// 최신 순서는 앱에서 고른다(ClubAdminService.latestRequest 와 같은 방식,
+  /// orderBy 를 붙이면 복합 색인이 필요하다).
   Future<({String status, String? reason})?> latestRequest(
     String clubId,
   ) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return null;
     try {
       final snap = await _db
           .collection('verification_requests')
-          .where('club_id', isEqualTo: clubId)
-          .orderBy('requested_at', descending: true)
-          .limit(1)
+          .where('requested_by', isEqualTo: uid)
+          .limit(20)
           .get();
-      if (snap.docs.isEmpty) return null;
-      final d = snap.docs.first.data();
+      Map<String, dynamic>? latest;
+      DateTime? latestAt;
+      for (final doc in snap.docs) {
+        final d = doc.data();
+        if (d['club_id'] != clubId) continue;
+        final ts = d['requested_at'];
+        final at = ts is Timestamp ? ts.toDate() : null;
+        // requested_at 이 아직 null(serverTimestamp 대기)인 문서도 후보로 잡는다.
+        if (latest == null ||
+            (at != null && (latestAt == null || at.isAfter(latestAt)))) {
+          latest = d;
+          latestAt = at;
+        }
+      }
+      if (latest == null) return null;
       return (
-        status: (d['status'] as String?) ?? 'pending',
-        reason: d['reject_reason'] is String
-            ? d['reject_reason'] as String
+        status: (latest['status'] as String?) ?? 'pending',
+        reason: latest['reject_reason'] is String
+            ? latest['reject_reason'] as String
             : null,
       );
     } catch (_) {

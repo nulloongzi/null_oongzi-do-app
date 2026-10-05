@@ -14,22 +14,23 @@ DateTime? _verifiedAt(Map d) {
       (meta is Map ? _ts(meta['updated_at']) ?? _ts(meta['created_at']) : null);
 }
 
-// admins(배열)를 정본으로 읽되, 비어 있으면 registered_by 한 명으로 폴백한다.
+// admins(배열)가 정본이다. registered_by 한 명으로 폴백하는 건 admins 필드가
+// **없거나 배열이 아닐 때뿐**이다 — 빈 배열은 '관리자 없음'(마지막 관리자가 빠진 팀)이다.
+// 빈 배열까지 폴백하면 스스로 빠진 등록자가 다시 관리자로 보인다.
 // firestore.rules 의 clubAdmins() · functions/lib/pure.js 의 clubAdminUids() ·
 // 웹 js/auth.js 의 window.clubAdminUids() 와 **같은 규칙이어야 한다.**
 // 어긋나면 화면엔 수정 버튼이 보이는데 저장은 거부되는, 원인을 알 수 없는 상태가 된다.
 List<String> _admins(Map d) {
-  final out = <String>[];
   final raw = d['admins'];
-  if (raw is List) {
-    for (final v in raw) {
-      final s = (v == null ? '' : '$v').trim();
-      if (s.isNotEmpty && !out.contains(s)) out.add(s);
-    }
+  if (raw is! List) {
+    final owner = d['registered_by'];
+    final s = owner == null ? '' : '$owner'.trim();
+    return s.isEmpty ? <String>[] : <String>[s];
   }
-  if (out.isEmpty) {
-    final owner = (d['registered_by'] as String?)?.trim() ?? '';
-    if (owner.isNotEmpty) out.add(owner);
+  final out = <String>[];
+  for (final v in raw) {
+    final s = (v == null ? '' : '$v').trim();
+    if (s.isNotEmpty && !out.contains(s)) out.add(s);
   }
   return out;
 }
@@ -63,7 +64,7 @@ Map<String, String> _reelCovers(Map d) {
 class Club {
   final String id;
   final String name;
-  final String? registeredBy; // 최초 등록자(admins 가 비었을 때의 폴백)
+  final String? registeredBy; // 최초 등록자(admins 필드가 없을 때의 폴백)
   final List<String> admins; // 팀 정보를 고칠 수 있는 계정들(최대 3)
   // 'exact' 가 기본이다. 필드가 없는 기존 문서는 지금까지처럼 정확히 보인다 —
   // 조용히 뭉개면 팀이 모르는 사이에 지도에서 옮겨진 것처럼 보인다.
@@ -88,6 +89,11 @@ class Club {
   final bool isVerified;
   final bool isUrgent;
   final String? urgentMsg;
+
+  /// 급구를 실제로 보여 줄지 — 켜져 있고 문구가 비어 있지 않을 때만.
+  /// 지도 마커·티커·상세 배너·릴스 미리보기가 모두 이 하나만 본다(웹과 같은 판정).
+  /// 문구 없이 켜진 급구는 '무엇이 급한지' 알 수 없어 보이지 않는다.
+  bool get urgentActive => isUrgent && (urgentMsg?.trim().isNotEmpty ?? false);
   // 데이터 신뢰도(웹 guidelines.html 2-3). last_verified_at 이 없는 레거시 문서는
   // metadata.updated_at → created_at 으로 폴백하므로 마이그레이션 없이 값이 나온다.
   final DateTime? lastVerifiedAt;
@@ -144,8 +150,10 @@ class Club {
       instaReelCovers: hidden ? const {} : _reelCovers(d),
       reelsHidden: hidden,
       isVerified: (d['is_verified'] ?? false) as bool,
-      isUrgent: (d['is_urgent'] ?? false) as bool,
-      urgentMsg: d['urgent_msg'] as String?,
+      // 규칙이 bool 만 받게 됐지만, 그 전에 들어간 문서가 문자열·숫자일 수 있다.
+      // `as bool` 이면 그 한 문서 때문에 목록 전체 파싱이 죽는다.
+      isUrgent: d['is_urgent'] == true,
+      urgentMsg: d['urgent_msg'] is String ? d['urgent_msg'] as String : null,
       lastVerifiedAt: _verifiedAt(d),
       dataStatus: d['data_status'] as String?,
     );

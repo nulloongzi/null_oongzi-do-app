@@ -35,11 +35,32 @@ void main() {
       expect(c.admins, ['owner']);
     });
 
-    test('admins 가 빈 배열이어도 registered_by 로 폴백', () async {
+    test('admins 가 빈 배열이면 관리자 없음 — registered_by 로 폴백하지 않는다', () async {
+      // 마지막 관리자가 스스로 빠진 팀. 폴백하면 빠진 등록자가 다시 관리자로 보이고,
+      // 규칙(clubAdmins)은 빈 배열을 그대로 쓰므로 저장은 거부된다.
       final c = await clubFrom({
         'name': 'A',
         'admins': <String>[],
         'registered_by': 'owner',
+      });
+      expect(c.admins, isEmpty);
+      expect(canManageClub(c, 'owner'), isFalse);
+    });
+
+    test('공백·빈 값만 든 admins 도 정리하면 빈 목록 — 폴백 없음', () async {
+      final c = await clubFrom({
+        'name': 'A',
+        'admins': ['', '  ', null],
+        'registered_by': 'owner',
+      });
+      expect(c.admins, isEmpty);
+    });
+
+    test('admins 가 배열이 아니면(잘못된 값) registered_by 로 폴백', () async {
+      final c = await clubFrom({
+        'name': 'A',
+        'admins': 'u1',
+        'registered_by': ' owner ',
       });
       expect(c.admins, ['owner']);
     });
@@ -121,6 +142,110 @@ void main() {
 
     test('정원은 서버(firestore.rules admins.size() <= 3)와 같은 3', () {
       expect(kMaxClubAdmins, 3);
+    });
+  });
+
+  group('showClubAdminArea (웹 #clubAdminArea 와 같은 조건)', () {
+    test('실명 로그인·운영자 아님이면 보인다 — 인증 여부와 무관', () {
+      expect(showClubAdminArea(uid: 'u1', isAnonymous: false), isTrue);
+    });
+
+    test('비로그인·익명·운영자에게는 보이지 않는다', () {
+      expect(showClubAdminArea(uid: null, isAnonymous: false), isFalse);
+      expect(showClubAdminArea(uid: '', isAnonymous: false), isFalse);
+      expect(showClubAdminArea(uid: 'anon', isAnonymous: true), isFalse);
+      expect(
+        showClubAdminArea(uid: 'op', isAnonymous: false, isOperator: true),
+        isFalse,
+      );
+    });
+  });
+
+  group('adminApprovalNeedsRefresh', () {
+    test('승인됐는데 admins 에 내가 없으면 다시 읽는다', () async {
+      final c = await clubFrom({
+        'name': 'A',
+        'admins': ['u1'],
+      });
+      expect(adminApprovalNeedsRefresh(c, 'u2', 'approved'), isTrue);
+    });
+
+    test('이미 admins 에 있거나, 승인 상태가 아니거나, 비로그인이면 안 읽는다', () async {
+      final c = await clubFrom({
+        'name': 'A',
+        'admins': ['u1'],
+      });
+      expect(adminApprovalNeedsRefresh(c, 'u1', 'approved'), isFalse);
+      expect(adminApprovalNeedsRefresh(c, 'u2', 'pending'), isFalse);
+      expect(adminApprovalNeedsRefresh(c, 'u2', 'rejected'), isFalse);
+      expect(adminApprovalNeedsRefresh(c, null, 'approved'), isFalse);
+    });
+  });
+
+  group('관리자 신청 거절 사유', () {
+    test('서버 코드 4개는 한/영 문구가 있다', () {
+      for (final code in kAdminRejectReasonCodes) {
+        final key = adminRejectReasonKey(code);
+        expect(key, 'ad_reason_$code');
+        expect(kStrings[key]?['ko'], isNotEmpty, reason: '$key ko');
+        expect(kStrings[key]?['en'], isNotEmpty, reason: '$key en');
+      }
+      expect(kAdminRejectReasonCodes, {
+        'full',
+        'already_admin',
+        'not_found',
+        'duplicate',
+      });
+    });
+
+    test('코드 → 사람이 읽는 말', () {
+      expect(adminRejectReasonText('full'), '관리자가 이미 3명이에요');
+      expect(adminRejectReasonText('already_admin'), '이미 이 팀 관리자예요');
+      expect(adminRejectReasonText('not_found'), '팀 정보를 찾지 못했어요');
+      expect(adminRejectReasonText('duplicate'), '같은 신청이 이미 들어가 있어요');
+    });
+
+    test('모르는 코드·사유 없음은 null — 사유 줄을 그리지 않는다', () {
+      expect(adminRejectReasonText(null), isNull);
+      expect(adminRejectReasonText(''), isNull);
+      expect(adminRejectReasonText('error'), isNull); // 옛 서버가 쓰던 값
+      expect(adminRejectReasonText('club_missing'), isNull);
+      expect(adminRejectReasonText('사진 불분명'), isNull);
+    });
+
+    test('영어 모드에선 영어로', () {
+      appLang.value = 'en';
+      addTearDown(() => appLang.value = 'ko');
+      expect(adminRejectReasonText('full'), 'This team already has 3 admins');
+    });
+  });
+
+  group('leaveClubAdminSucceeded', () {
+    test("서버가 {status:'left'} 를 돌려줄 때만 성공", () {
+      expect(
+        leaveClubAdminSucceeded({'status': 'left', 'remaining': 1}),
+        isTrue,
+      );
+      expect(
+        leaveClubAdminSucceeded({'status': 'not_admin', 'remaining': 2}),
+        isFalse,
+      );
+      expect(leaveClubAdminSucceeded(null), isFalse);
+      expect(leaveClubAdminSucceeded('left'), isFalse);
+    });
+  });
+
+  group('ClubAdminService.fetchClub', () {
+    test('팀 문서를 새로 읽어 admins 를 돌려준다', () async {
+      final db = FakeFirebaseFirestore();
+      await db.collection('clubs').doc('c1').set({
+        'name': 'A',
+        'admins': ['u1', 'u2'],
+      });
+      final svc = ClubAdminService(db: db, auth: MockFirebaseAuth());
+      final c = await svc.fetchClub('c1');
+      expect(c?.admins, ['u1', 'u2']);
+      expect(await svc.fetchClub('nope'), isNull);
     });
   });
 

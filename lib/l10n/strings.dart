@@ -1500,6 +1500,25 @@ const Map<String, Map<String, String>> kStrings = {
     'en': '❌ Admin request was not accepted',
   },
   'ad_reapply': {'ko': '🔄 다시 신청', 'en': '🔄 Apply again'},
+  // 거절 사유 코드(club_admin_requests.reject_reason) → 사람이 읽는 말.
+  // 서버가 쓰는 코드는 full · already_admin · not_found · duplicate 뿐이다.
+  // 모르는 코드(옛 문서의 error 등)나 사유 없는 수동 거절은 사유 줄을 아예 안 보인다.
+  'ad_reason_full': {
+    'ko': '관리자가 이미 3명이에요',
+    'en': 'This team already has 3 admins',
+  },
+  'ad_reason_already_admin': {
+    'ko': '이미 이 팀 관리자예요',
+    'en': "You're already an admin of this team",
+  },
+  'ad_reason_not_found': {
+    'ko': '팀 정보를 찾지 못했어요',
+    'en': "We couldn't find this team",
+  },
+  'ad_reason_duplicate': {
+    'ko': '같은 신청이 이미 들어가 있어요',
+    'en': 'The same request is already in',
+  },
   'ad_full': {
     'ko': '이 팀은 관리자가 벌써 3명이에요',
     'en': 'This team already has 3 admins.',
