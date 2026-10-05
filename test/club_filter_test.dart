@@ -106,4 +106,70 @@ void main() {
       expect(f.chipCount, 4);
     });
   });
+
+  group('🔥 급구만 · 🙋 모집 중', () {
+    final urgent = Club(
+      id: 'u',
+      name: '급구팀',
+      isUrgent: true,
+      urgentMsg: '세터 1명',
+      urgentUntil: DateTime.now().add(const Duration(hours: 2)),
+    );
+    final expired = Club(
+      id: 'e',
+      name: '지난급구',
+      isUrgent: true,
+      urgentMsg: '세터 1명',
+      urgentUntil: DateTime.now().subtract(const Duration(hours: 2)),
+    );
+    final recruiting = Club(id: 'r', name: '모집팀', isRecruiting: true);
+    final both = Club(
+      id: 'b',
+      name: '둘다',
+      isUrgent: true,
+      urgentMsg: '리베로',
+      isRecruiting: true,
+    );
+    final plain = _club();
+
+    test('급구만 — 지금 보이는 급구만(마감 지난 급구는 빠진다)', () {
+      const f = ClubFilter(urgentOnly: true);
+      expect(f.matches(urgent), isTrue);
+      expect(f.matches(both), isTrue);
+      expect(f.matches(expired), isFalse);
+      expect(f.matches(recruiting), isFalse);
+      expect(f.matches(plain), isFalse);
+    });
+
+    test('모집 중만', () {
+      const f = ClubFilter(recruitingOnly: true);
+      expect(f.matches(recruiting), isTrue);
+      expect(f.matches(both), isTrue);
+      expect(f.matches(urgent), isFalse);
+      expect(f.matches(plain), isFalse);
+    });
+
+    test('둘 다 켜면 AND', () {
+      const f = ClubFilter(urgentOnly: true, recruitingOnly: true);
+      expect(f.matches(both), isTrue);
+      expect(f.matches(urgent), isFalse);
+      expect(f.matches(recruiting), isFalse);
+    });
+
+    test('다른 조건과 AND', () {
+      final f = const ClubFilter(recruitingOnly: true).copyWith(keyword: '없는말');
+      expect(f.matches(recruiting), isFalse);
+    });
+
+    test('켜면 빈 필터가 아니고 칩 수에 든다, copyWith 가 보존한다', () {
+      const f = ClubFilter(urgentOnly: true, recruitingOnly: true);
+      expect(f.isEmpty, isFalse);
+      expect(f.chipCount, 2);
+      final g = f.copyWith(keyword: 'x');
+      expect(g.urgentOnly, isTrue);
+      expect(g.recruitingOnly, isTrue);
+      expect(f.copyWith(urgentOnly: false).urgentOnly, isFalse);
+      expect(const ClubFilter().urgentOnly, isFalse);
+    });
+  });
 }

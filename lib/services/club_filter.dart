@@ -1,6 +1,7 @@
 // club_filter.dart — 동호회 필터/검색 순수 로직. 웹 filters.js applyFilters 매칭 포팅.
 // 지역(주소 startsWith, 충청/전라/경상 묶음) · 요일(schedule 포함, '매일') · 대상(부분일치,
-// 특수필터 없으면 '무관' 포함) · 키워드(name/address 포함).
+// 특수필터 없으면 '무관' 포함) · 키워드(name/address 포함) ·
+// 🔥 급구만(Club.urgentActive) · 🙋 모집 중(Club.recruitingActive).
 import '../models/club.dart';
 import 'region_match.dart';
 
@@ -9,12 +10,16 @@ class ClubFilter {
   final Set<String> days;
   final Set<String> targets;
   final String keyword;
+  final bool urgentOnly; // 🔥 급구만 — 지금 급구가 올라가 있는 팀
+  final bool recruitingOnly; // 🙋 모집 중 — 회원 모집 깃발을 켠 팀
 
   const ClubFilter({
     this.regions = const {},
     this.days = const {},
     this.targets = const {},
     this.keyword = '',
+    this.urgentOnly = false,
+    this.recruitingOnly = false,
   });
 
   static const regionOptions = regionOptionsAll;
@@ -30,7 +35,12 @@ class ClubFilter {
   ];
   static const _special = {'여성전용', '남성전용', '선출가능', '6인제'};
 
-  int get chipCount => regions.length + days.length + targets.length;
+  int get chipCount =>
+      regions.length +
+      days.length +
+      targets.length +
+      (urgentOnly ? 1 : 0) +
+      (recruitingOnly ? 1 : 0);
   bool get isEmpty => chipCount == 0 && keyword.trim().isEmpty;
 
   ClubFilter copyWith({
@@ -38,15 +48,23 @@ class ClubFilter {
     Set<String>? days,
     Set<String>? targets,
     String? keyword,
+    bool? urgentOnly,
+    bool? recruitingOnly,
   }) => ClubFilter(
     regions: regions ?? this.regions,
     days: days ?? this.days,
     targets: targets ?? this.targets,
     keyword: keyword ?? this.keyword,
+    urgentOnly: urgentOnly ?? this.urgentOnly,
+    recruitingOnly: recruitingOnly ?? this.recruitingOnly,
   );
 
   bool matches(Club c) {
     final addr = c.address ?? '';
+
+    // 둘 다 켜면 AND — 급구도 올렸고 모집 중인 팀(다른 묶음들과 같은 결합).
+    if (urgentOnly && !c.urgentActive) return false;
+    if (recruitingOnly && !c.recruitingActive) return false;
 
     if (regions.isNotEmpty) {
       // 광역 묶음(충청/전라/경상) 전개는 region_match.dart 에 공통화 — 픽업 필터와 규칙 공유.

@@ -1,4 +1,4 @@
-// filter_sheet.dart — 동호회 필터 바텀시트 (지역/요일/대상 + 검색). 웹 filterSheet 포팅.
+// filter_sheet.dart — 동호회 필터 바텀시트 (급구·모집 토글 / 지역/요일/대상 + 검색). 웹 filterSheet 포팅.
 // 적용 시 ClubFilter 반환(null=취소). 검색어도 함께 담아 반환.
 import 'package:flutter/material.dart';
 import '../services/club_filter.dart';
@@ -27,6 +27,11 @@ class _FilterSheetState extends State<_FilterSheet> {
   late final Set<String> _regions = {...widget.initial.regions};
   late final Set<String> _days = {...widget.initial.days};
   late final Set<String> _targets = {...widget.initial.targets};
+  // 급구만·모집 중 토글 — 칩 묶음으로 그리려고 Set 으로 든다.
+  late final Set<String> _flags = {
+    if (widget.initial.urgentOnly) 'urgent',
+    if (widget.initial.recruitingOnly) 'recruiting',
+  };
   late final TextEditingController _kw = TextEditingController(
     text: widget.initial.keyword,
   );
@@ -58,6 +63,7 @@ class _FilterSheetState extends State<_FilterSheet> {
       _regions.clear();
       _days.clear();
       _targets.clear();
+      _flags.clear();
       _kw.clear();
     });
   }
@@ -70,6 +76,8 @@ class _FilterSheetState extends State<_FilterSheet> {
         days: _days,
         targets: _targets,
         keyword: _kw.text.trim(),
+        urgentOnly: _flags.contains('urgent'),
+        recruitingOnly: _flags.contains('recruiting'),
       ),
     );
   }
@@ -102,6 +110,22 @@ class _FilterSheetState extends State<_FilterSheet> {
               decoration: InputDecoration(
                 hintText: t('filter_search_hint'),
                 prefixIcon: const Icon(Icons.search),
+              ),
+            ),
+            // 🔥 급구만 · 🙋 모집 중 — 라벨이 스스로 설명하므로 묶음 제목 없이
+            Padding(
+              padding: const EdgeInsets.only(top: 14),
+              child: MultiChoiceChips(
+                options: [
+                  (label: t('ug_filter'), value: 'urgent'),
+                  (label: t('rc_filter'), value: 'recruiting'),
+                ],
+                selected: _flags,
+                onChanged: (s) => setState(() {
+                  _flags
+                    ..clear()
+                    ..addAll(s);
+                }),
               ),
             ),
             _section(
