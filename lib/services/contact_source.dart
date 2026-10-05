@@ -2,7 +2,7 @@
 //
 // North Star(주당 연락한 사용자 수)를 기능별로 나눠 보려고 연락 클릭에 두 값을 붙인다
 // (웹 docs/metrics.md 와 같은 이름·값):
-//  · via  — 'detail'(상세의 연락 버튼) | 'this_week'(🍽️ 이번 주 차림표 줄)
+//  · via  — 'detail'(상세의 연락 버튼) | 'this_week'(🍚 여기 자리 있어요? 줄)
 //  · flag — 누른 순간 팀 상태: 'guest'(게스트 급구) | 'drop_in'(식구 모집+맛보기) |
 //           'recruit'(식구 모집) | 'none'. 픽업은 'pickup'.
 import '../models/club.dart';

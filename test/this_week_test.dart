@@ -1,4 +1,4 @@
-// 🍽️ 이번 주 차림표 순수 로직 — 무엇이 들어가고(게스트 급구·맛보기·픽업), 무엇이 빠지고
+// 🍚 여기 자리 있어요?(이번 주에 가서 뛸 수 있는 곳) 순수 로직 — 무엇이 들어가고(게스트 급구·맛보기·픽업), 무엇이 빠지고
 // (예전 급구·7일 밖·유효기간 지난 픽업), 어떤 순서로 묶이는지. 웹과 같은 규칙.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nulloongzido/l10n/strings.dart';
@@ -493,8 +493,8 @@ void main() {
         '이번 운동에 같이 뛸 사람을 급하게 찾아요',
         "Looking for players for this session.",
       ],
-      'tw_entry': ['🍽️ 이번 주 차림표 · {n}곳', "🍽️ This week's menu · {n}"],
-      'tw_title': ['🍽️ 이번 주 차림표', "🍽️ This week's menu"],
+      'tw_entry': ['🍚 여기 자리 있어요? · {n}곳', "🍚 Room for one more? · {n}"],
+      'tw_title': ['🍚 여기 자리 있어요?', "🍚 Room for one more?"],
       'tw_sub': ['이번 주에 가서 뛸 수 있는 곳', "Places you can go and play this week"],
       'tw_empty': ['고른 조건에 맞는 곳이 아직 없어요', "Nothing matches yet."],
       'tw_kind_guest': ['🔥 게스트 급구', "🔥 Guests needed"],

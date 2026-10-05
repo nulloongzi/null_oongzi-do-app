@@ -258,7 +258,7 @@ const Map<String, Map<String, String>> kStrings = {
 
   // 🍚 식구 모집(식구 = 같이 밥 먹는 사람 = 회원) — 급구와 따로, 인증 여부와 상관없이
   // 팀 관리자가 켠다. 🥄 맛보기 환영은 그 안의 선택(한 번 와서 뛰어 봐도 된다).
-  // 웹 js/i18n.js 와 키·문구가 같다(식구 모집·이번 주 차림표 계약).
+  // 웹 js/i18n.js 와 키·문구가 같다(식구 모집·여기 자리 있어요? 계약).
   'rc_badge': {'ko': '🍚 식구 모집', 'en': '🍚 Taking new members'},
   'rc_badge_desc': {
     'ko': '새 회원을 받고 있어요',
@@ -297,9 +297,13 @@ const Map<String, Map<String, String>> kStrings = {
     'en': 'Looking for players for this session.',
   },
 
-  // 🍽️ 이번 주 차림표 — 7일 안에 가서 뛸 수 있는 곳(픽업 + 게스트 급구 + 맛보기 환영 팀의 운동).
-  'tw_entry': {'ko': '🍽️ 이번 주 차림표 · {n}곳', 'en': "🍽️ This week's menu · {n}"},
-  'tw_title': {'ko': '🍽️ 이번 주 차림표', 'en': "🍽️ This week's menu"},
+  // 🍚 여기 자리 있어요?(처음 이름 '이번 주 차림표') — 7일 안에 가서 뛸 수 있는 곳
+  // (픽업 + 게스트 급구 + 맛보기 환영 팀의 운동). 키는 tw_* 그대로.
+  'tw_entry': {
+    'ko': '🍚 여기 자리 있어요? · {n}곳',
+    'en': '🍚 Room for one more? · {n}',
+  },
+  'tw_title': {'ko': '🍚 여기 자리 있어요?', 'en': '🍚 Room for one more?'},
   'tw_sub': {
     'ko': '이번 주에 가서 뛸 수 있는 곳',
     'en': 'Places you can go and play this week',

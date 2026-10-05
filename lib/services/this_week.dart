@@ -1,6 +1,7 @@
-// this_week.dart — 🍽️ 이번 주 차림표 순수 로직(웹과 같은 규칙, 식구 모집·차림표 계약).
+// this_week.dart — 🍚 여기 자리 있어요? 순수 로직(웹과 같은 규칙, 식구 모집·자리 있어요 계약).
+// 처음 이름이 '이번 주 차림표'여서 파일·함수 이름이 this_week 이다.
 //
-// 차림표 = 앞으로 7일 안에 "가서 뛸 수 있는 곳"을 시간순으로 한 줄에 모은 것:
+// 자리 있어요 = 앞으로 7일 안에 "가서 뛸 수 있는 곳"을 시간순으로 한 줄에 모은 것:
 //  · 🔥 게스트 급구(guest) — 급구가 올라가 있는 팀. 끝 = urgent_until.
 //    시작은 팀 일정에서 끝 시각(같은 날·같은 HH:mm)이 맞는 회차로 짐작하고, 없으면 비운다("~21:00").
 //    마감이 없는 예전 급구는 넣지 않는다 — 서버 정리가 한 시간 안에 마감을 채운다.
@@ -8,7 +9,7 @@
 //    같은 팀의 급구 운동과 끝 시각이 같은 회차는 급구 줄 하나만 남긴다.
 //  · 픽업(pickup) — 유효기간이 안 지난 크루의 일정 회차(크루당 3개까지). 문구 = 이번주 메모.
 // 회차는 급구 회차 칩과 같은 함수(nextSessions)로 센다 — 끝이 지금+5분보다 뒤, 지금+7일 안.
-// 지역 필터는 따르지 않는다. 차림표는 따로 보는 목록이고 종류·날짜 칩이 따로 있다.
+// 지역 필터는 따르지 않는다. 자리 목록은 따로 보는 목록이고 종류·날짜 칩이 따로 있다.
 import '../l10n/strings.dart';
 import '../models/club.dart';
 import '../models/pickup_spot.dart';
@@ -24,10 +25,10 @@ const kTwPickup = 'pickup';
 /// 칩·정렬 순서.
 const kTwKinds = [kTwGuest, kTwDropIn, kTwPickup];
 
-/// 팀·크루 하나가 차림표에 낼 수 있는 회차 수(급구 줄은 따로).
+/// 팀·크루 하나가 자리 목록에 낼 수 있는 회차 수(급구 줄은 따로).
 const kTwMaxPerPlace = 3;
 
-/// 차림표 한 줄.
+/// 자리 목록 한 줄.
 class ThisWeekItem {
   final String kind; // guest | drop_in | pickup
   final DateTime? start; // 급구인데 일정에서 회차를 못 찾으면 null("~21:00")
@@ -128,7 +129,7 @@ int _kindOrder(String k) {
   return i < 0 ? kTwKinds.length : i;
 }
 
-/// 차림표 항목을 만든다(시간순). [now] 는 기기 시각.
+/// 자리 목록 항목을 만든다(시간순). [now] 는 기기 시각.
 List<ThisWeekItem> buildThisWeek({
   required Iterable<Club> clubs,
   required Iterable<PickupSpot> spots,
