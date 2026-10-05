@@ -425,4 +425,19 @@ void main() {
       );
     });
   });
+
+  group('일정표(schedule_raw) 방어', () {
+    test('글자가 아닌 칸은 그 칸만 건너뛰고 예외를 내지 않는다', () {
+      final raw = [
+        {'day': '월', 'start': 19, 'end': '21:00'}, // 숫자 시작
+        {'day': 3, 'start': '19:00', 'end': '21:00'}, // 숫자 요일
+        {'day': '수', 'start': '19:00', 'end': null},
+        'garbage',
+        {'day': '금', 'start': '20:00', 'end': '22:00'},
+      ];
+      final ev = eventsFromRaw(raw, overnight: true);
+      expect(ev.map((e) => (e.day, e.start, e.end)), [('금', 20.0, 22.0)]);
+      expect(eventsFromRaw(raw).length, 1);
+    });
+  });
 }

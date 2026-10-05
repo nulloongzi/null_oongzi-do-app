@@ -58,6 +58,8 @@ List<({int lane, int lanes})> assignLanes(List<SchedEvent> sorted) {
   return [for (var k = 0; k < n; k++) (lane: lane[k], lanes: count[k])];
 }
 
+String? _str(Object? v) => v is String ? v : null;
+
 double? _hm(String? s) {
   if (s == null) return null;
   final m = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(s);
@@ -81,9 +83,12 @@ List<SchedEvent> eventsFromRaw(List? raw, {bool overnight = false}) {
   if (raw == null) return out;
   for (final r in raw) {
     if (r is! Map) continue;
-    final day = r['day'] as String?;
-    final s = _hm(r['start'] as String?);
-    final e = _hm(r['end'] as String?);
+    // 글자가 아닌 값(숫자·null 등)은 그 칸만 건너뛴다. `as String?` 로 꺼내면 칸 하나 때문에
+    // 예외가 나는데, '여기 자리 있어요?' 는 지도를 그릴 때 모든 팀·크루 일정을 읽어서 문서 하나가
+    // 지도 화면 전체를 깨뜨릴 수 있다(규칙은 원소 타입을 검사하지 않는다).
+    final day = _str(r['day']);
+    final s = _hm(_str(r['start']));
+    final e = _hm(_str(r['end']));
     if (day == null || !scheduleDays.contains(day) || s == null || e == null) {
       continue;
     }
