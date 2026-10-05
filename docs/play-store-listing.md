@@ -171,14 +171,15 @@ English and Korean throughout. Start today! 🏐
 > 게 아니다 — 다음에 보고 "안 맞는다"며 고치지 말 것.
 > **EN 간단한 설명은 여유가 7자뿐이다** — 여기만 손댈 때 상한을 다시 세어볼 것.
 
-### 출시 노트 (What's new · v2.11.0)
+### 출시 노트 (What's new · v2.12.0)
 
 > **번호 이력 (확인한 값만).**
 > 최신 → 과거 순. 모두 콘솔 출시 내역에서 확인한 값이다(2026-09-08).
 >
 > | versionCode | 상태 |
 > |---|---|
-> | **21 (2.11.0)** | **프로덕션 게시됨** (2026-10-01 사용자 확인). Release AAB run #21(main `923c7e3`) 산출물. 웹과 같은 누룽지 모양·말투(#67): 지도 위 버튼 둥근 사각형, 급구 표시 대비, 스낵바·확인 창 모양, 입력 칸 바로 아래 안내, 도시락 직접 담기 한 창, 알림·안내 문구 `~해요`. 지금 사용자가 받는 버전. |
+> | **22 (2.12.0)** | **빌드 예정** (2026-10-05). 이 PR 머지 후 main 에서 Release AAB 로 뽑는다 — 업로드·게시 여부는 확인되면 여기 적는다. 관리자 신청 안내 창(#72), 급구 = 운동 한 번·자동 내려감(서버 `postUrgent`), 🍚 식구 모집 · 🥄 맛보기 환영 · 🍚 여기 자리 있어요?(#73). **이 버전부터 급구는 서버로만 올라간다 — 21 이하에서는 급구 올리기가 실패한다(내리기는 됨).** |
+> | **21 (2.11.0)** | **프로덕션 게시됨** (2026-10-01 사용자 확인). Release AAB run #21(main `923c7e3`) 산출물. 웹과 같은 누룽지 모양·말투(#67): 지도 위 버튼 둥근 사각형, 급구 표시 대비, 스낵바·확인 창 모양, 입력 칸 바로 아래 안내, 도시락 직접 담기 한 창, 알림·안내 문구 `~해요`. 22 로 대체 예정. |
 > | 20 (2.10.1) | **프로덕션 게시됨** (2026-09-30 사용자 확인). Release AAB run #20(main `c6c0de9`) 산출물. 모집 대상 괄호 메모를 한 덩어리 칩으로(#64) + 계측 정리(화면 변화 없음 — 필터·화면 언어·공유 출처·소셜 가입 계측, debug 빌드 GA 수집 끔). 21 로 대체됨. |
 > | 19 (2.10.0) | **프로덕션 게시됨** (2026-09-29 사용자 확인). Release AAB run #19(main `d29fe81`) 산출물. 포장하기 인스타 스토리 직행 공유 + 카드 여백 140 + 운영자 릴스 숨김(`reels_hidden`) 반영 + 릴스 10개 상한. 20 으로 대체됨. |
 > | 18 (2.9.0) | **프로덕션 게시됨** (2026-09-28 사용자 확인). Release AAB run #18(브랜치 `claude/share-bapdogam`, 커밋 `c20f044` — main `4e01aa2` 와 같은 코드) 산출물. 포장하기 개편: 네임카드(밥도감 · 상차림) / 식단표 두 장, 둘 다 9:16. 19 로 대체됨. |
@@ -192,9 +193,41 @@ English and Korean throughout. Start today! 🏐
 > | 10 (2.4.0) | **AAB 를 만든 적이 없다** — 스토어에 나간 적 없음(Release AAB 실행 이력으로 확인). |
 > | 9 (2.3.0) | 12 이전의 라이브. 대체됨. |
 >
-> 번호는 재사용할 수 없다. 21 까지 썼으므로 다음은 22 다(pubspec 을 `2.x.y+22` 로 올리고 빌드).
+> 번호는 재사용할 수 없다. 22 까지 썼으므로 다음은 23 이다(pubspec 을 `2.x.y+23` 로 올리고 빌드).
 >
-> 아래가 21(2.11.0) 의 노트 — **2.10.1(20) 이후 변경분만**. 20 의 노트는 접어 뒀다.
+> 아래가 22(2.12.0) 의 노트 — **2.11.0(21) 이후 변경분만**. 21 의 노트는 접어 뒀다.
+
+```
+🍚 여기 자리 있어요?
+이번 주에 가서 뛸 수 있는 픽업, 게스트 급구, 맛보기 환영 팀을 시간순으로 한눈에 보고 바로 연락할 수 있어요.
+
+🔥 게스트 급구
+급구는 운동 한 번을 골라 올려요. 그 운동이 끝나면 저절로 내려가요.
+
+🍚 식구 모집 · 🥄 맛보기 환영
+새 회원을 받는 팀, 한 번 와서 같이 뛰어 봐도 되는 팀을 지도와 필터에서 찾을 수 있어요.
+
+🙋 관리자 신청이 쉬워졌어요
+어떤 사진을 올리면 되는지 먼저 알려 주고, 인증 전인 팀에도 신청할 수 있어요.
+```
+
+**EN (en-US)**
+
+```
+🍚 Room for one more?
+This week's pickups, guest calls and drop-in teams in one list. Contact them in a tap.
+
+🔥 Guest calls
+Post a guest call for one session. It comes down on its own when that session ends.
+
+🍚 Taking members · 🥄 Drop-ins welcome
+Find teams taking new members or open to drop-ins, on the map and in filters.
+
+🙋 Easier admin requests
+See which photo to upload first, and request admin access for unverified teams too.
+```
+
+<details><summary>2.11.0(21) 출시 노트 — 21 이 게시될 때 쓴 문안</summary>
 
 ```
 🍚 누룽지다운 모양으로
@@ -219,6 +252,8 @@ When you register a team or pickup, a hint appears right under any field you mis
 🗣 Friendlier wording
 Notices and error messages are shorter and easier to follow.
 ```
+
+</details>
 
 <details><summary>2.10.1(20) 출시 노트 — 20 이 게시될 때 쓴 문안</summary>
 
