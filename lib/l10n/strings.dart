@@ -2,7 +2,8 @@
 // 등록 폼은 한국어 유지(개설자 대상). 소비 동선(둘러보기·상세·공유·프로필·도시락)은 한/영.
 const Map<String, Map<String, String>> kStrings = {
   // 공통
-  'brand': {'ko': '누룽지도', 'en': 'Nurungjido'},
+  // 영어 이름은 Nulloongzi-do 하나(웹 brand 와 같음)
+  'brand': {'ko': '누룽지도', 'en': 'Nulloongzi-do'},
   'cancel': {'ko': '취소', 'en': 'Cancel'},
   'confirm': {'ko': '확인', 'en': 'OK'},
   'delete': {'ko': '삭제', 'en': 'Delete'},
@@ -600,7 +601,7 @@ const Map<String, Map<String, String>> kStrings = {
   'reels_hidden_notice': {
     'ko': '운영자가 이 릴스를 숨겼어요. 문의는 누룽지도 운영팀으로 해 주세요.',
     'en':
-        'Reels were hidden by the moderators. Please contact the Nulloongzido team.',
+        'Reels were hidden by the moderators. Please contact the Nulloongzi-do team.',
   },
   'reel_first_hint': {
     'ko': '맨 위 릴스가 마커 미리보기로 표시돼요 · ≡ 꾹 눌러 순서 변경',
