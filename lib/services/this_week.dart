@@ -189,6 +189,10 @@ List<ThisWeekItem> buildThisWeek({
   }
 
   for (final s in spots) {
+    // 공개 정보로 운영자가 대신 올린 크루(source 'curated')는 넣지 않는다 — 크루가 직접 올린 게
+    // 아니라 일정이 바뀌어도 그대로라, '이번 주 몇 시'로 보여 주면 헛걸음을 만들 수 있다.
+    // 픽업 탭·상세에는 그대로 나온다. 웹 js/this-week.js 와 같은 규칙.
+    if (s.source == 'curated') continue;
     if (s.expireAt != null && !s.expireAt!.isAfter(now)) continue;
     final place =
         _nonEmpty(s.venueName) ?? _nonEmpty(s.region) ?? shortPlace(s.address);

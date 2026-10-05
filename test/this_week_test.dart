@@ -54,6 +54,7 @@ PickupSpot spot(
   String? address,
   String? insta,
   String? contactLink,
+  String? source,
 }) => PickupSpot(
   id: id,
   title: '크루$id',
@@ -66,6 +67,7 @@ PickupSpot spot(
   address: address,
   insta: insta,
   contactLink: contactLink,
+  source: source,
 );
 
 List<ThisWeekItem> build({
@@ -247,6 +249,17 @@ void main() {
   });
 
   group('픽업', () {
+    test('공개 정보로 대신 올린 크루(curated)는 넣지 않고, 직접 올린 크루는 넣는다', () {
+      final items = build(
+        spots: [
+          spot('cur', text: '토 14:00~17:00', source: 'curated'),
+          spot('self', text: '토 14:00~17:00', source: 'self'),
+          spot('none', text: '토 14:00~17:00'),
+        ],
+      );
+      expect(items.map((e) => e.refId).toSet(), {'self', 'none'});
+    });
+
     test('유효기간이 지난 크루는 빠지고, 상시·남은 크루는 크루당 3회', () {
       final daily = raw([
         for (final d in scheduleDays) [d, '20:00', '22:00'],
