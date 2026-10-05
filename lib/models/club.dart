@@ -89,11 +89,29 @@ class Club {
   final bool isVerified;
   final bool isUrgent;
   final String? urgentMsg;
+  // 급구가 내려가는 시각 = 고른 운동이 끝나는 시각(서버 postUrgent 가 쓴다).
+  // 없으면 예전 급구 — 서버 정리(sweep)가 지금+7일을 채워 넣을 때까지 마감 없이 보인다.
+  final DateTime? urgentUntil;
+  final DateTime? urgentAt; // 급구를 올린 시각(서버 시각)
+  // 회원 모집 중 — 급구와 따로, 인증 여부와 상관없이 팀 관리자가 켠다.
+  final bool isRecruiting;
+  final String? recruitMsg; // 비어 있을 수 있다
+  final DateTime? recruitAt; // 켜거나 문구를 바꾼 시각(서버 시각)
 
-  /// 급구를 실제로 보여 줄지 — 켜져 있고 문구가 비어 있지 않을 때만.
+  /// 급구를 실제로 보여 줄지 — 켜져 있고, 문구가 비어 있지 않고, 마감이 안 지났을 때만.
   /// 지도 마커·티커·상세 배너·릴스 미리보기가 모두 이 하나만 본다(웹과 같은 판정).
   /// 문구 없이 켜진 급구는 '무엇이 급한지' 알 수 없어 보이지 않는다.
-  bool get urgentActive => isUrgent && (urgentMsg?.trim().isNotEmpty ?? false);
+  /// 마감이 지난 급구는 서버 정리(매시)가 내리기 전이라도 바로 숨긴다.
+  bool get urgentActive => urgentActiveAt(DateTime.now());
+
+  /// [now] 기준 급구 판정 — 테스트·정렬에서 시각을 고정하려고 따로 둔다.
+  bool urgentActiveAt(DateTime now) =>
+      isUrgent &&
+      (urgentMsg?.trim().isNotEmpty ?? false) &&
+      (urgentUntil == null || urgentUntil!.isAfter(now));
+
+  /// 회원 모집 중 표시 여부 — is_recruiting 이 bool true 일 때만(웹과 같은 판정).
+  bool get recruitingActive => isRecruiting;
   // 데이터 신뢰도(웹 guidelines.html 2-3). last_verified_at 이 없는 레거시 문서는
   // metadata.updated_at → created_at 으로 폴백하므로 마이그레이션 없이 값이 나온다.
   final DateTime? lastVerifiedAt;
@@ -121,6 +139,11 @@ class Club {
     this.isVerified = false,
     this.isUrgent = false,
     this.urgentMsg,
+    this.urgentUntil,
+    this.urgentAt,
+    this.isRecruiting = false,
+    this.recruitMsg,
+    this.recruitAt,
     this.lastVerifiedAt,
     this.dataStatus,
   });
@@ -154,6 +177,13 @@ class Club {
       // `as bool` 이면 그 한 문서 때문에 목록 전체 파싱이 죽는다.
       isUrgent: d['is_urgent'] == true,
       urgentMsg: d['urgent_msg'] is String ? d['urgent_msg'] as String : null,
+      urgentUntil: _ts(d['urgent_until']),
+      urgentAt: _ts(d['urgent_at']),
+      isRecruiting: d['is_recruiting'] == true,
+      recruitMsg: d['recruit_msg'] is String
+          ? d['recruit_msg'] as String
+          : null,
+      recruitAt: _ts(d['recruit_at']),
       lastVerifiedAt: _verifiedAt(d),
       dataStatus: d['data_status'] as String?,
     );
