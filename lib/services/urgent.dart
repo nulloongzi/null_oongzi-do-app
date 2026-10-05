@@ -90,8 +90,9 @@ List<UrgentSession> nextSessions(
   for (final e in events) {
     final wd = scheduleDays.indexOf(e.day) + 1; // 월=1 … 일=7 (DateTime.weekday)
     if (wd <= 0) continue;
-    // 오늘부터 8일째까지 — 7일 뒤 같은 요일의 이른 회차까지 범위에 걸칠 수 있다.
-    for (var d = 0; d <= 7; d++) {
+    // 어제부터 8일째까지 — 7일 뒤 같은 요일의 이른 회차까지 범위에 걸칠 수 있고,
+    // 어제 시작해 오늘 새벽에 끝나는(자정을 넘는) 회차도 아직 진행 중일 수 있다.
+    for (var d = -1; d <= 7; d++) {
       final day = DateTime(today.year, today.month, today.day + d);
       if (day.weekday != wd) continue;
       final s = UrgentSession(_at(day, e.start), _at(day, e.end));

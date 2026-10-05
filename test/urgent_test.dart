@@ -387,4 +387,42 @@ void main() {
       expect(recruitOffFields(), {'is_recruiting': false});
     });
   });
+
+  group('자정을 넘기는 운동(22:00~01:00)', () {
+    test('파서 기본값은 지금처럼 건너뛴다 — 0~24시 칸에 그리는 시간표용', () {
+      expect(eventsFromText('금 22:00~01:00'), isEmpty);
+      expect(
+        eventsFromRaw([
+          {'day': '금', 'start': '22:00', 'end': '01:00'},
+        ]),
+        isEmpty,
+      );
+    });
+
+    test('overnight 이면 끝을 +24 로 살린다(글·일정표 둘 다)', () {
+      final t = eventsFromText('금 22:00~01:00', overnight: true).single;
+      expect((t.day, t.start, t.end), ('금', 22.0, 25.0));
+      final r = eventsFromRaw([
+        {'day': '금', 'start': '22:30', 'end': '00:30'},
+      ], overnight: true).single;
+      expect((r.day, r.start, r.end), ('금', 22.5, 24.5));
+      // 시작과 끝이 같으면 운동이 아니다 — 여전히 건너뛴다.
+      expect(eventsFromText('금 19:00~19:00', overnight: true), isEmpty);
+    });
+
+    test('회차는 다음 날 새벽에 끝나고, 어제 시작해 진행 중인 회차도 잡힌다', () {
+      final events = eventsFromText('목 22:00~01:00', overnight: true);
+      // 2026-10-09(금) 00:30 — 목요일 22시에 시작한 운동이 아직 진행 중
+      final s = nextSessions(events, DateTime(2026, 10, 9, 0, 30));
+      // 다음 주 목요일 회차는 끝(10/16 01:00)이 지금+7일(10/16 00:30)을 넘어 빠진다.
+      expect(s, [
+        UrgentSession(DateTime(2026, 10, 8, 22), DateTime(2026, 10, 9, 1)),
+      ]);
+      // 낮에 보면 이번 주 목요일 밤 회차가 다음 날 새벽에 끝난다.
+      expect(
+        nextSessions(events, DateTime(2026, 10, 9, 12)).first,
+        UrgentSession(DateTime(2026, 10, 15, 22), DateTime(2026, 10, 16, 1)),
+      );
+    });
+  });
 }

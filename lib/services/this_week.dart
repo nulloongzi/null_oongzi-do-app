@@ -66,14 +66,14 @@ class ThisWeekItem {
 /// 팀 일정 → 이벤트(일정표가 있으면 그것, 없으면 글로 적은 일정).
 List<SchedEvent> clubEvents(Club c) =>
     (c.scheduleRaw != null && c.scheduleRaw!.isNotEmpty)
-    ? eventsFromRaw(c.scheduleRaw)
-    : eventsFromText(c.schedule);
+    ? eventsFromRaw(c.scheduleRaw, overnight: true)
+    : eventsFromText(c.schedule, overnight: true);
 
 /// 크루 일정 → 이벤트(상세와 같은 순서: 일정표 → 일정 → 일정 메모).
 List<SchedEvent> spotEvents(PickupSpot s) =>
     (s.scheduleRaw != null && s.scheduleRaw!.isNotEmpty)
-    ? eventsFromRaw(s.scheduleRaw)
-    : eventsFromText(s.schedule ?? s.scheduleText);
+    ? eventsFromRaw(s.scheduleRaw, overnight: true)
+    : eventsFromText(s.schedule ?? s.scheduleText, overnight: true);
 
 /// 주소 앞 두 낱말("서울 마포구 …" → "서울 마포구"). 긴 주소가 한 줄을 다 먹지 않게.
 String shortPlace(String? address) {
@@ -116,11 +116,14 @@ DateTime _at(DateTime day, double hours) =>
 /// 같은 날 같은 HH:mm 에 끝나는 회차만 본다('다른 날'로 올린 급구는 시작을 모른다).
 DateTime? guestStartFor(List<SchedEvent> events, DateTime until) {
   final u = until.toLocal();
-  final day = DateTime(u.year, u.month, u.day);
-  for (final e in events) {
-    final wd = scheduleDays.indexOf(e.day) + 1;
-    if (wd != u.weekday) continue;
-    if (_sameMinute(_at(day, e.end), u)) return _at(day, e.start);
+  // 자정을 넘기는 운동(22:00~01:00)은 마감 전날 시작한다 — 그날과 전날을 함께 본다.
+  for (final back in const [0, 1]) {
+    final day = DateTime(u.year, u.month, u.day - back);
+    for (final e in events) {
+      final wd = scheduleDays.indexOf(e.day) + 1;
+      if (wd != day.weekday) continue;
+      if (_sameMinute(_at(day, e.end), u)) return _at(day, e.start);
+    }
   }
   return null;
 }

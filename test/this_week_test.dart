@@ -530,4 +530,32 @@ void main() {
       expect(kStrings[k]?['en'], v[1], reason: '$k en');
     });
   });
+
+  group('자정을 넘기는 운동', () {
+    test('픽업 금 22:00~01:00 은 금요일 밤에 시작해 토요일 새벽에 끝나는 회차로 들어간다', () {
+      final items = build(spots: [spot('late', text: '금 22:00~01:00')]);
+      final it = items.single;
+      expect(it.start, DateTime(2026, 10, 9, 22));
+      expect(it.end, DateTime(2026, 10, 10, 1));
+    });
+
+    test('게스트 급구 마감이 새벽이면 전날 밤 시작 시각을 일정에서 찾는다', () {
+      final items = build(
+        clubs: [
+          club(
+            'c',
+            urgent: true,
+            urgentMsg: '세터 1명',
+            until: DateTime(2026, 10, 10, 1),
+            schedule: raw([
+              ['금', '22:00', '01:00'],
+            ]),
+          ),
+        ],
+      );
+      final it = items.single;
+      expect(it.kind, kTwGuest);
+      expect(it.start, DateTime(2026, 10, 9, 22));
+    });
+  });
 }

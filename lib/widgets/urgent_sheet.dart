@@ -21,8 +21,8 @@ Future<bool> showUrgentSheet(
   required Future<String?> Function(DateTime until, String msg) post,
 }) async {
   final events = (club.scheduleRaw != null && club.scheduleRaw!.isNotEmpty)
-      ? eventsFromRaw(club.scheduleRaw)
-      : eventsFromText(club.schedule);
+      ? eventsFromRaw(club.scheduleRaw, overnight: true)
+      : eventsFromText(club.schedule, overnight: true);
   final editing = club.urgentActive;
   final ok = await showAppSheet<bool>(
     context,
