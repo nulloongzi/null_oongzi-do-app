@@ -134,7 +134,7 @@ void main() {
       );
     });
 
-    test('마감 없는 예전 급구·지난 급구·7일 넘는 급구는 빠진다', () {
+    test('마감 없는 예전 급구·지난 급구·문구 없는 급구는 빠지고, 떠 있는 급구는 7일을 넘어도 남는다', () {
       final items = build(
         clubs: [
           club('legacy', urgent: true, urgentMsg: '급구'),
@@ -159,7 +159,8 @@ void main() {
           club('nomsg', urgent: true, until: DateTime(2026, 10, 8, 21)),
         ],
       );
-      expect(items.map((e) => e.refId), ['edge']);
+      // 서버가 받는 마감은 8일까지 — 떠 있는 급구는 창으로 자르지 않는다(웹과 같음)
+      expect(items.map((e) => e.refId), ['edge', 'far']);
     });
   });
 
@@ -221,7 +222,7 @@ void main() {
       expect(items, isEmpty);
     });
 
-    test('급구 운동과 겹치는 맛보기 회차는 급구 줄 하나만 남긴다', () {
+    test('급구 운동과 겹치는 맛보기 회차는 빼고, 남은 회차에서 3개', () {
       final items = build(
         clubs: [
           club(
@@ -239,6 +240,7 @@ void main() {
         'drop_in 7',
         'guest 8',
         'drop_in 9',
+        'drop_in 10',
       ]);
       expect(thisWeekPlaceCount(items), 1);
     });
@@ -356,11 +358,30 @@ void main() {
       expect(filterThisWeek(items, kinds: {}), isEmpty);
     });
 
-    test('날짜 칩은 오늘부터 7일', () {
-      final days = thisWeekDays(now);
+    test('날짜 칩은 오늘부터 7일, 그 뒤 날짜 항목이 있으면 그날까지', () {
+      final days = thisWeekDays(now, items);
       expect(days.first, DateTime(2026, 10, 7));
       expect(days.last, DateTime(2026, 10, 13));
       expect(days, hasLength(7));
+      final late = ThisWeekItem(
+        kind: kTwGuest,
+        end: DateTime(2026, 10, 14, 23),
+        title: 'x',
+        place: '',
+        refId: 'x',
+        refType: 'club',
+      );
+      expect(thisWeekDays(now, [...items, late]).last, DateTime(2026, 10, 14));
+    });
+
+    test('같은 시각이면 종류 순, 그다음 넣은 순서(이름으로 가르지 않는다)', () {
+      final two = build(
+        spots: [
+          spot('z', text: '목 19:00~21:00'),
+          spot('a', text: '목 19:00~20:00'),
+        ],
+      );
+      expect(two.map((e) => e.refId), ['z', 'a']);
     });
 
     test('연락 버튼 채널 — 인스타 → 링크, 없으면 null', () {

@@ -75,13 +75,13 @@ DateTime _at(DateTime day, double hours) {
   return DateTime(day.year, day.month, day.day, 0, minutes);
 }
 
-/// 팀 일정 → 급구로 고를 수 있는 다음 회차들(가까운 순, 최대 [max]개).
+/// 팀 일정 → 급구로 고를 수 있는 다음 회차들(가까운 순, 최대 [max]개 — null 이면 모두).
 /// 끝나는 시각이 지금+5분보다 뒤이고 지금+7일 안인 것만 — 진행 중인 운동도
 /// 끝나기 5분 전까지는 고를 수 있다. 같은 회차가 두 번 적혀 있으면 하나만.
 List<UrgentSession> nextSessions(
   List<SchedEvent> events,
   DateTime now, {
-  int max = 3,
+  int? max = 3,
 }) {
   final today = DateTime(now.year, now.month, now.day);
   final minEnd = now.add(kUrgentMinLead);
@@ -103,7 +103,7 @@ List<UrgentSession> nextSessions(
       final c = a.start.compareTo(b.start);
       return c != 0 ? c : a.end.compareTo(b.end);
     });
-  return list.length > max ? list.sublist(0, max) : list;
+  return (max != null && list.length > max) ? list.sublist(0, max) : list;
 }
 
 const _wdKo = ['월', '화', '수', '목', '금', '토', '일'];

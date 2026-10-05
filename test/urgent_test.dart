@@ -165,6 +165,14 @@ void main() {
       expect(s.single.start, DateTime(2026, 11, 2, 19));
     });
 
+    test('max — 기본 3개, 숫자로 바꾸거나 null 이면 7일 안 모두', () {
+      final daily = [for (final d in scheduleDays) SchedEvent(d, 19, 21)];
+      expect(nextSessions(daily, fri20), hasLength(3));
+      expect(nextSessions(daily, fri20, max: 5), hasLength(5));
+      // 금 20:00 기준 오늘 회차(21:00 끝)부터 다음 금 19~21 직전까지 = 7회
+      expect(nextSessions(daily, fri20, max: null), hasLength(7));
+    });
+
     test('일정이 없으면 빈 목록', () {
       expect(nextSessions(const [], fri20), isEmpty);
       expect(nextSessions(eventsFromText('매주 아무 때나'), fri20), isEmpty);

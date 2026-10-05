@@ -193,7 +193,7 @@ class RoomSheet extends StatefulWidget {
 class _RoomSheetState extends State<RoomSheet> {
   final Set<String> _kinds = kTwKinds.toSet(); // 처음엔 모두 켬
   DateTime? _day; // null = 7일 전체
-  late final List<DateTime> _days = thisWeekDays(widget.clock());
+  late final List<DateTime> _days = thisWeekDays(widget.clock(), widget.items);
 
   String _kindLabel(String k) => t('tw_kind_$k');
 

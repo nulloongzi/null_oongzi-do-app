@@ -5,8 +5,9 @@
 //  · 🔥 게스트 급구(guest) — 급구가 올라가 있는 팀. 끝 = urgent_until.
 //    시작은 팀 일정에서 끝 시각(같은 날·같은 HH:mm)이 맞는 회차로 짐작하고, 없으면 비운다("~21:00").
 //    마감이 없는 예전 급구는 넣지 않는다 — 서버 정리가 한 시간 안에 마감을 채운다.
+//    떠 있는 급구는 7일 창으로 자르지 않는다(서버가 받는 마감은 8일까지 — 웹과 같음).
 //  · 🥄 맛보기(drop_in) — 식구 모집 + 맛보기 환영 팀의 일정 회차(팀당 3개까지).
-//    같은 팀의 급구 운동과 끝 시각이 같은 회차는 급구 줄 하나만 남긴다.
+//    같은 팀의 급구 운동과 끝 시각이 같은 회차는 빼고(급구 줄 하나만), 남은 것에서 3개.
 //  · 픽업(pickup) — 유효기간이 안 지난 크루의 일정 회차(크루당 3개까지). 문구 = 이번주 메모.
 // 회차는 급구 회차 칩과 같은 함수(nextSessions)로 센다 — 끝이 지금+5분보다 뒤, 지금+7일 안.
 // 지역 필터는 따르지 않는다. 자리 목록은 따로 보는 목록이고 종류·날짜 칩이 따로 있다.
@@ -135,7 +136,6 @@ List<ThisWeekItem> buildThisWeek({
   required Iterable<PickupSpot> spots,
   required DateTime now,
 }) {
-  final maxEnd = now.add(kUrgentHorizon);
   final out = <ThisWeekItem>[];
 
   for (final c in clubs) {
@@ -145,7 +145,7 @@ List<ThisWeekItem> buildThisWeek({
     DateTime? guestEnd;
 
     final until = c.urgentUntil?.toLocal();
-    if (c.urgentActiveAt(now) && until != null && !until.isAfter(maxEnd)) {
+    if (c.urgentActiveAt(now) && until != null) {
       guestEnd = until;
       out.add(
         ThisWeekItem(
@@ -163,10 +163,11 @@ List<ThisWeekItem> buildThisWeek({
     }
 
     if (c.dropInActive) {
-      // 다음 회차 3개를 고른 뒤, 급구 운동과 겹치는 회차만 뺀다 — 한 팀이 급구 1 + 맛보기 2 로
-      // 3줄을 넘지 않게.
-      for (final s in nextSessions(events, now, max: kTwMaxPerPlace)) {
-        if (guestEnd != null && _sameMinute(s.end, guestEnd)) continue;
+      // 급구 운동과 끝이 같은 회차를 먼저 빼고 3개(웹 this-week.js 와 같은 순서).
+      final sessions = nextSessions(events, now, max: null)
+          .where((s) => guestEnd == null || !_sameMinute(s.end, guestEnd))
+          .take(kTwMaxPerPlace);
+      for (final s in sessions) {
         out.add(
           ThisWeekItem(
             kind: kTwDropIn,
@@ -205,18 +206,14 @@ List<ThisWeekItem> buildThisWeek({
     }
   }
 
-  // 시각 → 끝 → 종류(급구·맛보기·픽업) → 이름. 같은 값은 넣은 순서를 지킨다.
+  // 시각 → 종류(급구·맛보기·픽업) → 넣은 순서(웹 this-week.js 와 같은 정렬).
   final indexed = out.asMap().entries.toList()
     ..sort((a, b) {
       final x = a.value, y = b.value;
-      var c = x.at.compareTo(y.at);
+      final c = x.at.compareTo(y.at);
       if (c != 0) return c;
-      c = x.end.compareTo(y.end);
-      if (c != 0) return c;
-      c = _kindOrder(x.kind).compareTo(_kindOrder(y.kind));
-      if (c != 0) return c;
-      c = x.title.compareTo(y.title);
-      return c != 0 ? c : a.key.compareTo(b.key);
+      final k = _kindOrder(x.kind).compareTo(_kindOrder(y.kind));
+      return k != 0 ? k : a.key.compareTo(b.key);
     });
   return [for (final e in indexed) e.value];
 }
@@ -231,10 +228,25 @@ DateTime localDay(DateTime d) {
   return DateTime(l.year, l.month, l.day);
 }
 
-/// 날짜 칩 7개 — 오늘부터 6일 뒤까지.
-List<DateTime> thisWeekDays(DateTime now) {
+/// 날짜 칩 — 오늘부터 6일 뒤까지 7개. 7일째 새벽 회차나 8일 마감 급구처럼 그 뒤 날짜의
+/// 항목이 있으면 그날까지 늘린다(웹 twDayChips 와 같음).
+List<DateTime> thisWeekDays(
+  DateTime now, [
+  Iterable<ThisWeekItem> items = const [],
+]) {
   final t = localDay(now);
-  return [for (var i = 0; i < 7; i++) DateTime(t.year, t.month, t.day + i)];
+  var last = DateTime(t.year, t.month, t.day + 6);
+  for (final e in items) {
+    final d = localDay(e.at);
+    if (d.isAfter(last)) last = d;
+  }
+  final out = <DateTime>[];
+  for (var i = 0; ; i++) {
+    final d = DateTime(t.year, t.month, t.day + i);
+    if (d.isAfter(last)) break;
+    out.add(d);
+  }
+  return out;
 }
 
 /// 종류 칩·날짜 칩으로 거른다. [day] 가 null 이면 7일 전체.
