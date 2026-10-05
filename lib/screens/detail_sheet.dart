@@ -960,6 +960,12 @@ Widget _recruitToggle(
       save: (msg, dropIn) async {
         try {
           await service.setRecruiting(c.id, on: true, msg: msg, dropIn: dropIn);
+          // 웹 club-detail.js 의 recruit_on 과 같은 이름·파라미터.
+          Track.event('recruit_on', {
+            'club_id': c.id,
+            'mode': c.recruitingActive ? 'edit' : 'create',
+            'drop_in': dropIn ? 1 : 0,
+          });
           return null;
         } catch (e) {
           debugPrint('recruit save: $e');
