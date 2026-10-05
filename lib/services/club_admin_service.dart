@@ -67,14 +67,18 @@ class ClubAdminService {
   }
 
   /// 갤러리에서 증빙 사진 선택 → 업로드 → 관리자 신청 문서 생성.
+  /// [confirm] 은 로그인·정원 확인을 통과한 뒤, 갤러리를 열기 직전에 불린다 —
+  /// 어떤 사진을 올려야 하는지 먼저 알려 주는 창. false 면 갤러리를 열지 않는다.
   /// 반환: null=성공, 'cancelled'=사용자 취소, 그 외=사용자에게 보일 오류 메시지.
-  Future<String?> submit(Club club) async {
+  Future<String?> submit(Club club, {Future<bool> Function()? confirm}) async {
     final user = _auth.currentUser;
     if (user == null || user.isAnonymous) return t('ad_login_required');
 
     // 정원이 찼으면 사진부터 올리게 두지 않는다 — 올려봐야 거절될 뿐이고,
     // 남의 이름이 찍힌 캡처가 괜히 저장소에 남는다.
     if (club.admins.length >= kMaxClubAdmins) return t('ad_full');
+
+    if (confirm != null && !await confirm()) return 'cancelled';
 
     final XFile? file = await ImagePicker().pickImage(
       source: ImageSource.gallery,

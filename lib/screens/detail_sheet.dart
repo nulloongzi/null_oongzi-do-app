@@ -755,6 +755,37 @@ final ValueNotifier<int> verifyDemoApply = ValueNotifier<int>(0);
 /// '심사 중' 안내가 뜨기 전에 지도로 돌아갔다.
 final ValueNotifier<int> verifyDemoDone = ValueNotifier<int>(0);
 
+/// 관리자 신청 전 안내 — 어떤 사진이 이 팀 사람이라는 증빙이 되는지,
+/// 남의 정보는 가려 달라는 말을 갤러리를 열기 전에 보여 준다.
+/// '관리자 신청하기'를 눌러야 true. 바깥을 눌러 닫거나 취소하면 false.
+Future<bool> confirmClubAdminRequest(BuildContext context) async {
+  if (!context.mounted) return false;
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (dctx) => AlertDialog(
+      title: Text(t('ad_title')),
+      // 문구가 길어 작은 화면·큰 글씨에서 넘칠 수 있다.
+      content: SingleChildScrollView(
+        child: Text(t('ad_desc'), style: const TextStyle(height: 1.5)),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dctx, false),
+          child: Text(t('cancel')),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(dctx, true),
+          child: Text(
+            t('ad_submit'),
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+        ),
+      ],
+    ),
+  );
+  return ok == true;
+}
+
 // 인증 신청/상태 영역(웹 verifyStatusArea 대응) — 소유자 & 미인증일 때만.
 // 최신 요청 조회: 이력 없음→신청 버튼 / 심사 중→안내 / 거절→사유+재신청.
 // 팀 관리자 영역 — 관리자 수 / 빠지기(관리자일 때) / 신청·대기·재신청(아닐 때).
@@ -800,7 +831,10 @@ class _ClubAdminSectionState extends State<_ClubAdminSection> {
   Future<void> _apply() async {
     if (_busy) return;
     setState(() => _busy = true);
-    final err = await ClubAdminService().submit(widget.club);
+    final err = await ClubAdminService().submit(
+      widget.club,
+      confirm: () => confirmClubAdminRequest(context),
+    );
     if (!mounted) return;
     setState(() => _busy = false);
     if (err == 'cancelled') return;
@@ -816,7 +850,7 @@ class _ClubAdminSectionState extends State<_ClubAdminSection> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(t('mp_cancel')),
+            child: Text(t('cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
