@@ -16,6 +16,7 @@ import '../services/sanitize.dart';
 import '../services/data_repository.dart';
 import '../services/club_admin.dart';
 import '../services/club_filter.dart';
+import '../services/contact_source.dart';
 import '../services/urgent.dart';
 import '../services/deep_link_service.dart';
 import '../services/profile_service.dart';
@@ -53,6 +54,8 @@ class _MarkerSpec {
   final String name;
   final bool red; // 빨강 핀(급구/스팟)
   final bool urgent;
+  // 라벨 앞 상태 표시 — 🔥(급구) 🍚(식구 모집) 🥄(맛보기). 픽업·일반 팀은 ''.
+  final String marks;
   final bool verified;
   final bool clusterable; // 급구 클럽=false(항상 표시), 그 외=true
   final bool areaOnly; // 대략 위치만 공개 → 핀 대신 범위 원도 같이 그린다
@@ -63,6 +66,7 @@ class _MarkerSpec {
     required this.name,
     required this.red,
     required this.urgent,
+    this.marks = '',
     required this.verified,
     required this.clusterable,
     this.areaOnly = false,
@@ -355,10 +359,11 @@ class _MapScreenState extends State<MapScreen> {
     String name, {
     required bool red,
     required bool urgent,
+    String marks = '',
     required bool verified,
   }) async {
     final key =
-        '${red ? "r" : "y"}|${urgent ? "u" : "n"}|${verified ? "v" : ""}|$name';
+        '${red ? "r" : "y"}|${urgent ? "u" : "n"}|${verified ? "v" : ""}|$marks|$name';
     final hit = _labelIconCache[key];
     if (hit != null) return hit;
     await _ensurePrewarm();
@@ -409,7 +414,7 @@ class _MapScreenState extends State<MapScreen> {
                     children: [
                       Flexible(
                         child: Text(
-                          urgent ? '🔥 $name' : name,
+                          marks.isEmpty ? name : '$marks $name',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -1344,7 +1349,7 @@ class _MapScreenState extends State<MapScreen> {
     String? reel;
     String? cover;
     String? peekId;
-    bool urgent = false;
+    String marks = '';
     double best = double.infinity;
     if (_tab == 'clubs') {
       for (final club in _clubs.where(_filter.matches)) {
@@ -1356,7 +1361,7 @@ class _MapScreenState extends State<MapScreen> {
           reel = club.instaReels.isNotEmpty ? club.instaReels.first : null;
           cover = club.instaReelCovers[Sanitize.instaReelCode(reel) ?? ''];
           peekId = club.id;
-          urgent = club.urgentActive;
+          marks = clubMarks(club);
         }
       }
     } else {
@@ -1369,7 +1374,7 @@ class _MapScreenState extends State<MapScreen> {
           reel = spot.instaReels.isNotEmpty ? spot.instaReels.first : null;
           cover = spot.instaReelCovers[Sanitize.instaReelCode(reel) ?? ''];
           peekId = spot.id;
-          urgent = false;
+          marks = '';
         }
       }
     }
@@ -1385,7 +1390,7 @@ class _MapScreenState extends State<MapScreen> {
         reel: reel!,
         cover: cover,
         id: peekId ?? '',
-        urgent: urgent,
+        marks: marks,
       ),
     );
   }
@@ -1423,6 +1428,7 @@ class _MapScreenState extends State<MapScreen> {
             name: club.name,
             red: urgent,
             urgent: urgent,
+            marks: clubMarks(club),
             verified: club.isVerified,
             clusterable: !urgent, // 급구: 클러스터 제외(항상 표시)
             areaOnly: isAreaOnly(club),
@@ -1457,6 +1463,7 @@ class _MapScreenState extends State<MapScreen> {
                 s.name,
                 red: s.red,
                 urgent: s.urgent,
+                marks: s.marks,
                 verified: s.verified,
               )
             : Future<NOverlayImage?>.value(),
@@ -1549,6 +1556,7 @@ class _MapScreenState extends State<MapScreen> {
                 s.name,
                 red: s.red,
                 urgent: s.urgent,
+                marks: s.marks,
                 verified: s.verified,
               )
             : Future<NOverlayImage?>.value(),
@@ -2506,19 +2514,19 @@ class _UrgentTickerState extends State<_UrgentTicker> {
   }
 }
 
-// 마커 롱프레스 릴스 미리보기 데이터(제목·릴스 URL·급구여부).
+// 마커 롱프레스 릴스 미리보기 데이터(제목·릴스 URL·팀 상태 표시).
 class _ReelPeek {
   final String title;
   final String reel;
   final String? cover; // 정지 커버(없으면 제네릭 카드)
   final String id; // reel_play 계측용
-  final bool urgent;
+  final String marks; // 🔥🍚🥄 — 지도 라벨과 같은 표시
   const _ReelPeek({
     required this.title,
     required this.reel,
     required this.cover,
     required this.id,
-    required this.urgent,
+    this.marks = '',
   });
 }
 
@@ -2597,15 +2605,18 @@ class _ReelPeekOverlayState extends State<_ReelPeekOverlay>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // 헤더: 이름(+급구 불꽃) · 닫기
+            // 헤더: 이름(+🔥🍚🥄 상태 표시) · 닫기
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 6, 2),
               child: Row(
                 children: [
-                  if (d.urgent)
-                    const Padding(
-                      padding: EdgeInsets.only(right: 6),
-                      child: Text('🔥', style: TextStyle(fontSize: 16)),
+                  if (d.marks.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: Text(
+                        d.marks,
+                        style: const TextStyle(fontSize: 16),
+                      ),
                     ),
                   Expanded(
                     child: Text(
