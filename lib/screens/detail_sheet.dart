@@ -17,6 +17,8 @@ import '../services/lunchbox_service.dart';
 import '../services/share_service.dart';
 import '../services/story_share.dart';
 import '../services/target_parse.dart' show targetTagParts;
+import '../services/urgent.dart';
+import '../services/urgent_service.dart';
 import '../services/schedule_parse.dart';
 import '../services/verification_service.dart';
 import '../theme.dart';
@@ -27,6 +29,7 @@ import '../widgets/reel_card.dart';
 import '../widgets/schedule_timetable.dart';
 import '../widgets/share_menu.dart';
 import '../widgets/story_card.dart';
+import '../widgets/urgent_sheet.dart';
 import '../widgets/data_trust_row.dart';
 import '../widgets/map_detail_panel.dart';
 import 'club_form_screen.dart';
@@ -63,7 +66,8 @@ Widget _chip(String text, Color bg, Color fg) => Container(
 );
 
 // 급구/이번주 배너 — 웹처럼 컴팩트(작은 크림-오렌지). 텍스트 크기 명시.
-Widget _banner(String badge, String text) => Container(
+// [sub] 는 문구 아래 작은 줄(급구 마감 '오늘 21:00까지' 등).
+Widget _banner(String badge, String text, {String? sub}) => Container(
   width: double.infinity,
   margin: const EdgeInsets.only(top: 8, bottom: 12),
   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
@@ -91,19 +95,84 @@ Widget _banner(String badge, String text) => Container(
       ),
       const SizedBox(width: 8),
       Expanded(
-        child: Text(
-          text,
-          style: const TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 13.5,
-            height: 1.3,
-            color: NurungjiColors.dark,
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              text,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 13.5,
+                height: 1.3,
+                color: NurungjiColors.dark,
+              ),
+            ),
+            if (sub != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(
+                  sub,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                    color: NurungjiColors.urgentInk,
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     ],
   ),
 );
+
+// 회원 모집 중 — 배지 + (있으면) 문구. 급구보다 차분한 초록 톤.
+Widget _recruitBanner(String? msg) {
+  final text = msg?.trim() ?? '';
+  return Container(
+    width: double.infinity,
+    margin: const EdgeInsets.only(top: 10),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+    decoration: BoxDecoration(
+      color: const Color(0xFFE8F5E9),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            // 흰 글자 대비 — 진한 초록(#2E7D32, 흰 바탕 5.1:1)
+            color: const Color(0xFF2E7D32),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            t('rc_badge'),
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 11,
+              color: Colors.white,
+            ),
+          ),
+        ),
+        if (text.isNotEmpty) ...[
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 13.5,
+                height: 1.3,
+                color: NurungjiColors.dark,
+              ),
+            ),
+          ),
+        ],
+      ],
+    ),
+  );
+}
 
 Widget _infoRow(String icon, String text) => Padding(
   padding: const EdgeInsets.only(top: 12),
@@ -686,21 +755,38 @@ Future<void> _confirmDelete(
   await onChanged?.call();
 }
 
-// 동호회 급구(is_urgent) 올리기/내리기 — 소유자 전용. update merge로 나머지 보존.
+// 동호회 급구 올리기·수정·내리기 — 인증 팀의 관리자(또는 운영자)만.
+// 올리기·수정은 서버 postUrgent 를 거친다(운동 회차 시트). 내리기는 직접 쓴다.
 Widget _urgentToggle(
   Club c,
   BuildContext context,
   Future<void> Function()? onChanged,
   VoidCallback close,
 ) {
-  Future<void> apply(bool urgent, String msg) async {
+  final service = UrgentService();
+  final active = c.urgentActive;
+
+  Future<void> openSheet() async {
+    final ok = await showUrgentSheet(
+      context,
+      c,
+      post: (until, msg) => service.post(c.id, until, msg),
+    );
+    if (!ok) return;
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('cd_urgent_posted'))));
+    }
+    close();
+    await onChanged?.call();
+  }
+
+  Future<void> turnOff() async {
     try {
-      await DataRepository().updateClub(c.id, {
-        'is_urgent': urgent,
-        'urgent_msg': urgent ? msg : '',
-      });
+      await service.turnOff(c.id);
     } catch (e) {
-      debugPrint('urgent toggle: $e');
+      debugPrint('urgent off: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
@@ -708,40 +794,125 @@ Widget _urgentToggle(
       }
       return;
     }
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('cd_urgent_closed'))));
+    }
     close();
     await onChanged?.call();
   }
 
+  final red = ElevatedButton.styleFrom(
+    backgroundColor: const Color(0xFFE53935),
+    foregroundColor: Colors.white,
+  );
   return Padding(
     padding: const EdgeInsets.only(top: 12),
-    child: SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFE53935),
-          foregroundColor: Colors.white,
-        ),
-        onPressed: () async {
-          if (c.isUrgent) {
-            await apply(false, '');
-          } else {
+    child: active
+        // 올라가 있으면: 수정(같은 시트, 채워진 채로) + 내리기
+        ? Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  style: red,
+                  onPressed: openSheet,
+                  icon: const Icon(Icons.edit, size: 18),
+                  label: Text(t('ug_edit')),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: turnOff,
+                  icon: const Icon(Icons.notifications_off, size: 18),
+                  label: Text(t('urgent_off')),
+                ),
+              ),
+            ],
+          )
+        : SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              style: red,
+              onPressed: openSheet,
+              icon: const Icon(Icons.campaign, size: 18),
+              label: Text(t('urgent_on')),
+            ),
+          ),
+  );
+}
+
+// 회원 모집 켜기·끄기 — 팀 관리자(인증 여부 무관) 또는 운영자. 직접 쓴다.
+// 켤 때 문구는 선택(비워도 된다), 급구와 같은 링크·전화번호 검사.
+// 60일 동안 팀 정보를 고치지 않으면 서버가 끈다 — 관리자에게만 그 안내를 보인다.
+Widget _recruitToggle(
+  Club c,
+  BuildContext context,
+  Future<void> Function()? onChanged,
+  VoidCallback close,
+) {
+  Future<void> apply(bool on, String msg) async {
+    try {
+      await UrgentService().setRecruiting(c.id, on: on, msg: msg);
+    } catch (e) {
+      debugPrint('recruit toggle: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(t('cd_update_error'))));
+      }
+      return;
+    }
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(on ? t('rc_badge') : t('rc_off'))));
+    }
+    close();
+    await onChanged?.call();
+  }
+
+  final on = c.recruitingActive;
+  return Padding(
+    padding: const EdgeInsets.only(top: 12),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        OutlinedButton(
+          onPressed: () async {
+            if (on) {
+              await apply(false, '');
+              return;
+            }
             final msg = await _promptText(
               context,
-              title: t('urgent_on'),
-              hint: t('urgent_msg_hint'),
-              action: t('cd_urgent_btn'),
+              title: t('rc_on'),
+              hint: t('rc_msg_hint'),
+              action: t('rc_on'),
+              initial: c.recruitMsg ?? '',
+              maxLength: kUrgentMsgMax,
+              validate: (v) {
+                final p = recruitMsgProblem(v);
+                return p == null ? null : t(urgentErrorKey(p));
+              },
             );
-            if (msg != null && msg.trim().isNotEmpty) {
-              await apply(true, msg.trim());
-            }
-          }
-        },
-        icon: Icon(
-          c.isUrgent ? Icons.notifications_off : Icons.campaign,
-          size: 18,
+            if (msg != null) await apply(true, msg.trim());
+          },
+          child: Text(on ? t('rc_off') : t('rc_on')),
         ),
-        label: Text(c.isUrgent ? t('urgent_off') : t('urgent_on')),
-      ),
+        Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Text(
+            t('rc_auto_off'),
+            style: const TextStyle(
+              fontSize: 12.5,
+              height: 1.35,
+              color: NurungjiColors.brown,
+            ),
+          ),
+        ),
+      ],
     ),
   );
 }
@@ -755,10 +926,41 @@ final ValueNotifier<int> verifyDemoApply = ValueNotifier<int>(0);
 /// '심사 중' 안내가 뜨기 전에 지도로 돌아갔다.
 final ValueNotifier<int> verifyDemoDone = ValueNotifier<int>(0);
 
-// 인증 신청/상태 영역(웹 verifyStatusArea 대응) — 소유자 & 미인증일 때만.
-// 최신 요청 조회: 이력 없음→신청 버튼 / 심사 중→안내 / 거절→사유+재신청.
+/// 관리자 신청 전 안내 — 어떤 사진이 이 팀 사람이라는 증빙이 되는지,
+/// 남의 정보는 가려 달라는 말을 갤러리를 열기 전에 보여 준다.
+/// '관리자 신청하기'를 눌러야 true. 바깥을 눌러 닫거나 취소하면 false.
+Future<bool> confirmClubAdminRequest(BuildContext context) async {
+  if (!context.mounted) return false;
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (dctx) => AlertDialog(
+      title: Text(t('ad_title')),
+      // 문구가 길어 작은 화면·큰 글씨에서 넘칠 수 있다.
+      content: SingleChildScrollView(
+        child: Text(t('ad_desc'), style: const TextStyle(height: 1.5)),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dctx, false),
+          child: Text(t('cancel')),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(dctx, true),
+          child: Text(
+            t('ad_submit'),
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+        ),
+      ],
+    ),
+  );
+  return ok == true;
+}
+
 // 팀 관리자 영역 — 관리자 수 / 빠지기(관리자일 때) / 신청·대기·재신청(아닐 때).
-// 웹 club-detail.js 의 #clubAdminArea 와 같은 구성.
+// 웹 club-detail.js 의 #clubAdminArea 와 같은 구성. 최신 신청 조회:
+// 이력 없음→신청 버튼 / 심사 중→안내 / 거절→사유(아는 코드만)+재신청 /
+// 승인됐는데 손에 든 admins 에 내가 없음→팀 문서를 한 번 다시 읽는다.
 class _ClubAdminSection extends StatefulWidget {
   final Club club;
   final String? currentUid;
@@ -778,19 +980,35 @@ class _ClubAdminSection extends StatefulWidget {
 class _ClubAdminSectionState extends State<_ClubAdminSection> {
   ({String status, String? reason})? _req;
   bool _busy = false;
+  // 승인 직후 다시 읽은 팀 문서. 없으면 시트를 열 때 받은 것을 쓴다.
+  Club? _fresh;
+
+  Club get _club => _fresh ?? widget.club;
 
   bool get _isAdmin =>
-      widget.currentUid != null &&
-      widget.club.admins.contains(widget.currentUid);
+      widget.currentUid != null && _club.admins.contains(widget.currentUid);
 
   @override
   void initState() {
     super.initState();
     // 관리자면 신청 이력을 볼 필요가 없다 — 쿼리도 아끼고 화면도 단순해진다.
-    if (!_isAdmin) {
-      ClubAdminService().latestRequest(widget.club.id).then((r) {
-        if (mounted && r != null) setState(() => _req = r);
-      });
+    if (!_isAdmin) unawaited(_loadRequest());
+  }
+
+  Future<void> _loadRequest() async {
+    final svc = ClubAdminService();
+    final r = await svc.latestRequest(widget.club.id);
+    if (!mounted || r == null) return;
+    setState(() => _req = r);
+    // 승인됐는데 내가 admins 에 없다 = 목록을 읽은 뒤에 승인됐다. 한 번만 다시 읽는다.
+    // 그래도 없으면(승인 뒤 스스로 빠진 경우 등) 아래 build 가 신청 버튼을 그린다.
+    if (!adminApprovalNeedsRefresh(_club, widget.currentUid, r.status)) return;
+    final fresh = await svc.fetchClub(widget.club.id);
+    if (!mounted || fresh == null) return;
+    setState(() => _fresh = fresh);
+    // 이제 관리자면 지도 목록도 새로 읽게 한다 — 다음에 열 때 수정 버튼이 보인다.
+    if (canManageClub(fresh, widget.currentUid)) {
+      await widget.onChanged?.call();
     }
   }
 
@@ -800,7 +1018,10 @@ class _ClubAdminSectionState extends State<_ClubAdminSection> {
   Future<void> _apply() async {
     if (_busy) return;
     setState(() => _busy = true);
-    final err = await ClubAdminService().submit(widget.club);
+    final err = await ClubAdminService().submit(
+      _club,
+      confirm: () => confirmClubAdminRequest(context),
+    );
     if (!mounted) return;
     setState(() => _busy = false);
     if (err == 'cancelled') return;
@@ -816,7 +1037,7 @@ class _ClubAdminSectionState extends State<_ClubAdminSection> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(t('mp_cancel')),
+            child: Text(t('cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -827,7 +1048,7 @@ class _ClubAdminSectionState extends State<_ClubAdminSection> {
     );
     if (ok != true || !mounted || _busy) return;
     setState(() => _busy = true);
-    final err = await ClubAdminService().leave(widget.club.id);
+    final err = await ClubAdminService().leave(_club.id);
     if (!mounted) return;
     setState(() => _busy = false);
     _toast(err ?? t('ad_leave_done'));
@@ -839,9 +1060,10 @@ class _ClubAdminSectionState extends State<_ClubAdminSection> {
 
   @override
   Widget build(BuildContext context) {
-    final count = widget.club.admins.length;
+    final count = _club.admins.length;
     final full = count >= kMaxClubAdmins;
     final r = _req;
+    final reason = adminRejectReasonText(r?.reason);
 
     final Widget action;
     if (_isAdmin) {
@@ -882,10 +1104,11 @@ class _ClubAdminSectionState extends State<_ClubAdminSection> {
                     color: Color(0xFFD32F2F),
                   ),
                 ),
-                if (r.reason != null && r.reason!.isNotEmpty) ...[
+                // 아는 코드만 말로 바꿔 보인다. 모르는 코드는 줄째 뺀다.
+                if (reason != null) ...[
                   const SizedBox(height: 4),
                   Text(
-                    '${t('vf_reason')}${r.reason}',
+                    '${t('vf_reason')}$reason',
                     style: const TextStyle(
                       fontSize: 13,
                       height: 1.5,
@@ -927,12 +1150,20 @@ class _ClubAdminSectionState extends State<_ClubAdminSection> {
     );
   }
 
+  // 사진 업로드 중엔 버튼이 그대로라 눌린 건지 알 수 없다 — 인증 신청 칸처럼
+  // 작은 원과 '올리는 중' 문구로 바꿔 보인다.
   Widget _adminApplyBtn(String label) => SizedBox(
     width: double.infinity,
     child: OutlinedButton.icon(
       onPressed: _busy ? null : _apply,
-      icon: const Icon(Icons.person_add_alt, size: 18),
-      label: Text(label),
+      icon: _busy
+          ? const SizedBox(
+              height: 18,
+              width: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.person_add_alt, size: 18),
+      label: Text(_busy ? t('vf_submitting') : label),
     ),
   );
 
@@ -1123,28 +1354,45 @@ Future<String?> _promptText(
   required String title,
   required String hint,
   required String action,
+  String initial = '',
+  int maxLength = 200,
+  // 확인을 눌렀을 때 검사 — 오류 문구를 돌려주면 칸 아래에 보이고 창은 닫히지 않는다.
+  String? Function(String)? validate,
 }) {
-  final ctrl = TextEditingController();
+  final ctrl = TextEditingController(text: initial);
+  String? error;
   return showDialog<String>(
     context: ctx,
-    builder: (dctx) => AlertDialog(
-      title: Text(title),
-      content: TextField(
-        controller: ctrl,
-        autofocus: true,
-        maxLength: 200,
-        decoration: InputDecoration(hintText: hint),
+    builder: (dctx) => StatefulBuilder(
+      builder: (dctx, setLocal) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          maxLength: maxLength,
+          onChanged: (_) {
+            if (error != null) setLocal(() => error = null);
+          },
+          decoration: InputDecoration(hintText: hint, errorText: error),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dctx),
+            child: Text(t('cancel')),
+          ),
+          TextButton(
+            onPressed: () {
+              final err = validate?.call(ctrl.text);
+              if (err != null) {
+                setLocal(() => error = err);
+                return;
+              }
+              Navigator.pop(dctx, ctrl.text);
+            },
+            child: Text(action),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(dctx),
-          child: Text(t('cancel')),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(dctx, ctrl.text),
-          child: Text(action),
-        ),
-      ],
     ),
   ).whenComplete(ctrl.dispose);
 }
@@ -1163,6 +1411,14 @@ final ValueNotifier<Widget?> detailPanel = ValueNotifier<Widget?>(null);
 /// MapScreen 에 넘긴다.
 final ValueNotifier<({double lat, double lng})?> focusMapRequest =
     ValueNotifier<({double lat, double lng})?>(null);
+
+/// 다른 화면(도시락통 등)에서 연 상세가 팀을 고친 뒤 "지도 목록을 다시 읽어 줘" 하고 올리는 신호.
+/// MapScreen 밖에서 연 상세엔 onChanged(_load)를 직접 넘길 수 없어서, focusMapRequest 처럼
+/// 전역 신호로 MapScreen 에 넘긴다. 값은 의미 없이 1씩 올린다.
+final ValueNotifier<int> clubsReloadRequest = ValueNotifier<int>(0);
+
+/// [clubsReloadRequest] 를 올린다 — showClubDetail 의 onChanged 로 그대로 넘길 수 있는 모양.
+Future<void> requestClubsReload() async => clubsReloadRequest.value++;
 
 void _showDetailSheet(
   BuildContext context,
@@ -1403,7 +1659,8 @@ void showClubDetail(
   final tagParts = targetTagParts(c.target);
   final tags = tagParts.words;
   // 수정/삭제: 팀 관리자(admins, 최대 3명) OR 운영자.
-  // admins 가 비어 있으면 registered_by 한 명으로 폴백한다(Club._admins).
+  // admins 필드가 없을 때만 registered_by 한 명으로 폴백한다(Club._admins) —
+  // 빈 배열은 '관리자 없음'이다.
   // 판정은 club_admin.dart 한 곳에만 두고 웹·서버 규칙과 맞춘다.
   final canModify = canManageClub(c, currentUid, isOperator: isAdmin);
   // 일정 이벤트(요약·그리드 공용으로 1회 파싱)
@@ -1431,8 +1688,14 @@ void showClubDetail(
     context,
     (close) => [
       // 1. 급구 배너 (맨 위, 컴팩트)
-      if (c.isUrgent && c.urgentMsg != null && c.urgentMsg!.isNotEmpty)
-        _banner(t('urgent'), c.urgentMsg!),
+      if (c.urgentActive)
+        _banner(
+          t('urgent'),
+          c.urgentMsg!.trim(),
+          sub: c.urgentUntil == null
+              ? null
+              : urgentDeadlineLabel(c.urgentUntil!, DateTime.now()),
+        ),
       // 2. 타이틀: ✓ + 이름 + 인스타 아이콘 + 🍱 북마크
       Row(
         children: [
@@ -1509,6 +1772,8 @@ void showClubDetail(
           accent: NurungjiColors.yellow,
         ),
       ),
+      // 회원 모집 중 — 배지 + 문구(일정 바로 아래, 모집 키워드 앞)
+      if (c.recruitingActive) _recruitBanner(c.recruitMsg),
       // 4. 모집 키워드 — 해시태그 느낌(#)
       if (tags.isNotEmpty || tagParts.notes.isNotEmpty)
         Padding(
@@ -1602,10 +1867,15 @@ void showClubDetail(
                 id: c.id,
               ),
             if (canModify && !c.isVerified) _VerificationSection(club: c),
-            // 관리자 영역은 로그인한 사람 모두에게 보인다 — 관리자면 '빠지기',
-            // 아니면 '신청'. 인증 안 된 팀은 인증 신청이 곧 관리자 신청이라
-            // (승인 시 grantClubAdmin) 중복으로 묻지 않는다.
-            if (currentUid != null && c.isVerified)
+            // 관리자 영역은 실명 로그인한 사람에게 보인다(익명·운영자 제외, 웹과 같은
+            // 조건) — 관리자면 '빠지기', 아니면 '신청'. 인증 여부와 무관하다:
+            // 등록자가 없는 미인증 팀도 실제 운영자가 손을 들 수 있어야 한다.
+            // 미인증 팀의 관리자는 위 인증 신청 칸과 이 칸을 함께 본다.
+            if (showClubAdminArea(
+              uid: currentUid,
+              isAnonymous: DataRepository().isAnonymous,
+              isOperator: isAdmin,
+            ))
               _ClubAdminSection(
                 club: c,
                 currentUid: currentUid,
@@ -1615,6 +1885,8 @@ void showClubDetail(
             // 급구는 인증팀만(웹 정책 통일 · A10)
             if (canModify && c.isVerified)
               _urgentToggle(c, context, onChanged, close),
+            // 회원 모집은 인증 여부와 상관없이 팀 관리자가 켠다
+            if (canModify) _recruitToggle(c, context, onChanged, close),
             if (canModify)
               _modifyRow(
                 onEdit: () async {

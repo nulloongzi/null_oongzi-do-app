@@ -28,6 +28,47 @@ String? adminRequestBlockReason(Club club, String? uid) {
   return null;
 }
 
+/// 상세 시트에 팀 관리자 영역(신청·대기·빠지기)을 보일지.
+/// 웹 club-detail.js #clubAdminArea 와 같은 조건 — 실명 로그인(익명 제외)이고
+/// 운영자가 아닐 때. 인증 여부와는 무관하다(인증 안 된 팀도 관리자 신청을 받는다).
+/// 익명 uid 는 신청해도 submit 이 로그인 안내로 돌려보내므로 처음부터 보이지 않는다.
+bool showClubAdminArea({
+  required String? uid,
+  required bool isAnonymous,
+  bool isOperator = false,
+}) => uid != null && uid.isNotEmpty && !isAnonymous && !isOperator;
+
+/// 관리자 신청이 승인됐는데 손에 든 팀 정보엔 내가 관리자로 없다 —
+/// 목록을 읽은 뒤에 승인된 경우다. 이때만 팀 문서를 한 번 다시 읽는다.
+/// (승인 뒤 스스로 빠진 사람도 여기 걸리지만, 다시 읽어도 없으니 신청 버튼이 뜬다.)
+bool adminApprovalNeedsRefresh(Club club, String? uid, String? status) =>
+    status == 'approved' &&
+    uid != null &&
+    uid.isNotEmpty &&
+    !club.admins.contains(uid);
+
+/// 서버가 club_admin_requests.reject_reason 에 쓰는 코드. 이 밖의 값(옛 문서의
+/// error 등)은 사람에게 보일 말이 없어 사유 줄을 생략한다. 수동 거절은 사유가 없다.
+const Set<String> kAdminRejectReasonCodes = {
+  'full',
+  'already_admin',
+  'not_found',
+  'duplicate',
+};
+
+/// 거절 사유 코드 → strings.dart 키. 모르는 코드·빈 값이면 null.
+String? adminRejectReasonKey(String? code) {
+  final c = code?.trim() ?? '';
+  return kAdminRejectReasonCodes.contains(c) ? 'ad_reason_$c' : null;
+}
+
+/// leaveClubAdmin callable 의 반환값이 '실제로 빠졌다'를 뜻하는가.
+/// 서버(functions/index.js)는 빠지면 {status:'left'}, 원래 관리자가 아니었으면
+/// {status:'not_admin'} 을 돌려준다. 앞의 경우만 성공이다 — 아니면 '빠졌어요'
+/// 라고 해 놓고 다시 열면 그대로 관리자인 상태가 된다.
+bool leaveClubAdminSucceeded(Object? data) =>
+    data is Map && data['status'] == 'left';
+
 // ── 위치 공개 수준 ────────────────────────────────────────────────
 
 /// 1/0.005° 격자. 위도로 약 550m.

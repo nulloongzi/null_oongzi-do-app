@@ -67,14 +67,18 @@ class ClubAdminService {
   }
 
   /// 갤러리에서 증빙 사진 선택 → 업로드 → 관리자 신청 문서 생성.
+  /// [confirm] 은 로그인·정원 확인을 통과한 뒤, 갤러리를 열기 직전에 불린다 —
+  /// 어떤 사진을 올려야 하는지 먼저 알려 주는 창. false 면 갤러리를 열지 않는다.
   /// 반환: null=성공, 'cancelled'=사용자 취소, 그 외=사용자에게 보일 오류 메시지.
-  Future<String?> submit(Club club) async {
+  Future<String?> submit(Club club, {Future<bool> Function()? confirm}) async {
     final user = _auth.currentUser;
     if (user == null || user.isAnonymous) return t('ad_login_required');
 
     // 정원이 찼으면 사진부터 올리게 두지 않는다 — 올려봐야 거절될 뿐이고,
     // 남의 이름이 찍힌 캡처가 괜히 저장소에 남는다.
     if (club.admins.length >= kMaxClubAdmins) return t('ad_full');
+
+    if (confirm != null && !await confirm()) return 'cancelled';
 
     final XFile? file = await ImagePicker().pickImage(
       source: ImageSource.gallery,
@@ -119,12 +123,24 @@ class ClubAdminService {
   /// 반환: null=성공, 그 외=사용자에게 보일 오류 메시지.
   Future<String?> leave(String clubId) async {
     try {
-      await FirebaseFunctions.instance.httpsCallable('leaveClubAdmin').call({
-        'clubId': clubId,
-      });
-      return null;
+      final res = await FirebaseFunctions.instance
+          .httpsCallable('leaveClubAdmin')
+          .call({'clubId': clubId});
+      // 호출이 성공해도 '원래 관리자가 아니었다'(not_admin)면 빠진 게 아니다.
+      return leaveClubAdminSucceeded(res.data) ? null : t('ad_leave_error');
     } catch (_) {
       return t('ad_leave_error');
+    }
+  }
+
+  /// 팀 문서를 새로 읽는다. 승인 직후처럼 손에 든 admins 가 낡았을 때만 쓴다.
+  /// 없거나 읽기 실패면 null.
+  Future<Club?> fetchClub(String clubId) async {
+    try {
+      final doc = await _db.collection('clubs').doc(clubId).get();
+      return doc.exists ? Club.fromDoc(doc) : null;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -135,4 +151,11 @@ class ClubAdminService {
     if (n.endsWith('.gif')) return 'image/gif';
     return 'image/jpeg';
   }
+}
+
+/// 관리자 신청 거절 사유 코드 → 화면에 보일 말. 모르는 코드·사유 없음이면 null
+/// (이때는 사유 줄 자체를 그리지 않는다 — 'error' 같은 코드를 그대로 보이지 않도록).
+String? adminRejectReasonText(String? code) {
+  final key = adminRejectReasonKey(code);
+  return key == null ? null : t(key);
 }

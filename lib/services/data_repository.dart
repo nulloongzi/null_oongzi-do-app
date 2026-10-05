@@ -46,6 +46,9 @@ class DataRepository {
   /// 현재 로그인 uid (없으면 null). 클럽 등록/권한 판정용.
   String? get currentUid => _auth.currentUser?.uid;
 
+  /// 지금 계정이 익명(픽업 무로그인 등록용)인가. 로그아웃이면 false(uid 도 null).
+  bool get isAnonymous => _auth.currentUser?.isAnonymous ?? false;
+
   // 관리자 여부 캐시 — uid별로 보관(계정 전환 시 이전 값이 남는 버그 방지).
   static String? _adminUid;
   static bool _adminValue = false;

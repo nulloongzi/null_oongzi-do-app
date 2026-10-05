@@ -16,6 +16,7 @@ import '../services/sanitize.dart';
 import '../services/data_repository.dart';
 import '../services/club_admin.dart';
 import '../services/club_filter.dart';
+import '../services/urgent.dart';
 import '../services/deep_link_service.dart';
 import '../services/profile_service.dart';
 import '../services/friends_service.dart';
@@ -116,6 +117,7 @@ class _MapScreenState extends State<MapScreen> {
     _deepLinks.start(_handleDeepLink);
     FriendsHub.instance.start(); // 밥친구: 로그인(익명 제외)하면 관계 구독 → 🍚 배지
     focusMapRequest.addListener(_onFocusMapRequest);
+    clubsReloadRequest.addListener(_onClubsReloadRequest);
     // 첫 로그인 시 밥이름 프로필 생성 (조용히, 실패 무시)
     final uid = _repo.currentUid;
     if (uid != null) {
@@ -126,6 +128,7 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void dispose() {
     focusMapRequest.removeListener(_onFocusMapRequest);
+    clubsReloadRequest.removeListener(_onClubsReloadRequest);
     detailPanel.value = null; // 화면 떠날 때 잔존 패널 정리
     _labelFadeTimer?.cancel();
     _search.dispose();
@@ -307,6 +310,9 @@ class _MapScreenState extends State<MapScreen> {
   // 라벨 on/off 데드밴드(히스테리시스): 경계 근처 미세 줌이 표시를 깜빡이며 토글하지 않도록.
   static const _labelZoomShow = 12.2; // 이 줌 이상 → 이름 알약 켜기
   static const _labelZoomHide = 11.8; // 이 줌 미만 → 끄기 (사이 구간은 현 상태 유지)
+  // 급구 라벨은 3단계 더 멀리서도 보인다 — 웹 map-core.js(카카오 레벨 ≤8 급구 / ≤5 일반)와
+  // 같은 차이. 카카오 레벨 1 = 네이버 줌 1(둘 다 한 단계에 축척 2배)이라 줌으로 3을 뺀다.
+  static const _urgentLabelZoomDelta = 3.0;
   static const _focusZoom = 15.0; // 마커 탭 시 확대 축척
   static const _captureFocusZoom = 12.5; // 저사양 캡처용(타일이 실제로 렌더되는 축척)
   // fitBounds 를 쓸 최소 경계 크기(위경도 도). 이보다 좁으면 최대 축척까지 확대돼
@@ -316,6 +322,10 @@ class _MapScreenState extends State<MapScreen> {
   // 이후 모든 이동에 계속 전파된다(줌아웃 방지 규칙 때문).
   static const _maxInheritZoom = 16.0;
   bool _showLabels = false; // 현재 줌이 임계 이상? (스테이지3=알약 표시)
+  bool _showUrgentLabels = false; // 급구 라벨 임계(일반보다 3단계 멀리) 이상?
+
+  /// 이 마커에 이름 알약을 붙일지 — 급구는 더 멀리서부터.
+  bool _labelOn(_MarkerSpec s) => s.urgent ? _showUrgentLabels : _showLabels;
 
   // 라벨 토글을 clear+add 없이 in-place(setIcon/setSize)로 적용하기 위한 보관.
   Map<String, NMarker> _markersById = {};
@@ -531,6 +541,11 @@ class _MapScreenState extends State<MapScreen> {
     _centerOnPin(r.lat, r.lng);
   }
 
+  // 다른 화면(도시락통 등)에서 연 상세가 팀을 고쳤다 — 마커·자리 목록이 낡지 않게 다시 읽는다.
+  void _onClubsReloadRequest() {
+    if (mounted) _load();
+  }
+
   // 마커/티커 탭 → 핀을 보이는 영역 중앙으로 이동 + 상세 시트 오픈.
   Future<void> _focusAndShowClub(Club club) async {
     await _centerOnPin(club.lat, club.lng);
@@ -575,7 +590,7 @@ class _MapScreenState extends State<MapScreen> {
     Club? pick() {
       if (_clubs.isEmpty) return null;
       for (final c in _clubs) {
-        if (c.isUrgent && (c.urgentMsg?.isNotEmpty ?? false)) return c;
+        if (c.urgentActive) return c;
       }
       for (final c in _clubs) {
         if (c.isVerified) return c;
@@ -699,7 +714,7 @@ class _MapScreenState extends State<MapScreen> {
       if (_stillPreset.matches(c)) return c;
     }
     for (final c in _clubs) {
-      if (c.isUrgent && (c.urgentMsg?.isNotEmpty ?? false)) return c;
+      if (c.urgentActive) return c;
     }
     return _clubs.first;
   }
@@ -1284,18 +1299,23 @@ class _MapScreenState extends State<MapScreen> {
     final cam = await _controller?.getCameraPosition();
     if (cam == null || !mounted) return;
     final z = cam.zoom;
-    final bool show;
-    if (z >= _labelZoomShow) {
-      show = true;
-    } else if (z < _labelZoomHide) {
-      show = false;
-    } else {
-      show = _showLabels; // 경계 사이 → 현 상태 유지(미세 줌 thrash 방지)
-    }
-    if (show != _showLabels) {
+    final show = _labelState(z, 0, _showLabels);
+    final showUrgent = _labelState(z, _urgentLabelZoomDelta, _showUrgentLabels);
+    final normalChanged = show != _showLabels;
+    final urgentChanged = showUrgent != _showUrgentLabels;
+    if (normalChanged || urgentChanged) {
       _showLabels = show;
-      _applyLabelState(); // clear+add 없이 setIcon/setSize로 교체 + 페이드
+      _showUrgentLabels = showUrgent;
+      // clear+add 없이 setIcon/setSize로 교체 + 페이드 — 상태가 바뀐 쪽 마커만
+      _applyLabelState(normal: normalChanged, urgent: urgentChanged);
     }
+  }
+
+  // 데드밴드 판정: [delta] 만큼 낮춘 경계로 켜기/끄기, 사이 구간은 [current] 유지.
+  static bool _labelState(double z, double delta, bool current) {
+    if (z >= _labelZoomShow - delta) return true;
+    if (z < _labelZoomHide - delta) return false;
+    return current; // 경계 사이 → 현 상태 유지(미세 줌 thrash 방지)
   }
 
   // 두 좌표 간 근사 거리(m) — 작은 범위라 equirectangular 근사로 충분(haversine 불필요).
@@ -1343,7 +1363,7 @@ class _MapScreenState extends State<MapScreen> {
           reel = club.instaReels.isNotEmpty ? club.instaReels.first : null;
           cover = club.instaReelCovers[Sanitize.instaReelCode(reel) ?? ''];
           peekId = club.id;
-          urgent = club.isUrgent && (club.urgentMsg?.isNotEmpty ?? false);
+          urgent = club.urgentActive;
         }
       }
     } else {
@@ -1402,7 +1422,7 @@ class _MapScreenState extends State<MapScreen> {
     if (_tab == 'clubs') {
       for (final club in _clubs.where(_filter.matches)) {
         if (club.lat == null || club.lng == null) continue;
-        final urgent = club.isUrgent && (club.urgentMsg?.isNotEmpty ?? false);
+        final urgent = club.urgentActive;
         items.add(
           _MarkerSpec(
             id: 'c_${club.id}',
@@ -1436,18 +1456,19 @@ class _MapScreenState extends State<MapScreen> {
     }
 
     // 2) 이름 알약 아이콘을 병렬로 빌드(순차 await 제거 → 줌 인 시 끊김 완화). 캐시 히트는 즉시.
-    final icons = _showLabels
-        ? await Future.wait(
-            items.map(
-              (s) => _labeledIcon(
+    // 라벨이 꺼진 마커는 null — 급구 라벨만 켜진 축척에선 급구 마커만 빌드한다.
+    final icons = await Future.wait(
+      items.map(
+        (s) => _labelOn(s)
+            ? _labeledIcon(
                 s.name,
                 red: s.red,
                 urgent: s.urgent,
                 verified: s.verified,
-              ),
-            ),
-          )
-        : const <NOverlayImage?>[];
+              )
+            : Future<NOverlayImage?>.value(),
+      ),
+    );
     if (gen != _markerGen || !mounted || _controller == null) return;
 
     // 3) 마커 생성(급구 클럽=비클러스터, 그 외=클러스터러블)
@@ -1455,7 +1476,7 @@ class _MapScreenState extends State<MapScreen> {
     final overlays = <NAddableOverlay>{};
     for (var i = 0; i < items.length; i++) {
       final s = items[i];
-      final icon = _showLabels ? icons[i] : null;
+      final icon = icons[i];
       final size = icon != null ? _labelSize : _markerSize;
       final fallback = s.red ? _pickupIcon : _clubIcon;
       final NMarker m;
@@ -1514,30 +1535,38 @@ class _MapScreenState extends State<MapScreen> {
 
   // 라벨 on/off를 clear+add 없이 적용: 보관된 기존 마커의 아이콘·크기만 교체 후 페이드.
   // (보관된 마커가 없으면 풀 리프레시로 폴백)
-  Future<void> _applyLabelState() async {
-    final specs = _lastSpecs;
-    if (specs.isEmpty || _markersById.isEmpty) {
+  // [normal]·[urgent]: 라벨 상태가 바뀐 묶음만 건드린다 — 급구 경계(줌 9.2 부근)를
+  // 넘을 때 일반 마커까지 깜빡이며 다시 나타나지 않게.
+  Future<void> _applyLabelState({
+    bool normal = true,
+    bool urgent = true,
+  }) async {
+    final specs = _lastSpecs
+        .where((s) => s.urgent ? urgent : normal)
+        .toList(growable: false);
+    if (_lastSpecs.isEmpty || _markersById.isEmpty) {
       return _refreshMarkers(fade: true);
     }
+    if (specs.isEmpty) return;
     final gen = _markerGen; // 적용 도중 풀 리프레시가 끼어들면 양보(재진입 가드)
-    final icons = _showLabels
-        ? await Future.wait(
-            specs.map(
-              (s) => _labeledIcon(
+    final icons = await Future.wait(
+      specs.map(
+        (s) => _labelOn(s)
+            ? _labeledIcon(
                 s.name,
                 red: s.red,
                 urgent: s.urgent,
                 verified: s.verified,
-              ),
-            ),
-          )
-        : const <NOverlayImage?>[];
+              )
+            : Future<NOverlayImage?>.value(),
+      ),
+    );
     if (gen != _markerGen || !mounted) return;
     final updated = <NMarker>[];
     for (var i = 0; i < specs.length; i++) {
       final m = _markersById[specs[i].id];
       if (m == null) continue;
-      final icon = _showLabels ? icons[i] : null;
+      final icon = icons[i];
       final fallback = specs[i].red ? _pickupIcon : _clubIcon;
       try {
         m.setIcon(icon ?? fallback);
@@ -1625,6 +1654,8 @@ class _MapScreenState extends State<MapScreen> {
         'target': result.targets.join(','),
         'six': result.targets.contains('6인제') ? 1 : 0,
         'has_keyword': result.keyword.trim().isNotEmpty ? 1 : 0,
+        'urgent': result.urgentOnly ? 1 : 0,
+        'recruiting': result.recruitingOnly ? 1 : 0,
       });
       setState(() {
         _filter = result;
@@ -2059,8 +2090,7 @@ class _MapScreenState extends State<MapScreen> {
 
   // 탭 pill (동호회 | 픽업) — 글래스.
   // 급구(메시지 있는) 동호회가 하나라도 있는지 — 상단 티커/탭 배치에 사용.
-  bool get _hasUrgent =>
-      _clubs.any((c) => c.isUrgent && (c.urgentMsg?.isNotEmpty ?? false));
+  bool get _hasUrgent => _clubs.any((c) => c.urgentActive);
 
   // 동호회/픽업 — 큰 알약 안에 작은 알약 둘(숫자 없음).
   Widget _tabPill() {
@@ -2172,9 +2202,7 @@ class _MapScreenState extends State<MapScreen> {
 
   // 급구 티커 (verified 무관, is_urgent+메시지 있는 클럽). 탭 → 상세.
   Widget _urgentTicker() {
-    final urgent = _clubs
-        .where((c) => c.isUrgent && (c.urgentMsg?.isNotEmpty ?? false))
-        .toList();
+    final urgent = sortByUrgentDeadline(_clubs.where((c) => c.urgentActive));
     if (urgent.isEmpty) return const SizedBox.shrink();
     // 롤링 티커: 여러 급구 팀을 일정 간격으로 위로 굴려 보여줌. 탭 → 핀 이동 + 상세.
     return _UrgentTicker(clubs: urgent, onTap: _focusAndShowClub);
@@ -2440,15 +2468,38 @@ class _UrgentTickerState extends State<_UrgentTicker> {
                       ).animate(anim),
                       child: FadeTransition(opacity: anim, child: child),
                     ),
-                    child: Text(
-                      '[${c.name}] ${c.urgentMsg}',
+                    // 마감 표기는 문구가 길어도 잘리지 않게 오른쪽에 따로 둔다.
+                    child: Row(
                       key: ValueKey('${c.id}_$_i'),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: NurungjiColors.dark,
-                      ),
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '[${c.name}] ${c.urgentMsg!.trim()}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: NurungjiColors.dark,
+                            ),
+                          ),
+                        ),
+                        if (c.urgentUntil != null)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8),
+                            child: Text(
+                              urgentDeadlineLabel(
+                                c.urgentUntil!,
+                                DateTime.now(),
+                              ),
+                              maxLines: 1,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: NurungjiColors.urgentInk,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ),

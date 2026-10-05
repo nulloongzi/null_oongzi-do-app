@@ -131,7 +131,7 @@ const Map<String, Map<String, String>> kStrings = {
 
   // 상세
   'this_week': {'ko': '이번주', 'en': 'This week'},
-  'urgent': {'ko': '🔥 급구', 'en': '🔥 Urgent'},
+  'urgent': {'ko': '🔥 게스트 급구', 'en': '🔥 Guests needed'},
   'chat_join': {'ko': '💬 단톡 들어가기', 'en': '💬 Join chat'},
   'share_btn': {'ko': '📤 공유하기', 'en': '📤 Share'},
   'bookmark_btn': {'ko': '🍱 도시락에 담기', 'en': '🍱 Add to lunchbox'},
@@ -163,8 +163,8 @@ const Map<String, Map<String, String>> kStrings = {
   'vf_reason': {'ko': '사유: ', 'en': 'Reason: '},
   'vf_no_reason': {'ko': '적힌 사유가 없어요.', 'en': 'No reason given.'},
   'vf_reapply': {'ko': '🔄 인증 재신청', 'en': '🔄 Re-apply'},
-  'urgent_on': {'ko': '🔥 급구 올리기', 'en': '🔥 Post an urgent call'},
-  'urgent_off': {'ko': '급구 내리기', 'en': 'Remove urgent'},
+  'urgent_on': {'ko': '🔥 게스트 급구 올리기', 'en': '🔥 Post a guest call'},
+  'urgent_off': {'ko': '게스트 급구 내리기', 'en': 'End guest call'},
   'urgent_msg_hint': {
     'ko': '예: 이번주 토 세터 1명 급구!',
     'en': 'e.g. Need 1 setter this Sat!',
@@ -190,6 +190,85 @@ const Map<String, Map<String, String>> kStrings = {
     'ko': '바꾸지 못했어요. 잠시 후 다시 해 주세요.',
     'en': "Couldn't save the change. Please try again in a moment.",
   },
+  'cd_urgent_posted': {'ko': '🔥 게스트 급구를 올렸어요', 'en': '🔥 Guest call posted'},
+  'cd_urgent_closed': {'ko': '게스트 급구를 마감했어요', 'en': 'Guest call closed'},
+
+  // 급구 — 운동 한 회차에 묶어 올리고, 그 운동이 끝나면 내려간다(서버 postUrgent).
+  // 웹 js/i18n.js 와 키·문구가 같다(급구·회원 모집 계약).
+  'ug_when': {
+    'ko': '언제 운동에 필요해요?',
+    'en': 'Which session do you need people for?',
+  },
+  'ug_other_day': {'ko': '다른 날', 'en': 'Another day'},
+  'ug_end_time': {'ko': '끝나는 시각', 'en': 'End time'},
+  'ug_msg_label': {'ko': '어떤 사람이 필요해요?', 'en': 'Who do you need?'},
+  'ug_msg_hint': {
+    'ko': '예: 센터 1명, 여자 레프트 1명',
+    'en': 'e.g. 1 middle blocker, 1 female outside hitter',
+  },
+  'ug_auto_off': {
+    'ko': '고른 운동이 끝나면 자동으로 내려가요',
+    'en': 'It comes down automatically when that session ends.',
+  },
+  'ug_submit': {'ko': '급구 올리기', 'en': 'Post'},
+  'ug_edit': {'ko': '게스트 급구 수정', 'en': 'Edit guest call'},
+  'ug_err_unverified': {
+    'ko': '인증된 팀만 급구를 올릴 수 있어요',
+    'en': 'Only verified teams can post urgent calls.',
+  },
+  'ug_err_past': {
+    'ko': '이미 지난 시간이에요. 다른 운동을 골라 주세요',
+    'en': 'That time has passed. Pick another session.',
+  },
+  'ug_err_too_far': {
+    'ko': '급구는 7일 안의 운동만 올릴 수 있어요',
+    'en': 'Urgent calls are only for sessions within 7 days.',
+  },
+  'ug_err_msg_empty': {'ko': '어떤 사람이 필요한지 적어 주세요', 'en': 'Say who you need.'},
+  'ug_err_msg_too_long': {'ko': '60자까지 쓸 수 있어요', 'en': 'Up to 60 characters.'},
+  'ug_err_msg_link': {
+    'ko': '링크는 넣을 수 없어요. 연락은 팀 연락처로 받아요',
+    'en':
+        "Links aren't allowed. People will reach you through the team contact.",
+  },
+  'ug_err_msg_phone': {
+    'ko': '전화번호는 넣을 수 없어요. 연락은 팀 연락처로 받아요',
+    'en':
+        "Phone numbers aren't allowed. People will reach you through the team contact.",
+  },
+  'ug_err_not_manager': {
+    'ko': '이 팀 관리자만 급구를 올릴 수 있어요',
+    'en': "Only this team's admins can post urgent calls.",
+  },
+  'ug_err_blocked': {
+    'ko': '이 팀은 지금 급구를 올릴 수 없어요. 운영자에게 문의해 주세요',
+    'en': "This team can't post urgent calls right now. Please contact us.",
+  },
+  'ug_err_generic': {
+    'ko': '급구를 올리지 못했어요. 잠시 후 다시 해 주세요',
+    'en': "Couldn't post the urgent call. Please try again in a moment.",
+  },
+  'ug_until_today': {'ko': '오늘 {time}까지', 'en': 'Until {time} today'},
+  'ug_until_tomorrow': {'ko': '내일 {time}까지', 'en': 'Until {time} tomorrow'},
+  'ug_until_day': {
+    'ko': 'D-{n} · {day} {time}까지',
+    'en': 'D-{n} · until {day} {time}',
+  },
+  'ug_filter': {'ko': '🔥 게스트 급구만', 'en': '🔥 Guest calls only'},
+
+  // 회원 모집 중 — 급구와 따로, 인증 여부와 상관없이 팀 관리자가 켠다.
+  'rc_badge': {'ko': '🙋 회원 모집 중', 'en': '🙋 Recruiting'},
+  'rc_on': {'ko': '🙋 회원 모집 시작', 'en': '🙋 Start recruiting'},
+  'rc_off': {'ko': '회원 모집 마감', 'en': 'Stop recruiting'},
+  'rc_msg_hint': {
+    'ko': '예: 20~30대 여성 회원 모집해요',
+    'en': 'e.g. Looking for women in their 20s–30s',
+  },
+  'rc_auto_off': {
+    'ko': '60일 동안 팀 정보를 고치지 않으면 자동으로 꺼져요',
+    'en': 'Turns off automatically after 60 days without team updates.',
+  },
+  'rc_filter': {'ko': '🙋 모집 중', 'en': '🙋 Recruiting'},
 
   // 공유 메뉴
   'share_title': {'ko': '공유하기', 'en': 'Share'},
@@ -1500,6 +1579,25 @@ const Map<String, Map<String, String>> kStrings = {
     'en': '❌ Admin request was not accepted',
   },
   'ad_reapply': {'ko': '🔄 다시 신청', 'en': '🔄 Apply again'},
+  // 거절 사유 코드(club_admin_requests.reject_reason) → 사람이 읽는 말.
+  // 서버가 쓰는 코드는 full · already_admin · not_found · duplicate 뿐이다.
+  // 모르는 코드(옛 문서의 error 등)나 사유 없는 수동 거절은 사유 줄을 아예 안 보인다.
+  'ad_reason_full': {
+    'ko': '관리자가 이미 3명이에요',
+    'en': 'This team already has 3 admins',
+  },
+  'ad_reason_already_admin': {
+    'ko': '이미 이 팀 관리자예요',
+    'en': "You're already an admin of this team",
+  },
+  'ad_reason_not_found': {
+    'ko': '팀 정보를 찾지 못했어요',
+    'en': "We couldn't find this team",
+  },
+  'ad_reason_duplicate': {
+    'ko': '같은 신청이 이미 들어가 있어요',
+    'en': 'The same request is already in',
+  },
   'ad_full': {
     'ko': '이 팀은 관리자가 벌써 3명이에요',
     'en': 'This team already has 3 admins.',
