@@ -17,6 +17,8 @@ import '../services/lunchbox_service.dart';
 import '../services/share_service.dart';
 import '../services/story_share.dart';
 import '../services/target_parse.dart' show targetTagParts;
+import '../services/urgent.dart';
+import '../services/urgent_service.dart';
 import '../services/schedule_parse.dart';
 import '../services/verification_service.dart';
 import '../theme.dart';
@@ -27,6 +29,7 @@ import '../widgets/reel_card.dart';
 import '../widgets/schedule_timetable.dart';
 import '../widgets/share_menu.dart';
 import '../widgets/story_card.dart';
+import '../widgets/urgent_sheet.dart';
 import '../widgets/data_trust_row.dart';
 import '../widgets/map_detail_panel.dart';
 import 'club_form_screen.dart';
@@ -63,7 +66,8 @@ Widget _chip(String text, Color bg, Color fg) => Container(
 );
 
 // 급구/이번주 배너 — 웹처럼 컴팩트(작은 크림-오렌지). 텍스트 크기 명시.
-Widget _banner(String badge, String text) => Container(
+// [sub] 는 문구 아래 작은 줄(급구 마감 '오늘 21:00까지' 등).
+Widget _banner(String badge, String text, {String? sub}) => Container(
   width: double.infinity,
   margin: const EdgeInsets.only(top: 8, bottom: 12),
   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
@@ -91,19 +95,84 @@ Widget _banner(String badge, String text) => Container(
       ),
       const SizedBox(width: 8),
       Expanded(
-        child: Text(
-          text,
-          style: const TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 13.5,
-            height: 1.3,
-            color: NurungjiColors.dark,
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              text,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 13.5,
+                height: 1.3,
+                color: NurungjiColors.dark,
+              ),
+            ),
+            if (sub != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(
+                  sub,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                    color: NurungjiColors.urgentInk,
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     ],
   ),
 );
+
+// 회원 모집 중 — 배지 + (있으면) 문구. 급구보다 차분한 초록 톤.
+Widget _recruitBanner(String? msg) {
+  final text = msg?.trim() ?? '';
+  return Container(
+    width: double.infinity,
+    margin: const EdgeInsets.only(top: 10),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+    decoration: BoxDecoration(
+      color: const Color(0xFFE8F5E9),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            // 흰 글자 대비 — 진한 초록(#2E7D32, 흰 바탕 5.1:1)
+            color: const Color(0xFF2E7D32),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            t('rc_badge'),
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 11,
+              color: Colors.white,
+            ),
+          ),
+        ),
+        if (text.isNotEmpty) ...[
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 13.5,
+                height: 1.3,
+                color: NurungjiColors.dark,
+              ),
+            ),
+          ),
+        ],
+      ],
+    ),
+  );
+}
 
 Widget _infoRow(String icon, String text) => Padding(
   padding: const EdgeInsets.only(top: 12),
@@ -686,21 +755,38 @@ Future<void> _confirmDelete(
   await onChanged?.call();
 }
 
-// 동호회 급구(is_urgent) 올리기/내리기 — 소유자 전용. update merge로 나머지 보존.
+// 동호회 급구 올리기·수정·내리기 — 인증 팀의 관리자(또는 운영자)만.
+// 올리기·수정은 서버 postUrgent 를 거친다(운동 회차 시트). 내리기는 직접 쓴다.
 Widget _urgentToggle(
   Club c,
   BuildContext context,
   Future<void> Function()? onChanged,
   VoidCallback close,
 ) {
-  Future<void> apply(bool urgent, String msg) async {
+  final service = UrgentService();
+  final active = c.urgentActive;
+
+  Future<void> openSheet() async {
+    final ok = await showUrgentSheet(
+      context,
+      c,
+      post: (until, msg) => service.post(c.id, until, msg),
+    );
+    if (!ok) return;
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('cd_urgent_posted'))));
+    }
+    close();
+    await onChanged?.call();
+  }
+
+  Future<void> turnOff() async {
     try {
-      await DataRepository().updateClub(c.id, {
-        'is_urgent': urgent,
-        'urgent_msg': urgent ? msg : '',
-      });
+      await service.turnOff(c.id);
     } catch (e) {
-      debugPrint('urgent toggle: $e');
+      debugPrint('urgent off: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
@@ -708,40 +794,125 @@ Widget _urgentToggle(
       }
       return;
     }
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('cd_urgent_closed'))));
+    }
     close();
     await onChanged?.call();
   }
 
+  final red = ElevatedButton.styleFrom(
+    backgroundColor: const Color(0xFFE53935),
+    foregroundColor: Colors.white,
+  );
   return Padding(
     padding: const EdgeInsets.only(top: 12),
-    child: SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFE53935),
-          foregroundColor: Colors.white,
-        ),
-        onPressed: () async {
-          if (c.isUrgent) {
-            await apply(false, '');
-          } else {
+    child: active
+        // 올라가 있으면: 수정(같은 시트, 채워진 채로) + 내리기
+        ? Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  style: red,
+                  onPressed: openSheet,
+                  icon: const Icon(Icons.edit, size: 18),
+                  label: Text(t('ug_edit')),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: turnOff,
+                  icon: const Icon(Icons.notifications_off, size: 18),
+                  label: Text(t('urgent_off')),
+                ),
+              ),
+            ],
+          )
+        : SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              style: red,
+              onPressed: openSheet,
+              icon: const Icon(Icons.campaign, size: 18),
+              label: Text(t('urgent_on')),
+            ),
+          ),
+  );
+}
+
+// 회원 모집 켜기·끄기 — 팀 관리자(인증 여부 무관) 또는 운영자. 직접 쓴다.
+// 켤 때 문구는 선택(비워도 된다), 급구와 같은 링크·전화번호 검사.
+// 60일 동안 팀 정보를 고치지 않으면 서버가 끈다 — 관리자에게만 그 안내를 보인다.
+Widget _recruitToggle(
+  Club c,
+  BuildContext context,
+  Future<void> Function()? onChanged,
+  VoidCallback close,
+) {
+  Future<void> apply(bool on, String msg) async {
+    try {
+      await UrgentService().setRecruiting(c.id, on: on, msg: msg);
+    } catch (e) {
+      debugPrint('recruit toggle: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(t('cd_update_error'))));
+      }
+      return;
+    }
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(on ? t('rc_badge') : t('rc_off'))));
+    }
+    close();
+    await onChanged?.call();
+  }
+
+  final on = c.recruitingActive;
+  return Padding(
+    padding: const EdgeInsets.only(top: 12),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        OutlinedButton(
+          onPressed: () async {
+            if (on) {
+              await apply(false, '');
+              return;
+            }
             final msg = await _promptText(
               context,
-              title: t('urgent_on'),
-              hint: t('urgent_msg_hint'),
-              action: t('cd_urgent_btn'),
+              title: t('rc_on'),
+              hint: t('rc_msg_hint'),
+              action: t('rc_on'),
+              initial: c.recruitMsg ?? '',
+              maxLength: kUrgentMsgMax,
+              validate: (v) {
+                final p = recruitMsgProblem(v);
+                return p == null ? null : t(urgentErrorKey(p));
+              },
             );
-            if (msg != null && msg.trim().isNotEmpty) {
-              await apply(true, msg.trim());
-            }
-          }
-        },
-        icon: Icon(
-          c.isUrgent ? Icons.notifications_off : Icons.campaign,
-          size: 18,
+            if (msg != null) await apply(true, msg.trim());
+          },
+          child: Text(on ? t('rc_off') : t('rc_on')),
         ),
-        label: Text(c.isUrgent ? t('urgent_off') : t('urgent_on')),
-      ),
+        Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Text(
+            t('rc_auto_off'),
+            style: const TextStyle(
+              fontSize: 12.5,
+              height: 1.35,
+              color: NurungjiColors.brown,
+            ),
+          ),
+        ),
+      ],
     ),
   );
 }
@@ -1183,28 +1354,45 @@ Future<String?> _promptText(
   required String title,
   required String hint,
   required String action,
+  String initial = '',
+  int maxLength = 200,
+  // 확인을 눌렀을 때 검사 — 오류 문구를 돌려주면 칸 아래에 보이고 창은 닫히지 않는다.
+  String? Function(String)? validate,
 }) {
-  final ctrl = TextEditingController();
+  final ctrl = TextEditingController(text: initial);
+  String? error;
   return showDialog<String>(
     context: ctx,
-    builder: (dctx) => AlertDialog(
-      title: Text(title),
-      content: TextField(
-        controller: ctrl,
-        autofocus: true,
-        maxLength: 200,
-        decoration: InputDecoration(hintText: hint),
+    builder: (dctx) => StatefulBuilder(
+      builder: (dctx, setLocal) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          maxLength: maxLength,
+          onChanged: (_) {
+            if (error != null) setLocal(() => error = null);
+          },
+          decoration: InputDecoration(hintText: hint, errorText: error),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dctx),
+            child: Text(t('cancel')),
+          ),
+          TextButton(
+            onPressed: () {
+              final err = validate?.call(ctrl.text);
+              if (err != null) {
+                setLocal(() => error = err);
+                return;
+              }
+              Navigator.pop(dctx, ctrl.text);
+            },
+            child: Text(action),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(dctx),
-          child: Text(t('cancel')),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(dctx, ctrl.text),
-          child: Text(action),
-        ),
-      ],
     ),
   ).whenComplete(ctrl.dispose);
 }
@@ -1492,7 +1680,14 @@ void showClubDetail(
     context,
     (close) => [
       // 1. 급구 배너 (맨 위, 컴팩트)
-      if (c.urgentActive) _banner(t('urgent'), c.urgentMsg!.trim()),
+      if (c.urgentActive)
+        _banner(
+          t('urgent'),
+          c.urgentMsg!.trim(),
+          sub: c.urgentUntil == null
+              ? null
+              : urgentDeadlineLabel(c.urgentUntil!, DateTime.now()),
+        ),
       // 2. 타이틀: ✓ + 이름 + 인스타 아이콘 + 🍱 북마크
       Row(
         children: [
@@ -1569,6 +1764,8 @@ void showClubDetail(
           accent: NurungjiColors.yellow,
         ),
       ),
+      // 회원 모집 중 — 배지 + 문구(일정 바로 아래, 모집 키워드 앞)
+      if (c.recruitingActive) _recruitBanner(c.recruitMsg),
       // 4. 모집 키워드 — 해시태그 느낌(#)
       if (tags.isNotEmpty || tagParts.notes.isNotEmpty)
         Padding(
@@ -1680,6 +1877,8 @@ void showClubDetail(
             // 급구는 인증팀만(웹 정책 통일 · A10)
             if (canModify && c.isVerified)
               _urgentToggle(c, context, onChanged, close),
+            // 회원 모집은 인증 여부와 상관없이 팀 관리자가 켠다
+            if (canModify) _recruitToggle(c, context, onChanged, close),
             if (canModify)
               _modifyRow(
                 onEdit: () async {
