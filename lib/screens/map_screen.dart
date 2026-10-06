@@ -123,6 +123,10 @@ class _MapScreenState extends State<MapScreen> {
     FriendsHub.instance.start(); // 밥친구: 로그인(익명 제외)하면 관계 구독 → 🍚 배지
     focusMapRequest.addListener(_onFocusMapRequest);
     clubsReloadRequest.addListener(_onClubsReloadRequest);
+    _roomTimer = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => _refreshRoom(),
+    );
     // 첫 로그인 시 밥이름 프로필 생성 (조용히, 실패 무시)
     final uid = _repo.currentUid;
     if (uid != null) {
@@ -136,6 +140,7 @@ class _MapScreenState extends State<MapScreen> {
     clubsReloadRequest.removeListener(_onClubsReloadRequest);
     detailPanel.value = null; // 화면 떠날 때 잔존 패널 정리
     _labelFadeTimer?.cancel();
+    _roomTimer?.cancel();
     _search.dispose();
     _deepLinks.dispose();
     super.dispose();
@@ -336,6 +341,9 @@ class _MapScreenState extends State<MapScreen> {
   Map<String, NMarker> _markersById = {};
   List<_MarkerSpec> _lastSpecs = const [];
   Timer? _labelFadeTimer;
+  // '여기 자리 있어요?' 는 시각에 따라 바뀐다(마감이 지난 급구·끝난 운동이 빠진다).
+  // 화면이 다시 그려질 때만 계산하면 앱을 켜 둔 채로는 낡은 항목이 남으므로 1분마다 다시 본다.
+  Timer? _roomTimer;
   int _markerGen = 0; // 마커 새로고침 세대 토큰(동시 호출 재진입 가드)
 
   // 마커 라벨 아이콘 캐시(이름·상태별 1회 렌더) + 핀 에셋 프리캐시(미로드 시 핀이 빈칸으로 캡처되는 것 방지)
@@ -2128,6 +2136,14 @@ class _MapScreenState extends State<MapScreen> {
       _roomCache = buildThisWeek(clubs: _clubs, spots: _spots, now: now);
     }
     return _roomCache;
+  }
+
+  // 1분마다: 항목이 실제로 바뀌었을 때만 다시 그린다(같으면 아무것도 안 한다).
+  void _refreshRoom() {
+    if (!mounted) return;
+    final before = _roomCache;
+    final after = _roomItems;
+    if (!sameThisWeekItems(before, after)) setState(() {});
   }
 
   void _openRoom() {

@@ -571,4 +571,60 @@ void main() {
       expect(it.start, DateTime(2026, 10, 9, 22));
     });
   });
+
+  group('게시 후 다듬기', () {
+    ThisWeekItem item(String id, DateTime end, {String kind = kTwGuest}) =>
+        ThisWeekItem(
+          kind: kind,
+          end: end,
+          title: id,
+          place: '',
+          refId: id,
+          refType: 'club',
+        );
+
+    test('날짜 칩은 먼 미래 마감이 있어도 8일째에서 멈춘다', () {
+      final far = item('far', DateTime(2029, 1, 1, 21));
+      final days = thisWeekDays(now, [far]);
+      expect(days.length, 9); // 오늘 + 8일
+      expect(days.last, DateTime(2026, 10, 15));
+    });
+
+    test('sameThisWeekItems — 같은 항목이면 true, 끝 시각·종류·개수가 다르면 false', () {
+      final a = [item('a', DateTime(2026, 10, 8, 21))];
+      expect(
+        sameThisWeekItems(a, [item('a', DateTime(2026, 10, 8, 21))]),
+        isTrue,
+      );
+      expect(
+        sameThisWeekItems(a, [item('a', DateTime(2026, 10, 8, 22))]),
+        isFalse,
+      );
+      expect(
+        sameThisWeekItems(a, [
+          item('a', DateTime(2026, 10, 8, 21), kind: kTwPickup),
+        ]),
+        isFalse,
+      );
+      expect(sameThisWeekItems(a, const []), isFalse);
+    });
+
+    test('시간이 지나면 끝난 항목이 빠진다 — 1분마다 다시 계산하는 근거', () {
+      final c = club(
+        'g',
+        urgent: true,
+        urgentMsg: '세터 1명',
+        until: DateTime(2026, 10, 7, 19),
+      );
+      final before = buildThisWeek(clubs: [c], spots: const [], now: now);
+      final after = buildThisWeek(
+        clubs: [c],
+        spots: const [],
+        now: DateTime(2026, 10, 7, 19, 1),
+      );
+      expect(before, hasLength(1));
+      expect(after, isEmpty);
+      expect(sameThisWeekItems(before, after), isFalse);
+    });
+  });
 }
