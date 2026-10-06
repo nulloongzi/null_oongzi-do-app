@@ -856,12 +856,19 @@ Widget _urgentToggle(
   final active = c.urgentActive;
 
   Future<void> openSheet() async {
-    final ok = await showUrgentSheet(
+    // 저장이 끝나기 전에 시트를 내려 닫아도 저장은 된다 — 시트가 돌려주는 값 대신
+    // 실제 저장 결과로 알림·지도 새로 읽기를 한다.
+    var saved = false;
+    await showUrgentSheet(
       context,
       c,
-      post: (until, msg) => service.post(c.id, until, msg),
+      post: (until, msg) async {
+        final err = await service.post(c.id, until, msg);
+        if (err == null) saved = true;
+        return err;
+      },
     );
-    if (!ok) return;
+    if (!saved) return;
     if (context.mounted) {
       ScaffoldMessenger.of(
         context,
@@ -954,12 +961,15 @@ Widget _recruitToggle(
   }
 
   Future<void> openSheet() async {
-    final ok = await showRecruitSheet(
+    // 저장 도중 시트를 닫아도 저장은 된다 — 실제 저장 결과로 알림·새로 읽기를 한다.
+    var saved = false;
+    await showRecruitSheet(
       context,
       c,
       save: (msg, dropIn) async {
         try {
           await service.setRecruiting(c.id, on: true, msg: msg, dropIn: dropIn);
+          saved = true;
           // 웹 club-detail.js 의 recruit_on 과 같은 이름·파라미터.
           Track.event('recruit_on', {
             'club_id': c.id,
@@ -973,7 +983,7 @@ Widget _recruitToggle(
         }
       },
     );
-    if (ok) await done('rc_saved');
+    if (saved) await done('rc_saved');
   }
 
   Future<void> turnOff() async {
@@ -1098,6 +1108,7 @@ class _ClubAdminSection extends StatefulWidget {
 class _ClubAdminSectionState extends State<_ClubAdminSection> {
   ({String status, String? reason})? _req;
   bool _busy = false;
+  bool _asking = false;
   // 승인 직후 다시 읽은 팀 문서. 없으면 시트를 열 때 받은 것을 쓴다.
   Club? _fresh;
 
@@ -1134,17 +1145,26 @@ class _ClubAdminSectionState extends State<_ClubAdminSection> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
   Future<void> _apply() async {
-    if (_busy) return;
-    setState(() => _busy = true);
-    final err = await ClubAdminService().submit(
-      _club,
-      confirm: () => confirmClubAdminRequest(context),
-    );
-    if (!mounted) return;
-    setState(() => _busy = false);
-    if (err == 'cancelled') return;
-    _toast(err ?? t('ad_done'));
-    if (err == null) setState(() => _req = (status: 'pending', reason: null));
+    if (_busy || _asking) return;
+    _asking = true; // 안내 창이 떠 있는 동안 두 번 눌려도 한 번만
+    try {
+      final err = await ClubAdminService().submit(
+        _club,
+        confirm: () async {
+          final ok = await confirmClubAdminRequest(context);
+          // '올리는 중' 표시는 안내 창에서 신청하기를 누른 뒤부터 — 창 뒤에서 미리 돌지 않게.
+          if (ok && mounted) setState(() => _busy = true);
+          return ok;
+        },
+      );
+      if (!mounted) return;
+      setState(() => _busy = false);
+      if (err == 'cancelled') return;
+      _toast(err ?? t('ad_done'));
+      if (err == null) setState(() => _req = (status: 'pending', reason: null));
+    } finally {
+      _asking = false;
+    }
   }
 
   Future<void> _leave() async {

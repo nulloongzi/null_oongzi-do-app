@@ -243,9 +243,12 @@ List<DateTime> thisWeekDays(
 ]) {
   final t = localDay(now);
   var last = DateTime(t.year, t.month, t.day + 6);
+  // 서버는 마감을 8일 뒤까지만 받는다. 콘솔에서 손으로 먼 날을 넣은 급구가 있어도
+  // 날짜 칩이 몇 년 치로 늘어나지 않게 8일째에서 멈춘다(그 항목은 '7일 전체'에 남는다).
+  final cap = DateTime(t.year, t.month, t.day + 8);
   for (final e in items) {
     final d = localDay(e.at);
-    if (d.isAfter(last)) last = d;
+    if (d.isAfter(last)) last = d.isAfter(cap) ? cap : d;
   }
   final out = <DateTime>[];
   for (var i = 0; ; i++) {
@@ -313,4 +316,22 @@ String thisWeekTickerLine(ThisWeekItem e, {bool? ko}) {
       : '${weekdayShort(at, ko: k)} ${hhmm(at)}';
   final tail = '${thisWeekKindMark(e.kind)} ${e.msg ?? ''}'.trim();
   return [when, e.title, if (tail.isNotEmpty) tail].join(' · ');
+}
+
+/// 두 목록이 같은 항목(같은 곳 · 같은 종류 · 같은 시각)을 같은 순서로 담았는지.
+/// 1분마다 다시 계산한 결과가 그대로면 화면을 다시 그리지 않으려고 쓴다.
+bool sameThisWeekItems(List<ThisWeekItem> a, List<ThisWeekItem> b) {
+  if (identical(a, b)) return true;
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    final x = a[i], y = b[i];
+    if (x.placeKey != y.placeKey ||
+        x.kind != y.kind ||
+        x.start != y.start ||
+        x.end != y.end ||
+        x.msg != y.msg) {
+      return false;
+    }
+  }
+  return true;
 }
