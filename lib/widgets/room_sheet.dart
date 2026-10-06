@@ -172,6 +172,13 @@ class _RoomStripState extends State<RoomStrip> {
   }
 }
 
+/// 캡처 시연용: 목록 시트의 칩·줄을 밖에서 누른다. 값(명령)이 바뀔 때마다 한 번.
+///   'kind:guest' · 'kind:drop_in' · 'kind:pickup' — 그 종류만 켠다 / 'kind:all' — 모두
+///   'day:first' — 지금 보이는 첫 줄의 날짜 칩 / 'day:all' — 7일 전체
+///   'open' — 지금 보이는 첫 줄을 누른다(그 팀·크루 상세로)
+/// 같은 명령을 다시 보내려면 뒤에 '#2' 처럼 아무 꼬리를 붙인다.
+final ValueNotifier<String> roomDemo = ValueNotifier<String>('');
+
 class RoomSheet extends StatefulWidget {
   final List<ThisWeekItem> items; // 시간순
   final void Function(ThisWeekItem) onOpen;
@@ -194,6 +201,45 @@ class _RoomSheetState extends State<RoomSheet> {
   final Set<String> _kinds = kTwKinds.toSet(); // 처음엔 모두 켬
   DateTime? _day; // null = 7일 전체
   late final List<DateTime> _days = thisWeekDays(widget.clock(), widget.items);
+
+  @override
+  void initState() {
+    super.initState();
+    if (kCaptureMode) roomDemo.addListener(_onDemo);
+  }
+
+  @override
+  void dispose() {
+    roomDemo.removeListener(_onDemo);
+    super.dispose();
+  }
+
+  void _onDemo() {
+    if (!mounted) return;
+    final cmd = roomDemo.value.split('#').first;
+    List<ThisWeekItem> shown() =>
+        filterThisWeek(widget.items, kinds: _kinds, day: _day);
+    if (cmd.startsWith('kind:')) {
+      final k = cmd.substring(5);
+      setState(() {
+        _kinds
+          ..clear()
+          ..addAll(k == 'all' ? kTwKinds : [k]);
+      });
+    } else if (cmd == 'day:all') {
+      setState(() => _day = null);
+    } else if (cmd == 'day:first') {
+      final s = shown();
+      if (s.isEmpty) return;
+      final d = localDay(s.first.at);
+      if (_days.contains(d)) setState(() => _day = d);
+    } else if (cmd == 'open') {
+      final s = shown();
+      if (s.isEmpty) return;
+      Navigator.pop(context);
+      widget.onOpen(s.first);
+    }
+  }
 
   String _kindLabel(String k) => t('tw_kind_$k');
 

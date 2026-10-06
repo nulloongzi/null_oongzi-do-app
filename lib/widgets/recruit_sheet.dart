@@ -3,14 +3,27 @@
 // 문구는 선택(비워도 된다), 60자·링크·전화번호 금지는 급구와 같은 검사.
 // 🥄 맛보기 환영 — "한 번 와서 뛰어 봐도 돼요"(체험·게스트). 켜면 이번 주 차림표에 팀 운동이 뜬다.
 // 저장은 팀 관리자가 직접 쓴다(UrgentService.setRecruiting) — 서버 호출이 없다.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../models/club.dart';
+import '../services/capture_demo.dart';
+import '../services/deep_link_service.dart' show kCaptureMode;
 import '../services/i18n.dart';
 import '../services/urgent.dart';
 import '../theme.dart';
 import 'app_sheet.dart';
 import 'field_error_text.dart';
+
+/// 캡처 시연용: 문구를 쳐 넣고 🥄 맛보기를 켠다(값이 바뀌면 시작).
+final ValueNotifier<int> recruitDemoFill = ValueNotifier<int>(0);
+
+/// 캡처 시연용: '🍚 식구 모집 시작'을 누른다 — 사용자가 누를 때와 같은 _submit()(실제 저장).
+final ValueNotifier<int> recruitDemoSubmit = ValueNotifier<int>(0);
+
+/// 시연 문구 — 칸의 예시와 같은 말.
+const kRecruitDemoMsg = '20~30대 회원 모집해요';
 
 /// 식구 모집 시작(또는 수정) 시트를 띄운다. 저장했으면 true.
 /// [save] 는 저장 — null=성공, 그 외=보일 문구.
@@ -57,11 +70,44 @@ class _RecruitSheetState extends State<RecruitSheet> {
   late bool _dropIn = widget.initialDropIn;
   bool _busy = false;
   String? _serverErr;
+  Timer? _typing; // 캡처 시연의 타이핑
+
+  @override
+  void initState() {
+    super.initState();
+    if (kCaptureMode) {
+      recruitDemoFill.addListener(_onDemoFill);
+      recruitDemoSubmit.addListener(_onDemoSubmit);
+    }
+  }
 
   @override
   void dispose() {
+    recruitDemoFill.removeListener(_onDemoFill);
+    recruitDemoSubmit.removeListener(_onDemoSubmit);
+    _typing?.cancel();
     _msg.dispose();
     super.dispose();
+  }
+
+  void _onDemoFill() {
+    if (!mounted) return;
+    _typing?.cancel();
+    _typing = demoType(
+      _msg,
+      kRecruitDemoMsg,
+      onChanged: () {
+        if (mounted) setState(() => _serverErr = null);
+      },
+      // 다 친 뒤 맛보기 체크 — 영상에서 두 동작이 따로 보이게.
+      onDone: () {
+        if (mounted) setState(() => _dropIn = true);
+      },
+    );
+  }
+
+  void _onDemoSubmit() {
+    if (mounted && !_busy) unawaited(_submit());
   }
 
   Future<void> _submit() async {

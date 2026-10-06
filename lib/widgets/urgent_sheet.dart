@@ -3,15 +3,28 @@
 // 급구는 운동 한 회차에 묶인다: 팀 일정에서 7일 안의 다음 회차(최대 3개)를 칩으로 보이고,
 // 일정에 없는 운동은 '다른 날'로 날짜와 끝나는 시각을 고른다. 고른 운동이 끝나면
 // 서버가 급구를 내린다. 문구는 60자, 링크·전화번호는 넣을 수 없다(서버와 같은 검사).
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../models/club.dart';
+import '../services/capture_demo.dart';
+import '../services/deep_link_service.dart' show kCaptureMode;
 import '../services/i18n.dart';
 import '../services/schedule_parse.dart';
 import '../services/urgent.dart';
 import '../theme.dart';
 import 'app_sheet.dart';
 import 'field_error_text.dart';
+
+/// 캡처 시연용: '어떤 사람이 필요해요?' 칸에 문구를 쳐 넣는다(값이 바뀌면 시작).
+final ValueNotifier<int> urgentDemoType = ValueNotifier<int>(0);
+
+/// 캡처 시연용: '급구 올리기'를 누른다 — 사용자가 누를 때와 같은 _submit()(서버 postUrgent 실제).
+final ValueNotifier<int> urgentDemoSubmit = ValueNotifier<int>(0);
+
+/// 시연 문구 — 칸의 예시와 같은 말(지어낸 상황을 새로 만들지 않는다).
+const kUrgentDemoMsg = '센터 1명, 여자 레프트 1명';
 
 /// 급구 올리기(또는 수정) 시트를 띄운다. 올렸으면 true.
 /// [post] 는 서버 호출 — null=성공, 그 외=보일 문구(UrgentService.post).
@@ -68,6 +81,7 @@ class _UrgentSheetState extends State<UrgentSheet> {
   bool _busy = false;
   bool _tried = false; // 올리기를 한 번 눌렀나 — 빈 문구 오류는 그 뒤에만 보인다
   String? _serverErr;
+  Timer? _typing; // 캡처 시연의 타이핑
 
   @override
   void initState() {
@@ -86,12 +100,35 @@ class _UrgentSheetState extends State<UrgentSheet> {
       }
     }
     if (_sel == null && _sessions.isNotEmpty) _sel = 0;
+    if (kCaptureMode) {
+      urgentDemoType.addListener(_onDemoType);
+      urgentDemoSubmit.addListener(_onDemoSubmit);
+    }
   }
 
   @override
   void dispose() {
+    urgentDemoType.removeListener(_onDemoType);
+    urgentDemoSubmit.removeListener(_onDemoSubmit);
+    _typing?.cancel();
     _msg.dispose();
     super.dispose();
+  }
+
+  void _onDemoType() {
+    if (!mounted) return;
+    _typing?.cancel();
+    _typing = demoType(
+      _msg,
+      kUrgentDemoMsg,
+      onChanged: () {
+        if (mounted) setState(() => _serverErr = null);
+      },
+    );
+  }
+
+  void _onDemoSubmit() {
+    if (mounted && !_busy) unawaited(_submit());
   }
 
   DateTime? get _until => _sel == null

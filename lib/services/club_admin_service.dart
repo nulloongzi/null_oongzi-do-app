@@ -14,7 +14,9 @@ import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:image_picker/image_picker.dart';
 
 import '../models/club.dart';
+import 'capture_demo.dart';
 import 'club_admin.dart';
+import 'deep_link_service.dart' show kCaptureMode;
 import 'i18n.dart';
 import 'sanitize.dart';
 
@@ -80,11 +82,15 @@ class ClubAdminService {
 
     if (confirm != null && !await confirm()) return 'cancelled';
 
-    final XFile? file = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1600,
-      imageQuality: 85,
-    );
+    // 캡처 시연은 사진 선택기(앱 밖 UI)를 조종할 수 없어 번들 이미지를 쓴다 —
+    // 업로드와 신청 문서 생성은 실제 그대로다(인증 신청 시연과 같다).
+    final XFile? file = kCaptureMode
+        ? await captureDemoPhoto('admin_demo.png')
+        : await ImagePicker().pickImage(
+            source: ImageSource.gallery,
+            maxWidth: 1600,
+            imageQuality: 85,
+          );
     if (file == null) return 'cancelled';
 
     try {
