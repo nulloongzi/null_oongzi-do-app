@@ -7,11 +7,14 @@
 > 이 문서에 맞춘다 — 반대가 아니다. 어긋난 것이 발견되면 아래 §1.1 대조표에 남긴다.
 
 Play Console → 앱 → **기본 스토어 등록정보**에 그대로 붙여넣는 자산 모음.
-- **업로드용 최종 스샷(카피 오버레이 합성본)**: CI 아티팩트 `nulloongzido-marketing-assets`의
-  **`store/` 폴더**(release 서명, 1080×1920, 크림 캔버스+한글 카피). → **그대로 Play 업로드**.
-- 카피 없는 순수 앱 스샷 원본(1080×2400)이 필요하면 같은 아티팩트의 `screens/` 폴더.
+- **업로드용 최종 스샷**: 레포의 **`assets/store/screens/ko/01~08.png`**(1080×1920, 크림 캔버스+
+  두 줄 카피+폰). → **그대로 순서대로 Play 업로드**. `python scripts/capture/make_store.py` 로
+  다시 굽는다 — 장면·문구는 `scripts/capture/store.ko.txt`, 화면은 카드뉴스와 같은
+  `scripts/capture/card-shots/` 고정본(실기기 캡처)이라 git pull 만으로 같은 그림이 나온다.
+- (옛 경로) CI 아티팩트 `nulloongzido-marketing-assets` 의 `store/` 폴더는 에뮬레이터 캡처
+  기반 7장이다 — 2.12 화면·기능이 빠져 있어 더 쓰지 않는다.
 - 디자인 규격: `docs/design-system.md`(크림 `#FFF8E1` / 옐로 `#FAC710` / 다크 `#4E342E`).
-- 카피 오버레이는 `scripts/capture/run_capture.sh`의 `compose_store()`가 자동 생성(나눔고딕Bold).
+- 카피·폰 합성은 `scripts/capture/make_store.py`(Pretendard, 헤드리스 크롬 렌더).
 
 ---
 
@@ -50,6 +53,18 @@ Volleyball clubs across Korea on one map — pickup games, filters & more 🏐
 ■ 픽업 게임
 정규 팀이 아니어도 OK. 오늘·이번 주 열리는 픽업 게임에 바로 참가.
 
+■ 여기 자리 있어요?
+이번 주 게스트 급구·맛보기·픽업을 한 목록으로. 날짜별로 보고 바로 연락.
+
+■ 게스트 급구
+사람이 모자란 날, 팀 관리자가 운동 한 번에 묶어 게스트를 구해요. 운동이 끝나면 저절로 내려가요.
+
+■ 식구 모집 · 맛보기 환영
+새 회원을 받는 팀은 지도에 표시돼요. '맛보기'를 켠 팀은 한 번 와서 뛰어 봐도 돼요.
+
+■ 우리 팀은 우리가
+팀 관리자가 되면 팀 정보를 직접 고쳐요. 세부 위치를 공개하고 싶지 않으면 동네 범위만 보여줄 수도 있어요.
+
 ■ 도시락 (찜)
 마음에 든 팀은 '도시락'에 담아두고 언제든 다시.
 
@@ -83,6 +98,18 @@ Narrow by region, weekday, and who plays (men / women / mixed).
 
 ■ Pickup games
 No club membership needed. Join a game happening today or this week.
+
+■ Room for one more?
+Guest calls, drop-ins and pickup games for the week ahead in one list — by day, with a contact button.
+
+■ Guest calls
+Short-handed? A team admin posts a call for one session, and it comes down by itself when the session ends.
+
+■ Taking new members · drop-ins welcome
+Clubs taking new members are marked on the map. With drop-ins on, you can come and play once first.
+
+■ Run your own team
+Team admins edit their team's info themselves — and if you'd rather not share the exact location, show just the neighbourhood.
 
 ■ Lunchbox (saved teams)
 Pack the teams you like into your Lunchbox and come back anytime.
@@ -170,6 +197,19 @@ English and Korean throughout. Start today! 🏐
 > 콘솔 카운트가 1~2자 더 많다. 이모지·줄바꿈을 세는 방식이 달라서지 문안이 다른
 > 게 아니다 — 다음에 보고 "안 맞는다"며 고치지 말 것.
 > **EN 간단한 설명은 여유가 7자뿐이다** — 여기만 손댈 때 상한을 다시 세어볼 것.
+
+#### 2026-10-07 갱신 — 2.12 네 문단 + 스샷 8장 (콘솔 미반영)
+
+2.12 의 여기 자리 있어요? · 게스트 급구 · 식구 모집·맛보기 와 팀 관리자·대략 위치를
+§1 전체 설명 KO·EN 에 네 문단으로 넣었다(픽업 게임 바로 뒤). 폰 스샷도 2.12 화면
+8장으로 새로 구웠다(§2).
+
+| 필드 | 콘솔 상태 |
+|---|---|
+| 전체 설명 KO·EN | **미반영** — 9-20 안치기 문단과 함께 §1 블록을 통째로 덮어쓴다 |
+| 폰 스크린샷 | **미반영** — 옛 7장을 지우고 `assets/store/screens/ko/01~08.png` 순서대로 |
+
+전체 설명 글자수(이 문서 기준): KO 886/4000 · EN 1663/4000.
 
 ### 출시 노트 (What's new · v2.12.0)
 
@@ -479,27 +519,29 @@ A team's Instagram Reels now show their real cover images. One tap opens Instagr
 
 ---
 
-## 2. 스크린샷 세트 (폰, 1080×2400 원본)
+## 2. 스크린샷 세트 (폰, 1080×1920 · 8장)
 
-Play는 **최소 2장, 최대 8장**. 아래 **7장 순서**(첫 3장이 목록 미리보기에 노출되니 임팩트 순).
-각 스샷은 크림 배경 + 상단 한 줄 카피 오버레이 권장(디자인은 아티팩트 미리보기 참조).
+Play는 **최소 2장, 최대 8장**. 첫 3장이 목록 미리보기에 노출되니 임팩트 순.
+**2026-10-07 실기기 캡처(2.12)** 기준. 파일: `assets/store/screens/ko/NN.png`.
 
-| 순서 | 원본 파일 | 화면 | 오버레이 카피(한 줄) |
+| 순서 | 화면 (card-shots/) | 윗줄 | 제목 |
 |---|---|---|---|
-| 1 | `play_01_map_ko.png` | 지도 | **전국 배구 동호회, 지도 한 눈에** |
-| 2 | `play_02_filter_ko.png` | 필터 | **지역·요일·대상으로 딱 맞는 팀** |
-| 3 | `play_04_detail_ko.png` | 클럽 상세 | **일정·회비·위치 확인하고 바로 연락** |
-| 4 | `play_03_pickup_ko.png` | 픽업 | **오늘 당장 뛸 픽업 게임** |
-| 5 | `play_05_lunchbox_ko.png` | 도시락 | **마음에 든 팀은 ‘도시락’에 찜** |
-| 6 | `play_06_profile_ko.png` | 밥이름 | **나만의 ‘밥이름’ 닉네임** |
-| 7 | `play_07_share_ko.png` | 공유 | **카톡·인스타로 우리 팀 자랑** |
+| 1 | 지도 + 여기 자리 띠 (`01_map`) | 전국 배구 동호회, | **지도 한눈에** |
+| 2 | 여기 자리 있어요? 목록 (`room@13`) | 게스트 급구·맛보기·픽업 | **이번 주 뛸 곳 한눈에** |
+| 3 | 팀 상세 (`06_club_sheet`) | 일정·회비·위치 확인하고 | **바로 연락** |
+| 4 | 급구 배너 (`urgent@24.5`) | 사람이 모자라면 | **게스트 급구** |
+| 5 | 식구 모집 배너 (`recruit@23`) | 새 회원 받는 팀은 | **식구 모집·맛보기 환영** |
+| 6 | 검색·필터 (`03_filter_set`) | 지역·요일·대상으로 | **딱 맞는 팀만** |
+| 7 | 도시락 + 식단표 (`09_lunchbox_diet`) | 마음에 든 팀은 도시락에 | **식단표로 일정 비교** |
+| 8 | 네임카드 (`12_namecard`) | 내 배구 명함, | **한 장으로 자랑** |
 
-> `play_08_story` 는 안내 다이얼로그라 등록 제외(공유는 #7로 충분). 필요 시 EN 세트는
-> `capture_lang=en` 로 재캡처.
+> 이전 세트(7장)에 있던 픽업·밥이름은 이번에 뺐다 — 급구·식구 모집·자리 띠가 2.12 의
+> 핵심이라 그 자리를 줬다. 픽업을 다시 넣으려면 `store.ko.txt` 에서 한 줄 바꾼다.
+> 문구에 특정 팀(학교·공공 체육관 등)을 집어 말하지 않는다.
 
-**스샷 오버레이 규격(각 이미지 상단 ~18%)**
-- 배경 크림 `#FFF8E1`, 카피 다크 `#4E342E` (Pretendard SemiBold ~64px), 핵심어만 옐로 `#FAC710`.
-- 폰 목업 안에 실제 스샷(둥근 모서리). 하단 여백 크림.
+**규격**: 크림 `#FFF8E1` 바탕, 윗줄 갈색 `#8D6E63` 48px, 제목 다크 `#4E342E` 88px(Pretendard
+ExtraBold), 핵심어만 옐로 `#FAC710` 밑줄. 폰은 다크 테두리 안에 화면 전체 — 실제 상태
+표시줄(시각·알림 아이콘)은 걷어 내고 9:41 기본 표시줄을 그린다.
 
 ---
 
@@ -509,7 +551,7 @@ Play는 **최소 2장, 최대 8장**. 아래 **7장 순서**(첫 3장이 목록 
 |---|---|---|
 | 앱 아이콘 | 512×512 PNG(32bit, 투명 X) | ✅ 기존 로고(`nulloongzido logo_512px.png`) 사용 |
 | **피처 그래픽** | **1024×500 PNG** | ✅ 확정본 `assets/store/feature-graphic-1024x500.png` (크림+옐로 로고타입+태그라인+폰 목업) |
-| 폰 스샷 | 1080×2400(9:20), 2~8장 | ✅ CI 자동 생산(7장) |
+| 폰 스샷 | 1080×1920(9:16), 2~8장 | ✅ `assets/store/screens/ko/` 8장 (2.12, `make_store.py`) |
 | (선택) 태블릿 | 7"/10" | 미제작 |
 
 **피처 그래픽 카피**: `누룽지도` + `전국 배구 동호회를 지도 한 눈에 🏐` (크림 배경, 옐로 포인트, 우측 지도 미리보기).
@@ -543,7 +585,8 @@ Play는 **최소 2장, 최대 8장**. 아래 **7장 순서**(첫 3장이 목록 
 - [x] AAB 업로드 — 12 (2.5.1) 프로덕션 게시 완료 (2026-09-07 22:20)
 - [x] 앱 이름 / 간단·전체 설명 붙여넣기 (2026-09-08 확인) — **단 게시 전**
 - [ ] **콘솔에서 `변경사항 4개 게시` 누르기** ← 이걸 눌러야 스토어에 반영된다
-- [ ] 스크린샷 7장 업로드(1080×2400, 순서대로)
+- [ ] 스크린샷 8장 교체 업로드 — `assets/store/screens/ko/01~08.png` 순서대로(옛 7장은 지운다)
+- [ ] 전체 설명 KO·EN 갱신 — 2.12 네 문단(여기 자리·급구·식구 모집·우리 팀은 우리가) 추가분
 - [x] 피처 그래픽 1024×500 확정 → `assets/store/feature-graphic-1024x500.png` 그대로 업로드
 - [ ] 앱 아이콘 512×512 확인
 - [ ] 카테고리: `스포츠` / 태그: 배구·생활체육
@@ -566,6 +609,7 @@ Play는 **최소 2장, 최대 8장**. 아래 **7장 순서**(첫 3장이 목록 
   - 소셜 로그인 수집 항목(구글/카카오/네이버 식별자)과 Firebase 처리위탁 반영본.
   - 빈 템플릿이던 `privacy.md`는 제거됨(커밋 `2362796`) — 옛 `.md` URL은 쓰지 말 것.
 
+> 폰 스샷은 `python scripts/capture/make_store.py` 로 굽는다(위 §2). 아래 CI 경로는 옛 방식.
 > 스샷/피처그래픽 갱신은 **GitHub Actions → Capture Assets → Run workflow**(수동 dispatch).
 > 릴리즈 세트는 `release` 입력을 켠다. `[cap-release]` 같은 커밋 메시지 마커는 더 이상
 > 동작하지 않는다 — #30에서 push 자동 트리거를 제거하고 dispatch 입력으로 옮겼다
