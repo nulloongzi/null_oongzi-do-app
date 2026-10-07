@@ -1668,9 +1668,9 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'reg_area_only_desc': {
     'ko':
-        '지도에 정확한 핀 대신 동네 범위로 표시하고, 주소는 시·군·구까지만 보여요. 체육관 이름과 상세 주소는 저장하지 않아요. 학교나 공공 체육관을 빌려 쓰는 팀에 권해요.',
+        '지도에 정확한 핀 대신 동네 범위로 표시하고, 주소는 시·군·구까지만 보여요. 체육관 이름과 상세 주소는 저장하지 않아요. 세부 위치를 공개하고 싶지 않은 팀에 권해요.',
     'en':
-        'Shows a neighbourhood area instead of an exact pin, and the address only down to the district. The venue name and full address are not stored. Recommended for teams renting school or public gyms.',
+        'Shows a neighbourhood area instead of an exact pin, and the address only down to the district. The venue name and full address are not stored. Recommended for teams that would rather not share their exact location.',
   },
   'reg_area_label_fail': {
     'ko': '이 주소로는 동네 범위를 만들지 못했어요. 지도에서 위치를 찍어 주세요.',

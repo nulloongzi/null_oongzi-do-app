@@ -1541,12 +1541,12 @@ class _MapScreenState extends State<MapScreen> {
     if (!await _hold(1.5, 'ar_form')) return;
     await _formStepDone('name');
     await _formStepDone('target');
-    await _formStepDone('addr_place'); // 학교·공공 체육관 — 이름만 쳐도 된다
+    await _formStepDone('addr_place'); // 체육관 이름만 쳐도 된다
     if (!await _hold(1.5, 'ar_addr')) return;
     await _formStepDone('addr_search');
     if (!await _hold(2, 'ar_addr_hit')) return;
     await _formStepDone('area_only');
-    if (!await _hold(4.5, 'ar_checked')) return; // 동네 범위·시군구까지·학교 체육관 권장
+    if (!await _hold(4.5, 'ar_checked')) return; // 동네 범위·시군구까지·세부 위치 비공개
     _formStep('submit');
     final created = await saved;
     if (!mounted) return;
