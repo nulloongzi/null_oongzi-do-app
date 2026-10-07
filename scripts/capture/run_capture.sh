@@ -544,6 +544,7 @@ if [ "$INCLUDE_REELS" = "true" ] && want flows; then
   flow admin   flow_admin   30   # 팀 상세 → 🙋 관리자 신청 → 사진 안내 창 → 확인 중
   flow urgent  flow_urgent  48   # 내 팀 → 🔥 게스트 급구(회차 칩·문구) → 지도·배너 → 내리기
   flow recruit flow_recruit 42   # 내 팀 → 🍚 식구 모집(문구·🥄 맛보기) → 지도·배너 → 마감
+  flow area    flow_area    45   # 등록 폼 '대략적인 위치만 공개' 체크 → 지도 범위 원 → 상세 안내(시연 팀은 끝에서 지운다)
 
   # 풀 투어: 3편 이어붙이기(편집 없이 바로 쓰는 앱 소개용).
   TOUR_LIST="$FLOWS_DIR/.tour.txt"; : > "$TOUR_LIST"
@@ -561,7 +562,7 @@ if [ "$INCLUDE_REELS" = "true" ] && want flows; then
 
   if [ "$FINGERPRINT" = "true" ]; then
   echo "===== FLOW FINGERPRINT ====="
-  for n in discover collect register reels room admin urgent recruit full_tour; do
+  for n in discover collect register reels room admin urgent recruit area full_tour; do
     flow_montage "$FLOWS_DIR/${n}_${CAP_LANG}.mp4" "flow_${n}"
   done
   echo "===== END FLOW FINGERPRINT ====="

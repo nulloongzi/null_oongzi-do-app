@@ -724,6 +724,9 @@ class _MapScreenState extends State<MapScreen> {
       case 'flow_recruit':
         await _flowRecruit();
         break;
+      case 'flow_area':
+        await _flowArea();
+        break;
     }
   }
 
@@ -1518,6 +1521,67 @@ class _MapScreenState extends State<MapScreen> {
     await _load();
     await _hold(2.5, 'rc_closed');
     _endFlow();
+  }
+
+  /// 📍 대략적인 위치만 공개 — 등록 폼에서 체크(설명 펼침) → 지도의 동네 범위 원 →
+  /// 상세의 '대략 위치' 안내. 대략 위치 팀이 실데이터에 없을 수 있어 시연 팀을 실제로
+  /// 등록했다가 끝에서 지운다(같은 이름이라도 이 흐름이 만든 대략 위치 팀만).
+  Future<void> _flowArea() async {
+    await _closeOverlays();
+    if (!mounted) return;
+    await _hold(2, 'ar_open');
+    if (_repo.currentUid == null) {
+      _snack(t('login_required'));
+      return;
+    }
+    final cam = await _controller?.getCameraPosition();
+    if (!mounted) return;
+    final center = cam?.target ?? const NLatLng(37.5559, 127.0838);
+    final saved = showClubFormSheet(context, initialCenter: center);
+    if (!await _hold(1.5, 'ar_form')) return;
+    await _formStepDone('name');
+    await _formStepDone('target');
+    await _formStepDone('addr_place'); // 학교·공공 체육관 — 이름만 쳐도 된다
+    if (!await _hold(1.5, 'ar_addr')) return;
+    await _formStepDone('addr_search');
+    if (!await _hold(2, 'ar_addr_hit')) return;
+    await _formStepDone('area_only');
+    if (!await _hold(4.5, 'ar_checked')) return; // 동네 범위·시군구까지·학교 체육관 권장
+    _formStep('submit');
+    final created = await saved;
+    if (!mounted) return;
+    if (created == true) await _load();
+    final uid = _repo.currentUid;
+    final mine = _clubs
+        .where(
+          (c) =>
+              isAreaOnly(c) && c.name == _demoClubName && canManageClub(c, uid),
+        )
+        .firstOrNull;
+    if (mine == null) {
+      debugPrint('CAPTURE_ERROR area: 등록한 대략 위치 팀을 못 찾았다');
+      return;
+    }
+    await _centerOnPin(mine.lat, mine.lng);
+    if (!await _hold(3.5, 'ar_map')) return; // 핀 + 동네 범위 원
+    if (!mounted) return;
+    showClubDetail(
+      context,
+      mine,
+      currentUid: uid,
+      isAdmin: _isAdmin,
+      onChanged: _load,
+    );
+    await _hold(4, 'ar_detail'); // '대략 위치' 안내 + 시·군·구까지만 보이는 주소
+    _endFlow(); // 아래는 뒷정리
+
+    await _backToMap();
+    try {
+      await _repo.deleteClub(mine.id);
+    } catch (e) {
+      debugPrint('CAPTURE_ERROR area delete: $e');
+    }
+    await _load();
   }
 
   /// 등록 폼 시연이 만드는 팀 이름 — 인증 단계에서 다시 찾을 때 쓴다.
