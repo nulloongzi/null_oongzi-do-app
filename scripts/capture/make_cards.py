@@ -198,13 +198,24 @@ def shot_path(src):
 def grab(src, out):
     """화면 한 장 → out(폭 1080). card-shots/ 고정본이 있으면 그걸, 없으면 캡처 원본에서."""
     shot = shot_path(src)
-    if shot.is_file() and not SNAPSHOT:
+    if shot.is_file() and (not SNAPSHOT or not capture_exists(src)):
+        # 다시 고정(SNAPSHOT)할 때도 캡처 원본이 없는 장면은 고정본을 그대로 둔다 —
+        # 다시 찍을 수 없는 예전 장면(예: still:verify_apply)이 지워지지 않게.
+        if SNAPSHOT:
+            warn(f"캡처 원본 없음 → 고정본 유지: {shot.name}")
         ffmpeg("-i", str(shot), "-frames:v", "1", str(out))
         return
     grab_capture(src, out)
     if SNAPSHOT:
         SHOTS.mkdir(exist_ok=True)
         ffmpeg("-i", str(out), "-frames:v", "1", "-q:v", "2", str(shot))
+
+
+def capture_exists(src):
+    if src.startswith("still:"):
+        return (STILLS / f"{src[6:]}.png").is_file()
+    m = re.fullmatch(r"([\w-]+)@.*", src)
+    return bool(m) and (FLOWS / f"{m.group(1)}_{LANG_TAG}.mp4").is_file()
 
 
 def grab_capture(src, out):

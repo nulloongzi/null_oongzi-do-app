@@ -1054,36 +1054,65 @@ final ValueNotifier<int> verifyDemoApply = ValueNotifier<int>(0);
 /// '심사 중' 안내가 뜨기 전에 지도로 돌아갔다.
 final ValueNotifier<int> verifyDemoDone = ValueNotifier<int>(0);
 
+/// 캡처 시연용: '🙋 이 팀 관리자 신청'을 밖에서 누른다(값이 바뀌면 신청).
+/// 사용자가 누를 때와 같은 _apply() 를 탄다 — 안내 창, 업로드, 신청 문서까지 실제.
+final ValueNotifier<int> adminDemoApply = ValueNotifier<int>(0);
+
+/// 캡처 시연용: 관리자 신청 안내 창의 '관리자 신청하기'를 누른다.
+final ValueNotifier<int> adminDemoConfirm = ValueNotifier<int>(0);
+
+/// 캡처 시연용: 관리자 신청이 실제로 끝난 시각(성공·실패 무관). 업로드 시간은
+/// 알 수 없어 고정 대기로는 '확인하고 있어요' 안내를 못 맞춘다(인증 신청과 같다).
+final ValueNotifier<int> adminDemoDone = ValueNotifier<int>(0);
+
 /// 관리자 신청 전 안내 — 어떤 사진이 이 팀 사람이라는 증빙이 되는지,
 /// 남의 정보는 가려 달라는 말을 갤러리를 열기 전에 보여 준다.
 /// '관리자 신청하기'를 눌러야 true. 바깥을 눌러 닫거나 취소하면 false.
 Future<bool> confirmClubAdminRequest(BuildContext context) async {
   if (!context.mounted) return false;
-  final ok = await showDialog<bool>(
-    context: context,
-    builder: (dctx) => AlertDialog(
-      title: Text(t('ad_title')),
-      // 문구가 길어 작은 화면·큰 글씨에서 넘칠 수 있다.
-      content: SingleChildScrollView(
-        child: Text(t('ad_desc'), style: const TextStyle(height: 1.5)),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(dctx, false),
-          child: Text(t('cancel')),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(dctx, true),
-          child: Text(
-            t('ad_submit'),
-            style: const TextStyle(fontWeight: FontWeight.w800),
-          ),
-        ),
-      ],
-    ),
-  );
+  // 캡처 시연: 창이 떠 있는 동안 adminDemoConfirm 이 오면 '관리자 신청하기'를 누른다.
+  BuildContext? dialogCtx;
+  void demoConfirm() {
+    final c = dialogCtx;
+    if (c != null && c.mounted) Navigator.pop(c, true);
+  }
+
+  if (kCaptureMode) adminDemoConfirm.addListener(demoConfirm);
+  final bool? ok;
+  try {
+    ok = await showDialog<bool>(
+      context: context,
+      builder: (dctx) {
+        dialogCtx = dctx;
+        return _adminRequestDialog(dctx);
+      },
+    );
+  } finally {
+    if (kCaptureMode) adminDemoConfirm.removeListener(demoConfirm);
+  }
   return ok == true;
 }
+
+Widget _adminRequestDialog(BuildContext dctx) => AlertDialog(
+  title: Text(t('ad_title')),
+  // 문구가 길어 작은 화면·큰 글씨에서 넘칠 수 있다.
+  content: SingleChildScrollView(
+    child: Text(t('ad_desc'), style: const TextStyle(height: 1.5)),
+  ),
+  actions: [
+    TextButton(
+      onPressed: () => Navigator.pop(dctx, false),
+      child: Text(t('cancel')),
+    ),
+    TextButton(
+      onPressed: () => Navigator.pop(dctx, true),
+      child: Text(
+        t('ad_submit'),
+        style: const TextStyle(fontWeight: FontWeight.w800),
+      ),
+    ),
+  ],
+);
 
 // 팀 관리자 영역 — 관리자 수 / 빠지기(관리자일 때) / 신청·대기·재신청(아닐 때).
 // 웹 club-detail.js 의 #clubAdminArea 와 같은 구성. 최신 신청 조회:
@@ -1122,6 +1151,17 @@ class _ClubAdminSectionState extends State<_ClubAdminSection> {
     super.initState();
     // 관리자면 신청 이력을 볼 필요가 없다 — 쿼리도 아끼고 화면도 단순해진다.
     if (!_isAdmin) unawaited(_loadRequest());
+    if (kCaptureMode) adminDemoApply.addListener(_onDemoApply);
+  }
+
+  @override
+  void dispose() {
+    adminDemoApply.removeListener(_onDemoApply);
+    super.dispose();
+  }
+
+  void _onDemoApply() {
+    if (mounted) unawaited(_apply());
   }
 
   Future<void> _loadRequest() async {
@@ -1157,6 +1197,7 @@ class _ClubAdminSectionState extends State<_ClubAdminSection> {
           return ok;
         },
       );
+      if (kCaptureMode) adminDemoDone.value++;
       if (!mounted) return;
       setState(() => _busy = false);
       if (err == 'cancelled') return;

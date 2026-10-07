@@ -23,9 +23,12 @@ import '../services/friends_service.dart';
 import '../services/i18n.dart';
 import '../services/pickup_filter.dart';
 import '../services/region_match.dart';
+import '../services/schedule_parse.dart';
 import '../services/share_service.dart';
 import '../services/story_share.dart';
 import '../services/this_week.dart';
+import '../services/urgent.dart';
+import '../services/urgent_service.dart';
 import '../services/lunchbox_service.dart';
 import '../theme.dart';
 import 'detail_sheet.dart';
@@ -44,9 +47,11 @@ import '../widgets/reel_card.dart';
 import '../widgets/map_detail_panel.dart';
 import '../widgets/map_picker.dart' show mapPickerDemoConfirm;
 import '../widgets/pickup_list_sheet.dart';
+import '../widgets/recruit_sheet.dart';
 import '../widgets/room_sheet.dart';
 import '../widgets/share_menu.dart';
 import '../widgets/story_card.dart';
+import '../widgets/urgent_sheet.dart';
 
 // 마커 1건 스펙(클럽/스팟 공통) — 아이콘 병렬 빌드 후 마커를 한 번에 생성하기 위한 중간 표현.
 class _MarkerSpec {
@@ -707,6 +712,21 @@ class _MapScreenState extends State<MapScreen> {
       case 'flow_reels':
         await _flowReels();
         break;
+      case 'flow_room':
+        await _flowRoom();
+        break;
+      case 'flow_admin':
+        await _flowAdmin();
+        break;
+      case 'flow_urgent':
+        await _flowUrgent();
+        break;
+      case 'flow_recruit':
+        await _flowRecruit();
+        break;
+      case 'flow_area':
+        await _flowArea();
+        break;
     }
   }
 
@@ -1226,6 +1246,351 @@ class _MapScreenState extends State<MapScreen> {
     await _hold(3.5, 'reg_verified');
     await _backToMap();
     _endFlow();
+  }
+
+  // ── 팀 쪽 기능 시연(관리자 신청·게스트 급구·식구 모집)과 '여기 자리 있어요?' ──
+  // 실데이터를 그대로 쓴다: 신청 문서·급구·식구 모집이 실제로 올라간다. 그래서
+  // 올린 것은 같은 흐름 안에서 내린다(급구·식구 모집). 관리자 신청은 운영자에게
+  // 카톡 알림이 가므로 촬영 뒤 운영자가 거절해 정리한다.
+
+  /// 관리자 신청 시연 대상 — 캡처 계정이 관리자가 아니고 정원(3명)이 남은 팀.
+  /// 다른 편의 팀(_stillClub)과 같으면 좋다. 없으면 인증팀 → 아무 팀.
+  Club? _adminDemoClub() {
+    final uid = _repo.currentUid;
+    bool ok(Club c) => adminRequestBlockReason(c, uid) == null;
+    final s = _stillClub();
+    if (s != null && ok(s)) return s;
+    for (final c in _clubs) {
+      if (c.isVerified && ok(c)) return c;
+    }
+    for (final c in _clubs) {
+      if (ok(c)) return c;
+    }
+    return null;
+  }
+
+  /// 캡처 계정이 관리자인 팀(급구는 인증팀만). 인증팀 → 등록 시연 팀 이름 순으로 고른다.
+  /// 등록 흐름은 돌 때마다 미인증 '누룽지 배구클럽'을 새로 만든다 — 같은 이름이 둘이면
+  /// 인증된 쪽을 골라야 급구까지 보인다.
+  Club? _ownDemoClub({required bool needVerified}) {
+    final uid = _repo.currentUid;
+    final mine = _clubs.where((c) => canManageClub(c, uid)).toList();
+    int rank(Club c) =>
+        (c.isVerified ? 0 : 2) + (c.name == _demoClubName ? 0 : 1);
+    mine.sort((a, b) => rank(a).compareTo(rank(b)));
+    for (final c in mine) {
+      if (!needVerified || c.isVerified) return c;
+    }
+    return null;
+  }
+
+  Club _fresh(Club c) => _clubs.where((x) => x.id == c.id).firstOrNull ?? c;
+
+  /// 시트가 닫히길 기다린다 — 저장이 실패하면 시트가 떠 있으니 끝까지 기다리지 않는다.
+  Future<void> _awaitSheet(Future<bool> sheet, {double timeout = 20}) =>
+      sheet.timeout(
+        Duration(milliseconds: (timeout * 1000).round()),
+        onTimeout: () => false,
+      );
+
+  /// 펼친 상세를 맨 아래로 — 관리자 영역·급구·식구 모집 버튼이 본문 끝에 있다.
+  Future<bool> _showDetailBottom(String beat) async {
+    detailPanelDemoExpand.value++;
+    if (!await _hold(1.2)) return false;
+    detailPanelDemoScrollEnd.value++;
+    return _hold(2.5, beat);
+  }
+
+  /// 🍚 여기 자리 있어요? — 지도의 띠 → 목록(종류·날짜 칩) → 한 줄 → 그 팀 상세,
+  /// 그리고 필터의 '🍚 식구 모집' 칩.
+  /// 목록이 비지 않게 내 팀에 게스트 급구·식구 모집(맛보기)을 조용히 올렸다가
+  /// 끝에서 내린다(시연이 실데이터를 남기지 않게).
+  Future<void> _flowRoom() async {
+    await _closeOverlays();
+    if (!mounted) return;
+    final svc = UrgentService();
+    final own = _ownDemoClub(needVerified: false);
+    var urgentUp = false, recruitUp = false;
+    if (own != null) {
+      if (own.isVerified) {
+        final events = (own.scheduleRaw?.isNotEmpty ?? false)
+            ? eventsFromRaw(own.scheduleRaw, overnight: true)
+            : eventsFromText(own.schedule, overnight: true);
+        final next = nextSessions(events, DateTime.now());
+        if (next.isNotEmpty) {
+          urgentUp =
+              await svc.post(own.id, next.first.end, kUrgentDemoMsg) == null;
+        }
+      }
+      try {
+        await svc.setRecruiting(
+          own.id,
+          on: true,
+          msg: kRecruitDemoMsg,
+          dropIn: true,
+        );
+        recruitUp = true;
+      } catch (e) {
+        debugPrint('CAPTURE_ERROR room recruit: $e');
+      }
+      await _load();
+    }
+    if (!await _hold(3.5, 'rm_strip')) return; // 검색창 아래 '여기 자리 있어요? · n곳'
+    _openRoom();
+    if (!await _hold(3.5, 'rm_sheet')) return; // 종류·날짜 칩 + 날짜별 목록
+    // 종류 하나만 켠다 — 방금 올린 게스트 급구가 있으면 그것, 없으면 맛보기.
+    final kind = urgentUp ? kTwGuest : (recruitUp ? kTwDropIn : null);
+    if (kind != null) {
+      roomDemo.value = 'kind:$kind';
+      if (!await _hold(2.5, 'rm_kind')) return;
+    }
+    roomDemo.value = 'day:first';
+    if (!await _hold(2.5, 'rm_day')) return;
+    roomDemo.value = 'open';
+    if (!await _hold(3.5, 'rm_open')) return; // 그 팀 상세
+
+    // 필터의 '🍚 식구 모집' 칩 — 모집 중인 팀만 남는다.
+    await _backToMap();
+    if (!mounted) return;
+    _onTab('clubs');
+    const preset = ClubFilter(recruitingOnly: true);
+    final sheet = showFilterSheet(context, preset);
+    await _hold(3, 'rm_filter');
+    if (!mounted) return; // 분석기는 _hold 의 반환값을 mounted 체크로 못 읽는다
+    Navigator.of(context).pop(preset); // '적용하기' 상당
+    final applied = await sheet;
+    if (!mounted) return;
+    if (applied != null) {
+      setState(() => _filter = applied);
+      await _refreshMarkers();
+    }
+    await _hold(3, 'rm_filtered');
+    _endFlow(); // 아래는 뒷정리 — 편집기가 여기서 자른다
+
+    await _backToMap();
+    if (!mounted) return;
+    setState(() => _filter = const ClubFilter());
+    if (own != null) {
+      try {
+        if (urgentUp) await svc.turnOff(own.id);
+        if (recruitUp) await svc.setRecruiting(own.id, on: false);
+      } catch (e) {
+        debugPrint('CAPTURE_ERROR room cleanup: $e');
+      }
+    }
+    await _load();
+  }
+
+  /// 🙋 관리자 신청 — 팀 상세 맨 아래 → 신청 버튼 → 사진 안내 창 → 신청 → 확인 중.
+  /// 신청 문서는 실제로 만들어진다(운영자 카톡 알림). 촬영 뒤 운영자가 거절해 정리한다.
+  Future<void> _flowAdmin() async {
+    await _closeOverlays();
+    if (!mounted) return;
+    final c = _adminDemoClub();
+    if (c == null) {
+      debugPrint('CAPTURE_ERROR admin: 신청할 수 있는 팀이 없다');
+      return;
+    }
+    await _focusAndShowClub(c);
+    if (!await _hold(2, 'ad_detail')) return;
+    if (!await _showDetailBottom('ad_button')) return; // 관리자 n/3명 + 🙋 신청
+    adminDemoApply.value++;
+    if (!await _hold(4.5, 'ad_guide')) return; // 어떤 사진을 올리면 되는지
+    final done = _awaitBump(adminDemoDone, timeout: 25);
+    adminDemoConfirm.value++;
+    await _hold(0.8, 'ad_uploading'); // '사진 올리는 중…'
+    await done;
+    if (!mounted) return;
+    await _hold(3.5, 'ad_pending'); // ⏳ 관리자 신청을 확인하고 있어요
+    await _backToMap();
+    _endFlow();
+  }
+
+  /// 🔥 게스트 급구 — 내 인증팀 상세 → 올리기 → 회차 칩·문구 → 지도(빨간 핀·🔥 이름표·
+  /// 자리 띠) → 상세 배너(마감 시각) → 수정·내리기 → 내리기.
+  Future<void> _flowUrgent() async {
+    await _closeOverlays();
+    if (!mounted) return;
+    final c = _ownDemoClub(needVerified: true);
+    if (c == null) {
+      debugPrint('CAPTURE_ERROR urgent: 이 계정이 관리자인 인증팀이 없다');
+      return;
+    }
+    final svc = UrgentService();
+    await _focusAndShowClub(c);
+    if (!await _hold(2, 'ug_detail')) return;
+    if (!await _showDetailBottom('ug_button')) return; // 🔥 게스트 급구 올리기
+    if (!mounted) return;
+    var saved = false;
+    final sheet = showUrgentSheet(
+      context,
+      c,
+      post: (until, msg) async {
+        final err = await svc.post(c.id, until, msg);
+        if (err == null) saved = true;
+        return err;
+      },
+    );
+    if (!await _hold(3, 'ug_sheet')) return; // 언제 운동에 필요해요? — 회차 칩
+    urgentDemoType.value++;
+    if (!await _hold(kUrgentDemoMsg.length * 0.07 + 0.3, 'ug_typing')) return;
+    if (!await _hold(1.8, 'ug_typed')) return;
+    urgentDemoSubmit.value++;
+    await _awaitSheet(sheet);
+    if (!mounted) return;
+    if (!saved) {
+      debugPrint('CAPTURE_ERROR urgent: 급구를 올리지 못했다');
+      await _backToMap();
+      return;
+    }
+    _snack(t('cd_urgent_posted'));
+    await _backToMap();
+    await _load();
+    if (!await _hold(3.5, 'ug_map')) return; // 빨간 핀·🔥 이름표·띠 맨 앞 🔥
+    await _focusAndShowClub(_fresh(c));
+    if (!await _hold(3, 'ug_banner')) return; // 🔥 게스트 급구 배너 + 마감 시각
+    if (!await _showDetailBottom('ug_manage')) return; // 수정 · 내리기
+    try {
+      await svc.turnOff(c.id); // '게스트 급구 내리기'와 같은 일
+    } catch (e) {
+      debugPrint('CAPTURE_ERROR urgent off: $e');
+    }
+    _snack(t('cd_urgent_closed'));
+    await _backToMap();
+    await _load();
+    await _hold(2.5, 'ug_closed');
+    _endFlow();
+  }
+
+  /// 🍚 식구 모집 + 🥄 맛보기 — 내 팀 상세 → 시작 → 문구·맛보기 → 지도(🍚🥄 이름표) →
+  /// 상세 초록 배너 → 수정·마감 → 마감. 인증은 필요 없다.
+  Future<void> _flowRecruit() async {
+    await _closeOverlays();
+    if (!mounted) return;
+    final c = _ownDemoClub(needVerified: false);
+    if (c == null) {
+      debugPrint('CAPTURE_ERROR recruit: 이 계정이 관리자인 팀이 없다');
+      return;
+    }
+    final svc = UrgentService();
+    await _focusAndShowClub(c);
+    if (!await _hold(2, 'rc_detail')) return;
+    if (!await _showDetailBottom('rc_button')) return; // 🍚 식구 모집 시작 + 60일 안내
+    if (!mounted) return;
+    var saved = false;
+    final sheet = showRecruitSheet(
+      context,
+      c,
+      save: (msg, dropIn) async {
+        try {
+          await svc.setRecruiting(c.id, on: true, msg: msg, dropIn: dropIn);
+          saved = true;
+          return null;
+        } catch (e) {
+          debugPrint('CAPTURE_ERROR recruit save: $e');
+          return t('cd_update_error');
+        }
+      },
+    );
+    if (!await _hold(2.5, 'rc_sheet')) return;
+    recruitDemoFill.value++; // 문구를 치고 나서 맛보기 체크
+    if (!await _hold(kRecruitDemoMsg.length * 0.07 + 0.3, 'rc_typing')) return;
+    if (!await _hold(2, 'rc_filled')) return;
+    recruitDemoSubmit.value++;
+    await _awaitSheet(sheet);
+    if (!mounted) return;
+    if (!saved) {
+      debugPrint('CAPTURE_ERROR recruit: 식구 모집을 올리지 못했다');
+      await _backToMap();
+      return;
+    }
+    _snack(t('rc_saved'));
+    await _backToMap();
+    await _load();
+    if (!await _hold(3, 'rc_map')) return; // 🍚🥄 이름표
+    await _focusAndShowClub(_fresh(c));
+    if (!await _hold(3.5, 'rc_banner')) return; // 초록 배너 + 🥄 맛보기 환영
+    if (!await _showDetailBottom('rc_manage')) return; // 수정 · 마감
+    try {
+      await svc.setRecruiting(c.id, on: false); // '식구 모집 마감'과 같은 일
+    } catch (e) {
+      debugPrint('CAPTURE_ERROR recruit off: $e');
+    }
+    _snack(t('rc_closed'));
+    await _backToMap();
+    await _load();
+    await _hold(2.5, 'rc_closed');
+    _endFlow();
+  }
+
+  /// 📍 대략적인 위치만 공개 — 등록 폼에서 체크(설명 펼침) → 지도의 동네 범위 원 →
+  /// 상세의 '대략 위치' 안내. 대략 위치 팀이 실데이터에 없을 수 있어 시연 팀을 실제로
+  /// 등록했다가 끝에서 지운다(같은 이름이라도 이 흐름이 만든 대략 위치 팀만).
+  Future<void> _flowArea() async {
+    await _closeOverlays();
+    if (!mounted) return;
+    await _hold(2, 'ar_open');
+    if (_repo.currentUid == null) {
+      _snack(t('login_required'));
+      return;
+    }
+    final cam = await _controller?.getCameraPosition();
+    if (!mounted) return;
+    final center = cam?.target ?? const NLatLng(37.5559, 127.0838);
+    final saved = showClubFormSheet(context, initialCenter: center);
+    if (!await _hold(1.5, 'ar_form')) return;
+    await _formStepDone('name');
+    await _formStepDone('target');
+    await _formStepDone('addr_place'); // 체육관 이름만 쳐도 된다
+    if (!await _hold(1.5, 'ar_addr')) return;
+    await _formStepDone('addr_search');
+    if (!await _hold(2, 'ar_addr_hit')) return;
+    await _formStepDone('area_only');
+    if (!await _hold(4.5, 'ar_checked')) return; // 동네 범위·시군구까지·세부 위치 비공개
+    _formStep('submit');
+    final created = await saved;
+    if (!mounted) return;
+    if (created == true) await _load();
+    final uid = _repo.currentUid;
+    final mine = _clubs
+        .where(
+          (c) =>
+              isAreaOnly(c) && c.name == _demoClubName && canManageClub(c, uid),
+        )
+        .firstOrNull;
+    if (mine == null) {
+      debugPrint('CAPTURE_ERROR area: 등록한 대략 위치 팀을 못 찾았다');
+      return;
+    }
+    // 범위 원(반지름 kAreaCircleRadius)이 화면 안에 다 들어오는 축척으로 본다. 상세용
+    // 확대 축척이면 원이 화면보다 커서 지도 전체가 옅게 칠해질 뿐 테두리가 안 보였다.
+    try {
+      await _controller?.updateCamera(
+        NCameraUpdate.scrollAndZoomTo(
+          target: NLatLng(mine.lat!, mine.lng!),
+          zoom: 14.3,
+        ),
+      );
+    } catch (_) {}
+    if (!await _hold(3.5, 'ar_map')) return; // 핀 + 동네 범위 원
+    if (!mounted) return;
+    showClubDetail(
+      context,
+      mine,
+      currentUid: uid,
+      isAdmin: _isAdmin,
+      onChanged: _load,
+    );
+    await _hold(4, 'ar_detail'); // '대략 위치' 안내 + 시·군·구까지만 보이는 주소
+    _endFlow(); // 아래는 뒷정리
+
+    await _backToMap();
+    try {
+      await _repo.deleteClub(mine.id);
+    } catch (e) {
+      debugPrint('CAPTURE_ERROR area delete: $e');
+    }
+    await _load();
   }
 
   /// 등록 폼 시연이 만드는 팀 이름 — 인증 단계에서 다시 찾을 때 쓴다.

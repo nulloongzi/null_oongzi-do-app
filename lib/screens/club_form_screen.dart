@@ -102,6 +102,7 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
   final GlobalKey _optionalKey = GlobalKey();
   final GlobalKey _schedKey = GlobalKey();
   final GlobalKey _reelKey = GlobalKey();
+  final GlobalKey _areaKey = GlobalKey(); // 대략적인 위치만 공개(시연이 스크롤해 체크한다)
 
   // 운영자가 릴스를 숨긴 팀(reels_hidden). 모델이 릴스를 비워 두므로 칸을 열어 두면
   // 저장 한 번에 숨긴 원본이 지워진다 — 잠그고, 저장 때 릴스 필드를 보내지 않는다.
@@ -276,6 +277,9 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
         await _geocode();
       case 'addr_map': // ② 지도에서 고르기(확정은 mapPickerDemoConfirm)
         await _pickLocation();
+      case 'area_only': // 대략적인 위치만 공개 — 체크하면 아래에 설명이 펼쳐진다
+        await _demoScrollTo(_areaKey, 0.35);
+        if (mounted) setState(() => _areaOnly = true);
       case 'optional': // 선택 정보 펼치기
         if (!_demoOptionalOpen) {
           setState(() => _demoOptionalOpen = true);
@@ -819,6 +823,7 @@ class _ClubFormScreenState extends State<ClubFormScreen> {
   // 넣으면 접혀 있어서 못 보고 지나간다. 학교·공공 체육관을 빌려 쓰는 팀은
   // 정확한 핀이 그대로 민원이 되기 때문에, 등록하는 그 자리에서 보여야 한다.
   Widget _areaOnlyRow() => Padding(
+    key: _areaKey,
     padding: const EdgeInsets.only(top: 10),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,

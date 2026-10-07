@@ -98,8 +98,22 @@ fi
 
 # ── APK 빌드 & 설치 ──────────────────────────────────────────
 if [ -z "${SKIP_BUILD:-}" ]; then
+  DEFINES=(--dart-define=CAPTURE_MODE=true)
+  # 네이버 로그인은 client secret 이 있어야 켠다(릴리스 빌드와 같은 조건). 없으면 버튼이
+  # 숨어서 네이버 계정으로 로그인할 수 없다 — 촬영 계정이 네이버면 반드시 필요하다.
+  # 우선순위: android/secrets.properties(gitignore) → NAVER_CLIENT_SECRET 환경변수.
+  naver_secret="${NAVER_CLIENT_SECRET:-}"
+  if [ -z "$naver_secret" ] && [ -f android/secrets.properties ]; then
+    naver_secret="$(grep -E '^naverClientSecret=' android/secrets.properties | head -1 | cut -d= -f2- | tr -d '\r ')"
+  fi
+  if [ -n "$naver_secret" ]; then
+    DEFINES+=(--dart-define=NAVER_LOGIN_ENABLED=true)
+    say "네이버 로그인 켬"
+  else
+    say "네이버 로그인 끔 — android/secrets.properties 에 naverClientSecret 이 없다"
+  fi
   say "APK 빌드 (CAPTURE_MODE=true)…"
-  flutter build apk --debug --dart-define=CAPTURE_MODE=true
+  flutter build apk --debug "${DEFINES[@]}"
 fi
 [ -f "$APK_OUT" ] || die "APK 가 없습니다: $APK_OUT (SKIP_BUILD 를 빼고 다시 실행)"
 say "설치…"

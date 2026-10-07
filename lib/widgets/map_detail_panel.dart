@@ -5,6 +5,8 @@
 //
 // 펼침 비율(_expand: 0=peek..1=expand)을 DetailPanelScope로 본문에 노출 → 시간표 morph
 // (요약↔그리드)와 펼침 힌트가 이 비율에 연동된다(웹 interpolateMorph 대응).
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import '../services/deep_link_service.dart' show kCaptureMode;
@@ -45,6 +47,10 @@ final ValueNotifier<int> detailPanelDemoExpand = ValueNotifier<int>(0);
 /// 바뀌는 게 영상에 안 보였다(실측: 7차 촬영본 10~13초).
 final ValueNotifier<int> detailPanelDemoPeek = ValueNotifier<int>(0);
 
+/// 캡처 시연용: 펼친 본문을 맨 아래까지 스크롤한다. 관리자 영역·급구·식구 모집
+/// 버튼은 본문 맨 끝이라 펼치기만 해서는 화면 아래로 밀려 안 보인다.
+final ValueNotifier<int> detailPanelDemoScrollEnd = ValueNotifier<int>(0);
+
 /// 쓸어내려 닫는 기준: 접힌 높이의 60% 아래에서 놓으면 닫힌다.
 /// 웹 club-detail.js SHEET_CLOSE_RATIO 와 같은 값(design-system §3-1).
 const kSheetCloseRatio = 0.6;
@@ -61,6 +67,7 @@ class MapDetailPanel extends StatefulWidget {
 class _MapDetailPanelState extends State<MapDetailPanel> {
   double _height = 0;
   double _peek = 0;
+  final ScrollController _body = ScrollController(); // 본문 스크롤(시연이 맨 아래로 내린다)
   double _expanded = 0;
   bool _ready = false;
   bool _dragging = false;
@@ -121,11 +128,22 @@ class _MapDetailPanelState extends State<MapDetailPanel> {
     if (kCaptureMode) {
       detailPanelDemoExpand.addListener(_onDemoExpand);
       detailPanelDemoPeek.addListener(_onDemoPeek);
+      detailPanelDemoScrollEnd.addListener(_onDemoScrollEnd);
     }
   }
 
   void _onDemoExpand() => _snapTo(_expanded);
   void _onDemoPeek() => _snapTo(_peek);
+  void _onDemoScrollEnd() {
+    if (!mounted || !_body.hasClients) return;
+    unawaited(
+      _body.animateTo(
+        _body.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeOutCubic,
+      ),
+    );
+  }
 
   void _snapTo(double h) {
     if (!mounted || !_ready) return;
@@ -139,6 +157,8 @@ class _MapDetailPanelState extends State<MapDetailPanel> {
   void dispose() {
     detailPanelDemoExpand.removeListener(_onDemoExpand);
     detailPanelDemoPeek.removeListener(_onDemoPeek);
+    detailPanelDemoScrollEnd.removeListener(_onDemoScrollEnd);
+    _body.dispose();
     _expand.dispose();
     detailPanelTop.value = -1; // 패널이 사라지면 좌표도 무효화
     super.dispose();
@@ -220,6 +240,7 @@ class _MapDetailPanelState extends State<MapDetailPanel> {
               child: Material(
                 type: MaterialType.transparency,
                 child: SingleChildScrollView(
+                  controller: _body,
                   // peek(ratio<0.5)에선 스크롤 잠금 — 펼쳐야 그 아래(릴스/소유자)까지 봄.
                   physics: _ratio >= 0.5
                       ? null
