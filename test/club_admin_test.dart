@@ -183,7 +183,7 @@ void main() {
   });
 
   group('관리자 신청 거절 사유', () {
-    test('서버 코드 4개는 한/영 문구가 있다', () {
+    test('서버 코드는 모두 한/영 문구가 있다', () {
       for (final code in kAdminRejectReasonCodes) {
         final key = adminRejectReasonKey(code);
         expect(key, 'ad_reason_$code');
@@ -195,6 +195,9 @@ void main() {
         'already_admin',
         'not_found',
         'duplicate',
+        'photo_unclear',
+        'photo_unrelated',
+        'other',
       });
     });
 
@@ -203,6 +206,13 @@ void main() {
       expect(adminRejectReasonText('already_admin'), '이미 이 팀 관리자예요');
       expect(adminRejectReasonText('not_found'), '팀 정보를 찾지 못했어요');
       expect(adminRejectReasonText('duplicate'), '같은 신청이 이미 들어가 있어요');
+      // 운영자가 거절하며 고른 사유(카톡 '관리자관리' · 알림의 거절 버튼)
+      expect(
+        adminRejectReasonText('photo_unclear'),
+        '사진으로는 이 팀 사람인지 확인하지 못했어요',
+      );
+      expect(adminRejectReasonText('photo_unrelated'), '이 팀과 관련 없는 사진이에요');
+      expect(adminRejectReasonText('other'), '확인이 어려워 받아들이지 않았어요');
     });
 
     test('모르는 코드·사유 없음은 null — 사유 줄을 그리지 않는다', () {

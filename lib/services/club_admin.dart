@@ -47,13 +47,18 @@ bool adminApprovalNeedsRefresh(Club club, String? uid, String? status) =>
     uid.isNotEmpty &&
     !club.admins.contains(uid);
 
-/// 서버가 club_admin_requests.reject_reason 에 쓰는 코드. 이 밖의 값(옛 문서의
-/// error 등)은 사람에게 보일 말이 없어 사유 줄을 생략한다. 수동 거절은 사유가 없다.
+/// 서버가 club_admin_requests.reject_reason 에 쓰는 코드 — 서버가 스스로 닫을 때
+/// (full · already_admin · not_found · duplicate) + 운영자가 거절하며 고른 것
+/// (photo_unclear · photo_unrelated · duplicate · other). 이 밖의 값(옛 문서의
+/// error 등)은 사람에게 보일 말이 없어 사유 줄을 생략한다. 옛 수동 거절은 사유가 없다.
 const Set<String> kAdminRejectReasonCodes = {
   'full',
   'already_admin',
   'not_found',
   'duplicate',
+  'photo_unclear',
+  'photo_unrelated',
+  'other',
 };
 
 /// 거절 사유 코드 → strings.dart 키. 모르는 코드·빈 값이면 null.
