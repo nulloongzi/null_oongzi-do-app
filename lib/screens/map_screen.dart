@@ -1562,7 +1562,16 @@ class _MapScreenState extends State<MapScreen> {
       debugPrint('CAPTURE_ERROR area: 등록한 대략 위치 팀을 못 찾았다');
       return;
     }
-    await _centerOnPin(mine.lat, mine.lng);
+    // 범위 원(반지름 kAreaCircleRadius)이 화면 안에 다 들어오는 축척으로 본다. 상세용
+    // 확대 축척이면 원이 화면보다 커서 지도 전체가 옅게 칠해질 뿐 테두리가 안 보였다.
+    try {
+      await _controller?.updateCamera(
+        NCameraUpdate.scrollAndZoomTo(
+          target: NLatLng(mine.lat!, mine.lng!),
+          zoom: 14.3,
+        ),
+      );
+    } catch (_) {}
     if (!await _hold(3.5, 'ar_map')) return; // 핀 + 동네 범위 원
     if (!mounted) return;
     showClubDetail(
