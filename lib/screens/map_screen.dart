@@ -1122,12 +1122,20 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   /// 릴스가 붙은 팀. 없으면 첫 팀(커버 구간은 빈 화면이 되지만 흐름은 산다).
+  /// 릴스 시연 팀 — 커버가 한눈에 배구로 보이는 인증 팀(GVT)을 먼저.
+  /// 목록 첫 팀을 집으면 커버가 일러스트인 팀이 걸려 배구로 안 보였다.
+  static const _reelsDemoClubName = 'GVT';
+
   Club? _clubWithReels() {
     if (_clubs.isEmpty) return null;
-    for (final x in _clubs) {
-      if (x.instaReels.isNotEmpty) return x;
+    final withReels = _clubs.where((x) => x.instaReels.isNotEmpty).toList();
+    for (final x in withReels) {
+      if (x.name == _reelsDemoClubName) return x;
     }
-    return _clubs.first;
+    for (final x in withReels) {
+      if (x.isVerified) return x;
+    }
+    return withReels.isNotEmpty ? withReels.first : _clubs.first;
   }
 
   /// ⑤ 릴스 연동 — 링크 하나 붙이면 지도 위 상세에 커버로 뜬다.
