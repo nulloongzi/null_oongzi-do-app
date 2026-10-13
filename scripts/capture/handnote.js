@@ -22,7 +22,7 @@ const DEFS=`<defs>
   <feTurbulence type="fractalNoise" baseFrequency="0.02 0.3" numOctaves="2" seed="2" result="w"/>
   <feDisplacementMap in="SourceGraphic" in2="w" scale="7"/>
  </filter></defs>`;
-function layer(slide,cls){const s=document.createElementNS(NS,"svg");s.setAttribute("class","layer "+cls);s.setAttribute("viewBox","0 0 1080 1440");s.innerHTML=DEFS;slide.appendChild(s);return s}
+function layer(slide,cls){const s=document.createElementNS(NS,"svg");s.setAttribute("class","layer "+cls);s.setAttribute("viewBox",`0 0 ${slide.offsetWidth} ${slide.offsetHeight}`);s.innerHTML=DEFS;slide.appendChild(s);return s}
 function path(svg,d,attrs){const p=document.createElementNS(NS,"path");p.setAttribute("d",d);for(const k in attrs)p.setAttribute(k,attrs[k]);svg.appendChild(p);return p}
 function rect(slide,el){const a=slide.getBoundingClientRect(),b=el.getBoundingClientRect();return{x:b.left-a.left,y:b.top-a.top,w:b.width,h:b.height}}
 // open, overshooting marker ellipse (2 strokes -> darker overlap)
