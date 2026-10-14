@@ -3,9 +3,11 @@
 
 카드뉴스(make_cards.py)의 영상판이다. 한 편 = 카드 한 편:
   첫 1.9초  표지 제목 + 결과 화면(정지컷)
-  단계마다  카드와 같은 종이·제목·파란 설명 + 카드 창 안에서 실제 녹화본이 움직이고,
-            누를 곳에 빨간 손글씨 동그라미가 '그려진다'
+  단계마다  앱 화면이 가로 꽉 차게(1:1) 움직이고, 맨 위 종이 띠에 카드와 같은 손글씨
+            제목·파란 설명. 누를 곳에 빨간 손글씨 동그라미가 누르기 전에 '그려진다'
   끝        다음 편 예고 카드
+화면은 카드처럼 창 안에 넣지 않는다 — 릴스는 화면이 프레임을 꽉 채워야 '창 안의 창'으로
+안 보인다. 종이 띠는 인스타 위쪽 아이콘(약 150px)을 피해 글씨가 그 아래에 오게 둔다.
 문구·동그라미 좌표는 handnote.<lang>.txt 의 같은 편에서, 녹화 구간은 reels.handnote.<lang>.txt
 에서 읽는다. 나레이션은 없다 — 자막(손글씨)과 음악만. 음악은 한 곡으로 통일(MUSIC).
 
@@ -39,10 +41,12 @@ MUSIC_OFFSET = float(os.environ.get("MUSIC_OFFSET", "0"))
 LOGO = mc.ROOT / "assets" / "nulloongzido logo_without bg.png"
 
 W, H, FPS = 1080, 1920, 30
-WX, WY, WW, WH = 54, 400, 972, 1420       # 카드 창(종이 위)
+BAND = 440                                  # 맨 위 종이 띠 높이(제목·설명)
+HOOK_BAND = 560                             # 첫 장면은 표지 제목이 커서 띠가 길다
+WX, WY, WW, WH = 0, BAND, 1080, H - BAND    # 화면이 보이는 자리(띠 아래 전부)
 SRC_W = 1080
-K = WW / SRC_W                              # 0.9
-WIN_H = round(WH / K)                       # 1578 — 창에 보이는 원본 높이
+K = 1.0                                     # 원본 1:1 — 줄이지 않는다
+WIN_H = WH                                  # 1480 — 보이는 원본 높이(y0 은 0~980)
 DRAW_STEPS = 9                              # 동그라미 그리기 단계(프레임 묶음)
 DRAW_SEC = 0.36
 
@@ -94,23 +98,23 @@ CSS = """
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:transparent}
 .slide{position:relative;width:1080px;height:1920px;overflow:hidden;margin:0 0 40px}
-.paper{background:radial-gradient(circle,rgba(141,110,99,.22) 1.6px,transparent 2px) 18px 18px/36px 36px,var(--bg)}
-.win{position:absolute;left:54px;top:400px;width:972px;height:1420px;border-radius:70px;background:#fff;
- box-shadow:0 8px 32px rgba(93,64,55,.15),0 1px 3px rgba(93,64,55,.12)}
+.band,.paper{background:radial-gradient(circle,rgba(141,110,99,.22) 1.6px,transparent 2px) 18px 18px/36px 36px,var(--bg)}
+.band{position:absolute;left:0;top:0;width:1080px;border-radius:0 0 44px 44px;
+ box-shadow:0 10px 28px rgba(93,64,55,.22),0 2px 4px rgba(93,64,55,.14)}
 i.t{position:absolute;display:block}
 svg.layer{position:absolute;inset:0;width:1080px;height:1920px;pointer-events:none}
 svg.under{mix-blend-mode:multiply;z-index:2}
 .hw{position:absolute;z-index:3;white-space:nowrap}
 svg.over{z-index:4}
-.title{font-family:PenScript;color:var(--ink);font-size:104px;line-height:1;left:56px;top:70px;transform:rotate(-1.2deg);transform-origin:left}
+.title{font-family:PenScript;color:var(--ink);font-size:104px;line-height:1;left:56px;top:150px;transform:rotate(-1.2deg);transform-origin:left}
 .note{font-family:PoorStory;color:var(--blue);font-size:54px;line-height:1.25;letter-spacing:-1px}
-.cap{left:72px;top:208px;transform:rotate(-1.5deg);transform-origin:left}
+.cap{left:72px;top:282px;transform:rotate(-1.5deg);transform-origin:left}
 .red{font-family:Brush;color:var(--red);font-size:74px;line-height:1}
-.kick{left:64px;top:60px;font-size:60px;transform:rotate(-3deg)}
-.cover{font-family:PenScript;color:var(--ink);font-size:124px;line-height:1.02;left:66px;top:128px;transform:rotate(-2deg);transform-origin:left}
-.side{left:640px;top:318px;font-size:48px;transform:rotate(-3deg)}
-.foot{font-family:PenScript;color:var(--ink);font-size:52px;right:56px;bottom:34px;opacity:.6}
-.marks .hw,.marks .win{visibility:hidden}
+.kick{left:64px;top:150px;font-size:60px;transform:rotate(-3deg)}
+.cover{font-family:PenScript;color:var(--ink);font-size:118px;line-height:1.02;left:66px;top:222px;transform:rotate(-2deg);transform-origin:left}
+.side{left:650px;top:440px;font-size:48px;transform:rotate(-3deg)}
+.foot{font-family:PenScript;color:var(--red);font-size:42px;left:64px;top:92px;opacity:.8;transform:rotate(-2deg)}
+.marks .hw,.marks .band{visibility:hidden}
 .outro .logo{position:absolute;left:340px;top:560px;width:400px}
 .outro .brand{font-family:PenScript;color:var(--ink);font-size:150px;left:0;right:0;top:1000px;text-align:center}
 .outro .next{left:0;right:0;top:1200px;text-align:center}
@@ -131,7 +135,7 @@ def build_html(post, reel, num):
     foot = f'<div class="hw foot">{html.escape(num)}</div>'
     pages, names = [], []
     # 표지(첫 장면)
-    pages.append(f'<section class="slide paper"><div class=win></div>'
+    pages.append(f'<section class=slide><div class=band style="height:{HOOK_BAND}px"></div>'
                  f'<div class="hw red kick">{mc.txt(cover["kick"])}</div>'
                  f'<div class="hw cover">{mc.txt(cover["title"])}</div>'
                  + (f'<div class="hw note side">{mc.txt(cover["side"])}</div>' if cover["side"] else "")
@@ -139,7 +143,7 @@ def build_html(post, reel, num):
     names.append("hook")
     # 단계 종이
     for i, s in enumerate(steps, 1):
-        pages.append(f'<section class="slide paper"><div class=win></div>'
+        pages.append(f'<section class=slide><div class=band style="height:{BAND}px"></div>'
                      f'<div class="hw title">{mc.txt(s["title"])}</div>'
                      f'<div class="hw note cap">{mc.txt(s["cap"])}</div>{foot}</section>')
         names.append(f"step{i}")
@@ -204,25 +208,15 @@ def flow_mp4(rid):
 def src_vf(y0):
     fr = mc.read_frame()
     crop = f"crop={fr[2]}:{fr[3]}:{fr[0]}:{fr[1]}," if fr else ""
-    return (f"{crop}scale={SRC_W}:-2:flags=lanczos,crop={SRC_W}:{WIN_H}:0:{y0},"
-            f"scale={WW}:{WH}:flags=lanczos,setsar=1")
+    return f"{crop}scale={SRC_W}:-2:flags=lanczos,crop={SRC_W}:{WIN_H}:0:{y0},setsar=1"
 
 
-def make_mask(d):
-    m = d / "mask.png"
-    # 둥근 모서리 창(흰=보임). 크롬 없이 ffmpeg 만으로 — 네 귀를 원으로 깎는다.
-    r = 70
-    ff("-f", "lavfi", "-i", f"color=white:s={WW}x{WH}", "-frames:v", "1", "-vf",
-       f"format=gray,geq=lum='255*lte(hypot(max(0,abs(X-{WW / 2})-{WW / 2 - r}),"
-       f"max(0,abs(Y-{WH / 2})-{WH / 2 - r})),{r})'", str(m))
-    return m
-
-
-def clip(base, video_args, vf, dur, circ_list, out, mask):
-    """base(종이) 위에 창(녹화본 구간) + 동그라미(concat 목록)를 얹어 dur 초짜리 조각."""
-    inputs = ["-loop", "1", "-t", f"{dur:.3f}", "-i", str(base), *video_args, "-loop", "1", "-i", str(mask)]
-    fc = (f"[1:v]{vf},fps={FPS},format=rgba[v];[2:v]format=gray,scale={WW}:{WH}[m];[v][m]alphamerge[vw];"
-          f"[0:v][vw]overlay={WX}:{WY}:shortest=0[b]")
+def clip(top, video_args, vf, dur, circ_list, out):
+    """크림 바탕 위에 화면(녹화본 구간, 띠 아래 꽉 채움) → 맨 위 종이 띠(top) → 동그라미."""
+    inputs = ["-f", "lavfi", "-t", f"{dur:.3f}", "-i", f"color=0xFBF8F1:s={W}x{H}:r={FPS}",
+              *video_args, "-loop", "1", "-t", f"{dur:.3f}", "-i", str(top)]
+    fc = (f"[1:v]{vf},fps={FPS}[v];[0:v][v]overlay={WX}:{WY}:shortest=0[a];"
+          f"[2:v]format=rgba[t];[a][t]overlay=0:0[b]")
     last = "[b]"
     if circ_list:
         inputs += ["-f", "concat", "-safe", "0", "-i", str(circ_list)]
@@ -262,7 +256,6 @@ def make_reel(chrome, post, reel, d, num):
     for i, nm in enumerate(names):
         ff("-i", str(strip), "-frames:v", "1", "-vf", f"crop={W}:{H}:0:{i * (H + 40)}", str(d / f"{nm}.png"))
     ff("-f", "lavfi", "-i", f"color=black@0.0:s={W}x{H},format=rgba", "-frames:v", "1", str(d / "blank.png"))
-    mask = make_mask(d)
     mp4 = flow_mp4(reel["id"])
     parts = []
     beat = 60 / 129
@@ -272,7 +265,7 @@ def make_reel(chrome, post, reel, d, num):
     still = d / "hook_src.png"
     ff("-ss", f"{ht:.2f}", "-i", str(mp4), "-frames:v", "1", str(still))
     out = d / "p00.mp4"
-    clip(d / "hook.png", ["-loop", "1", "-t", f"{hook_dur:.3f}", "-i", str(still)], src_vf(hy), hook_dur, None, out, mask)
+    clip(d / "hook.png", ["-loop", "1", "-t", f"{hook_dur:.3f}", "-i", str(still)], src_vf(hy), hook_dur, None, out)
     parts.append(out)
     for j, seg in enumerate(reel["segs"]):
         dur = seg["t1"] - seg["t0"]
@@ -280,7 +273,7 @@ def make_reel(chrome, post, reel, d, num):
         out = d / f"p{j + 1:02d}.mp4"
         mc.log(f"{reel['id']} ③ 조각 {j + 1}: 단계 {seg['step']} · {seg['t0']}~{seg['t1']}초")
         clip(d / f"step{seg['step']}.png", ["-ss", f"{seg['t0']:.3f}", "-t", f"{dur:.3f}", "-i", str(mp4)],
-             src_vf(seg["y0"]), dur, lst, out, mask)
+             src_vf(seg["y0"]), dur, lst, out)
         parts.append(out)
     out = d / "p99.mp4"
     ff("-loop", "1", "-t", f"{4 * beat:.3f}", "-i", str(d / "outro.png"), "-vf", f"fps={FPS},format=yuv420p",
