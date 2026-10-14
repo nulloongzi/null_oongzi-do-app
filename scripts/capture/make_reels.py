@@ -198,17 +198,34 @@ def ff(*args):
     mc.ffmpeg(*args)
 
 
+RAW = mc.ART / "reels" / "raw"   # 폰 화면 그대로의 원본(예: 1080x2640) — 있으면 이걸 쓴다
+
+
 def flow_mp4(rid):
+    """(영상, 원본인가). 원본(raw)이 있으면 그것 — 흐름본(flows)은 아래 제스처 바(60px)를
+    잘라 내고 9:16 에 맞춰 줄여 둔 것이라, 시트 맨 아래 버튼이 프레임 끝에 붙어 잘려 보이고
+    다시 키우면 흐려진다."""
+    raw = RAW / f"{rid}_{LANG_TAG}.mp4"
+    if raw.is_file():
+        return raw, True
     p = mc.FLOWS / f"{rid}_{LANG_TAG}.mp4"
     if not p.is_file():
         mc.die(f"녹화본 없음: {p}")
-    return p
+    mc.warn(f"원본 없음({raw.name}) → 흐름본으로(아래 60px 없음·조금 흐림)")
+    return p, False
 
 
-def src_vf(y0):
-    fr = mc.read_frame()
-    crop = f"crop={fr[2]}:{fr[3]}:{fr[0]}:{fr[1]}," if fr else ""
-    return f"{crop}scale={SRC_W}:-2:flags=lanczos,crop={SRC_W}:{WIN_H}:0:{y0},setsar=1"
+def src_vf(y0, raw):
+    """원본 화면 → 폭 1080, 위 상태 바만 덜어냄(흐름본과 같은 좌표) → 띠 아래 창 높이만큼.
+    y0 이 너무 크면 화면 맨 아래에 맞춘다."""
+    if raw:
+        t = "trunc(120*iw/1080/2)*2"   # 상태 바(1080 폭 기준 120px) — 흐름본과 같은 양
+        head = f"crop=iw:ih-{t}:0:{t},"
+    else:
+        fr = mc.read_frame()
+        head = f"crop={fr[2]}:{fr[3]}:{fr[0]}:{fr[1]}," if fr else ""
+    return (f"{head}scale={SRC_W}:-2:flags=lanczos,"
+            f"crop={SRC_W}:{WIN_H}:0:'min({y0},ih-{WIN_H})',setsar=1")
 
 
 def clip(top, video_args, vf, dur, circ_list, out):
@@ -256,7 +273,7 @@ def make_reel(chrome, post, reel, d, num):
     for i, nm in enumerate(names):
         ff("-i", str(strip), "-frames:v", "1", "-vf", f"crop={W}:{H}:0:{i * (H + 40)}", str(d / f"{nm}.png"))
     ff("-f", "lavfi", "-i", f"color=black@0.0:s={W}x{H},format=rgba", "-frames:v", "1", str(d / "blank.png"))
-    mp4 = flow_mp4(reel["id"])
+    mp4, raw = flow_mp4(reel["id"])
     parts = []
     beat = 60 / 129
     # 첫 장면 — 결과 화면 정지컷 4박
@@ -265,7 +282,7 @@ def make_reel(chrome, post, reel, d, num):
     still = d / "hook_src.png"
     ff("-ss", f"{ht:.2f}", "-i", str(mp4), "-frames:v", "1", str(still))
     out = d / "p00.mp4"
-    clip(d / "hook.png", ["-loop", "1", "-t", f"{hook_dur:.3f}", "-i", str(still)], src_vf(hy), hook_dur, None, out)
+    clip(d / "hook.png", ["-loop", "1", "-t", f"{hook_dur:.3f}", "-i", str(still)], src_vf(hy, raw), hook_dur, None, out)
     parts.append(out)
     for j, seg in enumerate(reel["segs"]):
         dur = seg["t1"] - seg["t0"]
@@ -273,7 +290,7 @@ def make_reel(chrome, post, reel, d, num):
         out = d / f"p{j + 1:02d}.mp4"
         mc.log(f"{reel['id']} ③ 조각 {j + 1}: 단계 {seg['step']} · {seg['t0']}~{seg['t1']}초")
         clip(d / f"step{seg['step']}.png", ["-ss", f"{seg['t0']:.3f}", "-t", f"{dur:.3f}", "-i", str(mp4)],
-             src_vf(seg["y0"]), dur, lst, out)
+             src_vf(seg["y0"], raw), dur, lst, out)
         parts.append(out)
     out = d / "p99.mp4"
     ff("-loop", "1", "-t", f"{4 * beat:.3f}", "-i", str(d / "outro.png"), "-vf", f"fps={FPS},format=yuv420p",
