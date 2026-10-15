@@ -279,11 +279,14 @@ def src_vf(y0, kind):
             f"crop={SRC_W}:{WIN_H}:0:'min({y0},ih-{WIN_H})',setsar=1")
 
 
-def clip(top, video_args, vf, dur, circ_list, out):
+def clip(top, video_args, vf, dur, circ_list, out, pre=0.0):
     """크림 바탕 위에 화면(녹화본 구간, 띠 아래 꽉 채움) → 맨 위 종이 띠(top) → 동그라미."""
     inputs = ["-f", "lavfi", "-t", f"{dur:.3f}", "-i", f"color=0xFBF8F1:s={W}x{H}:r={FPS}",
               *video_args, "-loop", "1", "-t", f"{dur:.3f}", "-i", str(top)]
-    fc = (f"[1:v]{vf},fps={FPS}[v];[0:v][v]overlay={WX}:{WY}:shortest=0[a];"
+    # 원본 녹화는 화면이 멈춰 있으면 프레임을 안 남긴다(가변 프레임). 구간 시작에 프레임이 없으면
+    # 첫 순간이 빈 바탕으로 나왔다 → pre 초 앞에서 읽어 고정 프레임으로 채운 뒤 잘라 낸다.
+    cut = f",trim=start={pre:.3f},setpts=PTS-STARTPTS" if pre else ""
+    fc = (f"[1:v]{vf},fps={FPS}{cut}[v];[0:v][v]overlay={WX}:{WY}:shortest=0[a];"
           f"[2:v]format=rgba[t];[a][t]overlay=0:0[b]")
     last = "[b]"
     if circ_list:
@@ -347,9 +350,10 @@ def make_reel(chrome, post, reel, d, num):
         out = d / f"p{j + 1:02d}.mp4"
         sg = src(seg["src"])
         mc.log(f"{reel['id']} 조각 {j + 1}: 단계 {seg['step']} · {seg['src']} {seg['t0']}~{seg['t1']}초")
+        pre = 0.0 if sg["still"] else min(1.0, seg["t0"])
         vin = (["-loop", "1", "-t", f"{dur:.3f}", "-i", str(sg["path"])] if sg["still"]
-               else ["-ss", f"{seg['t0']:.3f}", "-t", f"{dur:.3f}", "-i", str(sg["path"])])
-        clip(d / f"step{seg['step']}.png", vin, src_vf(seg["y0"], sg["kind"]), dur, lst, out)
+               else ["-ss", f"{seg['t0'] - pre:.3f}", "-t", f"{dur + pre:.3f}", "-i", str(sg["path"])])
+        clip(d / f"step{seg['step']}.png", vin, src_vf(seg["y0"], sg["kind"]), dur, lst, out, pre)
         parts.append(out)
     out = d / "p99.mp4"
     ff("-loop", "1", "-t", f"{4 * beat:.3f}", "-i", str(d / "outro.png"), "-vf", f"fps={FPS},format=yuv420p",
