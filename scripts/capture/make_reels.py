@@ -41,12 +41,12 @@ MUSIC_OFFSET = float(os.environ.get("MUSIC_OFFSET", "0"))
 LOGO = mc.ROOT / "assets" / "nulloongzido logo_without bg.png"
 
 W, H, FPS = 1080, 1920, 30
-BAND = 440                                  # 맨 위 종이 띠 높이(제목·설명)
-HOOK_BAND = 560                             # 첫 장면은 표지 제목이 커서 띠가 길다
+BAND = 290                                  # 맨 위 종이 띠 높이(제목 한 줄) — 화면을 가리지 않게 얇게
+HOOK_BAND = 450                             # 첫 장면은 표지 제목(두 줄)이라 띠가 조금 길다
 WX, WY, WW, WH = 0, BAND, 1080, H - BAND    # 화면이 보이는 자리(띠 아래 전부)
 SRC_W = 1080
 K = 1.0                                     # 원본 1:1 — 줄이지 않는다
-WIN_H = WH                                  # 1480 — 보이는 원본 높이(y0 은 0~980)
+WIN_H = WH                                  # 1630 — 보이는 원본 높이
 DRAW_STEPS = 9                              # 동그라미 그리기 단계(프레임 묶음)
 DRAW_SEC = 0.36
 
@@ -97,7 +97,7 @@ CSS = """
 :root{--red:#E0463A;--blue:#2F4DA8;--ink:#1F1F22;--hl:#FFE45C;--bg:#FBF8F1}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:transparent}
-.slide{position:relative;width:1080px;height:1920px;overflow:hidden;margin:0 0 40px}
+.slide{position:relative;width:1080px;height:1920px;overflow:hidden}
 .band,.paper{background:radial-gradient(circle,rgba(141,110,99,.22) 1.6px,transparent 2px) 18px 18px/36px 36px,var(--bg)}
 .band{position:absolute;left:0;top:0;width:1080px;border-radius:0 0 44px 44px;
  box-shadow:0 10px 28px rgba(93,64,55,.22),0 2px 4px rgba(93,64,55,.14)}
@@ -106,14 +106,14 @@ svg.layer{position:absolute;inset:0;width:1080px;height:1920px;pointer-events:no
 svg.under{mix-blend-mode:multiply;z-index:2}
 .hw{position:absolute;z-index:3;white-space:nowrap}
 svg.over{z-index:4}
-.title{font-family:PenScript;color:var(--ink);font-size:104px;line-height:1;left:56px;top:150px;transform:rotate(-1.2deg);transform-origin:left}
+.title{font-family:PenScript;color:var(--ink);font-size:96px;line-height:1;left:56px;top:150px;transform:rotate(-1.2deg);transform-origin:left}
 .note{font-family:PoorStory;color:var(--blue);font-size:54px;line-height:1.25;letter-spacing:-1px}
 .cap{left:72px;top:282px;transform:rotate(-1.5deg);transform-origin:left}
 .red{font-family:Brush;color:var(--red);font-size:74px;line-height:1}
-.kick{left:64px;top:150px;font-size:60px;transform:rotate(-3deg)}
-.cover{font-family:PenScript;color:var(--ink);font-size:118px;line-height:1.02;left:66px;top:222px;transform:rotate(-2deg);transform-origin:left}
-.side{left:650px;top:440px;font-size:48px;transform:rotate(-3deg)}
-.foot{font-family:PenScript;color:var(--red);font-size:42px;left:64px;top:92px;opacity:.8;transform:rotate(-2deg)}
+.kick{left:64px;top:118px;font-size:54px;transform:rotate(-3deg)}
+.cover{font-family:PenScript;color:var(--ink);font-size:104px;line-height:1.02;left:66px;top:178px;transform:rotate(-2deg);transform-origin:left}
+.side{left:660px;top:330px;font-size:44px;transform:rotate(-3deg)}
+.foot{font-family:PenScript;color:var(--red);font-size:40px;left:64px;top:96px;opacity:.8;transform:rotate(-2deg)}
 .marks .hw,.marks .band{visibility:hidden}
 .outro .logo{position:absolute;left:340px;top:560px;width:400px}
 .outro .brand{font-family:PenScript;color:var(--ink);font-size:150px;left:0;right:0;top:1000px;text-align:center}
@@ -145,7 +145,7 @@ def build_html(post, reel, num):
     for i, s in enumerate(steps, 1):
         pages.append(f'<section class=slide><div class=band style="height:{BAND}px"></div>'
                      f'<div class="hw title">{mc.txt(s["title"])}</div>'
-                     f'<div class="hw note cap">{mc.txt(s["cap"])}</div>{foot}</section>')
+                     f'{foot}</section>')
         names.append(f"step{i}")
     # 동그라미 — 구간마다 그리는 중(1..DRAW_STEPS) 투명 레이어
     for j, seg in enumerate(reel["segs"]):
@@ -174,23 +174,27 @@ document.querySelectorAll('.slide.marks').forEach(s=>{
   a.style.strokeDasharray=la;a.style.strokeDashoffset=Math.max(0,la-L);
   if(b){b.style.strokeDasharray=lb;b.style.strokeDashoffset=Math.max(0,lb-Math.max(0,L-la));}}});
 document.body.dataset.done=1},50)</script>"""
-    body = "\n".join(pages)
-    return (f"<!doctype html><html lang={LANG_TAG}><head><meta charset=utf-8><style>{CSS}</style></head>"
-            f"<body>{body}{js}</body></html>"), names
+    head = (f"<!doctype html><html lang={LANG_TAG}><head><meta charset=utf-8><style>{CSS}</style></head><body>")
+    return [(nm, f"{head}{pg}{js}</body></html>") for nm, pg in zip(names, pages)]
 
 
-def render_layers(chrome, page, n, d):
+def render_layers(chrome, docs, d):
+    """레이어를 한 장(1080x1920)씩 따로 그린다. 한 페이지에 수십 장을 세로로 이어 붙이면
+    (10만 px) 윈도우 크롬이 아래쪽 장의 글씨·동그라미를 그리지 않고 배경만 찍었다."""
     prof = d / "chrome-profile"
-    strip = d / "strip.png"
-    cmd = [chrome, "--headless", "--no-sandbox", "--disable-gpu", "--hide-scrollbars",
-           "--no-first-run", "--no-default-browser-check", f"--user-data-dir={prof}",
-           "--allow-file-access-from-files", "--force-device-scale-factor=1",
-           "--default-background-color=00000000", "--virtual-time-budget=8000",
-           f"--window-size={W},{n * (H + 40) + 200}", f"--screenshot={strip}", page.as_uri()]
-    r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=str(d))
-    if not strip.is_file():
-        mc.die("크롬 렌더 실패:\n" + r.stderr.decode("utf-8", "replace")[-600:])
-    return strip
+    for nm, doc in docs:
+        page = d / f"layer_{nm}.html"
+        page.write_text(doc, encoding="utf-8")
+        shot = d / f"shot_{nm}.png"
+        cmd = [chrome, "--headless", "--no-sandbox", "--disable-gpu", "--hide-scrollbars",
+               "--no-first-run", "--no-default-browser-check", f"--user-data-dir={prof}",
+               "--allow-file-access-from-files", "--force-device-scale-factor=1",
+               "--default-background-color=00000000", "--virtual-time-budget=5000",
+               f"--window-size={W},{H + 200}", f"--screenshot={shot}", page.as_uri()]
+        r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=str(d))
+        if not shot.is_file():
+            mc.die("크롬 렌더 실패:\n" + r.stderr.decode("utf-8", "replace")[-600:])
+        ff("-i", str(shot), "-frames:v", "1", "-vf", f"crop={W}:{H}:0:0", str(d / f"{nm}.png"))
 
 
 # ── 합성 ─────────────────────────────────────────────────────
@@ -213,6 +217,20 @@ def flow_mp4(rid):
         mc.die(f"녹화본 없음: {p}")
     mc.warn(f"원본 없음({raw.name}) → 흐름본으로(아래 60px 없음·조금 흐림)")
     return p, False
+
+
+def screen_h(mp4, raw):
+    """보이는 화면(폭 1080, 상태 바 덜어낸) 높이. 창 y0 을 화면 안으로 묶는 데 쓴다."""
+    r = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(mp4)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    m = re.search(r"Video:.*?\b(\d{3,5})x(\d{3,5})\b", r.stderr.decode("utf-8", "replace"))
+    w, h = (int(m.group(1)), int(m.group(2))) if m else (1080, 2640)
+    if raw:
+        t = int(120 * w / 1080 / 2) * 2
+        return int((h - t) * SRC_W / w)
+    fr = mc.read_frame()
+    if fr:
+        w, h = fr[2], fr[3]
+    return int(h * SRC_W / w)
 
 
 def src_vf(y0, raw):
@@ -266,14 +284,14 @@ def make_reel(chrome, post, reel, d, num):
         shutil.copyfile(mc.FONTS / f, d / f)
     shutil.copyfile(mc.JS, d / "handnote.js")
     shutil.copyfile(LOGO, d / "logo.png")
-    page_html, names = build_html(post, reel, num)
-    page = d / "layers.html"
-    page.write_text(page_html, encoding="utf-8")
-    strip = render_layers(chrome, page, len(names), d)
-    for i, nm in enumerate(names):
-        ff("-i", str(strip), "-frames:v", "1", "-vf", f"crop={W}:{H}:0:{i * (H + 40)}", str(d / f"{nm}.png"))
-    ff("-f", "lavfi", "-i", f"color=black@0.0:s={W}x{H},format=rgba", "-frames:v", "1", str(d / "blank.png"))
     mp4, raw = flow_mp4(reel["id"])
+    sh = screen_h(mp4, raw)
+    fit = lambda y: max(0, min(y, sh - WIN_H))   # 창이 화면 밖으로 나가지 않게 — 동그라미도 같은 값
+    reel = dict(reel, hook=(reel["hook"][0], fit(reel["hook"][1])),
+                segs=[dict(sg, y0=fit(sg["y0"])) for sg in reel["segs"]])
+    mc.log(f"{reel['id']} 레이어 그리기(한 장씩) · 화면 높이 {sh}")
+    render_layers(chrome, build_html(post, reel, num), d)
+    ff("-f", "lavfi", "-i", f"color=black@0.0:s={W}x{H},format=rgba", "-frames:v", "1", str(d / "blank.png"))
     parts = []
     beat = 60 / 129
     # 첫 장면 — 결과 화면 정지컷 4박
