@@ -66,18 +66,38 @@ def load_spec():
         elif cur is None:
             mc.die(f"reel 줄보다 먼저 나왔습니다: {ln}")
         elif f[0] == "hook":
-            cur["hook"] = (float(f[1]), int(f[2]))
+            f += [""] * (4 - len(f))
+            shot = f[1].startswith("shot:")
+            cur["hook"] = dict(t=0.0 if shot else float(f[1]), y0=int(f[2]),
+                               src=f[1] if shot else (f[3] or cur["id"]))
         elif f[0] == "seg":
+            f += [""] * (8 - len(f))
             on = None
-            if len(f) > 5 and f[5]:
+            if f[5]:
                 a, b = f[5].split("-")
                 on = (float(a), float(b))
-            cur["segs"].append(dict(step=int(f[1]), t0=float(f[2]), t1=float(f[3]), y0=int(f[4]), on=on))
+            cur["segs"].append(dict(step=int(f[1]), t0=float(f[2]), t1=float(f[3]), y0=int(f[4]), on=on,
+                                    src=f[6] or cur["id"], circ=f[7]))
         elif f[0] == "outro":
             cur["outro"] = f[1]
         else:
             mc.die(f"형식 오류: {ln}")
     return reels
+
+
+def seg_circles(step, seg):
+    """구간의 동그라미(흐름 좌표). seg 에 직접 적었으면 그것('-' = 없음), 아니면 카드 것.
+    카드가 스틸(상태 바 포함 1080x2640)에서 잰 좌표면 상태 바(120)만큼 올린다."""
+    if seg["circ"]:
+        return [] if seg["circ"] == "-" else circles(seg["circ"])
+    cs = circles(step["marks"])
+    if step["src"].startswith("still:"):
+        p = mc.shot_path(step["src"])
+        if p.is_file():
+            w, h = probe_wh(p)
+            if h * 1080 / w > 2500:
+                cs = [(x, y - 120, cw, ch, pad) for x, y, cw, ch, pad in cs]
+    return cs
 
 
 def circles(marks):
@@ -86,6 +106,8 @@ def circles(marks):
         p = m.split()
         if p[0] == "circle" and len(p) >= 5:
             out.append((*map(int, p[1:5]), int(p[5]) if len(p) > 5 else 20))
+        elif len(p) >= 4 and p[0].lstrip("-").isdigit():     # 구간에 직접 적은 'x y w h [pad]'
+            out.append((*map(int, p[0:4]), int(p[4]) if len(p) > 4 else 12))
     return out
 
 
@@ -151,7 +173,7 @@ def build_html(post, reel, num):
     for j, seg in enumerate(reel["segs"]):
         if not seg["on"]:
             continue
-        cs = circles(steps[seg["step"] - 1]["marks"])
+        cs = seg_circles(steps[seg["step"] - 1], seg)
         for k in range(1, DRAW_STEPS + 1):
             marks = "".join(win_mark(*c, seg["y0"], seed=seg["step"] * 10 + n + 1,
                                      extra=f'data-p="{k / DRAW_STEPS:.3f}" ')
@@ -205,43 +227,54 @@ def ff(*args):
 RAW = mc.ART / "reels" / "raw"   # 폰 화면 그대로의 원본(예: 1080x2640) — 있으면 이걸 쓴다
 
 
-def flow_mp4(rid):
-    """(영상, 원본인가). 원본(raw)이 있으면 그것 — 흐름본(flows)은 아래 제스처 바(60px)를
-    잘라 내고 9:16 에 맞춰 줄여 둔 것이라, 시트 맨 아래 버튼이 프레임 끝에 붙어 잘려 보이고
-    다시 키우면 흐려진다."""
-    raw = RAW / f"{rid}_{LANG_TAG}.mp4"
+def probe_wh(path):
+    r = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(path)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    m = re.search(r"Video:.*?\b(\d{3,5})x(\d{3,5})\b", r.stderr.decode("utf-8", "replace"))
+    return (int(m.group(1)), int(m.group(2))) if m else (1080, 2640)
+
+
+_warned = set()
+
+
+def source(name):
+    """화면 출처 → dict(path, kind, h). kind:
+      raw   녹화 원본(reels/raw, 폰 화면 그대로) — 위 상태 바만 덜어낸다
+      flow  흐름본(reels/flows) — frame.txt 위치를 잘라 쓴다(아래 60px 없음·조금 흐림)
+      shot  card-shots/<이름>.jpg 고정본 — 높이로 스틸(상태 바 있음)인지 흐름 좌표인지 가린다
+    h 는 폭 1080 으로 맞춘 '보이는 화면' 높이(창 y0 을 묶는 데 쓴다)."""
+    if name.startswith("shot:"):
+        p = mc.SHOTS / f"{name[5:]}.jpg"
+        if not p.is_file():
+            mc.die(f"고정본 없음: {p}")
+        w, h = probe_wh(p)
+        if h * 1080 / w > 2500:      # 스틸(1080x2640) — 상태 바 포함
+            return dict(path=p, kind="raw", h=int((h - int(120 * w / 1080 / 2) * 2) * SRC_W / w), still=True)
+        return dict(path=p, kind="shot", h=int(h * SRC_W / w), still=True)
+    raw = RAW / f"{name}_{LANG_TAG}.mp4"
     if raw.is_file():
-        return raw, True
-    p = mc.FLOWS / f"{rid}_{LANG_TAG}.mp4"
+        w, h = probe_wh(raw)
+        return dict(path=raw, kind="raw", h=int((h - int(120 * w / 1080 / 2) * 2) * SRC_W / w), still=False)
+    p = mc.FLOWS / f"{name}_{LANG_TAG}.mp4"
     if not p.is_file():
         mc.die(f"녹화본 없음: {p}")
-    mc.warn(f"원본 없음({raw.name}) → 흐름본으로(아래 60px 없음·조금 흐림)")
-    return p, False
-
-
-def screen_h(mp4, raw):
-    """보이는 화면(폭 1080, 상태 바 덜어낸) 높이. 창 y0 을 화면 안으로 묶는 데 쓴다."""
-    r = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(mp4)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    m = re.search(r"Video:.*?\b(\d{3,5})x(\d{3,5})\b", r.stderr.decode("utf-8", "replace"))
-    w, h = (int(m.group(1)), int(m.group(2))) if m else (1080, 2640)
-    if raw:
-        t = int(120 * w / 1080 / 2) * 2
-        return int((h - t) * SRC_W / w)
+    if name not in _warned:
+        _warned.add(name)
+        mc.warn(f"원본 없음({raw.name}) → 흐름본으로(아래 60px 없음·조금 흐림)")
     fr = mc.read_frame()
-    if fr:
-        w, h = fr[2], fr[3]
-    return int(h * SRC_W / w)
+    w, h = (fr[2], fr[3]) if fr else probe_wh(p)
+    return dict(path=p, kind="flow", h=int(h * SRC_W / w), still=False)
 
 
-def src_vf(y0, raw):
-    """원본 화면 → 폭 1080, 위 상태 바만 덜어냄(흐름본과 같은 좌표) → 띠 아래 창 높이만큼.
-    y0 이 너무 크면 화면 맨 아래에 맞춘다."""
-    if raw:
+def src_vf(y0, kind):
+    """화면 → 폭 1080, 위 상태 바만 덜어냄(흐름본·카드와 같은 좌표) → 띠 아래 창 높이만큼."""
+    if kind == "raw":
         t = "trunc(120*iw/1080/2)*2"   # 상태 바(1080 폭 기준 120px) — 흐름본과 같은 양
         head = f"crop=iw:ih-{t}:0:{t},"
-    else:
+    elif kind == "flow":
         fr = mc.read_frame()
         head = f"crop={fr[2]}:{fr[3]}:{fr[0]}:{fr[1]}," if fr else ""
+    else:
+        head = ""
     return (f"{head}scale={SRC_W}:-2:flags=lanczos,"
             f"crop={SRC_W}:{WIN_H}:0:'min({y0},ih-{WIN_H})',setsar=1")
 
@@ -284,31 +317,39 @@ def make_reel(chrome, post, reel, d, num):
         shutil.copyfile(mc.FONTS / f, d / f)
     shutil.copyfile(mc.JS, d / "handnote.js")
     shutil.copyfile(LOGO, d / "logo.png")
-    mp4, raw = flow_mp4(reel["id"])
-    sh = screen_h(mp4, raw)
-    fit = lambda y: max(0, min(y, sh - WIN_H))   # 창이 화면 밖으로 나가지 않게 — 동그라미도 같은 값
-    reel = dict(reel, hook=(reel["hook"][0], fit(reel["hook"][1])),
-                segs=[dict(sg, y0=fit(sg["y0"])) for sg in reel["segs"]])
-    mc.log(f"{reel['id']} 레이어 그리기(한 장씩) · 화면 높이 {sh}")
+    srcs = {}
+    def src(n):
+        if n not in srcs:
+            srcs[n] = source(n)
+        return srcs[n]
+    fit = lambda y, n: max(0, min(y, src(n)["h"] - WIN_H))   # 창이 화면 밖으로 안 나가게 — 동그라미도 같은 값
+    hk = reel["hook"]
+    reel = dict(reel, hook=dict(hk, y0=fit(hk["y0"], hk["src"])),
+                segs=[dict(sg, y0=fit(sg["y0"], sg["src"])) for sg in reel["segs"]])
+    mc.log(f"{reel['id']} 레이어 그리기(한 장씩)")
     render_layers(chrome, build_html(post, reel, num), d)
     ff("-f", "lavfi", "-i", f"color=black@0.0:s={W}x{H},format=rgba", "-frames:v", "1", str(d / "blank.png"))
     parts = []
     beat = 60 / 129
     # 첫 장면 — 결과 화면 정지컷 4박
-    ht, hy = reel["hook"]
+    hk = reel["hook"]
+    hs = src(hk["src"])
     hook_dur = 4 * beat
     still = d / "hook_src.png"
-    ff("-ss", f"{ht:.2f}", "-i", str(mp4), "-frames:v", "1", str(still))
+    ff(*([] if hs["still"] else ["-ss", f"{hk['t']:.2f}"]), "-i", str(hs["path"]), "-frames:v", "1", str(still))
     out = d / "p00.mp4"
-    clip(d / "hook.png", ["-loop", "1", "-t", f"{hook_dur:.3f}", "-i", str(still)], src_vf(hy, raw), hook_dur, None, out)
+    clip(d / "hook.png", ["-loop", "1", "-t", f"{hook_dur:.3f}", "-i", str(still)], src_vf(hk["y0"], hs["kind"]),
+         hook_dur, None, out)
     parts.append(out)
     for j, seg in enumerate(reel["segs"]):
         dur = seg["t1"] - seg["t0"]
         lst = circ_concat(d, j, seg["on"], seg["t0"], dur) if seg["on"] else None
         out = d / f"p{j + 1:02d}.mp4"
-        mc.log(f"{reel['id']} ③ 조각 {j + 1}: 단계 {seg['step']} · {seg['t0']}~{seg['t1']}초")
-        clip(d / f"step{seg['step']}.png", ["-ss", f"{seg['t0']:.3f}", "-t", f"{dur:.3f}", "-i", str(mp4)],
-             src_vf(seg["y0"], raw), dur, lst, out)
+        sg = src(seg["src"])
+        mc.log(f"{reel['id']} 조각 {j + 1}: 단계 {seg['step']} · {seg['src']} {seg['t0']}~{seg['t1']}초")
+        vin = (["-loop", "1", "-t", f"{dur:.3f}", "-i", str(sg["path"])] if sg["still"]
+               else ["-ss", f"{seg['t0']:.3f}", "-t", f"{dur:.3f}", "-i", str(sg["path"])])
+        clip(d / f"step{seg['step']}.png", vin, src_vf(seg["y0"], sg["kind"]), dur, lst, out)
         parts.append(out)
     out = d / "p99.mp4"
     ff("-loop", "1", "-t", f"{4 * beat:.3f}", "-i", str(d / "outro.png"), "-vf", f"fps={FPS},format=yuv420p",
@@ -322,7 +363,7 @@ def make_reel(chrome, post, reel, d, num):
     final = OUT / f"{reel['id']}.mp4"
     if MUSIC and Path(MUSIC).is_file():
         total = hook_dur + sum(s["t1"] - s["t0"] for s in reel["segs"]) + 4 * beat
-        ff("-i", str(silent), "-ss", f"{MUSIC_OFFSET:.3f}", "-i", MUSIC, "-map", "0:v", "-map", "1:a",
+        ff("-i", str(silent), "-stream_loop", "-1", "-ss", f"{MUSIC_OFFSET:.3f}", "-i", MUSIC, "-map", "0:v", "-map", "1:a",
            "-af", f"afade=t=out:st={total - 1.2:.2f}:d=1.2,loudnorm=I=-16:TP=-1.5",
            "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-shortest", str(final))
     else:
