@@ -250,7 +250,7 @@ def source(name):
         if h * 1080 / w > 2500:      # 스틸(1080x2640) — 상태 바 포함
             return dict(path=p, kind="raw", h=int((h - int(120 * w / 1080 / 2) * 2) * SRC_W / w), still=True)
         return dict(path=p, kind="shot", h=int(h * SRC_W / w), still=True)
-    raw = RAW / f"{name}_{LANG_TAG}.mp4"
+    raw = RAW / f"flow_{name}_{LANG_TAG}.mp4"   # run_capture.sh 가 남기는 이름
     if raw.is_file():
         w, h = probe_wh(raw)
         return dict(path=raw, kind="raw", h=int((h - int(120 * w / 1080 / 2) * 2) * SRC_W / w), still=False)
