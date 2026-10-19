@@ -10,12 +10,14 @@
   2_upload_second_M.png 가운데 조각
   3_upload_last_L.png   왼쪽 조각 — 마지막에 올리고, 마지막에 고정
   preview.png           프로필 화면 미리보기(칸 사이 틈 · 고정 핀 표시)
+  feed.png              홈 피드에 한 장씩 뜬 모습(올린 순서대로) — 조각마다 혼자서도 표지가 되는지 확인
 그리고 marketing-assets/grid/guide.png — 직접 디자인할 때 깔고 쓰는 안전 영역 가이드.
 
 안전 영역 (각 조각 기준):
   - 오른쪽 위 170x170 비우기: 고정 게시물엔 핀 아이콘이 여기 뜬다.
   - 이음매 좌우 40px 안에는 글자를 두지 않기: 프로필 칸 사이 흰 틈에 글자가 끊긴다.
-  - 홈 피드에선 조각이 한 장씩 따로 보인다 → 조각마다 혼자서도 말이 되게.
+  - 홈 피드에선 조각이 한 장씩 따로 보인다 → 조각마다 완결된 카드로(제목·설명·화면).
+    이음매를 넘는 건 배경(무늬·네트·궤적)만. 글자·물건이 반으로 잘리면 낱장이 망가진다.
 
 사용법:
   python scripts/capture/make_grid.py                  # 누룽지도 기본 시안(pinned) + guide
@@ -87,101 +89,75 @@ def split(pano, out):
 
 
 # ── 누룽지도 기본 시안 ───────────────────────────────────────
+# 조각 = 완결된 카드 한 장. 세 장이 같은 뼈대(브랜드 칩 · 제목 · 설명 · 폰 화면)를 쓰고,
+# 이어 보이게 하는 건 배경(점 무늬 · 네트 · 공 궤적)뿐이다 — 글자나 물건은 이음매를 넘지 않는다.
+# 그래서 홈 피드에 한 장씩 떠도 각자 표지로 읽히고, 프로필에선 한 장면으로 이어진다.
+CARDS = (  # (번호, 동사, 제목 두 줄, 설명, 화면, 화면 세로 위치)
+    ("01", "찾기", "배구할 팀,<br><span class=hl>지도 한 눈에</span>",
+     "지역·요일·대상으로 우리 동네 동호회", "01_map.jpg", "top"),
+    ("02", "뛰기", "오늘 빈자리,<br><span class=hl>바로 한 게임</span>",
+     "‘여기 자리 있어요?’에서 게스트 자리 확인", "room@13.jpg", "bottom"),
+    ("03", "올리기", "우리 팀도<br><span class=hl>지도에 올려요</span>",
+     "운영진이라면 1분이면 팀 등록 끝", "register@30.jpg", "18%"),
+)
+
 PINNED_CSS = """
 .pano{position:relative;width:3240px;height:1440px;overflow:hidden;
-  background:radial-gradient(900px 700px at 1620px 640px,#FFE9A3 0%,rgba(255,233,163,0) 70%),#FFF8E1}
+  background:radial-gradient(760px 620px at 540px 980px,#FFEDB0 0%,rgba(255,237,176,0) 70%),
+             radial-gradient(760px 620px at 1620px 980px,#FFEDB0 0%,rgba(255,237,176,0) 70%),
+             radial-gradient(760px 620px at 2700px 980px,#FFEDB0 0%,rgba(255,237,176,0) 70%),#FFF8E1}
 .dots{position:absolute;inset:0;background-image:radial-gradient(#E9DDB6 2.4px,transparent 2.6px);
   background-size:44px 44px;opacity:.55}
 .arc{position:absolute;inset:0}
-.net{position:absolute;left:0;right:0;top:1196px;height:132px;
+.net{position:absolute;left:0;right:0;top:1150px;height:120px;
   background:
-   repeating-linear-gradient(90deg,rgba(78,52,46,.16) 0 3px,transparent 3px 44px),
-   repeating-linear-gradient(0deg,rgba(78,52,46,.16) 0 3px,transparent 3px 44px);
-  border-top:16px solid #4E342E;border-bottom:6px solid rgba(78,52,46,.35)}
-.floor{position:absolute;left:0;right:0;top:1334px;bottom:0;background:#F5E6B8}
+   repeating-linear-gradient(90deg,rgba(78,52,46,.16) 0 3px,transparent 3px 40px),
+   repeating-linear-gradient(0deg,rgba(78,52,46,.16) 0 3px,transparent 3px 40px);
+  border-top:14px solid #4E342E;border-bottom:6px solid rgba(78,52,46,.35)}
+.floor{position:absolute;left:0;right:0;top:1276px;bottom:0;background:#F5E6B8}
 .tile{position:absolute;top:0;width:1080px;height:1440px}
-.t0{left:0}.t1{left:1080px}.t2{left:2160px}
-
-/* 왼쪽 — 브랜드 */
-.logo{position:absolute;left:96px;top:120px;width:150px;height:150px;border-radius:40px;
-  background:#fff url(logo.png) center/118% no-repeat;box-shadow:0 14px 34px rgba(78,52,46,.16)}
-.kick{position:absolute;left:100px;top:330px;font-size:44px;font-weight:800;color:#8D6E63;letter-spacing:.04em}
-.name{position:absolute;left:88px;top:392px;font-size:236px;font-weight:900;line-height:.98;letter-spacing:-.045em}
-.name .y{color:#FAC710}
-.tag{position:absolute;left:100px;top:880px;font-size:64px;font-weight:800;line-height:1.36;letter-spacing:-.02em}
-.hl{background:linear-gradient(transparent 58%,#FAC710 58%,#FAC710 92%,transparent 92%);padding:0 6px}
-
-/* 가운데 — 앱 화면 */
-.phone{position:absolute;left:285px;top:96px;width:510px;height:1050px;border-radius:72px;
-  border:18px solid #3A2C26;background:#3A2C26 url(map.jpg) center top/100% auto no-repeat;
-  box-shadow:0 40px 80px rgba(78,52,46,.28)}
-.mk{position:absolute;width:112px}
-.badge{position:absolute;padding:20px 34px;border-radius:999px;background:#fff;
-  border:4px solid #EAD9A0;font-size:42px;font-weight:800;box-shadow:0 12px 26px rgba(78,52,46,.12)}
-
-/* 오른쪽 — 행동 유도 */
-.cta-k{position:absolute;left:110px;top:440px;font-size:44px;font-weight:800;color:#8D6E63;letter-spacing:.04em}
-.cta{position:absolute;left:104px;top:500px;font-size:104px;font-weight:900;line-height:1.14;letter-spacing:-.04em}
-.steps{position:absolute;left:110px;top:780px;display:flex;flex-direction:column;gap:22px}
-.step{display:flex;align-items:center;gap:28px;font-size:48px;font-weight:800}
-.step b{display:grid;place-items:center;width:76px;height:76px;border-radius:50%;
-  background:#4E342E;color:#FAC710;font-size:42px;font-weight:900}
-.link{position:absolute;left:110px;top:1068px;padding:22px 40px;border-radius:999px;background:#FAC710;
-  font-size:46px;font-weight:900;box-shadow:0 10px 0 #E0A800}
-.ball{position:absolute;left:95px;top:225px;width:150px;height:150px;border-radius:50%;
-  background:radial-gradient(circle at 34% 28%,#fff,#FAC710 70%,#F0B800);
-  box-shadow:0 18px 30px rgba(216,67,21,.25)}
+.chip{position:absolute;left:84px;top:84px;display:flex;align-items:center;gap:18px;
+  padding:12px 30px 12px 12px;border-radius:999px;background:#fff;border:3px solid #EAD9A0;
+  font-size:36px;font-weight:800;box-shadow:0 8px 20px rgba(78,52,46,.08)}
+.chip i{width:64px;height:64px;border-radius:50%;background:#FFF8E1 url(logo.png) center/125% no-repeat}
+.chip em{font-style:normal;color:#C79A00}
+.title{position:absolute;left:84px;top:210px;font-size:104px;font-weight:900;line-height:1.16;letter-spacing:-.04em}
+.hl{background:linear-gradient(transparent 60%,#FAC710 60%,#FAC710 92%,transparent 92%);padding:0 6px}
+.sub{position:absolute;left:88px;top:470px;font-size:40px;font-weight:700;color:#8D6E63}
+.phone{position:absolute;left:330px;top:580px;width:420px;height:800px;border-radius:60px;
+  border:16px solid #3A2C26;background:#3A2C26 no-repeat;background-size:100% auto;
+  box-shadow:0 36px 70px rgba(78,52,46,.26)}
+.ball{position:absolute;width:120px;height:120px;border-radius:50%;
+  background:radial-gradient(circle at 34% 28%,#fff,#FAC710 70%,#F0B800);box-shadow:0 16px 26px rgba(216,67,21,.22)}
 .ball::before,.ball::after{content:"";position:absolute;inset:0;border-radius:50%;border:4px solid #E0A800;opacity:.55}
 .ball::before{transform:scaleX(.4)}.ball::after{transform:scaleY(.4)}
 """
 
-PINNED_BODY = """
-<div class=pano>
-  <div class=dots></div>
-  <div class=floor></div>
-  <div class=net></div>
-  <!-- 세 조각을 가로지르는 공 궤적: 이음매를 넘는 요소가 있어야 한 장으로 읽힌다 -->
-  <svg class=arc width=3240 height=1440 viewBox="0 0 3240 1440">
-    <path d="M 560 1150 Q 1500 -150, 2330 300" fill=none stroke="#E0A800"
-          stroke-width=12 stroke-linecap=round stroke-dasharray="4 34" opacity=.9 />
-  </svg>
 
-  <div class="tile t0">
-    <div class=logo></div>
-    <div class=kick>전국 배구 동호회 지도</div>
-    <div class=name>누룽<br><span class=y>지도</span></div>
-    <div class=tag>배구할 팀,<br><span class=hl>지도 한 눈에</span></div>
-  </div>
-
-  <div class="tile t1">
-    <div class=phone></div>
-    <img class=mk src=marker_yellow.png style="left:120px;top:430px;transform:rotate(-10deg)">
-    <img class=mk src=marker_red.png style="left:850px;top:720px;transform:rotate(8deg)">
-    <div class=badge style="left:96px;top:880px">동호회</div>
-    <div class=badge style="left:760px;top:330px">픽업</div>
-  </div>
-
-  <div class="tile t2">
-    <div class=cta-k>지금 시작하기</div>
-    <div class=cta>우리 팀도<br>지도에 올려요</div>
-    <div class=steps>
-      <div class=step><b>1</b>앱 받기</div>
-      <div class=step><b>2</b>팀 등록</div>
-      <div class=step><b>3</b>모집 글 올리기</div>
-    </div>
-    <div class=link>프로필 링크에서 다운로드</div>
-    <div class=ball></div>
-  </div>
-</div>
-"""
+def pinned_body():
+    tiles = []
+    for i, (no, verb, title, sub, shot, pos) in enumerate(CARDS):
+        tiles.append(
+            f"<div class=tile style='left:{i * TW}px'>"
+            f"<div class=chip><i></i>누룽지도 <em>{no} {verb}</em></div>"
+            f"<div class=title>{title}</div><div class=sub>{sub}</div>"
+            f"<div class=phone style=\"background-image:url('{shot}');background-position:center {pos}\"></div>"
+            "</div>")
+    # 공 궤적은 폰 사이 빈 곳(이음매 근처)에서만 보이고, 폰 뒤로 지나간다
+    return (
+        "<div class=pano><div class=dots></div><div class=floor></div><div class=net></div>"
+        "<svg class=arc width=3240 height=1440 viewBox='0 0 3240 1440'>"
+        "<path d='M 140 1120 C 700 520, 1300 520, 1620 760 S 2560 1000, 3050 640' fill=none stroke='#E0A800' "
+        "stroke-width=11 stroke-linecap=round stroke-dasharray='4 32' opacity=.9 /></svg>"
+        + "".join(tiles)
+        + "<div class=ball style='left:2990px;top:560px'></div></div>")
 
 
 def stage_assets(work):
     shutil.copyfile(FONTS / "PretendardVariable.ttf", work / "PretendardVariable.ttf")
     shutil.copyfile(ROOT / "assets" / "nulloongzido logo_without bg.png", work / "logo.png")
-    for c in ("yellow", "red"):
-        shutil.copyfile(ROOT / "assets" / "markers" / f"marker_{c}.png", work / f"marker_{c}.png")
-    shutil.copyfile(SHOTS / "01_map.jpg", work / "map.jpg")
+    for c in CARDS:
+        shutil.copyfile(SHOTS / c[4], work / c[4])
 
 
 # ── 가이드 · 미리보기 ────────────────────────────────────────
@@ -239,6 +215,21 @@ def preview_body(tiles):
         ".e{background:repeating-linear-gradient(45deg,#f2f2f2 0 20px,#e9e9e9 20px 40px)}"
 
 
+def feed_body(tiles):
+    # 홈 피드에선 조각이 각자 한 게시물로 뜬다 — 혼자서도 표지 노릇을 하는지 보는 용도
+    posts = []
+    for name in ("1_upload_first_R", "2_upload_second_M", "3_upload_last_L"):
+        posts.append("<div class=p><div class=h><i></i><b>nulloongzido</b><span>···</span></div>"
+                     f"<img src={tiles[name]}><div class=a>♡ &nbsp;💬 &nbsp;➤<span>🔖</span></div></div>")
+    css = (".w{display:flex;gap:48px;padding:48px;background:#e9e9e9}"
+           ".p{width:720px;background:#fff;border-radius:18px;overflow:hidden}"
+           ".h{display:flex;align-items:center;gap:16px;padding:20px 22px;font-size:28px}"
+           ".h i{width:56px;height:56px;border-radius:50%;border:2px solid #ddd;background:#fff url(logo.png) center/125%}"
+           ".h span,.a span{margin-left:auto}.p img{display:block;width:720px;height:960px}"
+           ".a{display:flex;padding:20px 24px 28px;font-size:36px}")
+    return f"<div class=w>{''.join(posts)}</div>", css
+
+
 def finish(chrome, work, pano, out):
     split(pano, out)
     tiles = {}
@@ -247,6 +238,8 @@ def finish(chrome, work, pano, out):
         tiles[name] = f"{name}.png"
     body, css = preview_body(tiles)
     shutil.copyfile(page(work, "preview", css, body, 1170, 2300, chrome), out / "preview.png")
+    body, css = feed_body(tiles)
+    shutil.copyfile(page(work, "feed", css, body, 2400, 1200, chrome), out / "feed.png")
     log(f"→ {out}")
 
 
@@ -274,7 +267,7 @@ def main():
             out = OUT_ROOT / "pinned"
             out.mkdir(parents=True, exist_ok=True)
             pano = out / "panorama.png"
-            shutil.copyfile(page(work, "pano", PINNED_CSS, PINNED_BODY, PW, TH, chrome), pano)
+            shutil.copyfile(page(work, "pano", PINNED_CSS, pinned_body(), PW, TH, chrome), pano)
         finish(chrome, work, pano, out)
     finally:
         shutil.rmtree(work, ignore_errors=True)
