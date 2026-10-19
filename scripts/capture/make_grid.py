@@ -99,6 +99,7 @@ def split(pano, out):
 import random  # noqa: E402
 
 MAP_SEED = 7
+BANNER_SHOT, BANNER_BOX = "urgent@20.jpg", (44, 187, 1030, 331)  # 폭 1080 캡처 기준 (x0, y0, x1, y1)
 
 
 def map_svg():
@@ -163,10 +164,9 @@ PINNED_CSS = """
   border:7px solid #fff;color:#4E342E;font-weight:900;box-shadow:0 10px 22px rgba(78,52,46,.22)}
 .me{position:absolute;width:44px;height:44px;border-radius:50%;background:#2F80ED;border:9px solid #fff;
   box-shadow:0 0 0 26px rgba(47,128,237,.18)}
-.toast{position:absolute;padding:28px 36px;border-radius:34px;background:rgba(255,248,225,.96);
-  box-shadow:0 18px 40px rgba(78,52,46,.22);font-size:38px;font-weight:800;color:#4E342E;line-height:1.35}
-.toast small{display:block;font-size:30px;font-weight:700;color:#8D6E63}
-.toast b{color:#D84315}
+/* 실제 앱 지도 위 배너를 캡처에서 잘라 그대로 붙인다 — 지어낸 UI 를 넣지 않는다 */
+.banner{position:absolute;width:840px;height:123px;border-radius:26px;
+  background:url(banner.png) center/100% 100%;box-shadow:0 18px 40px rgba(78,52,46,.22)}
 """
 
 
@@ -174,14 +174,13 @@ def pinned_body():
     R = 2160
     scene = (
         f"<img class=mk src=marker_yellow.png style='left:{R + 170}px;top:330px'>"
-        f"<img class=mk src=marker_red.png style='left:{R + 640}px;top:520px'>"
+        f"<img class=mk src=marker_red.png style='left:{R + 680}px;top:770px'>"
         f"<img class=mk src=marker_yellow.png style='left:{R + 420}px;top:860px'>"
         f"<img class=mk src=marker_yellow.png style='left:{R + 820}px;top:1080px'>"
         f"<div class=cl style='left:{R + 470}px;top:250px;width:130px;height:130px;font-size:54px'>3</div>"
         f"<div class=cl style='left:{R + 160}px;top:1060px;width:160px;height:160px;font-size:62px'>12</div>"
-        f"<div class=me style='left:{R + 560}px;top:760px'></div>"
-        f"<div class=toast style='left:{R + 300}px;top:600px'>🔥 <b>게스트 급구</b> · 토 19:00"
-        "<small>센터 1명 · 여자 레프트 1명</small></div>")
+        f"<div class=me style='left:{R + 290}px;top:820px'></div>"
+        f"<div class=banner style='left:{R + 120}px;top:600px'></div>")
     return ("<div class=pano>" + map_svg() + "<div class=veil></div>"
             "<div class=logo></div><div class=kick>전국 배구 동호회 지도</div>"
             "<div class=name>누룽<br><span class=y>지도</span></div>"
@@ -195,6 +194,10 @@ def stage_assets(work):
     for c in ("yellow", "red"):
         shutil.copyfile(ROOT / "assets" / "markers" / f"marker_{c}.png", work / f"marker_{c}.png")
     shutil.copyfile(SHOTS / "01_map.jpg", work / "01_map.jpg")
+    # '여기 자리 있어요?' 배너 (시트가 안 덮인 지도 화면이라 딤 없음)
+    x0, y0, x1, y1 = BANNER_BOX
+    ffmpeg("-i", str(SHOTS / BANNER_SHOT), "-frames:v", "1",
+           "-vf", f"crop={x1 - x0}:{y1 - y0}:{x0}:{y0}", str(work / "banner.png"))
 
 
 # ── 가이드 · 미리보기 ────────────────────────────────────────
