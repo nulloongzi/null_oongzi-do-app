@@ -16,8 +16,10 @@
 안전 영역 (각 조각 기준):
   - 오른쪽 위 170x170 비우기: 고정 게시물엔 핀 아이콘이 여기 뜬다.
   - 이음매 좌우 40px 안에는 글자를 두지 않기: 프로필 칸 사이 흰 틈에 글자가 끊긴다.
-  - 홈 피드에선 조각이 한 장씩 따로 보인다 → 조각마다 완결된 카드로(제목·설명·화면).
-    이음매를 넘는 건 배경(무늬·네트·궤적)만. 글자·물건이 반으로 잘리면 낱장이 망가진다.
+  - 홈 피드에선 조각이 한 장씩 따로 보인다. 그렇다고 세 장에 같은 틀(제목·설명·화면)을
+    찍으면 카드 세 장으로 보여 한 장면 맛이 죽는다 → 조각마다 역할을 달리한다
+    (글자 / 물건 / 장면). 글자는 한 조각에만. 이음매는 배경(지도·강·큰길)만 넘고,
+    글자·물건은 반으로 잘리지 않게 조각 안에서 끝낸다.
 
 사용법:
   python scripts/capture/make_grid.py                  # 누룽지도 기본 시안(pinned) + guide
@@ -89,75 +91,110 @@ def split(pano, out):
 
 
 # ── 누룽지도 기본 시안 ───────────────────────────────────────
-# 조각 = 완결된 카드 한 장. 세 장이 같은 뼈대(브랜드 칩 · 제목 · 설명 · 폰 화면)를 쓰고,
-# 이어 보이게 하는 건 배경(점 무늬 · 네트 · 공 궤적)뿐이다 — 글자나 물건은 이음매를 넘지 않는다.
-# 그래서 홈 피드에 한 장씩 떠도 각자 표지로 읽히고, 프로필에선 한 장면으로 이어진다.
-CARDS = (  # (번호, 동사, 제목 두 줄, 설명, 화면, 화면 세로 위치)
-    ("01", "찾기", "배구할 팀,<br><span class=hl>지도 한 눈에</span>",
-     "지역·요일·대상으로 우리 동네 동호회", "01_map.jpg", "top"),
-    ("02", "뛰기", "오늘 빈자리,<br><span class=hl>바로 한 게임</span>",
-     "‘여기 자리 있어요?’에서 게스트 자리 확인", "room@13.jpg", "bottom"),
-    ("03", "올리기", "우리 팀도<br><span class=hl>지도에 올려요</span>",
-     "운영진이라면 1분이면 팀 등록 끝", "register@30.jpg", "18%"),
-)
+# 큰 지도 한 장 위에 세 조각이 서로 다른 일을 한다 — 같은 틀을 세 번 찍지 않는다.
+#   왼쪽  글자(브랜드)  : 글자는 여기에만 둔다
+#   가운데 물건(앱 화면): 지도 위에 놓인 폰
+#   오른쪽 장면(지도)   : 마커가 모여 있는 동네 — 앱 말풍선 하나
+# 이어 주는 건 지도(강·큰길)이고, 마커·폰·글자는 조각 안에서 끝난다.
+import random  # noqa: E402
+
+MAP_SEED = 7
+
+
+def map_svg():
+    rnd = random.Random(MAP_SEED)
+    out = [f"<svg class=map width={PW} height={TH} viewBox='0 0 {PW} {TH}'>"]
+    for _ in range(9):  # 공원
+        x, y, r = rnd.randint(0, PW), rnd.randint(0, TH), rnd.randint(70, 170)
+        out.append(f"<ellipse cx={x} cy={y} rx={r} ry={int(r * .7)} fill='#E3EDCF' "
+                   f"transform='rotate({rnd.randint(0, 180)} {x} {y})'/>")
+    # 골목 — 540x480 칸마다 기울기가 다른 격자(칸 밖으로 안 넘치게 잘라서 겹침 없이)
+    out.append("<defs>")
+    cells = [(c * 540, r * 480) for r in range(3) for c in range(6)]
+    for i, (x, y) in enumerate(cells):
+        out.append(f"<clipPath id=c{i}><rect x={x} y={y} width=540 height=480/></clipPath>")
+    out.append("</defs>")
+    for i, (x, y) in enumerate(cells):
+        cx, cy = x + 270, y + 240
+        ang, step = rnd.randint(-18, 18), rnd.randint(95, 130)
+        lines = []
+        for k in range(-5, 6):
+            lines.append(f"M {cx - 500} {cy + k * step} L {cx + 500} {cy + k * step}")
+            lines.append(f"M {cx + k * step} {cy - 500} L {cx + k * step} {cy + 500}")
+        out.append(f"<g clip-path='url(#c{i})'><path d='{' '.join(lines)}' stroke='#FFFFFF' stroke-width=6 "
+                   f"fill=none opacity=.8 transform='rotate({ang} {cx} {cy})'/></g>")
+    river = "M -120 1010 C 520 1180, 900 640, 1500 760 S 2400 1180, 2900 900 S 3300 640, 3400 700"
+    out.append(f"<path d='{river}' stroke='#CFE8F2' stroke-width=190 fill=none stroke-linecap=round/>")
+    out.append(f"<path d='{river}' stroke='#B9DDEC' stroke-width=150 fill=none stroke-linecap=round/>")
+    roads = []
+    for y0 in (180, 470, 1290):  # 큰길 — 세 조각을 가로지른다
+        pts = [(x, y0 + rnd.randint(-90, 90)) for x in range(-100, PW + 600, 540)]
+        roads.append("M " + " L ".join(f"{x} {y}" for x, y in pts))
+    for x0 in (420, 1250, 2050, 2780):  # 세로 큰길
+        roads.append(f"M {x0} -60 C {x0 + 160} 500, {x0 - 160} 900, {x0 + 60} 1500")
+    d = " ".join(roads)
+    out.append(f"<path d='{d}' stroke='#EBC872' stroke-width=26 fill=none stroke-linejoin=round/>")
+    out.append(f"<path d='{d}' stroke='#F8E3A2' stroke-width=17 fill=none stroke-linejoin=round/>")
+    out.append("</svg>")
+    # HTML 파서는 따옴표 없는 값 뒤의 '/>' 를 값에 붙여 읽는다(round/ → 안 닫힘) — 띄워 둔다
+    return "".join(out).replace("/>", " />")
+
 
 PINNED_CSS = """
-.pano{position:relative;width:3240px;height:1440px;overflow:hidden;
-  background:radial-gradient(760px 620px at 540px 980px,#FFEDB0 0%,rgba(255,237,176,0) 70%),
-             radial-gradient(760px 620px at 1620px 980px,#FFEDB0 0%,rgba(255,237,176,0) 70%),
-             radial-gradient(760px 620px at 2700px 980px,#FFEDB0 0%,rgba(255,237,176,0) 70%),#FFF8E1}
-.dots{position:absolute;inset:0;background-image:radial-gradient(#E9DDB6 2.4px,transparent 2.6px);
-  background-size:44px 44px;opacity:.55}
-.arc{position:absolute;inset:0}
-.net{position:absolute;left:0;right:0;top:1150px;height:120px;
-  background:
-   repeating-linear-gradient(90deg,rgba(78,52,46,.16) 0 3px,transparent 3px 40px),
-   repeating-linear-gradient(0deg,rgba(78,52,46,.16) 0 3px,transparent 3px 40px);
-  border-top:14px solid #4E342E;border-bottom:6px solid rgba(78,52,46,.35)}
-.floor{position:absolute;left:0;right:0;top:1276px;bottom:0;background:#F5E6B8}
-.tile{position:absolute;top:0;width:1080px;height:1440px}
-.chip{position:absolute;left:84px;top:84px;display:flex;align-items:center;gap:18px;
-  padding:12px 30px 12px 12px;border-radius:999px;background:#fff;border:3px solid #EAD9A0;
-  font-size:36px;font-weight:800;box-shadow:0 8px 20px rgba(78,52,46,.08)}
-.chip i{width:64px;height:64px;border-radius:50%;background:#FFF8E1 url(logo.png) center/125% no-repeat}
-.chip em{font-style:normal;color:#C79A00}
-.title{position:absolute;left:84px;top:210px;font-size:104px;font-weight:900;line-height:1.16;letter-spacing:-.04em}
-.hl{background:linear-gradient(transparent 60%,#FAC710 60%,#FAC710 92%,transparent 92%);padding:0 6px}
-.sub{position:absolute;left:88px;top:470px;font-size:40px;font-weight:700;color:#8D6E63}
-.phone{position:absolute;left:330px;top:580px;width:420px;height:800px;border-radius:60px;
-  border:16px solid #3A2C26;background:#3A2C26 no-repeat;background-size:100% auto;
-  box-shadow:0 36px 70px rgba(78,52,46,.26)}
-.ball{position:absolute;width:120px;height:120px;border-radius:50%;
-  background:radial-gradient(circle at 34% 28%,#fff,#FAC710 70%,#F0B800);box-shadow:0 16px 26px rgba(216,67,21,.22)}
-.ball::before,.ball::after{content:"";position:absolute;inset:0;border-radius:50%;border:4px solid #E0A800;opacity:.55}
-.ball::before{transform:scaleX(.4)}.ball::after{transform:scaleY(.4)}
+.pano{position:relative;width:3240px;height:1440px;overflow:hidden;background:#F7EFD9}
+.map{position:absolute;inset:0}
+/* 왼쪽: 지도 위에 크림을 덮어 글자 자리를 만든다. 이음매 전에 완전히 걷힌다 */
+.veil{position:absolute;left:0;top:0;width:1000px;height:1440px;
+  background:linear-gradient(90deg,rgba(255,248,225,.97) 0,rgba(255,248,225,.93) 52%,rgba(255,248,225,0) 100%)}
+.logo{position:absolute;left:96px;top:110px;width:132px;height:132px;border-radius:36px;
+  background:#fff url(logo.png) center/118% no-repeat;box-shadow:0 14px 34px rgba(78,52,46,.16)}
+.kick{position:absolute;left:100px;top:470px;font-size:44px;font-weight:800;color:#8D6E63;letter-spacing:.04em}
+.name{position:absolute;left:86px;top:530px;font-size:250px;font-weight:900;line-height:.96;letter-spacing:-.05em;color:#4E342E}
+.name .y{color:#FAC710}
+.tag{position:absolute;left:100px;top:1060px;font-size:58px;font-weight:800;line-height:1.4;letter-spacing:-.02em;color:#4E342E}
+.hl{background:linear-gradient(transparent 58%,#FAC710 58%,#FAC710 92%,transparent 92%);padding:0 6px}
+/* 가운데: 폰 */
+.phone{position:absolute;left:1325px;top:150px;width:590px;height:1180px;border-radius:84px;
+  border:20px solid #3A2C26;background:#3A2C26 url(01_map.jpg) center top/100% auto no-repeat;
+  transform:rotate(-4deg);box-shadow:0 60px 110px rgba(78,52,46,.35),0 0 0 2px rgba(255,255,255,.4)}
+/* 오른쪽: 동네 장면 */
+.mk{position:absolute;width:118px;filter:drop-shadow(0 10px 10px rgba(78,52,46,.25))}
+.cl{position:absolute;display:grid;place-items:center;border-radius:50%;background:#FAC710;
+  border:7px solid #fff;color:#4E342E;font-weight:900;box-shadow:0 10px 22px rgba(78,52,46,.22)}
+.me{position:absolute;width:44px;height:44px;border-radius:50%;background:#2F80ED;border:9px solid #fff;
+  box-shadow:0 0 0 26px rgba(47,128,237,.18)}
+.toast{position:absolute;padding:28px 36px;border-radius:34px;background:rgba(255,248,225,.96);
+  box-shadow:0 18px 40px rgba(78,52,46,.22);font-size:38px;font-weight:800;color:#4E342E;line-height:1.35}
+.toast small{display:block;font-size:30px;font-weight:700;color:#8D6E63}
+.toast b{color:#D84315}
 """
 
 
 def pinned_body():
-    tiles = []
-    for i, (no, verb, title, sub, shot, pos) in enumerate(CARDS):
-        tiles.append(
-            f"<div class=tile style='left:{i * TW}px'>"
-            f"<div class=chip><i></i>누룽지도 <em>{no} {verb}</em></div>"
-            f"<div class=title>{title}</div><div class=sub>{sub}</div>"
-            f"<div class=phone style=\"background-image:url('{shot}');background-position:center {pos}\"></div>"
-            "</div>")
-    # 공 궤적은 폰 사이 빈 곳(이음매 근처)에서만 보이고, 폰 뒤로 지나간다
-    return (
-        "<div class=pano><div class=dots></div><div class=floor></div><div class=net></div>"
-        "<svg class=arc width=3240 height=1440 viewBox='0 0 3240 1440'>"
-        "<path d='M 140 1120 C 700 520, 1300 520, 1620 760 S 2560 1000, 3050 640' fill=none stroke='#E0A800' "
-        "stroke-width=11 stroke-linecap=round stroke-dasharray='4 32' opacity=.9 /></svg>"
-        + "".join(tiles)
-        + "<div class=ball style='left:2990px;top:560px'></div></div>")
+    R = 2160
+    scene = (
+        f"<img class=mk src=marker_yellow.png style='left:{R + 170}px;top:330px'>"
+        f"<img class=mk src=marker_red.png style='left:{R + 640}px;top:520px'>"
+        f"<img class=mk src=marker_yellow.png style='left:{R + 420}px;top:860px'>"
+        f"<img class=mk src=marker_yellow.png style='left:{R + 820}px;top:1080px'>"
+        f"<div class=cl style='left:{R + 470}px;top:250px;width:130px;height:130px;font-size:54px'>3</div>"
+        f"<div class=cl style='left:{R + 160}px;top:1060px;width:160px;height:160px;font-size:62px'>12</div>"
+        f"<div class=me style='left:{R + 560}px;top:760px'></div>"
+        f"<div class=toast style='left:{R + 300}px;top:600px'>🔥 <b>게스트 급구</b> · 토 19:00"
+        "<small>센터 1명 · 여자 레프트 1명</small></div>")
+    return ("<div class=pano>" + map_svg() + "<div class=veil></div>"
+            "<div class=logo></div><div class=kick>전국 배구 동호회 지도</div>"
+            "<div class=name>누룽<br><span class=y>지도</span></div>"
+            "<div class=tag>우리 동네 배구,<br><span class=hl>지도 한 눈에</span></div>"
+            "<div class=phone></div>" + scene + "</div>")
 
 
 def stage_assets(work):
     shutil.copyfile(FONTS / "PretendardVariable.ttf", work / "PretendardVariable.ttf")
     shutil.copyfile(ROOT / "assets" / "nulloongzido logo_without bg.png", work / "logo.png")
-    for c in CARDS:
-        shutil.copyfile(SHOTS / c[4], work / c[4])
+    for c in ("yellow", "red"):
+        shutil.copyfile(ROOT / "assets" / "markers" / f"marker_{c}.png", work / f"marker_{c}.png")
+    shutil.copyfile(SHOTS / "01_map.jpg", work / "01_map.jpg")
 
 
 # ── 가이드 · 미리보기 ────────────────────────────────────────
