@@ -1,6 +1,7 @@
 // main.dart — 네이티브 재작성 진입점.
 // 게스트 모드(웹 패리티 A1): 열람은 무로그인, 등록/찜/프로필 등 액션 시점에 로그인 유도.
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:kakao_flutter_sdk_share/kakao_flutter_sdk_share.dart';
@@ -48,6 +49,10 @@ class MyApp extends StatelessWidget {
         title: '누룽지도',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
+        // 기본 위젯 글자(날짜·시간 선택 창의 '취소'·'확인', 요일·월 이름 등)도 앱 언어를 따른다.
+        locale: Locale(appLang.value),
+        supportedLocales: const [Locale('ko'), Locale('en')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
         home: const MapScreen(), // 게스트도 바로 지도(웹과 동일)
       ),
     );

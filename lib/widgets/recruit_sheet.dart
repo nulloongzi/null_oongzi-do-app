@@ -15,6 +15,7 @@ import '../services/urgent.dart';
 import '../theme.dart';
 import 'app_sheet.dart';
 import 'field_error_text.dart';
+import 'bowl_text.dart';
 
 /// 캡처 시연용: 문구를 쳐 넣고 🥄 맛보기를 켠다(값이 바뀌면 시작).
 final ValueNotifier<int> recruitDemoFill = ValueNotifier<int>(0);
@@ -221,7 +222,7 @@ class _RecruitSheetState extends State<RecruitSheet> {
                         height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : Text(widget.editing ? t('rc_save') : t('rc_on')),
+                    : BowlText(widget.editing ? t('rc_save') : t('rc_on')),
               ),
             ),
           ],

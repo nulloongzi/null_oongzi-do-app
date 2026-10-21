@@ -2332,11 +2332,13 @@ class _MapScreenState extends State<MapScreen> {
     },
     // 웹 .fab-profile 처럼 다른 FAB보다 한 치수 크게(55/24).
     child: _fab(
-      '🍚',
+      '',
       t('fab_profile'),
       _openProfile,
       size: 55,
       radius: NurungjiRadius.fabProfile,
+      // 🍚 버튼 그림 = 로고(웹 .fab-logo 와 같은 46)
+      icon: Image.asset('assets/logo-512.png', width: 46, height: 46),
     ),
   );
 
@@ -2347,6 +2349,7 @@ class _MapScreenState extends State<MapScreen> {
     Color? bg,
     double size = 50,
     double radius = NurungjiRadius.fab,
+    Widget? icon,
   }) {
     return Semantics(
       button: true,
@@ -2361,7 +2364,8 @@ class _MapScreenState extends State<MapScreen> {
             width: size,
             height: size,
             child: Center(
-              child: Text(emoji, style: TextStyle(fontSize: size * 0.46)),
+              child:
+                  icon ?? Text(emoji, style: TextStyle(fontSize: size * 0.46)),
             ),
           ),
         ),

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
 import 'bounce_tap.dart';
+import 'bowl_text.dart';
 
 typedef ChipOption = ({String label, String value});
 
@@ -25,7 +26,7 @@ class SingleChoiceChips extends StatelessWidget {
         final on = o.value == selected;
         return BounceTap(
           child: ChoiceChip(
-            label: Text(o.label),
+            label: BowlText(o.label),
             selected: on,
             onSelected: (_) => onChanged(o.value),
             selectedColor: NurungjiColors.yellow,
@@ -63,7 +64,7 @@ class MultiChoiceChips extends StatelessWidget {
         final on = selected.contains(o.value);
         return BounceTap(
           child: FilterChip(
-            label: Text(o.label),
+            label: BowlText(o.label),
             selected: on,
             onSelected: (sel) {
               final s = Set<String>.of(selected);

@@ -38,6 +38,7 @@ import '../widgets/map_detail_panel.dart';
 import 'club_form_screen.dart';
 import 'login_screen.dart';
 import 'pickup_form_screen.dart';
+import '../widgets/bowl_text.dart';
 
 const _titleStyle = TextStyle(
   fontSize: 20.5,
@@ -212,7 +213,7 @@ Widget _recruitBanner(Club c) {
                 color: _recruitInk,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Text(
+              child: BowlText(
                 t('rc_badge'),
                 style: const TextStyle(
                   fontWeight: FontWeight.w800,
@@ -1028,7 +1029,7 @@ Widget _recruitToggle(
             ],
           )
         else
-          OutlinedButton(onPressed: openSheet, child: Text(t('rc_on'))),
+          OutlinedButton(onPressed: openSheet, child: BowlText(t('rc_on'))),
         Padding(
           padding: const EdgeInsets.only(top: 6),
           child: Text(

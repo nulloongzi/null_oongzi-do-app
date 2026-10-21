@@ -248,7 +248,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text('🍚', style: TextStyle(fontSize: 64)),
+                    // 로고(그림 둘레에 여백이 있어 크게 잡는다)
+                    Image.asset(
+                      'assets/logo-512.png',
+                      width: 120,
+                      height: 120,
+                      excludeFromSemantics: true,
+                    ),
                     const SizedBox(height: 8),
                     Text(
                       t('brand'),
