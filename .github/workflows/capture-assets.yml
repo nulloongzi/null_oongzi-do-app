@@ -185,7 +185,8 @@ jobs:
       # 정확한 UI 상태 스틸을 찍고 전환은 앱의 실제 모션(바텀시트 250ms/decelerate,
       # 스크림 black54)으로 재현한다. 에뮬 밖에서 수십 초면 끝난다.
       - name: Compose motion (stills → demo video)
-        if: ${{ env.SMOKE_ONLY == 'false' }}
+        # 스틸은 릴스를 켤 때만 찍는다(PHASES=play 면 stills/ 가 없다).
+        if: ${{ env.SMOKE_ONLY == 'false' && env.INCLUDE_REELS == 'true' }}
         env:
           ARTIFACTS_DIR: ${{ github.workspace }}/marketing-assets
           CAP_LANG: ${{ env.CAP_LANG }}
