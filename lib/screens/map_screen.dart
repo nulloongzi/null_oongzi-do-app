@@ -2364,7 +2364,8 @@ class _MapScreenState extends State<MapScreen> {
             width: size,
             height: size,
             child: Center(
-              child: icon ?? Text(emoji, style: TextStyle(fontSize: size * 0.46)),
+              child:
+                  icon ?? Text(emoji, style: TextStyle(fontSize: size * 0.46)),
             ),
           ),
         ),

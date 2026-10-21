@@ -39,11 +39,232 @@ class AppTheme {
 
     return base.copyWith(
       scaffoldBackgroundColor: NurungjiColors.bg,
+      // 화면 머리: 진한 옐로 띠 대신 크림 바탕 + 다크 글자(웹 시트·팝업 머리처럼). 옐로는 누르는 것에만 아낀다.
       appBarTheme: const AppBarTheme(
-        backgroundColor: NurungjiColors.yellow,
+        backgroundColor: NurungjiColors.bg,
         foregroundColor: NurungjiColors.dark,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
         centerTitle: false,
+        titleTextStyle: TextStyle(
+          fontFamily: 'Pretendard',
+          color: NurungjiColors.dark,
+          fontSize: 18,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+      // 칩: 웹 .chip 과 같은 모양 — 반투명 흰 알약 + 옅은 갈색 테두리, 고르면 옐로 + 굵은 글자.
+      // Material 기본(진한 옐로 컨테이너 + 체크 표시)은 쓰지 않는다.
+      chipTheme: ChipThemeData(
+        color: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected)
+              ? NurungjiColors.yellow
+              : s.contains(WidgetState.disabled)
+              ? NurungjiColors.chipBg
+              : const Color(0xCCFFFFFF),
+        ),
+        side: WidgetStateBorderSide.resolveWith(
+          (s) => BorderSide(
+            color: s.contains(WidgetState.selected)
+                ? NurungjiColors.yellow
+                : const Color(0x4D8D6E63),
+          ),
+        ),
+        shape: const StadiumBorder(),
+        showCheckmark: false,
+        elevation: 0,
+        pressElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        // 글자: 웹 .chip(14/600 · #5d4037). 상태별 굵기는 주지 않는다 — WidgetStateTextStyle 은
+        // 칩 기본 스타일과 합쳐지며 글꼴이 빠진다.
+        labelStyle: const TextStyle(
+          fontFamily: 'Pretendard',
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          color: NurungjiColors.dark,
+        ),
+      ),
+      // 켜고 끄기: 웹 .fr-switch 와 같은 값 — 켜면 브라운 길, 끄면 베이지 길, 손잡이는 늘 흰색.
+      switchTheme: SwitchThemeData(
+        thumbColor: const WidgetStatePropertyAll(Colors.white),
+        trackColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected)
+              ? NurungjiColors.brown
+              : const Color(0xFFD8CBB6),
+        ),
+        trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+      ),
+      // 체크 상자: 웹 accent-color(옐로) — 체크 표시는 다크.
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected)
+              ? NurungjiColors.yellow
+              : Colors.white,
+        ),
+        checkColor: const WidgetStatePropertyAll(NurungjiColors.dark),
+        side: const BorderSide(color: NurungjiColors.brown, width: 1.5),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+      ),
+      // 도는 표시: 크림 바탕에서 옐로는 안 보여서 브라운.
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: NurungjiColors.brown,
+        linearTrackColor: NurungjiColors.chipBg,
+        circularTrackColor: Colors.transparent,
+      ),
+      // 탭: 고른 탭은 다크 + 옐로 밑줄, 나머지는 브라운.
+      tabBarTheme: const TabBarThemeData(
+        labelColor: NurungjiColors.dark,
+        unselectedLabelColor: NurungjiColors.brown,
+        indicatorColor: NurungjiColors.yellow,
+        indicatorSize: TabBarIndicatorSize.label,
+        dividerColor: Colors.transparent,
+        labelStyle: TextStyle(
+          fontFamily: 'Pretendard',
+          fontSize: 15,
+          fontWeight: FontWeight.w800,
+        ),
+        unselectedLabelStyle: TextStyle(
+          fontFamily: 'Pretendard',
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      // 메뉴(⋯ 누르면 나오는 목록): 흰 카드, 모서리 둥글게, 따뜻한 그림자.
+      popupMenuTheme: PopupMenuThemeData(
+        color: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shadowColor: NurungjiColors.shadow,
+        elevation: 6,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(NurungjiRadius.input),
+        ),
+        textStyle: const TextStyle(
+          fontFamily: 'Pretendard',
+          color: NurungjiColors.dark,
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      // 카드: 흰 바탕 + 따뜻한 옅은 그림자(검정·보라 틴트 없이).
+      cardTheme: CardThemeData(
+        color: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shadowColor: NurungjiColors.shadowSm,
+        elevation: 1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(NurungjiRadius.button),
+        ),
+      ),
+      // 접고 펴는 줄: 펼쳐도 위아래 선이 생기지 않게, 화살표는 브라운.
+      expansionTileTheme: const ExpansionTileThemeData(
+        shape: Border(),
+        collapsedShape: Border(),
+        iconColor: NurungjiColors.dark,
+        collapsedIconColor: NurungjiColors.brown,
+        textColor: NurungjiColors.dark,
+        collapsedTextColor: NurungjiColors.dark,
+      ),
+      // 펼침 목록(드롭다운): 흰 카드 + 둥근 모서리.
+      menuTheme: MenuThemeData(
+        style: MenuStyle(
+          backgroundColor: const WidgetStatePropertyAll(Colors.white),
+          surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+          shadowColor: const WidgetStatePropertyAll(NurungjiColors.shadow),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(NurungjiRadius.input),
+            ),
+          ),
+        ),
+      ),
+      dividerTheme: const DividerThemeData(
+        color: Color(0x143D2C22),
+        thickness: 1,
+        space: 1,
+      ),
+      // 말풍선 도움말: 토스트와 같은 다크 브라운 + 크림 글자.
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(
+          color: NurungjiColors.dark,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        textStyle: const TextStyle(
+          fontFamily: 'Pretendard',
+          color: NurungjiColors.bg,
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      // 날짜 고르기: 흰 카드 + 크림 머리, 고른 날은 옐로 원 + 다크 글자, 오늘은 브라운 테두리.
+      datePickerTheme: DatePickerThemeData(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        headerBackgroundColor: NurungjiColors.bg,
+        headerForegroundColor: NurungjiColors.dark,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(NurungjiRadius.dialog),
+        ),
+        dayForegroundColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.disabled)
+              ? NurungjiColors.handle
+              : NurungjiColors.dark,
+        ),
+        dayBackgroundColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected)
+              ? NurungjiColors.yellow
+              : Colors.transparent,
+        ),
+        todayForegroundColor: const WidgetStatePropertyAll(NurungjiColors.dark),
+        todayBackgroundColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected)
+              ? NurungjiColors.yellow
+              : Colors.transparent,
+        ),
+        todayBorder: const BorderSide(color: NurungjiColors.brown),
+        yearForegroundColor: const WidgetStatePropertyAll(NurungjiColors.dark),
+        yearBackgroundColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected)
+              ? NurungjiColors.yellow
+              : Colors.transparent,
+        ),
+        cancelButtonStyle: TextButton.styleFrom(
+          foregroundColor: NurungjiColors.brown,
+        ),
+        confirmButtonStyle: TextButton.styleFrom(
+          foregroundColor: NurungjiColors.dark,
+        ),
+      ),
+      // 시간 고르기: 같은 톤 — 고른 칸·바늘은 옐로, 글자는 다크.
+      timePickerTheme: TimePickerThemeData(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(NurungjiRadius.dialog),
+        ),
+        dialBackgroundColor: NurungjiColors.bg,
+        dialHandColor: NurungjiColors.yellow,
+        dialTextColor: NurungjiColors.dark,
+        hourMinuteColor: WidgetStateColor.resolveWith(
+          (s) => s.contains(WidgetState.selected)
+              ? NurungjiColors.yellow
+              : NurungjiColors.bg,
+        ),
+        hourMinuteTextColor: NurungjiColors.dark,
+        dayPeriodColor: WidgetStateColor.resolveWith(
+          (s) => s.contains(WidgetState.selected)
+              ? NurungjiColors.yellow
+              : Colors.transparent,
+        ),
+        dayPeriodTextColor: NurungjiColors.dark,
+        dayPeriodBorderSide: const BorderSide(color: NurungjiColors.handle),
+        entryModeIconColor: NurungjiColors.brown,
+        cancelButtonStyle: TextButton.styleFrom(
+          foregroundColor: NurungjiColors.brown,
+        ),
+        confirmButtonStyle: TextButton.styleFrom(
+          foregroundColor: NurungjiColors.dark,
+        ),
       ),
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: NurungjiColors.light,
