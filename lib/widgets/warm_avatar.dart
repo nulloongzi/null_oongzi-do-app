@@ -295,8 +295,10 @@ void paintMealBowl(Canvas c, Rect rect, int tier) {
   c.save();
   c.translate(rect.left, rect.top);
   c.scale(rect.width / 24);
+  // 작게 그릴 때(24 미만)는 이음선이 뭉개져 실루엣만 — 웹 friends.js 작은 아바타와 같다.
+  final small = rect.width < 24;
   if (t == 0) {
-    c.drawPath(bowlSolidPath(), Paint()..color = _ink);
+    c.drawPath(small ? path : bowlSolidPath(), Paint()..color = _ink);
     c.restore();
     return;
   }
@@ -308,7 +310,9 @@ void paintMealBowl(Canvas c, Rect rect, int tier) {
   );
   final y = _bowlBottom - (_bowlBottom - _bowlTop) * mealLevel[t];
   c.drawRect(Rect.fromLTWH(0, y, 24, 24), Paint()..color = warmRing[t]);
-  c.drawPath(bowlSeamsPath(), Paint()..color = const Color(0x8C3D2C22));
+  if (!small) {
+    c.drawPath(bowlSeamsPath(), Paint()..color = const Color(0x8C3D2C22));
+  }
   c.restore();
   c.drawPath(
     path,
