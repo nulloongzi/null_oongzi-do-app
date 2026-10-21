@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nulloongzido/services/i18n.dart';
 import 'package:nulloongzido/widgets/app_sheet.dart';
 import 'package:nulloongzido/widgets/recruit_sheet.dart';
+import 'package:nulloongzido/widgets/bowl_text.dart';
 
 class _Call {
   final String msg;
@@ -53,16 +54,20 @@ Future<List<Object?>> _open(
   return results;
 }
 
+// 맨 앞 🍚 는 로고 아이콘으로 그려지므로(BowlText) 글자 대신 문구로 찾는다.
+Finder _bowl(String s) =>
+    find.byWidgetPredicate((w) => w is BowlText && w.text == s);
+
 void main() {
   setUp(() => appLang.value = 'ko');
 
   testWidgets('새로 켤 때 — 제목·안내·맛보기 칸, 버튼은 시작', (tester) async {
     await _open(tester);
-    expect(find.text(t('rc_badge')), findsOneWidget);
+    expect(_bowl(t('rc_badge')), findsOneWidget);
     expect(find.text(t('rc_msg_label')), findsOneWidget);
     expect(find.text(t('rc_drop_in_ask')), findsOneWidget);
     expect(find.text(t('rc_auto_off')), findsOneWidget);
-    expect(find.text(t('rc_on')), findsOneWidget);
+    expect(_bowl(t('rc_on')), findsOneWidget);
     final box = tester.widget<CheckboxListTile>(
       find.byKey(const ValueKey('rc_drop_in')),
     );
