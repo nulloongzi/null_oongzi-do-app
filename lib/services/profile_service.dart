@@ -2,6 +2,7 @@
 // 공개 users 문서(룰 화이트리스트 필드만). 닉네임 중복은 full_nickname 쿼리로 검사.
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import '../models/profile.dart';
 import 'rice_dex.dart' show kRiceData;
 
@@ -36,6 +37,14 @@ class ProfileService {
   ProfileService({FirebaseFirestore? db, Random? rnd})
     : _db = db ?? FirebaseFirestore.instance,
       _rnd = rnd ?? Random();
+
+  /// 회원 탈퇴: 서버(deleteMyAccount, 웹 functions/index.js)가 개인 데이터와 로그인 계정을
+  /// 지운다. 내가 등록한 동호회는 남고 관리자 명단에서만 빠진다. 실패하면 예외.
+  static Future<void> deleteMyAccount() async {
+    await FirebaseFunctions.instance
+        .httpsCallable('deleteMyAccount')
+        .call(<String, dynamic>{});
+  }
 
   final FirebaseFirestore _db;
   final Random _rnd;

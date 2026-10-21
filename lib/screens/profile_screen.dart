@@ -163,50 +163,83 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final uid = _uid;
     if (p == null || uid == null) return;
     final ctrl = TextEditingController(text: p.fullNickname);
+    // 검사는 팝업 안에서 한다 — 틀리면 닫지 않고 칸 바로 아래에 알린다(웹 nzPrompt validate 와 같음)
     final newName = await showDialog<String>(
       context: context,
-      builder: (dctx) => AlertDialog(
-        title: Text(t('change_nickname')),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          maxLength: 30,
-          decoration: InputDecoration(hintText: t('nickname_hint')),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dctx),
-            child: Text(t('cancel')),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(dctx, ctrl.text),
-            child: Text(t('nick_btn')),
-          ),
-        ],
-      ),
+      builder: (dctx) {
+        String? error;
+        var busy = false;
+        return StatefulBuilder(
+          builder: (dctx, setLocal) {
+            Future<void> submit() async {
+              if (busy) return;
+              final n = ctrl.text.trim();
+              String? err;
+              if (n.isEmpty) {
+                err = t('nick_empty');
+              } else if (n.contains('-')) {
+                err = t('nickname_hyphen');
+              } else if (n != p.fullNickname) {
+                setLocal(() => busy = true);
+                try {
+                  if (isReservedNickname(n) &&
+                      !await _svc.canUseReservedNickname(uid)) {
+                    err = t('nickname_reserved');
+                  } else if (await _svc.isDuplicate(n)) {
+                    err = t('nickname_dup');
+                  }
+                } catch (e) {
+                  debugPrint('rename check: $e');
+                  err = t('nick_change_error');
+                }
+                if (!dctx.mounted) return;
+                setLocal(() => busy = false);
+              }
+              if (err != null) {
+                setLocal(() => error = err);
+                return;
+              }
+              Navigator.pop(dctx, n);
+            }
+
+            return AlertDialog(
+              title: Text(t('change_nickname')),
+              content: TextField(
+                controller: ctrl,
+                autofocus: true,
+                maxLength: 30,
+                onChanged: (_) {
+                  if (error != null) setLocal(() => error = null);
+                },
+                onSubmitted: (_) => submit(),
+                decoration: InputDecoration(
+                  hintText: t('nickname_hint'),
+                  errorText: error,
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dctx),
+                  child: Text(t('cancel')),
+                ),
+                TextButton(
+                  onPressed: busy ? null : submit,
+                  child: Text(t('nick_btn')),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
     ctrl.dispose(); // 다이얼로그 종료 후 컨트롤러 정리(누수 방지)
-    if (newName == null) return;
-    final n = newName.trim();
-    if (n.isEmpty || n == p.fullNickname) return;
-    if (n.contains('-')) {
-      _snack(t('nickname_hyphen'));
-      return;
-    }
+    if (newName == null || newName == p.fullNickname) return;
     try {
-      if (isReservedNickname(n) && !await _svc.canUseReservedNickname(uid)) {
-        _snack(t('nickname_reserved'));
-        return;
-      }
-      if (await _svc.isDuplicate(n)) {
-        _snack(t('nickname_dup'));
-        return;
-      }
-      await _svc.rename(uid, n);
+      await _svc.rename(uid, newName);
       if (mounted) {
         setState(
           () => _profile = Profile(
-            fullNickname: n,
+            fullNickname: newName,
             nickname: p.nickname,
             color: p.color,
             createdAt: p.createdAt,
@@ -244,6 +277,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (_) {}
     await SocialAuthService.signOutProviders(); // 카카오/네이버 세션도 정리
     await FirebaseAuth.instance.signOut();
+    if (mounted) Navigator.pop(context); // 게스트로 지도 복귀
+  }
+
+  // 회원 탈퇴(웹 auth.js deleteMyAccount 와 같은 흐름): 확인 → 서버가 지움 → 카카오 연결 끊기·
+  // 네이버 토큰 삭제 → 로그아웃 → 게스트로 지도 복귀.
+  bool _deleting = false;
+  Future<void> _deleteAccount() async {
+    if (_deleting) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dctx) => AlertDialog(
+        title: Text(t('acct_delete_title')),
+        content: Text(t('acct_delete_body')),
+        actions: [
+          TextButton(
+            autofocus: true, // 위험한 작업은 '취소'에 먼저(웹 nzConfirm danger 와 같음)
+            onPressed: () => Navigator.pop(dctx, false),
+            child: Text(t('cancel')),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: NurungjiColors.urgentInk,
+              textStyle: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+            onPressed: () => Navigator.pop(dctx, true),
+            child: Text(t('acct_delete_btn')),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _deleting = true);
+    _snack(t('acct_deleting'));
+    try {
+      await ProfileService.deleteMyAccount();
+    } catch (e) {
+      debugPrint('deleteMyAccount: $e');
+      if (mounted) setState(() => _deleting = false);
+      _snack(t('acct_delete_err'));
+      return;
+    }
+    Track.event('account_delete');
+    try {
+      await GoogleSignIn().disconnect();
+    } catch (_) {}
+    await SocialAuthService.unlinkProvidersAfterDeletion();
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (_) {}
+    _snack(t('acct_deleted'));
     if (mounted) Navigator.pop(context); // 게스트로 지도 복귀
   }
 
@@ -428,6 +511,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                   ],
+                ),
+                // 회원 탈퇴 입구(웹 .pc-delete-link) — 눈에 띄지 않게, 그러나 찾을 수 있게
+                const SizedBox(height: 8),
+                Center(
+                  child: TextButton(
+                    onPressed: _deleting ? null : _deleteAccount,
+                    style: TextButton.styleFrom(
+                      foregroundColor: NurungjiColors.dark.withValues(
+                        alpha: 0.55,
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                    child: Text(t('acct_delete')),
+                  ),
                 ),
               ],
             ),
