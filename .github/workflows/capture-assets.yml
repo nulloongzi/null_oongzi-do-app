@@ -55,7 +55,8 @@ jobs:
     # dispatch 전용이라 inputs가 항상 있다. || 뒤는 방어적 기본값(안전한 쪽: debug+smoke).
     env:
       BUILD_TYPE: ${{ inputs.build_type || 'debug' }}
-      SMOKE_ONLY: ${{ inputs.smoke_only || 'true' }}
+      # smoke_only 는 boolean 이라 `false || 'true'` 가 늘 'true' 가 되어 전체 캡처를 고를 수 없었다 → 문자열로 비교
+      SMOKE_ONLY: ${{ format('{0}', inputs.smoke_only) == 'false' && 'false' || 'true' }}
       CAP_LANG: ${{ inputs.capture_lang || 'ko' }}
       # 릴스 원본은 언어별로 캡처(후반합성이 한/영 자막을 각각 입힘). 스샷은 CAP_LANG(ko) 유지.
       CAP_LANGS: "ko en"
