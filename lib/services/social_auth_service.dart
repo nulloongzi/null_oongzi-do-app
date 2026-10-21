@@ -148,6 +148,21 @@ class SocialAuthService {
     } catch (_) {}
   }
 
+  /// 회원 탈퇴 뒤: 카카오는 앱 연결을 끊고(카카오 정책), 네이버는 토큰을 지운다.
+  /// 지난 로그인 수단 기억도 지운다. 실패해도 탈퇴는 이미 끝났으니 조용히 넘어간다.
+  static Future<void> unlinkProvidersAfterDeletion() async {
+    try {
+      await kakao.UserApi.instance.unlink();
+    } catch (_) {}
+    try {
+      await FlutterNaverLogin.logOutAndDeleteToken();
+    } catch (_) {}
+    try {
+      final sp = await SharedPreferences.getInstance();
+      await sp.remove(_lastProviderKey);
+    } catch (_) {}
+  }
+
   static bool _isCancel(Object e) {
     return e is PlatformException &&
         (e.code == 'CANCELED' || e.code == 'CANCELLED');
