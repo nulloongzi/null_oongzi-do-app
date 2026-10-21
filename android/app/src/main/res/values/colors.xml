@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#ffffff</color>
-    <!-- 첫 화면 바탕: 앱 크림(--nurungji-bg) -->
+    <!-- 첫 화면 바탕: 앱 크림(웹 nurungji-bg 와 같은 색) -->
     <color name="splash_bg">#FFF8E1</color>
 </resources>
