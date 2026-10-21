@@ -1,11 +1,11 @@
 {
-    "name": "nulloongzido",
-    "short_name": "nulloongzido",
+    "name": "누룽지도 Nulloongzi-do",
+    "short_name": "누룽지도",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FFF8E1",
+    "theme_color": "#FAC710",
+    "description": "전국 배구 동호회·픽업 게임 지도",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
