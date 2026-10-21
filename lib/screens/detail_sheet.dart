@@ -910,15 +910,17 @@ Widget _urgentToggle(
         // 올라가 있으면: 수정(같은 시트, 채워진 채로) + 내리기
         ? Row(
             children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  style: red,
-                  onPressed: openSheet,
-                  icon: const Icon(Icons.edit, size: 18),
-                  label: Text(t('ug_edit')),
+              if (c.isVerified) ...[
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: red,
+                    onPressed: openSheet,
+                    icon: const Icon(Icons.edit, size: 18),
+                    label: Text(t('ug_edit')),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
+                const SizedBox(width: 8),
+              ],
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: turnOff,
@@ -2012,8 +2014,9 @@ void showClubDetail(
                 onChanged: onChanged,
                 close: close,
               ),
-            // 급구는 인증팀만(웹 정책 통일 · A10)
-            if (canModify && c.isVerified)
+            // 급구 올리기·고치기는 인증팀만(웹 정책 통일 · A10). 떠 있는 급구를 내리는 건
+            // 인증과 상관없이 된다 — 예전에 올라간 급구도 관리자가 내릴 수 있게(웹과 같음)
+            if (canModify && (c.isVerified || c.urgentActive))
               _urgentToggle(c, context, onChanged, close),
             // 식구 모집은 인증 여부와 상관없이 팀 관리자가 켠다
             if (canModify) _recruitToggle(c, context, onChanged, close),

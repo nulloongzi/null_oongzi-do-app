@@ -2093,7 +2093,7 @@ class _MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     final roomItems = _roomItems; // 🍚 여기 자리 있어요? — 입구 띠·아래 칸 자리 계산
-    // 시스템 뒤로가기: 인앱 오버레이(릴스 피크 → 상세 패널)를 먼저 닫고, 없을 때만 앱 종료.
+    // 시스템 뒤로가기: 인앱 오버레이(릴스 피크 → 상세 패널 → 픽업 상세)를 먼저 닫고, 없을 때만 앱 종료.
     // (상세 패널·피크는 route가 아닌 Stack 오버레이라 처리 없인 back이 곧장 앱을 종료함)
     return PopScope(
       canPop: false,
@@ -2103,6 +2103,8 @@ class _MapScreenState extends State<MapScreen> {
           setState(() => _reelPeek = null);
         } else if (detailPanel.value != null) {
           detailPanel.value = null;
+        } else if (_selectedSpot != null) {
+          _closeSpot(); // 픽업 상세 → 목록으로(웹 '← 목록으로'와 같음)
         } else {
           // 실수 종료 방지: 2초 안에 한 번 더 눌러야 종료
           final now = DateTime.now();
