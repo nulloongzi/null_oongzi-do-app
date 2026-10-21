@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:   # 날짜·시간 선택 창 등 기본 위젯 글자를 앱 언어(한/영)로
+    sdk: flutter
   google_sign_in: ^6.2.1  # 추가
   http: ^1.1.0            # 서버 통신용 추가 (선택)
 
