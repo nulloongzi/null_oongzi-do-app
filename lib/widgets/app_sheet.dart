@@ -4,6 +4,7 @@
 // 모달 시트로 슬라이드업. 상세/필터/공유 시트와 동일한 톤(크림 배경·드래그핸들·
 // 상단 라운드 — theme.dart bottomSheetTheme)을 그대로 쓴다.
 import 'package:flutter/material.dart';
+import 'bowl_text.dart';
 
 /// 화면 콘텐츠를 모달 바텀시트로 띄운다.
 /// - [child]는 Scaffold/AppBar 없이 시트 본문만 담은 위젯.
@@ -34,7 +35,7 @@ class SheetTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
-      child: Text(
+      child: BowlText(
         text,
         style: Theme.of(context).textTheme.titleLarge?.copyWith(
           fontWeight: FontWeight.w800,
