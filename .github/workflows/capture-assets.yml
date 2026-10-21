@@ -169,6 +169,9 @@ jobs:
           SMOKE_ONLY: ${{ env.SMOKE_ONLY }}
           CAP_LANG: ${{ env.CAP_LANG }}
           INCLUDE_REELS: ${{ env.INCLUDE_REELS }}
+          # 스틸·흐름 녹화는 릴스(모션) 재료다. 릴스를 안 찍을 땐 스토어 스샷만 찍어
+          # 시간을 줄인다(러너가 중간에 끊기면 그때까지 찍은 것도 못 올린다).
+          PHASES: ${{ env.INCLUDE_REELS == 'true' && 'play,stills,flows' || 'play' }}
           CAP_LANGS: ${{ env.CAP_LANGS }}
           # 로그인 필요 화면(도시락/프로필/닉네임) 옵션 — 테스트 계정 시크릿 있을 때만 동작.
           TEST_ACCOUNT_EMAIL: ${{ secrets.TEST_ACCOUNT_EMAIL }}
