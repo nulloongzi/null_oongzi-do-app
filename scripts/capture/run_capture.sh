@@ -337,7 +337,19 @@ compose_store() { # compose_store <basename> <line1> <line2>
     "$out" 2>/dev/null && log "  합성: store/$1.png" || echo "::warning::합성 실패: $1"
   rm -f "$tmp"
 }
-if [ -e "$KFONT" ]; then
+# 카피는 캡처 언어를 따른다 — 영어 화면에 한글 카피가 얹히던 것(2026-10-22 run #71).
+# 나눔고딕에 라틴 글자가 있어 영어도 같은 폰트로 쓴다.
+if [ -e "$KFONT" ] && [ "$CAP_LANG" = "en" ]; then
+  compose_store "play_01_map_en"      "Volleyball clubs across Korea," "on one map"
+  compose_store "play_02_filter_en"   "By region, day and who plays —" "teams that fit"
+  compose_store "play_04_detail_en"   "Schedule, fees and location —" "contact in one tap"
+  compose_store "play_03_pickup_en"   "Play today with" "pickup games"
+  compose_store "play_05_lunchbox_en" "Like a team?" "Pack it in your Lunchbox"
+  compose_store "play_06_profile_en"  "Pick your own" "rice-name"
+  compose_store "play_07_share_en"    "Show off your team on" "KakaoTalk & Instagram"
+  compose_store "play_08_story_en"    "One card for your" "Instagram story"
+  compose_store "play_09_login_en"    "Sign in with Google or email" "in seconds"
+elif [ -e "$KFONT" ]; then
   compose_store "play_01_map_${CAP_LANG}"      "전국 배구 동호회," "지도 한 눈에"
   compose_store "play_02_filter_${CAP_LANG}"   "지역·요일·대상으로" "딱 맞는 팀"
   compose_store "play_04_detail_${CAP_LANG}"   "일정·회비·위치 확인하고" "바로 연락"

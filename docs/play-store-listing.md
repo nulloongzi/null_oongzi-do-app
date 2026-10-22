@@ -578,7 +578,8 @@ A team's Instagram Reels now show their real cover images. One tap opens Instagr
 
 Play는 **최소 2장, 최대 8장**. 아래 **8장 순서**(첫 3장이 목록 미리보기에 노출되니 임팩트 순).
 업로드 파일은 Capture Marketing Assets 아티팩트의 **`store/`**(카피 오버레이 합성본, 1080×1920).
-2026-10-22 세트: KO = run #70(main `433b684`), EN = 그 다음 run(`capture_lang=en`).
+2026-10-22 세트는 레포에 넣어 두었다 → **`assets/store/screenshots/ko/`**, **`assets/store/screenshots/en/`**
+(KO = run #70 main `433b684` 의 `store/`, EN = run #71 `capture_lang=en` 의 `screens/` 원본에 영어 카피로 같은 규격 합성).
 
 | 순서 | 업로드 파일 | 화면 | 카피(합성본에 들어 있음) |
 |---|---|---|---|
@@ -590,6 +591,10 @@ Play는 **최소 2장, 최대 8장**. 아래 **8장 순서**(첫 3장이 목록 
 | 6 | `play_06_profile_{ko,en}.png` | 밥이름 | 나만의 '밥이름' 닉네임 |
 | 7 | `play_08_story_{ko,en}.png` | 포장하기 | 내 카드 한 장으로 스토리에 자랑 |
 | 8 | `play_07_share_{ko,en}.png` | 공유 | 카톡·인스타로 우리 팀 자랑 |
+
+영어 카피(en): 1 Volleyball clubs across Korea, / on one map · 2 By region, day and who plays — / teams that fit ·
+3 Schedule, fees and location — / contact in one tap · 4 Play today with / pickup games · 5 Like a team? / Pack it in your Lunchbox ·
+6 Pick your own / rice-name · 7 One card for your / Instagram story · 8 Show off your team on / KakaoTalk & Instagram
 
 > `play_09_login` 은 등록 제외(8장 상한). 한국어 등록정보엔 `_ko`, 영어(en-US)엔 `_en` 을 올린다.
 
@@ -639,7 +644,7 @@ Play는 **최소 2장, 최대 8장**. 아래 **8장 순서**(첫 3장이 목록 
 - [x] AAB 업로드 — 12 (2.5.1) 프로덕션 게시 완료 (2026-09-07 22:20)
 - [x] 앱 이름 / 간단·전체 설명 붙여넣기 (2026-09-08 확인) — **단 게시 전**
 - [ ] **콘솔에서 `변경사항 4개 게시` 누르기** ← 이걸 눌러야 스토어에 반영된다
-- [ ] 스크린샷 8장 업로드(`store/` 합성본, §2 순서) — KO·EN 각각
+- [ ] 스크린샷 8장 업로드(`assets/store/screenshots/{ko,en}/`, §2 순서) — KO·EN 각각
 - [x] 피처 그래픽 1024×500 확정 → `assets/store/feature-graphic-1024x500.png` 그대로 업로드
 - [ ] 앱 아이콘 512×512 확인
 - [ ] 카테고리: `스포츠` / 태그: 배구·생활체육
