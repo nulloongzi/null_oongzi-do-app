@@ -1,19 +1,17 @@
-// filter_sheet.dart — 동호회 필터 바텀시트 (급구·모집 토글 / 지역/요일/대상 + 검색). 웹 filterSheet 포팅.
+// filter_sheet.dart — 동호회 필터 탑시트(위에서 내려옴) (급구·모집 토글 / 지역/요일/대상 + 검색). 웹 filterSheet 포팅.
 // 적용 시 ClubFilter 반환(null=취소). 검색어도 함께 담아 반환.
 import 'package:flutter/material.dart';
 import '../services/club_filter.dart';
 import '../services/i18n.dart';
 import '../theme.dart';
-import 'app_sheet.dart' show kModalSheetMotion;
+import 'app_sheet.dart' show showTopSheet;
 import 'chip_select.dart';
 
 Future<ClubFilter?> showFilterSheet(BuildContext context, ClubFilter current) {
-  return showModalBottomSheet<ClubFilter>(
-    context: context,
-    showDragHandle: true,
-    isScrollControlled: true,
-    sheetAnimationStyle: kModalSheetMotion,
-    builder: (_) => _FilterSheet(initial: current),
+  // 검색바 옆 버튼에서 여는 시트라 위에서 내려온다(웹과 같음, docs/motion-spec.md §5)
+  return showTopSheet<ClubFilter>(
+    context,
+    child: _FilterSheet(initial: current),
   );
 }
 
@@ -87,12 +85,8 @@ class _FilterSheetState extends State<_FilterSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        4,
-        20,
-        MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
+      // 탑시트가 키보드 위까지만 커지므로(app_sheet.dart) 아래 여백만 둔다
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
