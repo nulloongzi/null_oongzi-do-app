@@ -12,7 +12,8 @@ import 'package:flutter/material.dart';
 import '../models/pickup_spot.dart';
 import '../services/i18n.dart';
 import '../theme.dart';
-import 'map_detail_panel.dart' show DetailPanelScope;
+import 'map_detail_panel.dart'
+    show DetailPanelScope, SheetHeight, kSheetCloseRatio, kSheetFlingVelocity;
 import 'pickup_list_panel.dart';
 
 class PickupListSheet extends StatefulWidget {
@@ -43,12 +44,13 @@ class PickupListSheet extends StatefulWidget {
   State<PickupListSheet> createState() => _PickupListSheetState();
 }
 
-class _PickupListSheetState extends State<PickupListSheet> {
-  double _height = 0;
+class _PickupListSheetState extends State<PickupListSheet>
+    with SingleTickerProviderStateMixin {
+  // 높이 — 상세 패널과 같은 컨트롤러·토큰(끌면 따라오고, 놓으면 300ms 감속으로 붙기). M02
+  late final SheetHeight _h = SheetHeight(this, _onTick);
   double _peek = 0; // 기본
   double _expanded = 0; // 확장
   bool _ready = false;
-  bool _dragging = false;
 
   // 0(peek)~1(expand) 펼침 비율 — 상세 본문 morph가 구독(MapDetailPanel과 동일).
   final ValueNotifier<double> _expand = ValueNotifier<double>(0);
@@ -60,17 +62,22 @@ class _PickupListSheetState extends State<PickupListSheet> {
       ? 0
       : ((_height - _peek) / (_expanded - _peek)).clamp(0.0, 1.0);
 
-  // 핸들러에서만 호출(build 중 호출 금지) — 높이 + 펼침비율 동기.
-  void _apply(double h) {
-    _height = h;
+  double get _height => _h.value;
+
+  void _onTick() {
+    if (!mounted) return;
+    setState(() {});
     _expand.value = _ratio;
   }
+
+  void _snap(double target) =>
+      _h.animateTo(target, instant: MediaQuery.of(context).disableAnimations);
 
   void _ensure(double screenH) {
     if (_ready) return;
     _peek = screenH * 0.42;
     _expanded = screenH * 0.9;
-    _height = _peek;
+    _h.jump(_peek);
     _ready = true;
   }
 
@@ -84,6 +91,7 @@ class _PickupListSheetState extends State<PickupListSheet> {
 
   @override
   void dispose() {
+    _h.dispose();
     _expand.dispose();
     _detailScroll.dispose();
     super.dispose();
@@ -91,29 +99,25 @@ class _PickupListSheetState extends State<PickupListSheet> {
 
   // 드래그 종료 → 가까운 스냅 지점(기본/확장). 목록은 peek 밑으로 안 내려가고 닫지도 않는다.
   // 상세는 아래로 충분히 내리면 목록으로 돌아간다(상세 패널의 닫기 제스처와 동일).
-  void _onDragEnd() {
-    if (_isDetail && _height < _peek * 0.6) {
-      setState(() {
-        _dragging = false;
-        _apply(_peek);
-      });
+  // 빠르게 튕기면 그 방향으로(상세 패널과 같은 기준).
+  void _onDragEnd(DragEndDetails d) {
+    final v = d.primaryVelocity ?? 0; // 아래가 +
+    final down = v > kSheetFlingVelocity && _height <= _peek;
+    if (_isDetail && (_height < _peek * kSheetCloseRatio || down)) {
+      _snap(_peek);
       widget.onBack?.call();
       return;
     }
+    if (v < -kSheetFlingVelocity) return _snap(_expanded);
+    if (v > kSheetFlingVelocity) return _snap(_peek);
     final mid = (_peek + _expanded) / 2;
-    setState(() {
-      _dragging = false;
-      _apply(_height >= mid ? _expanded : _peek);
-    });
+    _snap(_height >= mid ? _expanded : _peek);
   }
 
   // 상세 본문(시간표) 탭 → peek↔expand 토글 (웹 toggleTimeExpand 대응).
   void _toggle() {
     final mid = (_peek + _expanded) / 2;
-    setState(() {
-      _dragging = false;
-      _apply(_height >= mid ? _peek : _expanded);
-    });
+    _snap(_height >= mid ? _peek : _expanded);
   }
 
   @override
@@ -121,9 +125,7 @@ class _PickupListSheetState extends State<PickupListSheet> {
     _ensure(MediaQuery.of(context).size.height);
     return Align(
       alignment: Alignment.bottomCenter,
-      child: AnimatedContainer(
-        duration: Duration(milliseconds: _dragging ? 0 : 240),
-        curve: Curves.easeOutCubic,
+      child: Container(
         height: _height,
         width: double.infinity,
         decoration: const BoxDecoration(
@@ -145,15 +147,13 @@ class _PickupListSheetState extends State<PickupListSheet> {
             // 드래그 핸들 — 여기만 끌어 높이 조절(본문 스크롤과 비간섭).
             GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onVerticalDragStart: (_) => setState(() => _dragging = true),
-              onVerticalDragUpdate: (d) => setState(
-                () => _apply(
-                  (_height - d.delta.dy)
-                      .clamp(_isDetail ? 0.0 : _peek, _expanded)
-                      .toDouble(),
-                ),
+              onVerticalDragStart: (_) => _h.jump(_height),
+              onVerticalDragUpdate: (d) => _h.jump(
+                (_height - d.delta.dy)
+                    .clamp(_isDetail ? 0.0 : _peek, _expanded)
+                    .toDouble(),
               ),
-              onVerticalDragEnd: (_) => _onDragEnd(),
+              onVerticalDragEnd: _onDragEnd,
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 14),

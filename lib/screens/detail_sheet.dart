@@ -332,7 +332,9 @@ Widget _addressRow(
 );
 
 // 시간표 morph (웹 #timeMorphContainer/interpolateMorph): peek=요약 텍스트, expand=주간 그리드.
-// 패널 펼침비율(DetailPanelScope.expand)에 연동해 crossfade, 탭하면 peek↔expand 토글.
+// 패널 펼침비율(DetailPanelScope.expand)에 매 프레임 묶인다 — 끄는 동안·붙는 동안 모두
+// 요약은 비율 0→0.5 에서 흐려지고, 시간표는 0.5→1 에서 자라며 나타난다(웹과 같은 식). M03
+// 탭하면 peek↔expand 토글.
 class _ScheduleMorph extends StatelessWidget {
   final String? summaryText; // 🗓 요약 (없으면 미표시)
   final Widget full; // 전체 시간표 그리드
@@ -356,21 +358,27 @@ class _ScheduleMorph extends StatelessWidget {
       onTap: scope.toggle,
       child: ValueListenableBuilder<double>(
         valueListenable: scope.expand,
-        builder: (_, r, _) => AnimatedCrossFade(
-          duration: const Duration(milliseconds: 220),
-          sizeCurve: Curves.easeOut,
-          crossFadeState: r >= 0.5
-              ? CrossFadeState.showSecond
-              : CrossFadeState.showFirst,
-          firstChild: summary,
-          secondChild: full,
-        ),
+        builder: (_, r, _) => r < 0.5
+            ? Opacity(opacity: (1 - r * 2).clamp(0.0, 1.0), child: summary)
+            : _grow((r - 0.5) * 2, full),
       ),
     );
   }
 }
 
-// 펼치기 전(peek)엔 숨기고, 위로 펼치면(ratio>=0.5) 펼쳐지듯 나타나는 영역.
+// 0..1 만큼 위에서부터 자라며(높이) 나타난다 — 시트 펼침비율에 묶인 모프·드러나기 공용.
+Widget _grow(double f, Widget child) {
+  final v = f.clamp(0.0, 1.0);
+  return ClipRect(
+    child: Align(
+      alignment: Alignment.topCenter,
+      heightFactor: v,
+      child: Opacity(opacity: v, child: child),
+    ),
+  );
+}
+
+// 펼치기 전(peek)엔 숨기고, 위로 펼치면(ratio 0.5→1) 시트를 따라 자라며 나타나는 영역.
 // 릴스 임베드·소유자 버튼(급구/수정/삭제)에 사용 — peek에선 주소복사/길찾기/공유까지만 보이게.
 class _ExpandReveal extends StatelessWidget {
   final Widget child;
@@ -382,14 +390,10 @@ class _ExpandReveal extends StatelessWidget {
     if (scope == null) return child; // 패널 밖이면 그냥 표시
     return ValueListenableBuilder<double>(
       valueListenable: scope.expand,
-      builder: (_, r, _) => AnimatedSize(
-        duration: const Duration(milliseconds: 220),
-        alignment: Alignment.topCenter,
-        curve: Curves.easeOut,
-        child: r >= 0.5
-            ? child
-            : const SizedBox(width: double.infinity, height: 0),
-      ),
+      // 접힘 쪽(0.5 미만)에선 아예 그리지 않는다 — 릴스 웹뷰가 미리 뜨지 않게
+      builder: (_, r, _) => r <= 0.5
+          ? const SizedBox(width: double.infinity, height: 0)
+          : _grow((r - 0.5) * 2, child),
     );
   }
 }

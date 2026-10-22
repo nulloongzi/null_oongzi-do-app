@@ -36,6 +36,8 @@ void main() {
 
     node.owner!.performAction(node.id, SemanticsAction.tap);
     await tester.pump();
+    expect(closed, 0, reason: '내려가는 모션이 끝난 뒤에 닫힌다');
+    await tester.pumpAndSettle();
     expect(closed, 1);
     semantics.dispose();
   });
@@ -54,15 +56,69 @@ void main() {
     final peek = 844 * 0.42;
     final handle = find.bySemanticsLabel('닫기');
 
+    // 천천히 끌어야 '튕김'이 아니라 위치로 판단한다
     // 30% 내림(높이 70%) → 닫히지 않음
-    await tester.drag(handle, Offset(0, peek * 0.3));
+    await tester.timedDrag(
+      handle,
+      Offset(0, peek * 0.3),
+      const Duration(seconds: 1),
+    );
     await tester.pumpAndSettle();
     expect(closed, 0);
 
     // 50% 내림(높이 50%) → 닫힘
-    await tester.drag(handle, Offset(0, peek * 0.5));
+    await tester.timedDrag(
+      handle,
+      Offset(0, peek * 0.5),
+      const Duration(seconds: 1),
+    );
     await tester.pumpAndSettle();
     expect(closed, 1);
     expect(kSheetCloseRatio, 0.6);
+  });
+
+  testWidgets('열면 높이 0 에서 접힌 높이까지 올라온다 (M01)', (tester) async {
+    tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MapDetailPanel(onClose: () {}, child: const Text('본문')),
+        ),
+      ),
+    );
+    final peek = 844 * 0.42;
+    double top() => detailPanelTop.value;
+    await tester.pump(); // 첫 프레임 뒤에 올라오기 시작
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(top(), greaterThan(844 - peek), reason: '아직 올라오는 중');
+    await tester.pumpAndSettle();
+    expect(top(), closeTo(844 - peek, 0.5));
+  });
+
+  testWidgets('위로 빠르게 튕기면 펼치고, 아래로 튕기면 접힌 뒤 한 번 더 튕기면 닫힌다 (M02)', (
+    tester,
+  ) async {
+    var closed = 0;
+    await _pump(tester, () => closed++);
+    final handle = find.bySemanticsLabel('닫기');
+
+    // 위치로는 접힘 쪽(120px)이어도 위로 튕기면 펼침
+    await tester.fling(handle, const Offset(0, -120), 1500);
+    await tester.pumpAndSettle();
+    expect(detailPanelTop.value, closeTo(844 * 0.1, 0.5));
+
+    // 위치로는 펼침 쪽이어도 아래로 튕기면 접힘(닫히지 않음)
+    await tester.fling(handle, const Offset(0, 120), 1500);
+    await tester.pumpAndSettle();
+    expect(detailPanelTop.value, closeTo(844 * 0.58, 0.5));
+    expect(closed, 0);
+
+    // 위치로는 접힘에 남을 만큼(120px)이어도, 접힌 데서 아래로 튕기면 닫힘
+    await tester.fling(handle, const Offset(0, 120), 1500);
+    await tester.pumpAndSettle();
+    expect(closed, 1);
+    expect(kSheetFlingVelocity, 800.0);
   });
 }

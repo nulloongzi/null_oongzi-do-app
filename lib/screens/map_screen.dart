@@ -566,8 +566,10 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   // 마커/티커 탭 → 핀을 보이는 영역 중앙으로 이동 + 상세 시트 오픈.
+  // 카메라 이동과 시트 올라오기를 **함께** 시작한다(웹과 같음) — 카메라(800ms)를 기다렸다
+  // 시트를 띄우면 탭한 뒤 한참 아무 일도 없어 보였다. docs/motion-spec.md M01·M16
   Future<void> _focusAndShowClub(Club club) async {
-    await _centerOnPin(club.lat, club.lng);
+    unawaited(_centerOnPin(club.lat, club.lng));
     if (!mounted) return;
     showClubDetail(
       context,
@@ -1653,7 +1655,7 @@ class _MapScreenState extends State<MapScreen> {
   void _formStep(String s) => clubFormDemo.value = '$s:${++_demoSeq}';
 
   Future<void> _focusAndShowSpot(PickupSpot spot) async {
-    await _centerOnPin(spot.lat, spot.lng);
+    unawaited(_centerOnPin(spot.lat, spot.lng)); // 카메라와 상세를 함께(동호회와 같음)
     if (!mounted) return;
     _selectSpot(spot);
   }
@@ -2102,7 +2104,8 @@ class _MapScreenState extends State<MapScreen> {
         if (_reelPeek != null) {
           setState(() => _reelPeek = null);
         } else if (detailPanel.value != null) {
-          detailPanel.value = null;
+          // 내려가는 모션으로 닫는다(M01). 패널 상태가 없으면 바로 걷는다
+          if (!closeDetailPanelAnimated()) detailPanel.value = null;
         } else if (_selectedSpot != null) {
           _closeSpot(); // 픽업 상세 → 목록으로(웹 '← 목록으로'와 같음)
         } else {
