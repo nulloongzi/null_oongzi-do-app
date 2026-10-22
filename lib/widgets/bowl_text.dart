@@ -41,6 +41,9 @@ class BowlText extends StatelessWidget {
           'assets/logo-512.png',
           width: fs * 1.6,
           height: fs * 1.6,
+          // 512 원본 대신 그리는 크기만큼만 디코딩
+          cacheWidth: (fs * 1.6 * MediaQuery.devicePixelRatioOf(context))
+              .round(),
           excludeFromSemantics: true,
         ),
       ),

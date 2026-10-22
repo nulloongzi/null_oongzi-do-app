@@ -514,6 +514,20 @@ class _MapScreenState extends State<MapScreen> {
 
   // 핀을 '시트 위 보이는 영역'의 중앙(화면 상단 ~30%)에 오도록 카메라 이동.
   // pivot으로 타깃 latlng를 화면 비율 위치에 배치(시트 peek가 하단 ~42% 가림 보정).
+  // 시트를 먼저 출발시키고 카메라는 kSheetCameraLag 뒤에. 캡처 빌드는 촬영 시각(CAPTURE_BEAT)이
+  // 맞춰져 있어 예전처럼 바로 움직인다.
+  void _centerOnPinAfterSheet(double? lat, double? lng) {
+    if (kCaptureMode) {
+      unawaited(_centerOnPin(lat, lng));
+      return;
+    }
+    unawaited(
+      Future<void>.delayed(kSheetCameraLag, () {
+        if (mounted) return _centerOnPin(lat, lng);
+      }),
+    );
+  }
+
   Future<void> _centerOnPin(double? lat, double? lng) async {
     final c = _controller;
     if (c == null || lat == null || lng == null) return;
@@ -568,8 +582,10 @@ class _MapScreenState extends State<MapScreen> {
   // 마커/티커 탭 → 핀을 보이는 영역 중앙으로 이동 + 상세 시트 오픈.
   // 카메라 이동과 시트 올라오기를 **함께** 시작한다(웹과 같음) — 카메라(800ms)를 기다렸다
   // 시트를 띄우면 탭한 뒤 한참 아무 일도 없어 보였다. docs/motion-spec.md M01·M16
+  // 다만 카메라는 시트가 출발한 뒤 살짝(kSheetCameraLag) 늦게 — 네이티브 지도 애니메이션과
+  // 시트 첫 프레임이 같은 순간에 몰려 시트가 출발하며 끊기던 것(2.13.0)을 피한다.
   Future<void> _focusAndShowClub(Club club) async {
-    unawaited(_centerOnPin(club.lat, club.lng));
+    _centerOnPinAfterSheet(club.lat, club.lng);
     if (!mounted) return;
     showClubDetail(
       context,
@@ -1655,7 +1671,7 @@ class _MapScreenState extends State<MapScreen> {
   void _formStep(String s) => clubFormDemo.value = '$s:${++_demoSeq}';
 
   Future<void> _focusAndShowSpot(PickupSpot spot) async {
-    unawaited(_centerOnPin(spot.lat, spot.lng)); // 카메라와 상세를 함께(동호회와 같음)
+    _centerOnPinAfterSheet(spot.lat, spot.lng); // 카메라와 상세를 함께(동호회와 같음)
     if (!mounted) return;
     _selectSpot(spot);
   }
@@ -2343,7 +2359,12 @@ class _MapScreenState extends State<MapScreen> {
       size: 55,
       radius: NurungjiRadius.fabProfile,
       // 🍚 버튼 그림 = 로고(웹 .fab-logo 와 같은 46)
-      icon: Image.asset('assets/logo-512.png', width: 46, height: 46),
+      icon: Image.asset(
+        'assets/logo-512.png',
+        width: 46,
+        height: 46,
+        cacheWidth: (46 * MediaQuery.devicePixelRatioOf(context)).round(),
+      ),
     ),
   );
 

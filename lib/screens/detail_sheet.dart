@@ -2,6 +2,7 @@
 // 칩·이번주 배너·정보행·링크버튼. 공유/릴스 임베드는 P4ب에서.
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
@@ -332,8 +333,10 @@ Widget _addressRow(
 );
 
 // 시간표 morph (웹 #timeMorphContainer/interpolateMorph): peek=요약 텍스트, expand=주간 그리드.
-// 패널 펼침비율(DetailPanelScope.expand)에 매 프레임 묶인다 — 끄는 동안·붙는 동안 모두
-// 요약은 비율 0→0.5 에서 흐려지고, 시간표는 0.5→1 에서 자라며 나타난다(웹과 같은 식). M03
+// 패널 펼침비율(DetailPanelScope.expand)에 묶인다 — 요약은 비율 0→0.5 에서 흐려지고,
+// 시간표는 0.5→1 에서 나타난다(웹과 같은 식). M03
+// 레이아웃은 0.5 를 넘나들 때 한 번만 바뀌고, 매 프레임은 투명도만 바뀐다 — 2.13.0 은 매 프레임
+// 높이(Align.heightFactor)를 바꿔 본문 전체를 다시 배치해 시트가 미세하게 끊겼다.
 // 탭하면 peek↔expand 토글.
 class _ScheduleMorph extends StatelessWidget {
   final String? summaryText; // 🗓 요약 (없으면 미표시)
@@ -356,30 +359,32 @@ class _ScheduleMorph extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: scope.toggle,
-      child: ValueListenableBuilder<double>(
-        valueListenable: scope.expand,
-        builder: (_, r, _) => r < 0.5
-            ? Opacity(opacity: (1 - r * 2).clamp(0.0, 1.0), child: summary)
-            : _grow((r - 0.5) * 2, full),
+      child: _HalfSwitch(
+        expand: scope.expand,
+        // 접힘 쪽: 요약만. 시간표는 미리 지어 두되(Offstage) 그리지 않는다.
+        builder: (open) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (!open)
+              FadeTransition(
+                opacity: _RatioAnimation(
+                  scope.expand,
+                  (r) => (1 - r * 2).clamp(0.0, 1.0),
+                ),
+                child: summary,
+              ),
+            _reveal(scope.expand, open, full),
+          ],
+        ),
       ),
     );
   }
 }
 
-// 0..1 만큼 위에서부터 자라며(높이) 나타난다 — 시트 펼침비율에 묶인 모프·드러나기 공용.
-Widget _grow(double f, Widget child) {
-  final v = f.clamp(0.0, 1.0);
-  return ClipRect(
-    child: Align(
-      alignment: Alignment.topCenter,
-      heightFactor: v,
-      child: Opacity(opacity: v, child: child),
-    ),
-  );
-}
-
-// 펼치기 전(peek)엔 숨기고, 위로 펼치면(ratio 0.5→1) 시트를 따라 자라며 나타나는 영역.
-// 릴스 임베드·소유자 버튼(급구/수정/삭제)에 사용 — peek에선 주소복사/길찾기/공유까지만 보이게.
+// 펼치기 전(peek)엔 숨기고, 위로 펼치면(ratio 0.5→1) 흐릿하게 나타나는 영역.
+// 릴스 커버·소유자 버튼(급구/수정/삭제)에 사용 — peek에선 주소복사/길찾기/공유까지만 보이게.
+// 접힘 쪽에서도 Offstage 로 미리 지어 둔다 — 0.5 를 넘는 순간(붙는 애니메이션 한가운데)
+// 릴스 커버를 처음 받아 디코딩하느라 프레임이 튀던 것을 없앤다.
 class _ExpandReveal extends StatelessWidget {
   final Widget child;
   const _ExpandReveal({required this.child});
@@ -388,14 +393,97 @@ class _ExpandReveal extends StatelessWidget {
   Widget build(BuildContext context) {
     final scope = DetailPanelScope.of(context);
     if (scope == null) return child; // 패널 밖이면 그냥 표시
-    return ValueListenableBuilder<double>(
-      valueListenable: scope.expand,
-      // 접힘 쪽(0.5 미만)에선 아예 그리지 않는다 — 릴스 웹뷰가 미리 뜨지 않게
-      builder: (_, r, _) => r <= 0.5
-          ? const SizedBox(width: double.infinity, height: 0)
-          : _grow((r - 0.5) * 2, child),
+    return _HalfSwitch(
+      expand: scope.expand,
+      builder: (open) => _reveal(scope.expand, open, child),
     );
   }
+}
+
+// 비율 0.5→1 에서 0→1 로 나타나는 투명도. 자식은 RepaintBoundary 로 묶어 투명도만 바뀌는
+// 동안 다시 그리지 않는다(그림은 그대로, 합성만).
+Widget _reveal(ValueListenable<double> expand, bool open, Widget child) =>
+    Offstage(
+      key: const ValueKey('reveal'), // 요약이 빠져도 같은 자리로(상태·이미지 유지)
+      offstage: !open,
+      child: TickerMode(
+        enabled: open,
+        child: FadeTransition(
+          opacity: _RatioAnimation(
+            expand,
+            (r) => ((r - 0.5) * 2).clamp(0.0, 1.0),
+          ),
+          child: RepaintBoundary(child: child),
+        ),
+      ),
+    );
+
+// 펼침비율이 0.5 를 넘나들 때만 다시 짓는다(매 프레임 X).
+class _HalfSwitch extends StatefulWidget {
+  final ValueListenable<double> expand;
+  final Widget Function(bool open) builder;
+  const _HalfSwitch({required this.expand, required this.builder});
+
+  @override
+  State<_HalfSwitch> createState() => _HalfSwitchState();
+}
+
+class _HalfSwitchState extends State<_HalfSwitch> {
+  late bool _open = widget.expand.value > 0.5;
+
+  void _onExpand() {
+    final open = widget.expand.value > 0.5;
+    if (open != _open) setState(() => _open = open);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    widget.expand.addListener(_onExpand);
+  }
+
+  @override
+  void didUpdateWidget(_HalfSwitch old) {
+    super.didUpdateWidget(old);
+    if (old.expand != widget.expand) {
+      old.expand.removeListener(_onExpand);
+      widget.expand.addListener(_onExpand);
+      _onExpand();
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.expand.removeListener(_onExpand);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.builder(_open);
+}
+
+// 펼침비율(ValueListenable)을 FadeTransition 이 받는 Animation 으로 — 값이 바뀔 때
+// 다시 짓지 않고 투명도 레이어만 갱신된다.
+class _RatioAnimation extends Animation<double>
+    with
+        AnimationLazyListenerMixin,
+        AnimationLocalListenersMixin,
+        AnimationLocalStatusListenersMixin {
+  final ValueListenable<double> source;
+  final double Function(double) map;
+  _RatioAnimation(this.source, this.map);
+
+  @override
+  double get value => map(source.value);
+
+  @override
+  AnimationStatus get status => AnimationStatus.forward;
+
+  @override
+  void didStartListening() => source.addListener(notifyListeners);
+
+  @override
+  void didStopListening() => source.removeListener(notifyListeners);
 }
 
 /// 시딩 항목(공개 인스타 정보로 모은 크루) 출처 고지 + 수정/삭제 요청 통로.
