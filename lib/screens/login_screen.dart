@@ -253,6 +253,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       'assets/logo-512.png',
                       width: 120,
                       height: 120,
+                      cacheWidth: (120 * MediaQuery.devicePixelRatioOf(context))
+                          .round(),
                       excludeFromSemantics: true,
                     ),
                     const SizedBox(height: 8),

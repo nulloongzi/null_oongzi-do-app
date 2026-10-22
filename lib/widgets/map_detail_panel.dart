@@ -60,6 +60,10 @@ const kSheetCloseRatio = 0.6;
 /// 웹 club-detail.js SHEET_FLING_VELOCITY(0.8px/ms) 와 같은 값. docs/motion-spec.md M02
 const kSheetFlingVelocity = 800.0;
 
+/// 마커를 눌러 시트를 띄울 때 지도 카메라는 이만큼 늦게 출발한다. 둘이 같은 프레임에 시작하면
+/// 네이티브 지도 애니메이션이 시트 첫 프레임들을 잡아먹었다(2.13.0). docs/motion-spec.md M01·M16
+const kSheetCameraLag = Duration(milliseconds: 120);
+
 /// 시트 높이를 움직이는 컨트롤러 — 상세 패널·픽업 목록 시트가 같이 쓴다.
 /// 끄는 동안은 손가락을 그대로 따라가고, 놓으면 토큰 시간·곡선(NurungjiMotion)으로 붙는다.
 /// 높이가 매 프레임 바뀌므로 펼침 비율(→ 시간표 모프)도 붙는 동안 함께 움직인다.

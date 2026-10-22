@@ -76,6 +76,10 @@ class ReelCard extends StatelessWidget {
     if (_safeUrl.isEmpty) return const SizedBox.shrink();
     final c = cover;
     if (c == null || c.isEmpty) return _generic();
+    final maxH = (MediaQuery.sizeOf(context).height * 0.6).clamp(240.0, 480.0);
+    // 커버는 카드 폭만큼만 디코딩한다(원본 1080 폭 그대로 풀면 시트가 붙는 중에 튄다).
+    final coverW = (maxH * 9 / 16 * MediaQuery.devicePixelRatioOf(context))
+        .round();
     return Padding(
       padding: const EdgeInsets.only(top: 14),
       child: Center(
@@ -83,12 +87,7 @@ class ReelCard extends StatelessWidget {
           onTap: () => _tap('cover'),
           child: ConstrainedBox(
             // 9:16 세로 카드. 높이 상한으로 시트 리듬 유지(웹과 동일: min(480, 60vh)).
-            constraints: BoxConstraints(
-              maxHeight: (MediaQuery.sizeOf(context).height * 0.6).clamp(
-                240.0,
-                480.0,
-              ),
-            ),
+            constraints: BoxConstraints(maxHeight: maxH),
             child: AspectRatio(
               aspectRatio: 9 / 16,
               child: Container(
@@ -110,6 +109,7 @@ class ReelCard extends StatelessWidget {
                     Image.network(
                       c,
                       fit: BoxFit.cover,
+                      cacheWidth: coverW,
                       // 커버 로드 실패(만료/차단) → 제네릭 카드 본문으로 폴백.
                       errorBuilder: (_, _, _) => _genericBody(),
                     ),
