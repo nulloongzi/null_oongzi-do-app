@@ -4,6 +4,7 @@
 // 모달 시트로 슬라이드업. 상세/필터/공유 시트와 동일한 톤(크림 배경·드래그핸들·
 // 상단 라운드 — theme.dart bottomSheetTheme)을 그대로 쓴다.
 import 'package:flutter/material.dart';
+import '../theme.dart';
 import 'bowl_text.dart';
 
 /// 화면 콘텐츠를 모달 바텀시트로 띄운다.
@@ -22,9 +23,18 @@ Future<T?> showAppSheet<T>(
     constraints: BoxConstraints(
       maxHeight: MediaQuery.of(context).size.height * 0.94,
     ),
+    sheetAnimationStyle: kModalSheetMotion,
     builder: (_) => child,
   );
 }
+
+/// 모달 바텀시트 모션 — 토큰(웹 --motion-modal-* · --ease-modal)과 같은 값. 웹 🍚 시트도 이 값. M01
+final kModalSheetMotion = AnimationStyle(
+  duration: NurungjiMotion.modalEnter,
+  reverseDuration: NurungjiMotion.modalExit,
+  curve: NurungjiMotion.modalCurve,
+  reverseCurve: NurungjiMotion.modalCurve,
+);
 
 /// 시트 본문 상단 제목 (AppBar를 대체). 좌측 정렬·굵게, 누룽지 다크.
 class SheetTitle extends StatelessWidget {

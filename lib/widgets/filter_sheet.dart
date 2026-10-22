@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../services/club_filter.dart';
 import '../services/i18n.dart';
 import '../theme.dart';
+import 'app_sheet.dart' show kModalSheetMotion;
 import 'chip_select.dart';
 
 Future<ClubFilter?> showFilterSheet(BuildContext context, ClubFilter current) {
@@ -11,6 +12,7 @@ Future<ClubFilter?> showFilterSheet(BuildContext context, ClubFilter current) {
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
+    sheetAnimationStyle: kModalSheetMotion,
     builder: (_) => _FilterSheet(initial: current),
   );
 }
