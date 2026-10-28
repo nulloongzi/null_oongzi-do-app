@@ -30,7 +30,6 @@ void main() {
     expect(d.schedule, '토요일 PM 1:00 ~ PM 5:00');
     expect(d.recruit!.msg, '남자부 모집중!!'); // 캔버스엔 이모지를 쓰지 않는다
     expect(d.tags, ['#성인', '#대학생']);
-    expect(d.insta, isTrue);
     expect(d.urgent, isNull);
     expect(d.actions.length, 3); // 주소 복사 · 길찾기 · 공유
   });
@@ -41,8 +40,8 @@ void main() {
       l.title,
       inExclusiveRange(frameTop, frameTop + 120),
     ); // 손잡이·힌트 없이 바로 제목
-    expect(l.logo.top, greaterThanOrEqualTo(250));
-    expect(l.logo.right, lessThanOrEqualTo(frameW - 64));
+    expect(l.logo.top, greaterThanOrEqualTo(200));
+    expect(l.logo.right, lessThanOrEqualTo(frameW - 40));
   });
 
   test('급구가 있으면 제목 위에 띠', () {

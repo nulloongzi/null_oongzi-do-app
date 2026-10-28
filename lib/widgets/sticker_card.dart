@@ -35,7 +35,6 @@ const _grayBtnBg = Color(0xFFECEFF1), _grayBtnFg = Color(0xFF455A64);
 class StickerData {
   final String title;
   final bool verified;
-  final bool insta, home;
   final FrameBanner? urgent; // 제목 위 (급구 · 픽업 이번주)
   final FrameBanner? recruit; // 일정 아래 (식구 모집)
   final String schedule; // 요약 한 줄 "토요일 PM 1:00 ~ PM 5:00"
@@ -47,8 +46,6 @@ class StickerData {
   const StickerData({
     required this.title,
     this.verified = false,
-    this.insta = false,
-    this.home = false,
     this.urgent,
     this.recruit,
     this.schedule = '',
@@ -84,8 +81,6 @@ class StickerData {
     return StickerData(
       title: c.name.isEmpty ? t('card_title_fallback') : c.name,
       verified: c.isVerified,
-      insta: (c.insta ?? '').isNotEmpty,
-      home: (c.link ?? '').isNotEmpty,
       urgent: c.urgentActive
           ? FrameBanner(
               stripEmoji(t('urgent')),
@@ -112,7 +107,6 @@ class StickerData {
     final week = stripEmoji(s.thisWeek);
     return StickerData(
       title: s.title,
-      insta: (s.insta ?? '').isNotEmpty,
       urgent: week.isNotEmpty ? FrameBanner(t('this_week'), '', week) : null,
       schedule: _summary(s.scheduleRaw, s.schedule ?? s.scheduleText),
       tags: [for (final x in StoryCardData.fromSpot(s).tags) x.text],
@@ -156,79 +150,6 @@ void _verified(Canvas c, double cx, double cy, double r) {
       ..lineTo(cx - r * 0.1, cy + r * 0.3)
       ..lineTo(cx + r * 0.42, cy - r * 0.28),
     cardStroke(Colors.white, r * 0.2),
-  );
-}
-
-void _insta(Canvas c, double x, double y, double s) {
-  c.drawRRect(
-    cardRRect(x, y, s, s, s * 0.29),
-    Paint()
-      ..shader = ui.Gradient.linear(
-        Offset(x, y + s),
-        Offset(x + s, y),
-        const [
-          Color(0xFFFEDA75),
-          Color(0xFFFA7E1E),
-          Color(0xFFD62976),
-          Color(0xFF962FBF),
-          Color(0xFF4F5BD5),
-        ],
-        const [0, 0.25, 0.5, 0.75, 1],
-      ),
-  );
-  final st = cardStroke(Colors.white, s * 0.07);
-  c.drawRRect(
-    cardRRect(x + s * 0.24, y + s * 0.3, s * 0.52, s * 0.42, s * 0.08),
-    st,
-  );
-  c.drawCircle(Offset(x + s / 2, y + s * 0.51), s * 0.11, st);
-}
-
-void _home(Canvas c, double x, double y, double s) {
-  c.drawRRect(
-    cardRRect(x, y, s, s, s * 0.29),
-    Paint()..color = NurungjiColors.chipBg,
-  );
-  final p = Paint()..color = NurungjiColors.brown;
-  c.drawPath(
-    Path()
-      ..moveTo(x + s * 0.5, y + s * 0.22)
-      ..lineTo(x + s * 0.8, y + s * 0.5)
-      ..lineTo(x + s * 0.2, y + s * 0.5)
-      ..close(),
-    p,
-  );
-  c.drawRect(Rect.fromLTWH(x + s * 0.28, y + s * 0.48, s * 0.44, s * 0.3), p);
-  c.drawRect(
-    Rect.fromLTWH(x + s * 0.44, y + s * 0.6, s * 0.12, s * 0.18),
-    Paint()..color = NurungjiColors.chipBg,
-  );
-}
-
-void _bento(Canvas c, double x, double y, double s) {
-  final h = s * 0.8, top = y + (s - h) / 2;
-  c.drawRRect(
-    cardRRect(x, top, s, h, s * 0.14),
-    Paint()..color = const Color(0xFF5D4037),
-  );
-  final p = s * 0.08, iw = s - p * 2, ih = h - p * 2, gx = x + p, gy = top + p;
-  void box(double bx, double by, double bw, double bh, Color col) =>
-      c.drawRRect(cardRRect(bx, by, bw, bh, s * 0.05), Paint()..color = col);
-  box(gx, gy, iw * 0.48, ih, const Color(0xFFFFFDF8));
-  box(gx + iw * 0.54, gy, iw * 0.46, ih * 0.46, const Color(0xFFE57373));
-  box(
-    gx + iw * 0.54,
-    gy + ih * 0.54,
-    iw * 0.2,
-    ih * 0.46,
-    const Color(0xFF81C784),
-  );
-  box(
-    gx + iw * 0.8,
-    gy + ih * 0.54,
-    iw * 0.2,
-    ih * 0.46,
-    const Color(0xFFFFD54F),
   );
 }
 
@@ -331,27 +252,15 @@ FrameLayout paintFrame(Canvas c, StickerData d, ui.Image? logo) {
         _banner(c, x, y, _iw, d.urgent!, _urgentBg, NurungjiColors.urgentInk) +
         36;
   }
-  // 제목 줄: 인증 배지 · 이름 · 인스타 · 홈 · 도시락
+  // 제목 줄: 인증 배지 · 이름 (시트의 인스타·홈·도시락 버튼은 프레임에선 눌리지 않아 뺀다)
   final titleY = y;
-  final icons = <void Function(Canvas, double, double, double)>[
-    if (d.insta) _insta,
-    if (d.home) _home,
-    _bento,
-  ];
-  final iconsW = icons.length * (72.0 + 18);
   final nx = x + (d.verified ? 84 : 0);
   final tst = cardStyle(61.5, FontWeight.w800, NurungjiColors.dark);
-  final name = cardWrapWords(d.title, tst, _iw - (nx - x) - iconsW, 2);
+  final name = cardWrapWords(d.title, tst, _iw - (nx - x), 2);
   final rowH = math.max(72.0, name.length * 74.0);
   if (d.verified) _verified(c, x + 33, y + math.min(rowH, 74) / 2, 33);
   for (var i = 0; i < name.length; i++) {
     cardText(c, name[i], tst, nx, y + i * 74 + 6);
-  }
-  var ix = _vw - _pad - 72;
-  final iy = y + (rowH - 72) / 2;
-  for (final ico in icons.reversed) {
-    ico(c, ix, iy, 72);
-    ix -= 72 + 18;
   }
   y += rowH + 12;
 
@@ -425,20 +334,36 @@ FrameLayout paintFrame(Canvas c, StickerData d, ui.Image? logo) {
   }
   c.restore();
 
-  // 오른쪽 위 로고 알약 — 이름표 하나뿐. 인스타 상단 UI(진행 바·프로필 줄) 아래.
-  final brand = t('brand');
-  final bst = cardStyle(30, FontWeight.w800, ShareCard.ink);
-  final pw = 10 + 48 + 12 + cardMeasure(brand, bst) + 26;
-  const ph = 68.0, py = 250.0;
-  final px = frameW - 64 - pw;
-  cardPill(c, px, py, pw, ph);
-  final center = Offset(px + 10 + 24, py + ph / 2);
+  // 오른쪽 위: 로고 아이콘만(글자·알약 없음). 인스타 상단 UI(진행 바·프로필 줄) 아래.
+  // 밝은 영상 위에서도 흰 밥이 묻히지 않게 아주 옅은 갈색 그림자만 깐다.
+  const ls = 160.0, ly = 220.0; // 로고 그림 둘레에 여백이 있어 보이는 크기는 약 100
+  const lx = frameW - 40 - ls;
+  const logoRect = Rect.fromLTWH(lx, ly, ls, ls);
   if (logo != null) {
-    cardLogoCircle(c, logo, center, 24);
-  } else {
-    cardVolley(c, center.dx, center.dy, 17, ShareCard.yellow);
+    final src = Rect.fromLTWH(
+      0,
+      0,
+      logo.width.toDouble(),
+      logo.height.toDouble(),
+    );
+    c.drawImageRect(
+      logo,
+      src,
+      logoRect.shift(const Offset(0, 4)),
+      Paint()
+        ..colorFilter = const ColorFilter.mode(
+          Color.fromRGBO(93, 64, 55, 0.28),
+          BlendMode.srcIn,
+        )
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+    );
+    c.drawImageRect(
+      logo,
+      src,
+      logoRect,
+      Paint()..filterQuality = FilterQuality.high,
+    );
   }
-  cardText(c, brand, bst, px + 10 + 48 + 12, py + ph / 2 + 1, middle: true);
 
   double? k(double? v) => v == null ? null : v * _k; // 프레임 좌표로
   return FrameLayout(
@@ -450,7 +375,7 @@ FrameLayout paintFrame(Canvas c, StickerData d, ui.Image? logo) {
     fee: k(feeY),
     address: k(addrY),
     actions: k(actY),
-    logo: Rect.fromLTWH(px, py, pw, ph),
+    logo: logoRect,
   );
 }
 
