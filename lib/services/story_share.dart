@@ -145,9 +145,9 @@ Future<void> shareFeedCard(BuildContext context, StoryCardData data) async {
   }
 }
 
-/// 릴스 스티커(배경 투명, 높이는 내용만큼) → OS 공유시트. 갤러리에 저장하거나 인스타 편집기로 바로
-/// 넘겨 영상 위에 '사진 스티커'로 얹는다(웹 shareSticker 대응). IG 스토리 스티커 API 는 배경을
-/// 우리가 정해 버려서 쓰지 않는다 — 배경은 올리는 사람의 영상이어야 한다.
+/// 릴스 프레임(9:16 투명 — 아래 바텀시트 + 오른쪽 위 로고) → OS 공유시트. 갤러리에 저장하거나
+/// 인스타 편집기로 바로 넘겨 영상 위에 꽉 차게 얹는다(앱 전용). IG 스토리 API 는
+/// 배경을 우리가 정해 버려서 쓰지 않는다 — 배경은 올리는 사람의 영상이어야 한다.
 Future<void> shareStickerCard(BuildContext context, StickerData data) async {
   final messenger = ScaffoldMessenger.of(context);
   Uint8List? png;
@@ -167,7 +167,7 @@ Future<void> shareStickerCard(BuildContext context, StickerData data) async {
   try {
     final dir = await getTemporaryDirectory();
     final file = File(
-      '${dir.path}/nurungji_sticker_${DateTime.now().millisecondsSinceEpoch}.png',
+      '${dir.path}/nurungji_frame_${DateTime.now().millisecondsSinceEpoch}.png',
     );
     await file.writeAsBytes(png);
     await Share.shareXFiles([XFile(file.path, mimeType: 'image/png')]);

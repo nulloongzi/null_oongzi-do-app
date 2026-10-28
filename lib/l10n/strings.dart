@@ -321,12 +321,13 @@ const Map<String, Map<String, String>> kStrings = {
   'share_story': {'ko': '📸 인스타 스토리', 'en': '📸 Instagram Story'},
   'share_feed': {'ko': '🖼 피드 이미지 (3:4)', 'en': '🖼 Feed image (3:4)'},
   'share_sticker': {
-    'ko': '🎬 릴스 스티커 (배경 투명)',
-    'en': '🎬 Reel sticker (transparent)',
+    'ko': '🎬 릴스 프레임 (9:16 투명)',
+    'en': '🎬 Reel frame (9:16, transparent)',
   },
   'sticker_hint': {
-    'ko': '저장한 뒤 릴스·스토리 편집에서 스티커 → 사진으로 얹어 보세요',
-    'en': 'Save it, then add it as a photo sticker in the Reels/Story editor',
+    'ko': '저장한 뒤 릴스·스토리 편집에서 영상 위에 꽉 차게 얹어 보세요',
+    'en':
+        'Save it, then lay it full-screen over your video in the Reels/Story editor',
   },
   'share_story_hint': {
     'ko': '링크 자동 복사 — 보는 사람은 탭 1번에 입장',
@@ -463,9 +464,6 @@ const Map<String, Map<String, String>> kStrings = {
   'back_exit_hint': {'ko': '한 번 더 누르면 종료돼요', 'en': 'Press back again to exit'},
   // 공유 카드(캔버스) 문구 — 웹 sh_club_fallback · sh_card_cta 와 같다. 이모지 금지(□로 깨짐).
   'card_title_fallback': {'ko': '배구 동호회', 'en': 'Volleyball club'},
-  // 릴스 스티커(캔버스) — 웹 sk_urgent · sk_foot_qr 와 같다.
-  'sticker_urgent': {'ko': '급구', 'en': 'Urgent'},
-  'sticker_foot_qr': {'ko': 'QR 찍으면 이 팀이 열려요', 'en': 'Scan to open this team'},
   'card_cta': {
     'ko': 'QR 찍으면 누룽지도에서 열려요',
     'en': 'Scan to open in Nulloongzi-do',
