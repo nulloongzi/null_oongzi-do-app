@@ -31,6 +31,7 @@ import '../widgets/bounce_tap.dart';
 import '../widgets/reel_card.dart';
 import '../widgets/schedule_timetable.dart';
 import '../widgets/share_menu.dart';
+import '../widgets/sticker_card.dart';
 import '../widgets/story_card.dart';
 import '../widgets/recruit_sheet.dart';
 import '../widgets/urgent_sheet.dart';
@@ -1812,6 +1813,7 @@ List<Widget> _spotDetailChildren(
         shareTitle: s.title,
         onStory: () => shareStoryCard(context, StoryCardData.fromSpot(s)),
         onFeed: () => shareFeedCard(context, StoryCardData.fromSpot(s)),
+        onSticker: () => shareStickerCard(context, StickerData.fromSpot(s)),
       ),
     ),
     // 추가 안내(notes) — 웹 픽업 상세 메모 행 (폼 저장값 표시 누락 보완)
@@ -1897,6 +1899,7 @@ void showClubDetail(
     shareTitle: c.name,
     onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
     onFeed: () => shareFeedCard(context, StoryCardData.fromClub(c)),
+    onSticker: () => shareStickerCard(context, StickerData.fromClub(c)),
   );
   Future<void> copyAddr() async {
     await Clipboard.setData(ClipboardData(text: c.address ?? ''));

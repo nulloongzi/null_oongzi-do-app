@@ -1,5 +1,5 @@
 // share_menu.dart — 통합 공유 바텀시트. 웹 openShareMenu 포팅.
-// 헤드라인=인스타 스토리, 그 외 링크복사 / 다른앱(OS 공유시트). 카톡 리치카드는 후속.
+// 헤드라인=인스타 스토리, 그 외 피드·릴스 스티커 / 카톡 / 링크복사 / 다른앱(OS 공유시트).
 import 'package:flutter/material.dart';
 import 'package:kakao_flutter_sdk_share/kakao_flutter_sdk_share.dart' as kakao;
 import '../services/analytics.dart';
@@ -13,6 +13,7 @@ void showShareMenu(
   required String shareTitle,
   VoidCallback? onStory, // 인스타 스토리 (스토리 카드 렌더 → IG)
   VoidCallback? onFeed, // 피드 이미지 3:4 (카드 렌더 → OS 공유시트)
+  VoidCallback? onSticker, // 릴스 스티커 (투명 PNG → OS 공유시트)
 }) {
   final u = Uri.tryParse(url);
   final idP = <String, Object?>{
@@ -65,6 +66,15 @@ void showShareMenu(
                   Navigator.pop(ctx);
                   Track.event('share', {'method': 'feed_card', ...idP});
                   onFeed();
+                },
+              ),
+            if (onSticker != null)
+              _menuButton(
+                label: t('share_sticker'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Track.event('share', {'method': 'reel_sticker', ...idP});
+                  onSticker();
                 },
               ),
             _menuButton(

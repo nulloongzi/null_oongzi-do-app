@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
 import '../widgets/share_card_kit.dart';
+import '../widgets/sticker_card.dart';
 import '../widgets/story_card.dart';
 import 'i18n.dart';
 import 'share_service.dart';
@@ -140,6 +141,38 @@ Future<void> shareFeedCard(BuildContext context, StoryCardData data) async {
     await Share.shareXFiles([XFile(file.path)], text: data.url);
   } catch (e) {
     debugPrint('feed share: $e');
+    messenger.showSnackBar(SnackBar(content: Text(t('err_share'))));
+  }
+}
+
+/// 릴스 스티커(배경 투명, 높이는 내용만큼) → OS 공유시트. 갤러리에 저장하거나 인스타 편집기로 바로
+/// 넘겨 영상 위에 '사진 스티커'로 얹는다(웹 shareSticker 대응). IG 스토리 스티커 API 는 배경을
+/// 우리가 정해 버려서 쓰지 않는다 — 배경은 올리는 사람의 영상이어야 한다.
+Future<void> shareStickerCard(BuildContext context, StickerData data) async {
+  final messenger = ScaffoldMessenger.of(context);
+  Uint8List? png;
+  try {
+    png = await renderStickerPng(data);
+  } catch (_) {}
+  if (png == null) {
+    messenger.showSnackBar(SnackBar(content: Text(t('err_card'))));
+    return;
+  }
+  messenger.showSnackBar(
+    SnackBar(
+      content: Text(t('sticker_hint')),
+      duration: const Duration(seconds: 4),
+    ),
+  );
+  try {
+    final dir = await getTemporaryDirectory();
+    final file = File(
+      '${dir.path}/nurungji_sticker_${DateTime.now().millisecondsSinceEpoch}.png',
+    );
+    await file.writeAsBytes(png);
+    await Share.shareXFiles([XFile(file.path, mimeType: 'image/png')]);
+  } catch (e) {
+    debugPrint('sticker share: $e');
     messenger.showSnackBar(SnackBar(content: Text(t('err_share'))));
   }
 }
