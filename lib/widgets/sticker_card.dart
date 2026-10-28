@@ -125,11 +125,16 @@ class StickerData {
 
 // ── 규격 (design-system §7-6) ──────────────────────────────────────
 const frameW = 1080.0, frameH = 1920.0;
-const frameTop = 1114.0; // 시트 윗단 = 1920 × 0.58 (앱 접힌 시트 높이 = 화면 × 0.42)
+// 시트 윗단 = 1920 × 0.64. 앱 접힌 시트(화면 42%)에서 손잡이·펼침 힌트 자리만큼 낮췄다 —
+// 프레임에선 끌어 올릴 수 없으니 둘 다 뺀다. 보이는 내용(제목·일정·띠…)은 그대로.
+const frameTop = 1229.0;
+// 시트 안 숫자는 dp × 3 으로 적고, 그릴 때 _k 로 줄여 dp × 2.625 가 되게 한다.
+// 1080px 폰은 대개 너비 411dp(밀도 2.625) — ×3(360dp 폰)으로 그리면 실제 캡처보다 글자가 15% 컸다.
+const _k = 2.625 / 3;
+const _vw = frameW / _k, _vh = frameH / _k; // 줄이기 전 좌표계의 프레임 크기
 const _r = 84.0; // 시트 위 모서리 (28dp)
 const _pad = 66.0; // 시트 안 좌우 여백 (22dp)
-const _iw = frameW - _pad * 2;
-const _hintInk = Color(0xFF9E9E9E);
+const _iw = _vw - _pad * 2;
 const _urgentBg = Color(0xFFFFF3E0), _recruitBg = Color(0xFFE8F5E9);
 const _recruitInk = Color(0xFF2E7D32);
 
@@ -300,10 +305,12 @@ class FrameLayout {
 
 /// 시트를 그린다. 프레임 밖(1920 아래)으로 넘친 건 이미지 크기에서 잘린다 — 접힌 시트 그대로.
 FrameLayout paintFrame(Canvas c, StickerData d, ui.Image? logo) {
-  const x = _pad, top = frameTop;
+  const x = _pad, top = frameTop / _k;
+  c.save();
+  c.scale(_k);
   // 시트 판: 위 모서리만 둥글고 아래는 프레임 끝까지
   final sheet = RRect.fromRectAndCorners(
-    const Rect.fromLTWH(0, top, frameW, frameH - top),
+    const Rect.fromLTWH(0, top, _vw, _vh - top),
     topLeft: const Radius.circular(_r),
     topRight: const Radius.circular(_r),
   );
@@ -314,24 +321,7 @@ FrameLayout paintFrame(Canvas c, StickerData d, ui.Image? logo) {
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 42),
   );
   c.drawRRect(sheet, Paint()..color = Colors.white);
-  // 손잡이 + 펼침 힌트
-  c.drawRRect(
-    cardRRect((frameW - 132) / 2, top + 60, 132, 15, 7.5),
-    Paint()..color = NurungjiColors.handle,
-  );
-  final hint = t('detail_pull_hint').replaceFirst(RegExp(r'^\s*▴\s*'), '');
-  final hst = cardStyle(34.5, FontWeight.w400, _hintInk);
-  final hx = (frameW - cardMeasure(hint, hst)) / 2 + 14, hy = top + 135 + 21;
-  c.drawPath(
-    Path()
-      ..moveTo(hx - 30, hy + 6)
-      ..lineTo(hx - 18, hy - 8)
-      ..lineTo(hx - 6, hy + 6)
-      ..close(),
-    Paint()..color = _hintInk,
-  );
-  cardText(c, hint, hst, hx, hy, middle: true);
-  var y = top + 135 + 42 + 18 + 12;
+  var y = top + 72; // 위 여백 24dp
 
   double? urgentY, schedY, recruitY, tagsY, feeY, addrY, actY;
   if (d.urgent != null) {
@@ -357,7 +347,7 @@ FrameLayout paintFrame(Canvas c, StickerData d, ui.Image? logo) {
   for (var i = 0; i < name.length; i++) {
     cardText(c, name[i], tst, nx, y + i * 74 + 6);
   }
-  var ix = frameW - _pad - 72;
+  var ix = _vw - _pad - 72;
   final iy = y + (rowH - 72) / 2;
   for (final ico in icons.reversed) {
     ico(c, ix, iy, 72);
@@ -433,31 +423,33 @@ FrameLayout paintFrame(Canvas c, StickerData d, ui.Image? logo) {
       );
     }
   }
+  c.restore();
 
   // 오른쪽 위 로고 알약 — 이름표 하나뿐. 인스타 상단 UI(진행 바·프로필 줄) 아래.
   final brand = t('brand');
-  final bst = cardStyle(34, FontWeight.w800, ShareCard.ink);
-  final pw = 12 + 56 + 14 + cardMeasure(brand, bst) + 30;
-  const ph = 80.0, py = 250.0;
+  final bst = cardStyle(30, FontWeight.w800, ShareCard.ink);
+  final pw = 10 + 48 + 12 + cardMeasure(brand, bst) + 26;
+  const ph = 68.0, py = 250.0;
   final px = frameW - 64 - pw;
   cardPill(c, px, py, pw, ph);
-  final center = Offset(px + 12 + 28, py + ph / 2);
+  final center = Offset(px + 10 + 24, py + ph / 2);
   if (logo != null) {
-    cardLogoCircle(c, logo, center, 28);
+    cardLogoCircle(c, logo, center, 24);
   } else {
-    cardVolley(c, center.dx, center.dy, 20, ShareCard.yellow);
+    cardVolley(c, center.dx, center.dy, 17, ShareCard.yellow);
   }
-  cardText(c, brand, bst, px + 12 + 56 + 14, py + ph / 2 + 1, middle: true);
+  cardText(c, brand, bst, px + 10 + 48 + 12, py + ph / 2 + 1, middle: true);
 
+  double? k(double? v) => v == null ? null : v * _k; // 프레임 좌표로
   return FrameLayout(
-    title: titleY,
-    urgent: urgentY,
-    schedule: schedY,
-    recruit: recruitY,
-    tags: tagsY,
-    fee: feeY,
-    address: addrY,
-    actions: actY,
+    title: titleY * _k,
+    urgent: k(urgentY),
+    schedule: k(schedY),
+    recruit: k(recruitY),
+    tags: k(tagsY),
+    fee: k(feeY),
+    address: k(addrY),
+    actions: k(actY),
     logo: Rect.fromLTWH(px, py, pw, ph),
   );
 }
