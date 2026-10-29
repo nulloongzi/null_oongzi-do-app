@@ -90,6 +90,25 @@ class MyCardLayout {
   ].reduce(math.max);
 }
 
+/// 좁은 시간표 블록에 세로로 쓸 글자들(웹 myCardVerticalChars 와 같은 규칙):
+/// 띄어쓰기는 빼고 한 자씩, 블록 높이에 안 들어가면 끝을 ⋮ 로(한 자 자리뿐이면 첫 글자만).
+({List<String> chars, double lh}) verticalChars(
+  String name,
+  double bh,
+  double size,
+) {
+  var chars = [
+    for (final r in name.replaceAll(RegExp(r'\s+'), '').runes)
+      String.fromCharCode(r),
+  ];
+  final lh = size + 3;
+  final max = math.max(1, ((bh - 10) / lh).floor());
+  if (chars.length > max) {
+    chars = max <= 1 ? chars.take(1).toList() : [...chars.take(max - 1), '⋮'];
+  }
+  return (chars: chars, lh: lh);
+}
+
 /// 식단표 헤드라인(웹 myCardDietSummary 와 같은 규칙).
 ///  · 요일: 운동하는 요일(월→일), 5일 이상이면 "주 N일"
 ///  · 성향: 시작 17시 이후 저녁형 · 12시 이후 낮형 · 그 전 아침형 — 많은 쪽(동률은 저녁 > 낮)
@@ -854,7 +873,9 @@ class MyCardPainter extends CustomPainter {
           Rect.fromLTWH(bx, by, math.min(5.0, bw), bh),
           Paint()..color = _slotRail[slot],
         );
-        if (bw >= 56 && bh >= 44) {
+        // 팀 이름: 넓은 블록은 가로로 두 줄까지, 같은 날 겹쳐 좁아진 블록은 세로로 한 자씩
+        // (웹 js/my-card.js 와 같은 규칙). 아주 작으면 색이 곧 범례.
+        if (bw >= 80 && bh >= 44) {
           c.save();
           c.clipRRect(block);
           final nst = cardStyle(18, FontWeight.w800, _ink);
@@ -866,6 +887,24 @@ class MyCardPainter extends CustomPainter {
               nst,
               bx + bw / 2 + 2,
               by + bh / 2 + (n - (nl.length - 1) / 2) * 22,
+              align: TextAlign.center,
+              middle: true,
+            );
+          }
+          c.restore();
+        } else if (bw >= 20 && bh >= 44) {
+          final size = math.min(18.0, bw - 6);
+          final vc = verticalChars(tm.name, bh, size);
+          c.save();
+          c.clipRRect(block);
+          final vst = cardStyle(size, FontWeight.w800, _ink);
+          for (var n = 0; n < vc.chars.length; n++) {
+            cardText(
+              c,
+              vc.chars[n],
+              vst,
+              bx + bw / 2 + 2,
+              by + bh / 2 + (n - (vc.chars.length - 1) / 2) * vc.lh,
               align: TextAlign.center,
               middle: true,
             );

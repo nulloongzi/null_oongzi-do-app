@@ -514,6 +514,20 @@ class _MapScreenState extends State<MapScreen> {
 
   // 핀을 '시트 위 보이는 영역'의 중앙(화면 상단 ~30%)에 오도록 카메라 이동.
   // pivot으로 타깃 latlng를 화면 비율 위치에 배치(시트 peek가 하단 ~42% 가림 보정).
+  // 시트를 먼저 출발시키고 카메라는 kSheetCameraLag 뒤에. 캡처 빌드는 촬영 시각(CAPTURE_BEAT)이
+  // 맞춰져 있어 예전처럼 바로 움직인다.
+  void _centerOnPinAfterSheet(double? lat, double? lng) {
+    if (kCaptureMode) {
+      unawaited(_centerOnPin(lat, lng));
+      return;
+    }
+    unawaited(
+      Future<void>.delayed(kSheetCameraLag, () {
+        if (mounted) return _centerOnPin(lat, lng);
+      }),
+    );
+  }
+
   Future<void> _centerOnPin(double? lat, double? lng) async {
     final c = _controller;
     if (c == null || lat == null || lng == null) return;
@@ -566,8 +580,12 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   // 마커/티커 탭 → 핀을 보이는 영역 중앙으로 이동 + 상세 시트 오픈.
+  // 카메라 이동과 시트 올라오기를 **함께** 시작한다(웹과 같음) — 카메라(800ms)를 기다렸다
+  // 시트를 띄우면 탭한 뒤 한참 아무 일도 없어 보였다. docs/motion-spec.md M01·M16
+  // 다만 카메라는 시트가 출발한 뒤 살짝(kSheetCameraLag) 늦게 — 네이티브 지도 애니메이션과
+  // 시트 첫 프레임이 같은 순간에 몰려 시트가 출발하며 끊기던 것(2.13.0)을 피한다.
   Future<void> _focusAndShowClub(Club club) async {
-    await _centerOnPin(club.lat, club.lng);
+    _centerOnPinAfterSheet(club.lat, club.lng);
     if (!mounted) return;
     showClubDetail(
       context,
@@ -1661,7 +1679,7 @@ class _MapScreenState extends State<MapScreen> {
   void _formStep(String s) => clubFormDemo.value = '$s:${++_demoSeq}';
 
   Future<void> _focusAndShowSpot(PickupSpot spot) async {
-    await _centerOnPin(spot.lat, spot.lng);
+    _centerOnPinAfterSheet(spot.lat, spot.lng); // 카메라와 상세를 함께(동호회와 같음)
     if (!mounted) return;
     _selectSpot(spot);
   }
@@ -2101,7 +2119,7 @@ class _MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     final roomItems = _roomItems; // 🍚 여기 자리 있어요? — 입구 띠·아래 칸 자리 계산
-    // 시스템 뒤로가기: 인앱 오버레이(릴스 피크 → 상세 패널)를 먼저 닫고, 없을 때만 앱 종료.
+    // 시스템 뒤로가기: 인앱 오버레이(릴스 피크 → 상세 패널 → 픽업 상세)를 먼저 닫고, 없을 때만 앱 종료.
     // (상세 패널·피크는 route가 아닌 Stack 오버레이라 처리 없인 back이 곧장 앱을 종료함)
     return PopScope(
       canPop: false,
@@ -2110,7 +2128,10 @@ class _MapScreenState extends State<MapScreen> {
         if (_reelPeek != null) {
           setState(() => _reelPeek = null);
         } else if (detailPanel.value != null) {
-          detailPanel.value = null;
+          // 내려가는 모션으로 닫는다(M01). 패널 상태가 없으면 바로 걷는다
+          if (!closeDetailPanelAnimated()) detailPanel.value = null;
+        } else if (_selectedSpot != null) {
+          _closeSpot(); // 픽업 상세 → 목록으로(웹 '← 목록으로'와 같음)
         } else {
           // 실수 종료 방지: 2초 안에 한 번 더 눌러야 종료
           final now = DateTime.now();
@@ -2340,11 +2361,18 @@ class _MapScreenState extends State<MapScreen> {
     },
     // 웹 .fab-profile 처럼 다른 FAB보다 한 치수 크게(55/24).
     child: _fab(
-      '🍚',
+      '',
       t('fab_profile'),
       _openProfile,
       size: 55,
       radius: NurungjiRadius.fabProfile,
+      // 🍚 버튼 그림 = 로고(웹 .fab-logo 와 같은 46)
+      icon: Image.asset(
+        'assets/logo-512.png',
+        width: 46,
+        height: 46,
+        cacheWidth: (46 * MediaQuery.devicePixelRatioOf(context)).round(),
+      ),
     ),
   );
 
@@ -2355,6 +2383,7 @@ class _MapScreenState extends State<MapScreen> {
     Color? bg,
     double size = 50,
     double radius = NurungjiRadius.fab,
+    Widget? icon,
   }) {
     return Semantics(
       button: true,
@@ -2369,7 +2398,8 @@ class _MapScreenState extends State<MapScreen> {
             width: size,
             height: size,
             child: Center(
-              child: Text(emoji, style: TextStyle(fontSize: size * 0.46)),
+              child:
+                  icon ?? Text(emoji, style: TextStyle(fontSize: size * 0.46)),
             ),
           ),
         ),

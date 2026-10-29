@@ -15,6 +15,7 @@ import '../services/this_week.dart';
 import '../theme.dart';
 import 'app_sheet.dart';
 import 'glass_surface.dart';
+import 'bowl_text.dart';
 
 const _guestInk = NurungjiColors.urgentInk;
 const _dropInInk = Color(0xFF2E7D32); // 식구 모집 배지와 같은 초록(흰 바탕 5.1:1)
@@ -116,7 +117,7 @@ class _RoomStripState extends State<RoomStrip> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          BowlText(
                             tf('tw_entry', {'n': '$n'}),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -383,7 +384,7 @@ class _RoomSheetState extends State<RoomSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 제목 바로 아래 부제가 붙으므로 SheetTitle(아래 여백 14) 대신 같은 글꼴로 직접
-          Text(
+          BowlText(
             t('tw_title'),
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w800,

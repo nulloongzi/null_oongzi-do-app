@@ -7,14 +7,11 @@
 > 이 문서에 맞춘다 — 반대가 아니다. 어긋난 것이 발견되면 아래 §1.1 대조표에 남긴다.
 
 Play Console → 앱 → **기본 스토어 등록정보**에 그대로 붙여넣는 자산 모음.
-- **업로드용 최종 스샷**: 레포의 **`assets/store/screens/ko/01~08.png`**(1080×1920, 크림 캔버스+
-  두 줄 카피+폰). → **그대로 순서대로 Play 업로드**. `python scripts/capture/make_store.py` 로
-  다시 굽는다 — 장면·문구는 `scripts/capture/store.ko.txt`, 화면은 카드뉴스와 같은
-  `scripts/capture/card-shots/` 고정본(실기기 캡처)이라 git pull 만으로 같은 그림이 나온다.
-- (옛 경로) CI 아티팩트 `nulloongzido-marketing-assets` 의 `store/` 폴더는 에뮬레이터 캡처
-  기반 7장이다 — 2.12 화면·기능이 빠져 있어 더 쓰지 않는다.
+- **업로드용 최종 스샷(카피 오버레이 합성본)**: CI 아티팩트 `nulloongzido-marketing-assets`의
+  **`store/` 폴더**(release 서명, 1080×1920, 크림 캔버스+한글 카피). → **그대로 Play 업로드**.
+- 카피 없는 순수 앱 스샷 원본(1080×2400)이 필요하면 같은 아티팩트의 `screens/` 폴더.
 - 디자인 규격: `docs/design-system.md`(크림 `#FFF8E1` / 옐로 `#FAC710` / 다크 `#4E342E`).
-- 카피·폰 합성은 `scripts/capture/make_store.py`(Pretendard, 헤드리스 크롬 렌더).
+- 카피 오버레이는 `scripts/capture/run_capture.sh`의 `compose_store()`가 자동 생성(나눔고딕Bold).
 
 ---
 
@@ -42,37 +39,34 @@ Volleyball clubs across Korea on one map — pickup games, filters & more 🏐
 🏐 배구는 하고 싶은데, 어디서 어떻게 시작하지?
 
 누룽지도는 전국 배구 동호회를 '지도 한 눈에' 보여주는 앱이에요.
-우리 동네 팀부터 오늘 당장 뛸 수 있는 픽업 게임까지, 배구 커뮤니티를 가장 쉽게 만나보세요.
+우리 동네 팀부터 이번 주에 바로 뛸 수 있는 자리까지, 배구 커뮤니티를 가장 쉽게 만나보세요.
 
 ■ 지도로 찾기
 전국 배구 동호회가 지도 위 마커로. 우리 동네를 눌러 바로 확인.
 
 ■ 딱 맞는 팀 필터
-지역·요일·대상(남/여/혼성)으로 조건에 맞는 팀만 골라보기.
+지역·요일·대상(남/여/혼성)으로, 게스트 급구·식구 모집 중인 팀만 골라보기.
+
+■ 🍚 여기 자리 있어요?
+이번 주에 가서 뛸 수 있는 게스트 급구, 맛보기 환영 팀, 픽업 게임을 시간순으로 한눈에. 마음에 들면 바로 연락.
 
 ■ 픽업 게임
 정규 팀이 아니어도 OK. 오늘·이번 주 열리는 픽업 게임에 바로 참가.
 
-■ 여기 자리 있어요?
-이번 주 게스트 급구·맛보기·픽업을 한 목록으로. 날짜별로 보고 바로 연락.
+■ 도시락 & 식단표
+마음에 든 팀은 '도시락'에 담아두고, 운동 시간은 '식단표'로 한 주를 한눈에.
 
-■ 게스트 급구
-사람이 모자란 날, 팀 관리자가 운동 한 번에 묶어 게스트를 구해요. 운동이 끝나면 저절로 내려가요.
+■ 밥친구
+초대코드로 밥친구를 맺고 서로의 식단표를 겹쳐 보세요. 같은 팀·같은 시간이면 '합석'!
 
-■ 식구 모집 · 맛보기 환영
-새 회원을 받는 팀은 지도에 표시돼요. '맛보기'를 켠 팀은 한 번 와서 뛰어 봐도 돼요.
-
-■ 우리 팀은 우리가
-팀 관리자가 되면 팀 정보를 직접 고쳐요. 세부 위치를 공개하고 싶지 않으면 동네 범위만 보여줄 수도 있어요.
-
-■ 도시락 (찜)
-마음에 든 팀은 '도시락'에 담아두고 언제든 다시.
-
-■ 밥이름 닉네임
-누룽지·주먹밥·비빔밥… 나만의 밥이름으로 재미있게.
+■ 밥이름 & 포장하기
+누룽지·주먹밥·비빔밥… 나만의 밥이름을 네임카드로 포장해 인스타 스토리에.
 
 ■ 안치기 — 라운드 자동 배치
 6인제도 9인제도. 온 사람만 넣으면 라운드별 코트 배치가 나와요. 출전과 대기를 고르게 나누고, 사람이 모자라면 어떤 자리가 비는지 알려줘요. 로그인 없이 픽업 탭에서 바로.
+
+■ 팀을 운영한다면
+팀 관리자가 되어 팀 정보를 직접 고치고, 게스트 급구·식구 모집을 올려 사람을 모아보세요.
 
 ■ 믿을 수 있는 정보
 팀·크루마다 '최종 확인일'을 표시하고, 틀린 정보는 앱 안에서 바로 신고.
@@ -88,37 +82,34 @@ Volleyball clubs across Korea on one map — pickup games, filters & more 🏐
 🏐 Want to play volleyball in Korea — but don't know where to start?
 
 Nulloongzi-do puts volleyball clubs across Korea on a single map.
-From the team down your street to a pickup game you can join tonight.
+From the team down your street to a spot you can grab this week.
 
 ■ Find on the map
 Every club as a pin. Tap your neighbourhood and see who plays there.
 
 ■ Filters that fit
-Narrow by region, weekday, and who plays (men / women / mixed).
+Narrow by region, weekday, and who plays (men / women / mixed) — or show only teams calling for guests or recruiting members.
+
+■ 🍚 Room for one more?
+Guest calls, drop-in friendly teams and pickup games you can join this week, in time order. Like one? Contact them right away.
 
 ■ Pickup games
 No club membership needed. Join a game happening today or this week.
 
-■ Room for one more?
-Guest calls, drop-ins and pickup games for the week ahead in one list — by day, with a contact button.
+■ Lunchbox & schedule
+Pack the teams you like into your Lunchbox and see your week of games on one schedule.
 
-■ Guest calls
-Short-handed? A team admin posts a call for one session, and it comes down by itself when the session ends.
+■ Rice friends
+Connect with an invite code and overlay each other's schedules. Same team, same time — you're sharing a table!
 
-■ Taking new members · drop-ins welcome
-Clubs taking new members are marked on the map. With drop-ins on, you can come and play once first.
-
-■ Run your own team
-Team admins edit their team's info themselves — and if you'd rather not share the exact location, show just the neighbourhood.
-
-■ Lunchbox (saved teams)
-Pack the teams you like into your Lunchbox and come back anytime.
-
-■ Rice-name nicknames
-Nurungji, Jumeokbap, Bibimbap… pick your own rice-name.
+■ Rice-name & gift wrap
+Nurungji, Jumeokbap, Bibimbap… wrap your own rice-name into a name card for your Instagram story.
 
 ■ Anchigi — automatic round draws
 6-a-side and 9-a-side. Add who turned up and it fills the court round by round, spreading play and bench time evenly — and when you're short, it shows which seats you still need. Right in the Pickup tab, no sign-in.
+
+■ Running a team?
+Become a team admin to edit your team's info and post guest calls or member recruiting.
 
 ■ Information you can trust
 Every team shows when it was last verified, and you can report bad info in-app.
@@ -190,36 +181,32 @@ English and Korean throughout. Start today! 🏐
 > 여는 사람이 §1 블록을 그대로 덮어쓰고, 관리형 게시라 **게시 버튼까지 눌러야**
 > 한다. 그때 이 표를 확인값으로 바꿔 주기 바란다.
 
+#### 2026-10-22 갱신 — 새 기능 문단을 더했다 (콘솔 미반영)
+
+전체 설명 KO·EN 에 그동안 빠져 있던 기능을 더했다: **🍚 여기 자리 있어요?**(이번 주 갈 곳),
+필터의 게스트 급구·식구 모집, **도시락 & 식단표**, **밥친구**(합석), **밥이름 & 포장하기**,
+**팀을 운영한다면**(관리자·급구·식구 모집). 앱 아이콘은 새 로고(`assets/store/play-icon-512.png`),
+피처 그래픽은 새 로고·새 지도 화면으로 다시 만들었다. 콘솔에 넣으면 이 표를 확인값으로 바꾼다.
+
 **글자수 여유** (Play 상한 대비, 괄호는 콘솔이 센 값):
 앱 이름 18/30 · 간단한 설명 KO 42(43)/80 · EN 73/80 ·
-전체 설명 KO 562(564)/4000 · EN 982(984)/4000.
+전체 설명 KO 865/4000 · EN 1629/4000(2026-10-22 문안, 이 문서 기준 글자 수).
 
 > 콘솔 카운트가 1~2자 더 많다. 이모지·줄바꿈을 세는 방식이 달라서지 문안이 다른
 > 게 아니다 — 다음에 보고 "안 맞는다"며 고치지 말 것.
 > **EN 간단한 설명은 여유가 7자뿐이다** — 여기만 손댈 때 상한을 다시 세어볼 것.
 
-#### 2026-10-07 갱신 — 2.12 네 문단 + 스샷 8장 (콘솔 미반영)
-
-2.12 의 여기 자리 있어요? · 게스트 급구 · 식구 모집·맛보기 와 팀 관리자·대략 위치를
-§1 전체 설명 KO·EN 에 네 문단으로 넣었다(픽업 게임 바로 뒤). 폰 스샷도 2.12 화면
-8장으로 새로 구웠다(§2).
-
-| 필드 | 콘솔 상태 |
-|---|---|
-| 전체 설명 KO·EN | **미반영** — 9-20 안치기 문단과 함께 §1 블록을 통째로 덮어쓴다 |
-| 폰 스크린샷 | **미반영** — 옛 7장을 지우고 `assets/store/screens/ko/01~08.png` 순서대로 |
-
-전체 설명 글자수(이 문서 기준): KO 886/4000 · EN 1663/4000.
-
-### 출시 노트 (What's new · v2.12.0)
+### 출시 노트 (What's new · v2.13.0)
 
 > **번호 이력 (확인한 값만).**
 > 최신 → 과거 순. 모두 콘솔 출시 내역에서 확인한 값이다(2026-09-08).
 >
 > | versionCode | 상태 |
 > |---|---|
-> | 23 | **아직 빌드 안 함** — 다음에 내보낼 때 이 번호로. 지금 main 에 쌓인 것: 자리 띠 1분마다 다시 계산(켜 둔 채로도 마감 지난 급구·끝난 운동이 빠짐)·날짜 칩 오늘+8일까지 · 관리자 신청 안내 창이 떠 있는 동안 버튼이 돌지 않음 · 급구/식구 모집 시트를 저장 중에 닫아도 안내·새로고침(#78). 버전 이름은 빌드할 때 정한다(예: 2.12.1). |
-> | **22 (2.12.0)** | **프로덕션 게시됨** (2026-10-06 사용자 확인). Release AAB run #24(main `290c685`) 산출물. 관리자 신청 안내 창·관리자 규칙 정리(#72), 게스트 급구 = 운동 한 번·자동 내려감(서버 `postUrgent`), 🍚 식구 모집 · 🥄 맛보기 환영 · 🍚 여기 자리 있어요?(#73), 일정표 칸 방어(#75), 대신 올린 픽업 크루는 자리 목록에서 제외(#76). **run #22·#23 산출물은 게시 전 점검에서 고친 것이 빠져 있어 올리지 않았다(같은 22 번호, 쓰지 말 것).** **이 버전부터 급구는 서버로만 올라간다 — 21 이하에서는 급구 올리기가 실패한다(내리기는 됨).** 지금 사용자가 받는 버전. |
+> | **25 (2.13.0)** | **빌드 중** (2026-10-23). 24 + 바텀시트 끊김 수정(#90: 시간표 모프 매 프레임 재배치 제거·릴스 커버 미리 읽기·마커 탭 시 카메라 120ms 늦게·로고 작은 크기로 디코딩). 24 를 대신해 프로덕션에 올린다 — 출시 노트는 24 와 같다. 빌드 run 번호는 확인되면 여기 적는다. |
+> | 24 (2.13.0) | **콘솔 프로덕션 초안에 업로드됨, 검토 제출 전** (2026-10-22, Claude in Chrome). 25 로 바꿔 올린다. Release AAB run #28(main `433b684`). Release AAB run #28(main `433b684`) 산출물 — run #26·#27 은 그 뒤 고친 것이 빠져 있어 **올리지 않는다(같은 24 번호)**. 새 로고(앱 아이콘·첫 화면·로그인·🍚 자리 아이콘), 웹과 같은 크림·옐로 테마, 날짜·시간 선택 창 한국어, 식단표 공유 겹친 일정 세로 쓰기(#83), 회원 탈퇴·이름 바꾸기 팝업 안 검사·픽업 상세 뒤로가기(#84), 바텀시트 모션 웹과 통일·필터 탑시트(#86). |
+> | 23 (2.12.1) | **Play 에 올라감** (2026-10-21 사용자 확인 — 마지막으로 쓴 번호). 24 로 대체 예정. 자리 띠 1분마다 다시 계산·날짜 칩 오늘+8일까지 · 관리자 신청 안내 창이 떠 있는 동안 버튼이 돌지 않음 · 급구/식구 모집 시트를 저장 중에 닫아도 안내·새로고침(#78), 관리자 신청 거절 사유 문장(#80 — 운영자가 카톡에서 고른 사유), 대략 위치 안내 문구에서 '학교·공공 체육관' 특정 빼기 + 캡처 촬영 흐름(캡처 빌드 전용, 일반 빌드엔 영향 없음)(#81). |
+> | 22 (2.12.0) | **프로덕션 게시됨** (2026-10-06 사용자 확인). Release AAB run #24(main `290c685`) 산출물. 관리자 신청 안내 창·관리자 규칙 정리(#72), 게스트 급구 = 운동 한 번·자동 내려감(서버 `postUrgent`), 🍚 식구 모집 · 🥄 맛보기 환영 · 🍚 여기 자리 있어요?(#73), 일정표 칸 방어(#75), 대신 올린 픽업 크루는 자리 목록에서 제외(#76). **run #22·#23 산출물은 게시 전 점검에서 고친 것이 빠져 있어 올리지 않았다(같은 22 번호, 쓰지 말 것).** **이 버전부터 급구는 서버로만 올라간다 — 21 이하에서는 급구 올리기가 실패한다(내리기는 됨).** 지금 사용자가 받는 버전(23 이 게시되면 대체됨). |
 > | 21 (2.11.0) | **프로덕션 게시됨** (2026-10-01 사용자 확인). Release AAB run #21(main `923c7e3`) 산출물. 웹과 같은 누룽지 모양·말투(#67): 지도 위 버튼 둥근 사각형, 급구 표시 대비, 스낵바·확인 창 모양, 입력 칸 바로 아래 안내, 도시락 직접 담기 한 창, 알림·안내 문구 `~해요`. 22 로 대체됨. |
 > | 20 (2.10.1) | **프로덕션 게시됨** (2026-09-30 사용자 확인). Release AAB run #20(main `c6c0de9`) 산출물. 모집 대상 괄호 메모를 한 덩어리 칩으로(#64) + 계측 정리(화면 변화 없음 — 필터·화면 언어·공유 출처·소셜 가입 계측, debug 빌드 GA 수집 끔). 21 로 대체됨. |
 > | 19 (2.10.0) | **프로덕션 게시됨** (2026-09-29 사용자 확인). Release AAB run #19(main `d29fe81`) 산출물. 포장하기 인스타 스토리 직행 공유 + 카드 여백 140 + 운영자 릴스 숨김(`reels_hidden`) 반영 + 릴스 10개 상한. 20 으로 대체됨. |
@@ -234,9 +221,76 @@ English and Korean throughout. Start today! 🏐
 > | 10 (2.4.0) | **AAB 를 만든 적이 없다** — 스토어에 나간 적 없음(Release AAB 실행 이력으로 확인). |
 > | 9 (2.3.0) | 12 이전의 라이브. 대체됨. |
 >
-> 번호는 재사용할 수 없다. 22 까지 썼으므로 다음은 23 이다(pubspec 을 `2.x.y+23` 로 올리고 빌드).
+> 번호는 재사용할 수 없다. 24 까지 썼으므로 다음은 25 다(pubspec 을 `2.x.y+25` 로 올리고 빌드).
 >
-> 아래가 22(2.12.0) 의 노트 — **2.11.0(21) 이후 변경분만**. 21 의 노트는 접어 뒀다.
+> 아래가 24(2.13.0) 의 노트 — **2.12.1(23) 이후 변경분만**. 23·22 의 노트는 접어 뒀다.
+
+```
+🍚 새 얼굴
+누룽지도 로고가 새로워졌어요. 앱 아이콘과 첫 화면, 로그인 화면이 바뀌었어요.
+
+🎨 더 누룽지다운 화면
+필터 칩·스위치·탭·날짜 고르는 창까지 누룽지 색으로 맞췄어요. 날짜·시간 고르는 창도 한국어로 나와요.
+
+✨ 손에 붙는 시트
+팀을 누르면 시트가 지도와 함께 쓱 올라오고, 끌어 올리면 시간표가 자연스럽게 펼쳐져요. 필터는 검색창에서 내려와요.
+
+🙋 계정 삭제
+내 카드 맨 아래 '계정 삭제'로 바로 탈퇴할 수 있어요.
+
+🛠 자잘한 손질
+식단표 공유에서 같은 날 일정이 겹쳐도 팀 이름을 세로로 보여 줘요. 픽업 상세에서 뒤로가기를 누르면 목록으로 돌아가요.
+```
+
+**EN (en-US)**
+
+```
+🍚 A new look
+New Nulloongzido logo on the app icon, launch and login screens.
+
+🎨 Warmer screens
+Chips, switches, tabs and date pickers in Nulloongzido colors. Pickers follow your app language.
+
+✨ Smoother sheets
+Team sheets slide up with the map; pull up to unfold the timetable. Filters drop from the search bar.
+
+🙋 Delete account
+Right from the bottom of your card.
+
+🛠 Small fixes
+Clearer shared timetables; Back from a pickup detail returns to the list.
+```
+
+<details><summary>2.12.1(23) 출시 노트 — 23 이 올라갈 때 쓴 문안</summary>
+
+
+```
+🍚 여기 자리 있어요?가 늘 최신으로
+화면을 켜 둔 채로도 마감이 지난 급구와 끝난 운동은 알아서 빠져요.
+
+🙋 관리자 신청 결과를 더 자세히
+신청이 받아들여지지 않았을 때 이유를 알려 줘요.
+
+🛠 자잘한 손질
+급구·식구 모집을 저장하는 중에 창을 닫아도 저장 결과를 알려 줘요. 몇몇 안내 문구도 다듬었어요.
+```
+
+**EN (en-US)**
+
+```
+🍚 Room for one more? stays fresh
+Expired guest calls and finished sessions drop off on their own, even if you leave the screen open.
+
+🙋 Clearer admin request results
+If your request isn't accepted, you'll see why.
+
+🛠 Small fixes
+Closing the guest call or member post sheet mid-save still confirms the result. Some wording was polished too.
+```
+
+</details>
+
+<details><summary>2.12.0(22) 출시 노트 — 22 가 게시될 때 쓴 문안</summary>
 
 ```
 🍚 여기 자리 있어요?
@@ -267,6 +321,8 @@ Find teams taking new members or open to drop-ins, on the map and in filters.
 🙋 Easier admin requests
 See which photo to upload first, and request admin access for unverified teams too.
 ```
+
+</details>
 
 <details><summary>2.11.0(21) 출시 노트 — 21 이 게시될 때 쓴 문안</summary>
 
@@ -519,29 +575,33 @@ A team's Instagram Reels now show their real cover images. One tap opens Instagr
 
 ---
 
-## 2. 스크린샷 세트 (폰, 1080×1920 · 8장)
+## 2. 스크린샷 세트 (폰, 1080×2400 원본)
 
-Play는 **최소 2장, 최대 8장**. 첫 3장이 목록 미리보기에 노출되니 임팩트 순.
-**2026-10-07 실기기 캡처(2.12)** 기준. 파일: `assets/store/screens/ko/NN.png`.
+Play는 **최소 2장, 최대 8장**. 아래 **8장 순서**(첫 3장이 목록 미리보기에 노출되니 임팩트 순).
+업로드 파일은 Capture Marketing Assets 아티팩트의 **`store/`**(카피 오버레이 합성본, 1080×1920).
+2026-10-22 세트는 레포에 넣어 두었다 → **`assets/store/screenshots/ko/`**, **`assets/store/screenshots/en/`**
+(KO = run #70 main `433b684` 의 `store/`, EN = run #71 `capture_lang=en` 의 `screens/` 원본에 영어 카피로 같은 규격 합성).
 
-| 순서 | 화면 (card-shots/) | 윗줄 | 제목 |
+| 순서 | 업로드 파일 | 화면 | 카피(합성본에 들어 있음) |
 |---|---|---|---|
-| 1 | 지도 + 여기 자리 띠 (`01_map`) | 전국 배구 동호회, | **지도 한눈에** |
-| 2 | 여기 자리 있어요? 목록 (`room@13`) | 게스트 급구·맛보기·픽업 | **이번 주 뛸 곳 한눈에** |
-| 3 | 팀 상세 (`06_club_sheet`) | 일정·회비·위치 확인하고 | **바로 연락** |
-| 4 | 급구 배너 (`urgent@24.5`) | 사람이 모자라면 | **게스트 급구** |
-| 5 | 식구 모집 배너 (`recruit@23`) | 새 회원 받는 팀은 | **식구 모집·맛보기 환영** |
-| 6 | 검색·필터 (`03_filter_set`) | 지역·요일·대상으로 | **딱 맞는 팀만** |
-| 7 | 도시락 + 식단표 (`09_lunchbox_diet`) | 마음에 든 팀은 도시락에 | **식단표로 일정 비교** |
-| 8 | 네임카드 (`12_namecard`) | 내 배구 명함, | **한 장으로 자랑** |
+| 1 | `play_01_map_{ko,en}.png` | 지도 | 전국 배구 동호회, 지도 한 눈에 |
+| 2 | `play_02_filter_{ko,en}.png` | 필터(탑시트) | 지역·요일·대상으로 딱 맞는 팀 |
+| 3 | `play_04_detail_{ko,en}.png` | 클럽 상세 | 일정·회비·위치 확인하고 바로 연락 |
+| 4 | `play_03_pickup_{ko,en}.png` | 픽업 | 오늘 당장 뛸 픽업 게임 |
+| 5 | `play_05_lunchbox_{ko,en}.png` | 도시락 | 마음에 든 팀은 '도시락'에 찜 |
+| 6 | `play_06_profile_{ko,en}.png` | 밥이름 | 나만의 '밥이름' 닉네임 |
+| 7 | `play_08_story_{ko,en}.png` | 포장하기 | 내 카드 한 장으로 스토리에 자랑 |
+| 8 | `play_07_share_{ko,en}.png` | 공유 | 카톡·인스타로 우리 팀 자랑 |
 
-> 이전 세트(7장)에 있던 픽업·밥이름은 이번에 뺐다 — 급구·식구 모집·자리 띠가 2.12 의
-> 핵심이라 그 자리를 줬다. 픽업을 다시 넣으려면 `store.ko.txt` 에서 한 줄 바꾼다.
-> 문구에 특정 팀(학교·공공 체육관 등)을 집어 말하지 않는다.
+영어 카피(en): 1 Volleyball clubs across Korea, / on one map · 2 By region, day and who plays — / teams that fit ·
+3 Schedule, fees and location — / contact in one tap · 4 Play today with / pickup games · 5 Like a team? / Pack it in your Lunchbox ·
+6 Pick your own / rice-name · 7 One card for your / Instagram story · 8 Show off your team on / KakaoTalk & Instagram
 
-**규격**: 크림 `#FFF8E1` 바탕, 윗줄 갈색 `#8D6E63` 48px, 제목 다크 `#4E342E` 88px(Pretendard
-ExtraBold), 핵심어만 옐로 `#FAC710` 밑줄. 폰은 다크 테두리 안에 화면 전체 — 실제 상태
-표시줄(시각·알림 아이콘)은 걷어 내고 9:41 기본 표시줄을 그린다.
+> `play_09_login` 은 등록 제외(8장 상한). 한국어 등록정보엔 `_ko`, 영어(en-US)엔 `_en` 을 올린다.
+
+**스샷 오버레이 규격(각 이미지 상단 ~18%)**
+- 배경 크림 `#FFF8E1`, 카피 다크 `#4E342E` (Pretendard SemiBold ~64px), 핵심어만 옐로 `#FAC710`.
+- 폰 목업 안에 실제 스샷(둥근 모서리). 하단 여백 크림.
 
 ---
 
@@ -549,9 +609,9 @@ ExtraBold), 핵심어만 옐로 `#FAC710` 밑줄. 폰은 다크 테두리 안에
 
 | 자산 | 규격 | 상태 |
 |---|---|---|
-| 앱 아이콘 | 512×512 PNG(32bit, 투명 X) | ✅ 기존 로고(`nulloongzido logo_512px.png`) 사용 |
-| **피처 그래픽** | **1024×500 PNG** | ✅ 확정본 `assets/store/feature-graphic-1024x500.png` (크림+옐로 로고타입+태그라인+폰 목업) |
-| 폰 스샷 | 1080×1920(9:16), 2~8장 | ✅ `assets/store/screens/ko/` 8장 (2.12, `make_store.py`) |
+| 앱 아이콘 | 512×512 PNG(32bit, 투명 X) | ✅ 새 로고(2026-10-22) `assets/store/play-icon-512.png` — 크림 바탕, 가운데 76% 안에 로고(Play 가 둥글게 자른다) |
+| **피처 그래픽** | **1024×500 PNG** | ✅ `assets/store/feature-graphic-1024x500.png` (2026-10-22 새 로고·새 지도 화면으로 다시 렌더 — 소스 `feature-graphic.html`, 나눔고딕) |
+| 폰 스샷 | 1080×2400(9:20), 2~8장 | ✅ CI 자동 생산(7장) |
 | (선택) 태블릿 | 7"/10" | 미제작 |
 
 **피처 그래픽 카피**: `누룽지도` + `전국 배구 동호회를 지도 한 눈에 🏐` (크림 배경, 옐로 포인트, 우측 지도 미리보기).
@@ -585,8 +645,7 @@ ExtraBold), 핵심어만 옐로 `#FAC710` 밑줄. 폰은 다크 테두리 안에
 - [x] AAB 업로드 — 12 (2.5.1) 프로덕션 게시 완료 (2026-09-07 22:20)
 - [x] 앱 이름 / 간단·전체 설명 붙여넣기 (2026-09-08 확인) — **단 게시 전**
 - [ ] **콘솔에서 `변경사항 4개 게시` 누르기** ← 이걸 눌러야 스토어에 반영된다
-- [ ] 스크린샷 8장 교체 업로드 — `assets/store/screens/ko/01~08.png` 순서대로(옛 7장은 지운다)
-- [ ] 전체 설명 KO·EN 갱신 — 2.12 네 문단(여기 자리·급구·식구 모집·우리 팀은 우리가) 추가분
+- [ ] 스크린샷 8장 업로드(`assets/store/screenshots/{ko,en}/`, §2 순서) — KO·EN 각각
 - [x] 피처 그래픽 1024×500 확정 → `assets/store/feature-graphic-1024x500.png` 그대로 업로드
 - [ ] 앱 아이콘 512×512 확인
 - [ ] 카테고리: `스포츠` / 태그: 배구·생활체육
@@ -609,7 +668,6 @@ ExtraBold), 핵심어만 옐로 `#FAC710` 밑줄. 폰은 다크 테두리 안에
   - 소셜 로그인 수집 항목(구글/카카오/네이버 식별자)과 Firebase 처리위탁 반영본.
   - 빈 템플릿이던 `privacy.md`는 제거됨(커밋 `2362796`) — 옛 `.md` URL은 쓰지 말 것.
 
-> 폰 스샷은 `python scripts/capture/make_store.py` 로 굽는다(위 §2). 아래 CI 경로는 옛 방식.
 > 스샷/피처그래픽 갱신은 **GitHub Actions → Capture Assets → Run workflow**(수동 dispatch).
 > 릴리즈 세트는 `release` 입력을 켠다. `[cap-release]` 같은 커밋 메시지 마커는 더 이상
 > 동작하지 않는다 — #30에서 push 자동 트리거를 제거하고 dispatch 입력으로 옮겼다

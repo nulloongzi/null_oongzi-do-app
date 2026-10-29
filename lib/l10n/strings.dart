@@ -339,7 +339,6 @@ const Map<String, Map<String, String>> kStrings = {
         'Link already copied! In the Instagram editor:\n\n1.  Tap the sticker icon (top)\n2.  Choose "Link"\n3.  Paste → done\n\nThen viewers open it in 1 tap.\n(Or they can use the QR/URL on the card.)',
   },
   'coach_go': {'ko': '인스타로 이동', 'en': 'Open Instagram'},
-  'coach_dont_show': {'ko': '다시 보지 않기', 'en': "Don't show again"},
 
   // 프로필
   'profile_title': {'ko': '내 프로필', 'en': 'My profile'},
@@ -513,6 +512,25 @@ const Map<String, Map<String, String>> kStrings = {
     'en': "Couldn't save the game. Please try again in a moment.",
   },
   'logout_confirm': {'ko': '로그아웃할까요?', 'en': 'Log out?'},
+  // 회원 탈퇴 — 웹 i18n acct_* 와 같은 문구(scripts/check-copy-parity.js)
+  'acct_delete': {'ko': '계정 삭제', 'en': 'Delete account'},
+  'acct_delete_title': {'ko': '계정을 지울까요?', 'en': 'Delete your account?'},
+  'acct_delete_body': {
+    'ko':
+        '밥이름·도시락·밥친구, 인증·관리자 신청과 사진, 내가 연 픽업 게임이 모두 지워지고 되돌릴 수 없어요.\n내가 등록한 동호회는 다른 사람도 보는 정보라 남고, 관리자 명단에서만 빠져요.',
+    'en':
+        "Your rice name, lunchbox, rice friends, verification and admin requests with their photos, and the pickup games you host will be deleted. This can't be undone.\nClubs you registered stay on the map for others — you're only removed from their admins.",
+  },
+  'acct_delete_btn': {'ko': '계정 지우기', 'en': 'Delete account'},
+  'acct_deleting': {'ko': '계정을 지우고 있어요…', 'en': 'Deleting your account…'},
+  'acct_deleted': {
+    'ko': '계정을 지웠어요. 그동안 함께해 줘서 고마워요',
+    'en': 'Your account was deleted. Thanks for playing with us.',
+  },
+  'acct_delete_err': {
+    'ko': '계정을 지우지 못했어요. 잠시 후 다시 해 주세요.',
+    'en': "Couldn't delete your account. Please try again in a moment.",
+  },
   'share_mode_card': {'ko': '네임카드', 'en': 'Name card'},
   'share_mode_diet': {'ko': '식단표', 'en': 'Schedule'},
   // 공유 카드(my_card.dart)는 Canvas에 직접 그려서 이모지가 tofu(□)로 뜬다.
@@ -1626,7 +1644,8 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'ad_reapply': {'ko': '🔄 다시 신청', 'en': '🔄 Apply again'},
   // 거절 사유 코드(club_admin_requests.reject_reason) → 사람이 읽는 말.
-  // 서버가 쓰는 코드는 full · already_admin · not_found · duplicate 뿐이다.
+  // 서버가 스스로 닫을 때 full · already_admin · not_found · duplicate, 운영자가 고를 때
+  // photo_unclear · photo_unrelated · duplicate · other (웹 functions/lib/pure.js).
   // 모르는 코드(옛 문서의 error 등)나 사유 없는 수동 거절은 사유 줄을 아예 안 보인다.
   'ad_reason_full': {
     'ko': '관리자가 이미 3명이에요',
@@ -1643,6 +1662,18 @@ const Map<String, Map<String, String>> kStrings = {
   'ad_reason_duplicate': {
     'ko': '같은 신청이 이미 들어가 있어요',
     'en': 'The same request is already in',
+  },
+  'ad_reason_photo_unclear': {
+    'ko': '사진으로는 이 팀 사람인지 확인하지 못했어요',
+    'en': "We couldn't tell from the photo that you're with this team",
+  },
+  'ad_reason_photo_unrelated': {
+    'ko': '이 팀과 관련 없는 사진이에요',
+    'en': "The photo isn't related to this team",
+  },
+  'ad_reason_other': {
+    'ko': '확인이 어려워 받아들이지 않았어요',
+    'en': "We couldn't confirm this request",
   },
   'ad_full': {
     'ko': '이 팀은 관리자가 벌써 3명이에요',

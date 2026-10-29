@@ -633,7 +633,6 @@ class _FriendsPageState extends State<FriendsPage> {
               _meta(t('fr_vis_title'), t(on ? 'fr_vis_on' : 'fr_vis_off')),
               Switch(
                 value: on,
-                activeTrackColor: NurungjiColors.brown,
                 onChanged: (v) => hub.setHideAll(!v).catchError((_) {
                   _toast(t('fr_err_generic'));
                 }),

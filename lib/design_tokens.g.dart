@@ -3,6 +3,7 @@
 // 다시 만들기(웹 저장소에서):
 //   npm run tokens -- --dart ../null_oongzi-do-app/lib/design_tokens.g.dart
 // 규칙과 쓰임: 웹 docs/design-system.md · CI: .github/workflows/design-tokens.yml
+import 'package:flutter/animation.dart';
 import 'package:flutter/painting.dart';
 
 /// 누룽지 색 — 웹 css/main.css :root 와 같은 값.
@@ -52,4 +53,22 @@ class NurungjiRadius {
   static const toast = 12.0; // --radius-toast · 토스트(웹 showToast · 앱 SnackBar)
   static const fab = 20.0; // --radius-fab · 지도 위 버튼 50px
   static const fabProfile = 24.0; // --radius-fab-profile · 🍚 버튼 55px
+}
+
+/// 모션 — 웹 --motion-* · --ease-* 와 같은 값(docs/motion-spec.md).
+class NurungjiMotion {
+  // --motion-sheet-enter: 상세 시트(비모달)가 올라오기 · 손을 놓았을 때 접힘/펼침으로 붙기
+  static const sheetEnter = Duration(milliseconds: 300);
+  // --motion-sheet-exit: 상세 시트가 내려가며 닫히기
+  static const sheetExit = Duration(milliseconds: 250);
+  // --motion-modal-enter: 모달 바텀시트 올라오기(Flutter 기본과 같은 값)
+  static const modalEnter = Duration(milliseconds: 250);
+  // --motion-modal-exit: 모달 바텀시트 내려가기(Flutter 기본과 같은 값)
+  static const modalExit = Duration(milliseconds: 200);
+  // --ease-sheet: 감속 — 상세 시트 올라오기·붙기
+  static const sheetCurve = Cubic(0.2, 0.8, 0.2, 1.0);
+  // --ease-sheet-exit: 가속 — 상세 시트 닫기(점점 빨라지며 화면 밖으로)
+  static const sheetExitCurve = Cubic(0.4, 0.0, 1.0, 1.0);
+  // --ease-modal: 모달 시트 열고 닫기(Flutter Easing.legacyDecelerate)
+  static const modalCurve = Cubic(0.0, 0.0, 0.2, 1.0);
 }

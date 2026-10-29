@@ -6,6 +6,7 @@ import 'package:nulloongzido/services/i18n.dart';
 import 'package:nulloongzido/services/this_week.dart';
 import 'package:nulloongzido/widgets/app_sheet.dart';
 import 'package:nulloongzido/widgets/room_sheet.dart';
+import 'package:nulloongzido/widgets/bowl_text.dart';
 
 // 2026-10-07 수요일 18:00
 DateTime _now() => DateTime(2026, 10, 7, 18);
@@ -78,12 +79,16 @@ Future<void> _open(
   await tester.pumpAndSettle();
 }
 
+// 맨 앞 🍚 는 로고 아이콘으로 그려지므로(BowlText) 글자 대신 문구로 찾는다.
+Finder _bowl(String s) =>
+    find.byWidgetPredicate((w) => w is BowlText && w.text == s);
+
 void main() {
   setUp(() => appLang.value = 'ko');
 
   testWidgets('제목·종류 칩 3개(모두 켜짐)·날짜 칩 7일 + 전체, 날짜별 묶음', (tester) async {
     await _open(tester);
-    expect(find.text(t('tw_title')), findsOneWidget);
+    expect(_bowl(t('tw_title')), findsOneWidget);
     expect(find.text(t('tw_sub')), findsOneWidget);
     for (final k in kTwKinds) {
       final chip = tester.widget<FilterChip>(
@@ -181,8 +186,8 @@ void main() {
         ),
       ),
     );
-    expect(find.text(tf('tw_entry', {'n': '3'})), findsOneWidget);
-    expect(find.text('🍚 여기 자리 있어요? · 3곳'), findsOneWidget);
+    expect(_bowl(tf('tw_entry', {'n': '3'})), findsOneWidget);
+    expect(_bowl('🍚 여기 자리 있어요? · 3곳'), findsOneWidget);
     expect(find.text('수 20:00 · 망원 픽업'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('room_strip')));
     expect(taps, 1);

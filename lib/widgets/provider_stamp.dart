@@ -7,6 +7,8 @@
 // provider가 빈 문자열(판별 불가)이면 아무것도 그리지 않는다.
 import 'package:flutter/material.dart';
 
+import 'warm_avatar.dart';
+
 class ProviderStamp extends StatelessWidget {
   const ProviderStamp({super.key, required this.provider, this.size = 20});
 
@@ -175,7 +177,7 @@ class _NaverWingedHatPainter extends CustomPainter {
   bool shouldRepaint(_NaverWingedHatPainter old) => old.color != color;
 }
 
-// 누룽지도: 로고 단순화 — 그릇에 얹어진 밥 (웹 SVG 포팅, 24 viewBox 기준)
+// 누룽지도: 로고 단순화 — 그릇에 얹어진 누룽지 공(밥친구 아바타와 같은 모양, warm_avatar.dart)
 class _RiceBowlPainter extends CustomPainter {
   _RiceBowlPainter(this.color);
   final Color color;
@@ -184,34 +186,7 @@ class _RiceBowlPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final s = size.width / 24;
     canvas.scale(s, s);
-    final paint = Paint()..color = color;
-
-    // 밥 (뭉게진 봉우리)
-    final rice = Path()
-      ..moveTo(12, 4.6)
-      ..cubicTo(10.1, 4.6, 8.8, 5.6, 8.1, 6.8)
-      ..cubicTo(7.1, 6.4, 5.7, 7.1, 5.7, 8.5)
-      ..cubicTo(5.7, 9.4, 6.4, 10, 7.1, 10)
-      ..lineTo(16.9, 10)
-      ..cubicTo(17.6, 10, 18.3, 9.4, 18.3, 8.5)
-      ..cubicTo(18.3, 7.1, 16.9, 6.4, 15.9, 6.8)
-      ..cubicTo(15.2, 5.6, 13.9, 4.6, 12, 4.6)
-      ..close();
-    canvas.drawPath(rice, paint);
-
-    // 그릇 (반구 + 굽)
-    final bowl = Path()
-      ..moveTo(4.2, 11.6)
-      ..lineTo(19.8, 11.6)
-      ..cubicTo(19.8, 14.7, 17.3, 17.2, 14, 17.8)
-      ..lineTo(14, 18.7)
-      ..cubicTo(14, 19.1, 13.7, 19.4, 13.3, 19.4)
-      ..lineTo(10.7, 19.4)
-      ..cubicTo(10.3, 19.4, 10, 19.1, 10, 18.7)
-      ..lineTo(10, 17.8)
-      ..cubicTo(6.7, 17.2, 4.2, 14.7, 4.2, 11.6)
-      ..close();
-    canvas.drawPath(bowl, paint);
+    canvas.drawPath(bowlSolidPath(), Paint()..color = color);
   }
 
   @override

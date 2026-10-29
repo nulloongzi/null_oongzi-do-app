@@ -15,6 +15,16 @@ import '../services/urgent.dart';
 import '../theme.dart';
 import 'app_sheet.dart';
 import 'field_error_text.dart';
+import 'bowl_text.dart';
+
+/// 캡처 시연용: 문구를 쳐 넣고 🥄 맛보기를 켠다(값이 바뀌면 시작).
+final ValueNotifier<int> recruitDemoFill = ValueNotifier<int>(0);
+
+/// 캡처 시연용: '🍚 식구 모집 시작'을 누른다 — 사용자가 누를 때와 같은 _submit()(실제 저장).
+final ValueNotifier<int> recruitDemoSubmit = ValueNotifier<int>(0);
+
+/// 시연 문구 — 칸의 예시와 같은 말.
+const kRecruitDemoMsg = '20~30대 회원 모집해요';
 
 /// 캡처 시연용: 문구를 쳐 넣고 🥄 맛보기를 켠다(값이 바뀌면 시작).
 final ValueNotifier<int> recruitDemoFill = ValueNotifier<int>(0);
@@ -221,7 +231,7 @@ class _RecruitSheetState extends State<RecruitSheet> {
                         height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : Text(widget.editing ? t('rc_save') : t('rc_on')),
+                    : BowlText(widget.editing ? t('rc_save') : t('rc_on')),
               ),
             ),
           ],
