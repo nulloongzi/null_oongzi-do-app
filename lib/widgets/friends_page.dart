@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../services/analytics.dart';
+import '../services/deep_link_service.dart' show kCaptureMode;
 import '../services/friend_share_service.dart';
 import '../services/friends_service.dart';
 import '../services/i18n.dart';
@@ -16,6 +17,13 @@ import 'bounce_tap.dart';
 import 'warm_avatar.dart';
 
 enum _View { list, add, detail }
+
+/// 캡처 시연 명령(값이 바뀌면 실행, 같은 명령을 다시 보내려면 뒤에 '#n'):
+///   'view:add'(내 초대 코드) 'view:list' 'qr'(QR 펼치기) 'accept'(받은 신청 첫 줄 수락)
+///   'confirm'(식단표 보이기 확인 카드의 '이대로 보이기') 'detail'(합석이 가장 큰 친구 상세)
+/// 버튼이 부르는 것과 같은 일을 한다 — 수락·공유는 실제로 저장된다.
+final ValueNotifier<String> friendsDemo = ValueNotifier<String>('');
+String _demoCmd() => friendsDemo.value.split('#').first;
 
 String inviteUrl(String code) =>
     '${ShareService.siteBase}?invite=${Uri.encodeComponent(code)}';
@@ -59,6 +67,37 @@ class _FriendsPageState extends State<FriendsPage> {
     if (_view == _View.add) _ensureCode();
     // 로그인이 늦게 끝나면(딥링크로 열린 경우) 그때 받는다
     hub.state.addListener(_onStateForCode);
+    if (kCaptureMode) friendsDemo.addListener(_onDemo);
+  }
+
+  Future<void> _onDemo() async {
+    if (!mounted) return;
+    final st = hub.state.value;
+    switch (_demoCmd()) {
+      case 'view:add':
+        _go(_View.add);
+      case 'view:list':
+        _go(_View.list);
+      case 'qr':
+        setState(() => _showQr = true);
+      case 'accept':
+        final l = st.incoming.firstOrNull;
+        if (l == null) return;
+        try {
+          await hub.svc.accept(l.id);
+          _toast(tf('fr_accepted_toast', {'name': st.profileOf(l.other).name}));
+        } catch (_) {
+          _toast(t('fr_err_generic'));
+        }
+      case 'detail':
+        if (st.friends.isEmpty) return;
+        // 합석이 가장 큰 친구 — 겹쳐 보기에 같은 칸이 보여야 한다
+        final f = [...st.friends]
+          ..sort(
+            (a, b) => hub.mealOf(b.other).n.compareTo(hub.mealOf(a.other).n),
+          );
+        _go(_View.detail, detail: f.first.id);
+    }
   }
 
   void _onStateForCode() {
@@ -67,6 +106,7 @@ class _FriendsPageState extends State<FriendsPage> {
 
   @override
   void dispose() {
+    friendsDemo.removeListener(_onDemo);
     hub.state.removeListener(_onStateForCode);
     _code.dispose();
     _msgTimer?.cancel();
@@ -961,6 +1001,31 @@ class _ShareConfirmCard extends StatefulWidget {
 }
 
 class _ShareConfirmCardState extends State<_ShareConfirmCard> {
+  @override
+  void initState() {
+    super.initState();
+    if (kCaptureMode) friendsDemo.addListener(_onDemoConfirm);
+  }
+
+  @override
+  void dispose() {
+    friendsDemo.removeListener(_onDemoConfirm);
+    super.dispose();
+  }
+
+  // 시연: '이대로 보이기' — 아래 버튼과 같은 일(고른 그대로 보이기)
+  Future<void> _onDemoConfirm() async {
+    if (!mounted || _demoCmd() != 'confirm' || _busy) return;
+    setState(() => _busy = true);
+    try {
+      await hub.confirmShare((_off ?? <String>{}).toList());
+      widget.onDone(t('fr_share_done'));
+    } catch (_) {
+      widget.onDone(t('fr_err_generic'));
+    }
+    if (mounted) setState(() => _busy = false);
+  }
+
   final hub = FriendsHub.instance;
   late Future<List<({String id, FriendTeam team})>> _teams = _load();
   Set<String>? _off; // 체크를 끈 팀

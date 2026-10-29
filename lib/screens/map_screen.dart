@@ -47,6 +47,7 @@ import '../widgets/glass_surface.dart';
 import '../widgets/reel_card.dart';
 import '../widgets/map_detail_panel.dart';
 import '../widgets/map_picker.dart' show mapPickerDemoConfirm;
+import '../widgets/friends_page.dart' show friendsDemo;
 import '../widgets/pickup_list_sheet.dart';
 import '../widgets/recruit_sheet.dart';
 import '../widgets/room_sheet.dart';
@@ -756,6 +757,12 @@ class _MapScreenState extends State<MapScreen> {
         break;
       case 'flow_anchigi':
         await _flowAnchigi();
+        break;
+      case 'flow_friends':
+        await _flowFriends();
+        break;
+      case 'flow_meal':
+        await _flowMeal();
         break;
     }
   }
@@ -1721,6 +1728,68 @@ class _MapScreenState extends State<MapScreen> {
 
   /// 시연 명단 — 흔한 이름 14개(6인제 두 팀 12명 + 대기 2명).
   static const _agDemoNames = '민준,서연,도윤,하은,시우,지유,준서,수아,예준,지아,하준,서윤,지호,채원';
+
+  /// 🍚 밥친구 맺기 — 🍚 팝업 둘째 장 → 내 초대 코드·QR → 받은 신청 수락 → '내 식단표
+  /// 보이기' 확인 카드 → 이대로 보이기. 촬영 전에 운영자의 다른 계정이 이 계정에 신청을
+  /// 보내 두고, 같은 팀 2~3개를 도시락에 담고 식단표 보이기를 켜 둔다(규칙상 한 계정으로는
+  /// 친구를 못 만든다). 수락·공유는 실제로 저장된다.
+  Future<void> _flowFriends() async {
+    await _closeOverlays();
+    if (!mounted) return;
+    _onTab('clubs');
+    if (!await _hold(2.5, 'fr_fab')) return; // 🍚 버튼의 빨간 숫자 = 받은 신청
+    if (!mounted) return;
+    unawaited(showProfileSheet(context));
+    if (!await _hold(2, 'fr_card')) return; // 첫째 장: 내 밥이름 카드
+    profileDemo.value = 'page:1';
+    if (!await _hold(2.5, 'fr_page')) return; // 둘째 장: 밥친구 — 받은 신청
+    friendsDemo.value = 'view:add';
+    if (!await _hold(3, 'fr_code')) return; // 내 초대 코드 · 초대 링크 복사
+    friendsDemo.value = 'qr';
+    if (!await _hold(2.5, 'fr_qr')) return; // QR — 옆 사람은 찍기만
+    friendsDemo.value = 'view:list';
+    if (!await _hold(1.5)) return;
+    friendsDemo.value = 'accept';
+    if (!await _hold(3, 'fr_accept')) return; // 수락 → 밥친구
+    if (!await _hold(2.5, 'fr_share_card')) return; // 내 식단표 보일 팀 고르기
+    friendsDemo.value = 'confirm';
+    if (!await _hold(3, 'fr_shared')) return; // 이대로 보이기
+    _endFlow();
+    friendsDemo.value = '';
+    profileDemo.value = '';
+    await _backToMap();
+  }
+
+  /// 🍚 식단표 겹쳐 보기·합석 — 둘째 장의 '이번 주 합석' → 친구 상세(밥그릇 단계·도시락)
+  /// → 아래로: 식단표 겹쳐 보기(합석 칸) → 도시락 편집의 눈 버튼으로 팀 숨기기(끝에 되돌림).
+  /// 밥친구 맺기 흐름 뒤에 찍는다(친구가 있어야 한다).
+  Future<void> _flowMeal() async {
+    await _closeOverlays();
+    if (!mounted) return;
+    _onTab('clubs');
+    unawaited(showProfileSheet(context, initialPage: 1));
+    if (!await _hold(3, 'ml_list')) return; // 이번 주 합석 줄 · 친구 밥그릇
+    friendsDemo.value = 'detail';
+    if (!await _hold(3, 'ml_detail')) return; // 한 숟갈·한 그릇·한솥밥 + 친구 도시락
+    profileDemo.value = 'scroll:end';
+    if (!await _hold(4, 'ml_overlay')) return; // 식단표 겹쳐 보기 — 합석 칸
+    friendsDemo.value = '';
+    profileDemo.value = '';
+    await _backToMap();
+    if (!mounted) return;
+    unawaited(showLunchboxSheet(context));
+    if (!await _hold(2, 'ml_lunchbox')) return;
+    lunchboxDemo.value = 'edit';
+    if (!await _hold(2, 'ml_edit')) return; // 칸마다 눈 버튼
+    lunchboxDemo.value = 'eye';
+    if (!await _hold(3, 'ml_eye')) return; // 이 팀은 밥친구에게 안 보임
+    _endFlow();
+    lunchboxDemo.value = 'eye:undo';
+    lunchboxDemo.value = 'edit#2';
+    lunchboxDemo.value = '';
+    await _hold(0.8);
+    await _backToMap();
+  }
 
   Future<void> _flowArea() async {
     await _closeOverlays();

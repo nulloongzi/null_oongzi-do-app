@@ -2,6 +2,7 @@
 // 웹처럼 화면 중앙 팝업 모달(딤 blur + slideUp 스프링)로 표시.
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
+import '../services/deep_link_service.dart' show kCaptureMode;
 import '../models/club.dart';
 import '../services/data_repository.dart';
 import '../services/friend_share_service.dart';
@@ -15,6 +16,11 @@ import '../widgets/diet_grid.dart';
 import 'detail_sheet.dart';
 
 /// 도시락 팝업: 웹 도시락 오버레이 대응 — 화면 중앙 통(카드) 모달(딤 blur + 스프링 등장).
+/// 캡처 시연: 'edit'(편집 켜고 끄기) 'eye'(첫 팀을 밥친구에게 숨기기) 'eye:undo'(되돌리기).
+/// 눈 버튼을 누를 때와 같은 일(FriendsHub.setHidden) — 끝에 'eye:undo' 로 되돌린다.
+final ValueNotifier<String> lunchboxDemo = ValueNotifier<String>('');
+String? _demoHiddenId;
+
 Future<void> showLunchboxSheet(BuildContext context, {bool openDiet = false}) {
   return showGeneralDialog<void>(
     context: context,
@@ -133,6 +139,7 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
 
   @override
   void dispose() {
+    lunchboxDemo.removeListener(_onDemo);
     lunchboxDietOpenSignal.removeListener(_onDietSignal);
     super.dispose();
   }
@@ -141,7 +148,29 @@ class _LunchboxScreenState extends State<LunchboxScreen> {
   void initState() {
     super.initState();
     lunchboxDietOpenSignal.addListener(_onDietSignal);
+    if (kCaptureMode) lunchboxDemo.addListener(_onDemo);
     _load();
+  }
+
+  void _onDemo() {
+    if (!mounted) return;
+    switch (lunchboxDemo.value.split('#').first) {
+      case 'edit':
+        setState(() {
+          _editing = !_editing;
+          _selectedSlot = null;
+        });
+      case 'eye':
+        final id = _data?.bookmarks.whereType<String>().firstOrNull;
+        if (id == null) return;
+        _demoHiddenId = id;
+        FriendsHub.instance.setHidden(id, true).catchError((_) {});
+      case 'eye:undo':
+        final id = _demoHiddenId;
+        if (id == null) return;
+        _demoHiddenId = null;
+        FriendsHub.instance.setHidden(id, false).catchError((_) {});
+    }
   }
 
   Future<void> _load() async {

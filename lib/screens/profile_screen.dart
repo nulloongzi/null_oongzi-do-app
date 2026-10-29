@@ -2,6 +2,7 @@
 // 웹처럼 화면 중앙 팝업 모달(딤 blur + slideUp 스프링)로 표시.
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
+import '../services/deep_link_service.dart' show kCaptureMode;
 import 'package:flutter/rendering.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -566,6 +567,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 // 위의 도트 두 개가 두 장을 알려주고, 받은 신청을 아직 안 봤으면 둘째 점이 커지고 빛난다.
 // 두 장의 높이가 달라서, 팝업 높이는 보고 있는 장에 맞춘다(넘기는 동안은 두 높이 사이를 보간).
 // 로그아웃·익명이면 둘째 장 없이 지금처럼 카드 한 장.
+/// 캡처 시연: 'page:0|1'(장 넘기기) 'scroll:end|top'(지금 장을 끝까지·맨 위로). '#n' 꼬리 허용.
+final ValueNotifier<String> profileDemo = ValueNotifier<String>('');
+
 class ProfilePager extends StatefulWidget {
   final int initialPage;
   final String? inviteCode;
@@ -586,6 +590,7 @@ class _ProfilePagerState extends State<ProfilePager> {
     initialPage: widget.initialPage,
   );
   final _heights = <double>[320, 320];
+  final _scrolls = [ScrollController(), ScrollController()]; // 장마다(시연에서 내릴 때)
   late double _page = widget.initialPage.toDouble();
   static const _dotsH = 28.0;
   static const _pad = EdgeInsets.symmetric(horizontal: 20, vertical: 8);
@@ -598,10 +603,38 @@ class _ProfilePagerState extends State<ProfilePager> {
       if (p != _page) setState(() => _page = p);
     });
     if (widget.initialPage == 1) _onFriendsShown();
+    if (kCaptureMode) profileDemo.addListener(_onDemo);
+  }
+
+  void _onDemo() {
+    if (!mounted) return;
+    final c = profileDemo.value.split('#').first;
+    if (c.startsWith('page:')) {
+      final i = int.tryParse(c.substring(5)) ?? 0;
+      if (_pc.hasClients) {
+        _pc.animateToPage(
+          i,
+          duration: const Duration(milliseconds: 420),
+          curve: Curves.easeOutCubic,
+        );
+      }
+    } else if (c.startsWith('scroll:')) {
+      final sc = _scrolls[_page.round().clamp(0, 1)];
+      if (!sc.hasClients) return;
+      sc.animateTo(
+        c == 'scroll:end' ? sc.position.maxScrollExtent : 0,
+        duration: const Duration(milliseconds: 900),
+        curve: Curves.easeInOut,
+      );
+    }
   }
 
   @override
   void dispose() {
+    profileDemo.removeListener(_onDemo);
+    for (final s in _scrolls) {
+      s.dispose();
+    }
     _pc.dispose();
     super.dispose();
   }
@@ -617,6 +650,7 @@ class _ProfilePagerState extends State<ProfilePager> {
   }
 
   Widget _pageOf(int i, Widget child) => SingleChildScrollView(
+    controller: _scrolls[i],
     padding: _pad,
     child: _MeasureSize(
       onSize: (s) => _setHeight(i, s.height + _pad.vertical),
