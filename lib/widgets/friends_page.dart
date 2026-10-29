@@ -217,7 +217,11 @@ class _FriendsPageState extends State<FriendsPage> {
         hub.friendLunchboxes,
         hub.myMeal,
       ]),
-      builder: (ctx, _) => _frame(hub.state.value),
+      // 팝업(showGeneralDialog)엔 Material 이 없다 — 입력칸·잉크 탭이 깔릴 바탕
+      builder: (ctx, _) => Material(
+        type: MaterialType.transparency,
+        child: _frame(hub.state.value),
+      ),
     );
   }
 
