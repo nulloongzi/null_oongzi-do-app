@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 2.13.0+25
+version: 2.13.0+26
 
 environment:
   sdk: ^3.10.4
@@ -138,3 +138,4 @@ flutter_launcher_icons:
   min_sdk_android: 21 # 안드로이드 최소 버전
   adaptive_icon_background: "#ffffff" # 배경색 (흰색)
   adaptive_icon_foreground: "assets/icon.png" # 전면 이미지
+  adaptive_icon_monochrome: "assets/icon_monochrome.png" # 안드로이드 13+ 테마 아이콘(단색 로고, 웹 assets/logo/nulloongzido-mono-small-*.svg)

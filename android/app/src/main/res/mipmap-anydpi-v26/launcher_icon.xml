@@ -6,4 +6,10 @@
           android:drawable="@drawable/ic_launcher_foreground"
           android:inset="16%" />
   </foreground>
+  <!-- 안드로이드 13+ 테마 아이콘: 단색 로고(작은 크기용). 색은 폰이 배경화면에 맞춰 입힌다 -->
+  <monochrome>
+      <inset
+          android:drawable="@drawable/ic_launcher_monochrome"
+          android:inset="16%" />
+  </monochrome>
 </adaptive-icon>
