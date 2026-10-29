@@ -1,7 +1,7 @@
-// warm_avatar.dart — 밥친구 합석 단계 그림(웹 js/friends.js fillBowl · 공유 카드와 같은 값).
+// warm_avatar.dart — 밥친구 합석 단계 그림(웹 js/friends.js avatar 와 같은 값).
 //
 // 합석 단계 = 같이 다니는 팀 수: 1 한 숟갈 · 2 한 그릇 · 3팀 이상 한솥밥.
-// 아바타 속 밥그릇이 단계만큼 차오른다(1/3 · 2/3 · 가득). 테두리·빛남 같은 장식은 없다.
+// 아바타 속 밥그릇(단색 로고)이 단계만큼 차오른다(1/3 · 2/3 · 가득). 테두리·빛남 같은 장식은 없다.
 // WarmAvatar(단계 색 테두리)는 🍚 버블의 '처음 합석' 알림에만 쓴다.
 import 'package:flutter/material.dart';
 
@@ -21,152 +21,9 @@ const warmRing = [
   Color(0xFFE0A800),
 ];
 const mealLevel = [0.0, 1 / 3, 2 / 3, 1.0];
-const _bowlTop = 4.4, _bowlBottom = 19.6;
 const _ink = Color(0xFF3D2C22);
 
-/// 밥그릇(24 단위 좌표) — 로고(assets/logo/nulloongzido-logo.svg) 단순화. 웹 js/friends.js BOWL_D 와 같은 모양.
-/// 밥 더미 + 그릇 윤곽: 채움·테두리용.
-Path bowlPath() => Path()
-  ..moveTo(11.04, 19.56)
-  ..cubicTo(9.67, 19.44, 8.56, 19.07, 8.31, 18.66)
-  ..cubicTo(8.25, 18.56, 8.21, 18.41, 8.21, 18.24)
-  ..cubicTo(8.21, 18.01, 8.20, 17.97, 8.08, 17.90)
-  ..cubicTo(7.08, 17.30, 6.03, 16.32, 5.47, 15.47)
-  ..cubicTo(4.74, 14.36, 4.32, 13.19, 4.22, 11.94)
-  ..cubicTo(4.18, 11.41, 4.22, 11.23, 4.43, 11.01)
-  ..lineTo(4.61, 10.82)
-  ..lineTo(4.68, 11.06)
-  ..cubicTo(4.75, 11.28, 4.74, 11.31, 4.65, 11.51)
-  ..cubicTo(4.48, 11.85, 4.51, 11.93, 4.86, 12.27)
-  ..cubicTo(5.26, 12.65, 5.56, 12.79, 6.56, 13.05)
-  ..cubicTo(7.18, 13.21, 7.74, 13.30, 8.78, 13.42)
-  ..cubicTo(9.03, 13.45, 9.31, 13.48, 9.40, 13.50)
-  ..cubicTo(10.09, 13.60, 14.41, 13.56, 15.05, 13.45)
-  ..cubicTo(15.09, 13.44, 15.28, 13.42, 15.48, 13.40)
-  ..cubicTo(15.99, 13.35, 17.09, 13.14, 17.63, 12.99)
-  ..cubicTo(18.44, 12.77, 18.71, 12.64, 19.08, 12.29)
-  ..cubicTo(19.45, 11.93, 19.48, 11.84, 19.32, 11.52)
-  ..cubicTo(19.25, 11.38, 19.24, 11.30, 19.27, 11.21)
-  ..cubicTo(19.30, 11.14, 19.32, 11.01, 19.32, 10.93)
-  ..lineTo(19.32, 10.77)
-  ..lineTo(19.52, 10.97)
-  ..cubicTo(19.77, 11.22, 19.81, 11.38, 19.76, 11.95)
-  ..cubicTo(19.53, 14.36, 18.17, 16.52, 16.10, 17.77)
-  ..lineTo(15.77, 17.97)
-  ..lineTo(15.75, 18.29)
-  ..cubicTo(15.73, 18.54, 15.70, 18.65, 15.61, 18.74)
-  ..cubicTo(15.33, 19.03, 14.50, 19.35, 13.69, 19.46)
-  ..cubicTo(13.47, 19.50, 13.23, 19.53, 13.15, 19.54)
-  ..cubicTo(12.84, 19.59, 11.49, 19.60, 11.04, 19.56)
-  ..close()
-  ..moveTo(10.30, 13.01)
-  ..cubicTo(10.28, 13.00, 10.04, 12.97, 9.75, 12.95)
-  ..cubicTo(7.83, 12.83, 5.82, 12.41, 5.21, 12.01)
-  ..cubicTo(5.07, 11.92, 5.09, 11.65, 5.24, 11.43)
-  ..cubicTo(5.30, 11.34, 5.32, 11.28, 5.28, 11.22)
-  ..cubicTo(5.20, 11.08, 5.22, 10.75, 5.32, 10.61)
-  ..cubicTo(5.38, 10.51, 5.40, 10.40, 5.39, 10.22)
-  ..cubicTo(5.38, 9.91, 5.48, 9.70, 5.68, 9.57)
-  ..cubicTo(5.82, 9.49, 5.83, 9.47, 5.84, 9.08)
-  ..cubicTo(5.86, 8.61, 5.98, 8.41, 6.36, 8.19)
-  ..cubicTo(6.55, 8.08, 6.58, 8.04, 6.58, 7.90)
-  ..cubicTo(6.58, 7.48, 6.83, 7.09, 7.21, 6.92)
-  ..cubicTo(7.36, 6.85, 7.43, 6.79, 7.45, 6.69)
-  ..cubicTo(7.56, 6.21, 7.81, 5.92, 8.15, 5.86)
-  ..cubicTo(8.52, 5.80, 8.56, 5.78, 8.64, 5.64)
-  ..cubicTo(8.72, 5.48, 8.83, 5.41, 9.11, 5.37)
-  ..cubicTo(9.25, 5.35, 9.32, 5.30, 9.41, 5.16)
-  ..cubicTo(9.59, 4.87, 9.80, 4.79, 10.22, 4.82)
-  ..cubicTo(10.49, 4.85, 10.60, 4.83, 10.72, 4.77)
-  ..cubicTo(10.82, 4.72, 10.93, 4.71, 11.06, 4.73)
-  ..cubicTo(11.22, 4.75, 11.27, 4.74, 11.38, 4.63)
-  ..cubicTo(11.65, 4.37, 12.04, 4.33, 12.42, 4.52)
-  ..cubicTo(12.61, 4.61, 12.70, 4.63, 12.96, 4.61)
-  ..cubicTo(13.21, 4.59, 13.30, 4.61, 13.43, 4.69)
-  ..cubicTo(13.54, 4.75, 13.64, 4.78, 13.75, 4.76)
-  ..cubicTo(13.95, 4.73, 14.24, 4.87, 14.37, 5.05)
-  ..cubicTo(14.46, 5.17, 14.51, 5.19, 14.73, 5.19)
-  ..cubicTo(15.05, 5.19, 15.31, 5.35, 15.49, 5.64)
-  ..cubicTo(15.60, 5.80, 15.68, 5.86, 15.87, 5.93)
-  ..cubicTo(16.07, 6.00, 16.14, 6.05, 16.24, 6.23)
-  ..cubicTo(16.33, 6.39, 16.42, 6.46, 16.53, 6.49)
-  ..cubicTo(16.70, 6.54, 17.09, 6.95, 17.08, 7.07)
-  ..cubicTo(17.07, 7.24, 17.16, 7.38, 17.34, 7.47)
-  ..cubicTo(17.64, 7.63, 17.80, 7.87, 17.82, 8.23)
-  ..cubicTo(17.84, 8.48, 17.87, 8.57, 17.98, 8.70)
-  ..cubicTo(18.07, 8.80, 18.13, 8.93, 18.15, 9.11)
-  ..cubicTo(18.18, 9.29, 18.22, 9.38, 18.30, 9.44)
-  ..cubicTo(18.48, 9.55, 18.58, 9.82, 18.57, 10.14)
-  ..cubicTo(18.56, 10.35, 18.59, 10.49, 18.67, 10.67)
-  ..cubicTo(18.77, 10.89, 18.78, 10.94, 18.73, 11.13)
-  ..cubicTo(18.68, 11.30, 18.69, 11.37, 18.74, 11.48)
-  ..cubicTo(18.89, 11.77, 18.87, 11.94, 18.65, 12.07)
-  ..cubicTo(18.16, 12.35, 16.69, 12.70, 15.40, 12.85)
-  ..cubicTo(15.03, 12.89, 14.62, 12.93, 14.48, 12.95)
-  ..cubicTo(14.19, 12.99, 10.33, 13.04, 10.30, 13.01)
-  ..close();
-
-/// 공 이음선(밥 더미 위). 웹 BOWL_SEAMS.
-Path bowlSeamsPath() => Path()
-  ..moveTo(12.11, 12.57)
-  ..cubicTo(11.99, 11.96, 11.82, 11.43, 11.73, 11.39)
-  ..cubicTo(11.69, 11.37, 11.41, 11.29, 11.12, 11.22)
-  ..cubicTo(9.60, 10.85, 8.10, 10.02, 6.96, 8.90)
-  ..lineTo(6.41, 8.37)
-  ..lineTo(6.28, 8.46)
-  ..cubicTo(6.21, 8.52, 6.12, 8.59, 6.08, 8.64)
-  ..cubicTo(5.97, 8.77, 5.83, 8.83, 5.87, 8.73)
-  ..cubicTo(5.93, 8.55, 6.14, 8.31, 6.36, 8.19)
-  ..cubicTo(6.55, 8.08, 6.58, 8.04, 6.58, 7.90)
-  ..cubicTo(6.58, 7.63, 6.72, 7.30, 6.91, 7.12)
-  ..cubicTo(7.01, 7.03, 7.08, 6.99, 7.06, 7.03)
-  ..cubicTo(7.05, 7.08, 6.99, 7.27, 6.93, 7.47)
-  ..lineTo(6.82, 7.82)
-  ..lineTo(7.02, 8.07)
-  ..cubicTo(7.38, 8.49, 8.52, 9.46, 8.65, 9.45)
-  ..cubicTo(8.67, 9.45, 8.83, 9.15, 9.02, 8.77)
-  ..cubicTo(9.76, 7.25, 10.79, 6.09, 12.10, 5.32)
-  ..cubicTo(12.62, 5.01, 13.40, 4.68, 13.48, 4.73)
-  ..cubicTo(13.51, 4.75, 13.65, 4.76, 13.79, 4.77)
-  ..cubicTo(13.99, 4.77, 14.09, 4.80, 14.24, 4.92)
-  ..cubicTo(14.46, 5.09, 14.50, 5.05, 13.72, 5.29)
-  ..cubicTo(12.12, 5.78, 10.71, 6.98, 9.76, 8.66)
-  ..cubicTo(9.61, 8.93, 9.26, 9.73, 9.26, 9.80)
-  ..cubicTo(9.26, 9.92, 10.86, 10.54, 11.60, 10.70)
-  ..lineTo(11.89, 10.76)
-  ..lineTo(12.27, 10.36)
-  ..cubicTo(13.47, 9.09, 15.00, 8.18, 16.62, 7.77)
-  ..cubicTo(17.08, 7.65, 17.16, 7.62, 17.18, 7.53)
-  ..cubicTo(17.20, 7.40, 17.20, 7.40, 17.38, 7.50)
-  ..cubicTo(17.64, 7.63, 17.80, 7.89, 17.82, 8.23)
-  ..cubicTo(17.84, 8.48, 17.87, 8.57, 17.99, 8.70)
-  ..cubicTo(18.26, 9.02, 18.12, 8.93, 17.79, 8.58)
-  ..lineTo(17.46, 8.22)
-  ..lineTo(17.14, 8.29)
-  ..cubicTo(16.42, 8.46, 15.79, 8.67, 15.34, 8.89)
-  ..lineTo(15.10, 9.01)
-  ..lineTo(15.33, 9.32)
-  ..cubicTo(15.90, 10.10, 16.37, 11.01, 16.63, 11.83)
-  ..cubicTo(16.89, 12.64, 16.89, 12.61, 16.59, 12.67)
-  ..cubicTo(16.21, 12.75, 16.22, 12.76, 16.13, 12.37)
-  ..cubicTo(15.94, 11.60, 15.58, 10.84, 14.99, 9.97)
-  ..cubicTo(14.52, 9.27, 14.58, 9.29, 14.10, 9.62)
-  ..cubicTo(13.62, 9.95, 12.83, 10.64, 12.57, 10.96)
-  ..lineTo(12.38, 11.18)
-  ..lineTo(12.51, 11.57)
-  ..cubicTo(12.63, 11.96, 12.82, 12.78, 12.82, 12.94)
-  ..cubicTo(12.82, 13.01, 12.78, 13.02, 12.51, 13.02)
-  ..lineTo(12.20, 13.02)
-  ..lineTo(12.11, 12.57)
-  ..close()
-  ..moveTo(5.44, 12.12)
-  ..cubicTo(5.12, 11.96, 5.12, 11.96, 5.13, 11.76)
-  ..cubicTo(5.15, 11.46, 5.19, 11.47, 5.52, 11.89)
-  ..cubicTo(5.69, 12.11, 5.82, 12.28, 5.80, 12.28)
-  ..cubicTo(5.78, 12.28, 5.62, 12.21, 5.44, 12.12)
-  ..close();
-
-/// 단색 아이콘: 이음선을 구멍으로 뺀 밥그릇. 웹 BOWL · 로그인 수단 도장과 같다.
+/// 단색 아이콘: 이음선을 구멍으로 뺀 밥그릇. 로그인 수단 도장(웹 js/profile.js rice)과 같다.
 Path bowlSolidPath() => Path()
   ..fillType = PathFillType.evenOdd
   ..moveTo(11.04, 19.56)
@@ -288,52 +145,41 @@ Path bowlSolidPath() => Path()
   ..cubicTo(8.63, 9.41, 8.44, 9.28, 8.23, 9.12)
   ..close();
 
-/// [rect] 안에 밥그릇을 그린다. tier 0 이면 짙은 단색, 아니면 단계만큼 차오른 그릇.
-void paintMealBowl(Canvas c, Rect rect, int tier) {
-  final t = tier.clamp(0, 3);
-  final path = bowlPath();
-  c.save();
-  c.translate(rect.left, rect.top);
-  c.scale(rect.width / 24);
-  // 작게 그릴 때(24 미만)는 이음선이 뭉개져 실루엣만 — 웹 friends.js 작은 아바타와 같다.
-  final small = rect.width < 24;
-  if (t == 0) {
-    c.drawPath(small ? path : bowlSolidPath(), Paint()..color = _ink);
-    c.restore();
-    return;
-  }
-  c.save();
-  c.clipPath(path);
-  c.drawRect(
-    const Rect.fromLTWH(0, 0, 24, 24),
-    Paint()..color = const Color(0x473D2C22),
-  );
-  final y = _bowlBottom - (_bowlBottom - _bowlTop) * mealLevel[t];
-  c.drawRect(Rect.fromLTWH(0, y, 24, 24), Paint()..color = warmRing[t]);
-  if (!small) {
-    c.drawPath(bowlSeamsPath(), Paint()..color = const Color(0x8C3D2C22));
-  }
-  c.restore();
-  c.drawPath(
-    path,
-    Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2
-      ..color = _ink,
-  );
-  c.restore();
-}
-
-class MealBowlPainter extends CustomPainter {
+/// 밥그릇 = 단색 로고(assets/logo_mono.png — 웹 assets/logo/nulloongzido-mono-small-*.svg).
+/// tier 0 이면 짙은 단색, 아니면 같은 로고가 아래부터 단계 색으로 차오른다(1/3 · 2/3 · 가득).
+/// 웹 js/friends.js avatar 와 같은 모양·색.
+class MealBowl extends StatelessWidget {
+  final double size;
   final int tier;
-  const MealBowlPainter([this.tier = 0]);
+  const MealBowl({super.key, required this.size, this.tier = 0});
 
   @override
-  void paint(Canvas c, Size size) => paintMealBowl(c, Offset.zero & size, tier);
-
-  @override
-  bool shouldRepaint(covariant MealBowlPainter old) => old.tier != tier;
+  Widget build(BuildContext context) {
+    final t = tier.clamp(0, 3);
+    final img = Image.asset(
+      'assets/logo_mono.png',
+      width: size,
+      color: t == 0 ? _ink : null,
+      colorBlendMode: BlendMode.srcIn,
+      cacheWidth: (size * MediaQuery.devicePixelRatioOf(context)).round(),
+      excludeFromSemantics: true,
+    );
+    if (t == 0) return img;
+    final lv = mealLevel[t];
+    return ShaderMask(
+      blendMode: BlendMode.srcIn,
+      shaderCallback: (r) => LinearGradient(
+        begin: Alignment.bottomCenter,
+        end: Alignment.topCenter,
+        colors: [warmRing[t], warmRing[t], _empty, _empty],
+        stops: [0, lv, lv, 1],
+      ).createShader(r),
+      child: img,
+    );
+  }
 }
+
+const _empty = Color(0x6B3D2C22); // 안 찬 부분 — 짙은 갈색 42%
 
 /// 단계 색 테두리 — 🍚 버블의 '처음 합석' 알림용.
 class WarmAvatar extends StatelessWidget {
