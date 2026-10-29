@@ -1,9 +1,14 @@
 // anchigi_roster_tab.dart — 명단 탭. 참석 체크, 포지션 티어 편집, 퇴장 시간, 추가/삭제.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../models/anchigi/anchigi_constants.dart';
 import '../../models/anchigi/anchigi_player.dart';
+import '../../screens/anchigi_screen.dart' show anchigiDemo, anchigiDemoCmd;
 import '../../services/anchigi/anchigi_store.dart';
+import '../../services/capture_demo.dart';
+import '../../services/deep_link_service.dart' show kCaptureMode;
 import '../../services/i18n.dart';
 import '../../theme.dart';
 import 'anchigi_common.dart';
@@ -37,8 +42,48 @@ class _AnchigiRosterTabState extends State<AnchigiRosterTab> {
 
   AnchigiStore get s => widget.store;
 
+  Timer? _typing; // 캡처 시연의 타이핑
+  final _pasteKey = GlobalKey(); // 시연에서 붙여 넣기 칸이 보이게
+
+  @override
+  void initState() {
+    super.initState();
+    if (kCaptureMode) anchigiDemo.addListener(_onDemo);
+  }
+
+  // 'paste:민준,서연,…' — 붙여 넣기 칸에 한 줄씩 쳐 넣고 '한 번에 추가'.
+  void _onDemo() {
+    final c = anchigiDemoCmd();
+    if (!mounted || !c.startsWith('paste:')) return;
+    final text = c.substring(6).split(',').join('\n');
+    final box = _pasteKey.currentContext;
+    if (box != null) {
+      Scrollable.ensureVisible(
+        box,
+        alignment: 0.15,
+        duration: const Duration(milliseconds: 500),
+      );
+    }
+    _typing?.cancel();
+    _typing = demoType(
+      _pasteCtl,
+      text,
+      every: const Duration(milliseconds: 45),
+      onChanged: () {
+        if (mounted) setState(() {});
+      },
+      onDone: () {
+        if (!mounted) return;
+        s.addPlayers(_pasteCtl.text);
+        _pasteCtl.clear();
+      },
+    );
+  }
+
   @override
   void dispose() {
+    anchigiDemo.removeListener(_onDemo);
+    _typing?.cancel();
     _nameCtl.dispose();
     _pasteCtl.dispose();
     super.dispose();
@@ -175,7 +220,7 @@ class _AnchigiRosterTabState extends State<AnchigiRosterTab> {
           ),
         ),
         _addCard(context),
-        _pasteCard(),
+        KeyedSubtree(key: _pasteKey, child: _pasteCard()),
         _bulkCard(),
       ],
     );

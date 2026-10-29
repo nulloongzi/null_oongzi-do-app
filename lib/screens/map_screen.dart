@@ -754,6 +754,9 @@ class _MapScreenState extends State<MapScreen> {
       case 'flow_tips':
         await _flowTips();
         break;
+      case 'flow_anchigi':
+        await _flowAnchigi();
+        break;
     }
   }
 
@@ -1672,6 +1675,52 @@ class _MapScreenState extends State<MapScreen> {
     await _backToMap();
     if (appLang.value != 'ko') await toggleLang();
   }
+
+  /// 🏐 안치기 — 픽업 탭 왼쪽 아래 → 명단에 이름 붙여 넣기 → 6인제 배치 뽑기(코트·대기)
+  /// → 확정 → 9인제로 바꿔 사람이 모자랄 때 비는 자리(필요) → 기록. 로그인 없는 폰 안 도구.
+  /// 명단은 폰에 저장되는 개인 자료라 시작에 백업하고 끝에 되돌린다(anchigiDemo).
+  Future<void> _flowAnchigi() async {
+    await _closeOverlays();
+    if (!mounted) return;
+    _onTab('pickup');
+    if (!await _hold(2.5, 'ag_fab')) return; // 왼쪽 아래 🏐 안치기
+    _openAnchigi();
+    if (!await _hold(2)) return; // 명단을 폰에서 읽어 올 시간(백업이 읽기 뒤에 와야 한다)
+    anchigiDemo.value = 'backup';
+    anchigiDemo.value = 'reset';
+    if (!await _hold(2.5, 'ag_open')) return; // 빈 명단 — 시작 안내
+    anchigiDemo.value = 'tab:1';
+    if (!await _hold(1.5, 'ag_roster')) return;
+    anchigiDemo.value = 'paste:$_agDemoNames';
+    if (!await _hold(4, 'ag_paste')) return; // 이름을 한 줄씩 → 한 번에 추가
+    if (!await _hold(2, 'ag_added')) return; // 14명 출석
+    anchigiDemo.value = 'tab:0';
+    if (!await _hold(2, 'ag_settings')) return; // 6인제 · 5-1
+    anchigiDemo.value = 'draw';
+    if (!await _hold(4, 'ag_draw')) return; // 코트 배치
+    anchigiDemo.value = 'scroll:end';
+    if (!await _hold(3, 'ag_bench')) return; // 대기 — 고르게 나눔
+    anchigiDemo.value = 'commit';
+    if (!await _hold(2.5, 'ag_commit')) return; // 확정 → 다음 라운드
+    anchigiDemo.value = 'sport:v9';
+    if (!await _hold(1.5)) return;
+    anchigiDemo.value = 'draw#2';
+    if (!await _hold(3, 'ag_v9')) return; // 9인제 — 모자라면 (필요) 자리
+    anchigiDemo.value = 'scroll:end#2';
+    if (!await _hold(3, 'ag_need')) return;
+    anchigiDemo.value = 'tab:2';
+    if (!await _hold(3, 'ag_record')) return; // 누적 기록(출전·대기)
+    _endFlow();
+    anchigiDemo.value = 'restore';
+    anchigiDemo.value = '';
+    if (!mounted) return;
+    Navigator.of(context).maybePop();
+    await _hold(0.8);
+    _onTab('clubs');
+  }
+
+  /// 시연 명단 — 흔한 이름 14개(6인제 두 팀 12명 + 대기 2명).
+  static const _agDemoNames = '민준,서연,도윤,하은,시우,지유,준서,수아,예준,지아,하준,서윤,지호,채원';
 
   Future<void> _flowArea() async {
     await _closeOverlays();

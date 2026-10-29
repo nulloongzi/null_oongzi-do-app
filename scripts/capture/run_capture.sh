@@ -559,6 +559,7 @@ if [ "$INCLUDE_REELS" = "true" ] && want flows; then
   flow area    flow_area    45   # 등록 폼 '대략적인 위치만 공개' 체크 → 지도 범위 원 → 상세 안내(시연 팀은 끝에서 지운다)
   flow pickup  flow_pickup  45   # 📍 픽업 탭 → 크루 목록 → 레벨 메뉴(설명)·입문 → 크루 상세 → 크루 등록 폼(저장 안 함)
   flow tips    flow_tips    42   # 💡 핀 꾹 눌러 릴스 미리보기 → 상세 맨 아래 최종 확인·정보가 틀렸어요(보내지 않음) → EN 화면
+  flow anchigi flow_anchigi 50   # 🏐 안치기 → 명단 붙여 넣기 14명 → 6인제 뽑기(코트·대기) → 확정 → 9인제 (필요) 자리 → 기록(명단은 백업했다 되돌림)
 
   # 풀 투어: 3편 이어붙이기(편집 없이 바로 쓰는 앱 소개용).
   TOUR_LIST="$FLOWS_DIR/.tour.txt"; : > "$TOUR_LIST"
@@ -576,7 +577,7 @@ if [ "$INCLUDE_REELS" = "true" ] && want flows; then
 
   if [ "$FINGERPRINT" = "true" ]; then
   echo "===== FLOW FINGERPRINT ====="
-  for n in discover collect register reels room admin urgent recruit area pickup tips full_tour; do
+  for n in discover collect register reels room admin urgent recruit area pickup tips anchigi full_tour; do
     flow_montage "$FLOWS_DIR/${n}_${CAP_LANG}.mp4" "flow_${n}"
   done
   echo "===== END FLOW FINGERPRINT ====="

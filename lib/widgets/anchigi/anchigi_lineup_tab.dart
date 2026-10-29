@@ -6,7 +6,9 @@ import '../../models/anchigi/anchigi_constants.dart';
 import '../../models/anchigi/anchigi_round.dart';
 import '../../models/anchigi/anchigi_schedule.dart';
 import '../../services/anchigi/anchigi_solver.dart';
+import '../../screens/anchigi_screen.dart' show anchigiDemo, anchigiDemoCmd;
 import '../../services/anchigi/anchigi_store.dart';
+import '../../services/deep_link_service.dart' show kCaptureMode;
 import '../../services/i18n.dart';
 import '../../theme.dart';
 import 'anchigi_common.dart';
@@ -36,6 +38,39 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
   int _gameTab = 0;
 
   AnchigiStore get s => widget.store;
+
+  final _list = ScrollController(); // 캡처 시연에서 아래로 내릴 때
+
+  @override
+  void initState() {
+    super.initState();
+    if (kCaptureMode) anchigiDemo.addListener(_onDemo);
+  }
+
+  @override
+  void dispose() {
+    anchigiDemo.removeListener(_onDemo);
+    _list.dispose();
+    super.dispose();
+  }
+
+  void _onDemo() {
+    final c = anchigiDemoCmd();
+    if (!mounted) return;
+    if (c == 'draw') {
+      _draw();
+    } else if (c.startsWith('game:')) {
+      setState(() => _gameTab = int.tryParse(c.substring(5)) ?? 0);
+    } else if (c == 'commit') {
+      s.commit();
+    } else if (c == 'scroll:end' && _list.hasClients) {
+      _list.animateTo(
+        _list.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 900),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
 
   /// 진단 사유를 사람이 읽는 문장으로.
   String _reasonText(InfeasibleReason r) {
@@ -137,6 +172,7 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
 
   Widget _scroll(RoundResult? cur, bool failed, List<InfeasibleReason> diag) {
     return ListView(
+      controller: _list,
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
       children: [
         // 결과가 있으면 설정을 접어 결과를 위로 올린다.

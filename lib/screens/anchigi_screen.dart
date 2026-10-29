@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/anchigi/anchigi_store.dart';
+import '../services/deep_link_service.dart' show kCaptureMode;
 import '../services/i18n.dart';
 import '../theme.dart';
 import '../widgets/anchigi/anchigi_help_tab.dart';
@@ -17,20 +18,61 @@ class AnchigiScreen extends StatefulWidget {
   State<AnchigiScreen> createState() => _AnchigiScreenState();
 }
 
+/// 캡처 시연 명령(값이 바뀌면 실행, 같은 명령을 다시 보내려면 뒤에 '#n'). 화면과 탭이 함께 듣는다.
+///   화면: 'backup' 'reset' 'restore' 'tab:N' 'sport:v6|v9'
+///   배치 탭: 'draw' 'game:N' 'commit' 'scroll:end'
+///   명단 탭: 'paste:이름,이름,…'(한 자씩 쳐 넣고 '한 번에 추가')
+/// 명단은 폰에 저장되는 개인 자료라, 시연 전에 백업하고 끝나면(또는 화면이 닫히면) 되돌린다.
+final ValueNotifier<String> anchigiDemo = ValueNotifier<String>('');
+
+/// '#n' 꼬리를 뗀 명령.
+String anchigiDemoCmd() => anchigiDemo.value.split('#').first;
+
 class _AnchigiScreenState extends State<AnchigiScreen>
     with SingleTickerProviderStateMixin {
   // 상태 조각이 탭을 넘나들며 얽혀 있어 화면이 저장소를 소유하고 탭에 넘긴다.
   final _store = AnchigiStore();
   late final TabController _tabs = TabController(length: 4, vsync: this);
 
+  String? _demoBackup; // 시연 전 명단·기록(끝나면 되돌린다)
+
   @override
   void initState() {
     super.initState();
     _store.load();
+    if (kCaptureMode) anchigiDemo.addListener(_onDemo);
+  }
+
+  void _onDemo() {
+    final c = anchigiDemoCmd();
+    if (!mounted || !_store.loaded) return;
+    if (c == 'backup') {
+      _demoBackup = _store.exportJson();
+    } else if (c == 'reset') {
+      if (_demoBackup == null) return; // 백업 없이 지우지 않는다
+      _store.clearRoster();
+      _store.resetStats();
+      _store.setSport('v6');
+    } else if (c == 'restore') {
+      _restoreDemo();
+    } else if (c.startsWith('tab:')) {
+      _tabs.animateTo(int.tryParse(c.substring(4)) ?? 0);
+    } else if (c.startsWith('sport:')) {
+      _store.setSport(c.substring(6));
+    }
+  }
+
+  void _restoreDemo() {
+    final b = _demoBackup;
+    if (b == null) return;
+    _store.importJson(b);
+    _demoBackup = null;
   }
 
   @override
   void dispose() {
+    anchigiDemo.removeListener(_onDemo);
+    _restoreDemo(); // 시연이 중간에 끊겨도 폰의 명단은 원래대로
     _tabs.dispose();
     _store.dispose();
     super.dispose();
