@@ -10,11 +10,16 @@
 // 펼침 비율은 DetailPanelScope로 본문에 노출 → 시간표 morph·릴스 노출이 상세 패널과 동일.
 import 'package:flutter/material.dart';
 import '../models/pickup_spot.dart';
+import '../services/deep_link_service.dart' show kCaptureMode;
 import '../services/i18n.dart';
 import '../theme.dart';
 import 'map_detail_panel.dart'
     show DetailPanelScope, SheetHeight, kSheetCloseRatio, kSheetFlingVelocity;
 import 'pickup_list_panel.dart';
+
+/// 캡처 시연용: 목록·상세 시트를 이 비율(0=기본 높이 … 1=확장)까지 올린다(음수면 무시).
+/// 손가락으로 끌어올릴 때와 같은 스냅 애니메이션.
+final ValueNotifier<double> pickupSheetDemoTo = ValueNotifier<double>(-1);
 
 class PickupListSheet extends StatefulWidget {
   final List<PickupSpot> spots;
@@ -82,6 +87,18 @@ class _PickupListSheetState extends State<PickupListSheet>
   }
 
   @override
+  void initState() {
+    super.initState();
+    if (kCaptureMode) pickupSheetDemoTo.addListener(_onDemoTo);
+  }
+
+  void _onDemoTo() {
+    final r = pickupSheetDemoTo.value;
+    if (!mounted || !_ready || r < 0) return;
+    _snap(_peek + (_expanded - _peek) * r.clamp(0.0, 1.0));
+  }
+
+  @override
   void didUpdateWidget(covariant PickupListSheet old) {
     super.didUpdateWidget(old);
     if (old.detailId != widget.detailId && _detailScroll.hasClients) {
@@ -91,6 +108,7 @@ class _PickupListSheetState extends State<PickupListSheet>
 
   @override
   void dispose() {
+    pickupSheetDemoTo.removeListener(_onDemoTo);
     _h.dispose();
     _expand.dispose();
     _detailScroll.dispose();

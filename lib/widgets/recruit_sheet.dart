@@ -26,15 +26,6 @@ final ValueNotifier<int> recruitDemoSubmit = ValueNotifier<int>(0);
 /// 시연 문구 — 칸의 예시와 같은 말.
 const kRecruitDemoMsg = '20~30대 회원 모집해요';
 
-/// 캡처 시연용: 문구를 쳐 넣고 🥄 맛보기를 켠다(값이 바뀌면 시작).
-final ValueNotifier<int> recruitDemoFill = ValueNotifier<int>(0);
-
-/// 캡처 시연용: '🍚 식구 모집 시작'을 누른다 — 사용자가 누를 때와 같은 _submit()(실제 저장).
-final ValueNotifier<int> recruitDemoSubmit = ValueNotifier<int>(0);
-
-/// 시연 문구 — 칸의 예시와 같은 말.
-const kRecruitDemoMsg = '20~30대 회원 모집해요';
-
 /// 식구 모집 시작(또는 수정) 시트를 띄운다. 저장했으면 true.
 /// [save] 는 저장 — null=성공, 그 외=보일 문구.
 Future<bool> showRecruitSheet(

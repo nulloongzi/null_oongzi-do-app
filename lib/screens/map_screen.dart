@@ -111,6 +111,8 @@ class _MapScreenState extends State<MapScreen> {
   bool _pkEnglishOnly = false; // 픽업: English OK만
   String _pkRegion = ''; // 픽업: 지역 칩. '' = 전체
   String _pkLevel = ''; // 픽업: 레벨. '' = 전체
+  // 캡처 시연: 레벨 메뉴를 사람이 누른 것처럼 연다(showButtonMenu).
+  final _levelMenuKey = GlobalKey<PopupMenuButtonState<String>>();
   // 픽업 목록은 지도와 공존하는 드래그 시트(PickupListSheet)로 상시 표시한다.
   // 시트 높이/드래그 상태는 그 위젯이 자체 관리 → 드래그 시 MapScreen을 리빌드하지 않는다.
   bool _isAdmin = false; // 관리자(픽업 모더레이션 삭제)
@@ -744,6 +746,9 @@ class _MapScreenState extends State<MapScreen> {
         break;
       case 'flow_area':
         await _flowArea();
+        break;
+      case 'flow_pickup':
+        await _flowPickup();
         break;
     }
   }
@@ -1552,6 +1557,72 @@ class _MapScreenState extends State<MapScreen> {
   /// 📍 대략적인 위치만 공개 — 등록 폼에서 체크(설명 펼침) → 지도의 동네 범위 원 →
   /// 상세의 '대략 위치' 안내. 대략 위치 팀이 실데이터에 없을 수 있어 시연 팀을 실제로
   /// 등록했다가 끝에서 지운다(같은 이름이라도 이 흐름이 만든 대략 위치 팀만).
+  /// 📍 픽업 — 정규 팀이 아니어도 뛸 곳. 탭 → 목록 → 레벨 필터(설명 포함) → 크루 상세
+  /// → 크루 등록 폼(익명 가능·유효기간). 폼은 보여 주기만 하고 저장하지 않는다.
+  /// 지금 크루들은 좌표가 없어 지도 핀 없이 목록에만 뜬다 — 그래서 목록 시트가 주인공.
+  Future<void> _flowPickup() async {
+    await _closeOverlays();
+    if (!mounted) return;
+    _onTab('clubs');
+    setState(() {
+      _pkRegion = '';
+      _pkLevel = '';
+      _pkEnglishOnly = false;
+    });
+    if (!await _hold(2, 'pk_map')) return; // 동호회 지도
+    _onTab('pickup');
+    if (!await _hold(3, 'pk_tab')) return; // 픽업 탭 — 크루 목록 시트
+    pickupSheetDemoTo.value = 1;
+    if (!await _hold(3, 'pk_list')) return; // 목록 펼침 — 레벨·English OK 배지
+    pickupSheetDemoTo.value = 0;
+    pickupSheetDemoTo.value = -1; // 다음 값이 같아도 다시 울리게
+    if (!await _hold(1)) return;
+
+    // 레벨 메뉴 — 단계마다 한 줄 설명(외국인에게 '초보도 가도 되나'가 핵심 질문)
+    _levelMenuKey.currentState?.showButtonMenu();
+    if (!await _hold(3, 'pk_level_menu')) return;
+    if (!mounted) return; // 분석기는 _hold 의 반환값을 mounted 체크로 못 읽는다
+    Navigator.of(context).pop('beginner'); // '입문' 고름 = onSelected
+    if (!await _hold(3, 'pk_level_set')) return; // 입문 크루만(레벨 무관 크루는 늘 포함)
+
+    // 크루 상세 — 시트가 그대로 정보창이 된다
+    final spot = _visibleSpots().firstOrNull ?? _spots.firstOrNull;
+    if (spot != null) {
+      await _focusAndShowSpot(spot);
+      if (!await _hold(2.5, 'pk_detail')) return;
+      pickupSheetDemoTo.value = 1;
+      if (!await _hold(3.5, 'pk_detail_more')) return; // 릴스·연락·일정
+      pickupSheetDemoTo.value = -1;
+      _closeSpot();
+      if (!await _hold(1.2, 'pk_back')) return;
+    }
+    setState(() => _pkLevel = '');
+    await _refreshMarkers();
+    if (!await _hold(1)) return;
+
+    // 크루 등록 — 로그인 없이(익명). 이름 → 레벨·English OK → 유효기간.
+    final cam = await _controller?.getCameraPosition();
+    if (!mounted) return;
+    final form = showPickupFormSheet(
+      context,
+      initialCenter: cam?.target ?? const NLatLng(37.5559, 127.0838),
+    );
+    if (!await _hold(2, 'pk_form')) return;
+    pickupFormDemo.value = 'title';
+    if (!await _hold(2.5, 'pk_form_title')) return;
+    pickupFormDemo.value = 'level';
+    if (!await _hold(3, 'pk_form_level')) return;
+    pickupFormDemo.value = 'expire';
+    if (!await _hold(3.5, 'pk_form_expire')) return; // 이번 주말·1개월·3개월·상시
+    pickupFormDemo.value = '';
+    // 저장하지 않고 닫는다 — 시연이 실제 크루를 만들면 안 된다.
+    if (mounted) Navigator.of(context).maybePop();
+    unawaited(form);
+    if (!await _hold(2, 'pk_end')) return; // 픽업 탭 + 왼쪽 아래 🏐 안치기(다음 편)
+    _endFlow();
+    _onTab('clubs');
+  }
+
   Future<void> _flowArea() async {
     await _closeOverlays();
     if (!mounted) return;
@@ -2784,6 +2855,7 @@ class _MapScreenState extends State<MapScreen> {
   Widget _levelMenu() {
     String label(String l) => l.isEmpty ? t('pk_level_all') : t('lv_$l');
     return PopupMenuButton<String>(
+      key: _levelMenuKey,
       tooltip: t('filter_level'),
       onSelected: (v) {
         setState(() => _pkLevel = v);

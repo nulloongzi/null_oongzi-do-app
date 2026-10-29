@@ -1,11 +1,15 @@
 // pickup_form_screen.dart — 픽업 스팟 등록/수정 폼. 웹 pickup-host.js 포팅.
 // 누구나 등록(무로그인=익명 인증). 좌표는 선택 — 없으면 지도 마커 없이 목록에만 뜬다.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import '../models/pickup_spot.dart';
 import '../models/schedule_block.dart';
 import '../services/data_repository.dart';
 import '../services/analytics.dart';
+import '../services/capture_demo.dart';
+import '../services/deep_link_service.dart' show kCaptureMode;
 import '../services/geocoding_service.dart';
 import '../services/i18n.dart';
 import '../services/pickup_filter.dart';
@@ -18,6 +22,15 @@ import '../widgets/chip_select.dart';
 import '../widgets/map_picker.dart';
 import '../widgets/reel_editor.dart';
 import '../widgets/schedule_editor.dart';
+
+/// 캡처 시연용 단계(값이 바뀌면 실행). 저장은 하지 않는다 — 시연은 폼을 보여 주고 닫는다.
+///   'title'  크루 이름을 한 자씩 친다
+///   'level'  레벨 '입문' + 초보 환영 + English OK
+///   'expire' 맨 아래(유효기간)까지 내려 '이번 주말' 을 고른다
+final ValueNotifier<String> pickupFormDemo = ValueNotifier<String>('');
+
+/// 시연 크루 이름 — 지어낸 팀 이름이 아니라 일반 명사.
+const kPickupDemoName = '주말 오픈짐';
 
 /// 픽업 등록/수정 폼: 풀스크린 라우트 대신 지도 위 모달 바텀시트(웹 등록 팝업 대응).
 /// 등록·수정 성공 시 true 반환.
@@ -86,6 +99,37 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
   bool _geocoding = false;
 
   bool get _isEdit => widget.editing != null;
+
+  final ScrollController _scroll = ScrollController(); // 캡처 시연에서 아래로 내릴 때
+  Timer? _typing; // 캡처 시연의 타이핑
+
+  void _onDemo() {
+    if (!mounted) return;
+    switch (pickupFormDemo.value) {
+      case 'title':
+        _typing?.cancel();
+        _typing = demoType(_title, kPickupDemoName, onChanged: () {
+          if (mounted) setState(() {});
+        });
+      case 'level':
+        setState(() {
+          _level = 'beginner';
+          _beginnerFriendly = true;
+          _englishOk = true;
+        });
+      case 'expire':
+        if (_scroll.hasClients) {
+          _scroll.animateTo(
+            _scroll.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 900),
+            curve: Curves.easeInOut,
+          );
+        }
+        Future<void>.delayed(const Duration(milliseconds: 1100), () {
+          if (mounted) setState(() => _expire = 'weekend');
+        });
+    }
+  }
 
   // 운영자가 릴스를 숨긴 스팟(reels_hidden). 모델이 릴스를 비워 두므로 칸을 열어 두면
   // 저장 한 번에 숨긴 원본이 지워진다 — 잠그고, 저장 때 릴스 필드를 보내지 않는다.
@@ -205,10 +249,14 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
     _repo.isAdmin().then((v) {
       if (mounted && v != _isAdmin) setState(() => _isAdmin = v);
     }, onError: (_) {});
+    if (kCaptureMode) pickupFormDemo.addListener(_onDemo);
   }
 
   @override
   void dispose() {
+    pickupFormDemo.removeListener(_onDemo);
+    _typing?.cancel();
+    _scroll.dispose();
     for (final c in [
       _title,
       _venue,
@@ -392,6 +440,7 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
       child: SingleChildScrollView(
+        controller: _scroll,
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
