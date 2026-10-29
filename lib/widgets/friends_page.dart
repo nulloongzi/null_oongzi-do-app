@@ -331,10 +331,7 @@ class _FriendsPageState extends State<FriendsPage> {
       ],
     ),
     alignment: Alignment.center,
-    child: CustomPaint(
-      size: Size.square(size * 0.58),
-      painter: MealBowlPainter(tier),
-    ),
+    child: MealBowl(size: size * 0.64, tier: tier),
   );
 
   String _mealText(FriendMeal m) =>
