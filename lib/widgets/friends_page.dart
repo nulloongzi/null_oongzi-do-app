@@ -14,6 +14,7 @@ import '../services/share_service.dart';
 import '../theme.dart';
 import 'bounce_tap.dart';
 import 'warm_avatar.dart';
+import 'empty_mark.dart';
 
 enum _View { list, add, detail }
 
@@ -518,6 +519,8 @@ class _FriendsPageState extends State<FriendsPage> {
           ),
           child: Column(
             children: [
+              const EmptyMark(),
+              const SizedBox(height: 12),
               Text(
                 t('fr_empty_title'),
                 style: const TextStyle(
