@@ -108,9 +108,13 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
     switch (pickupFormDemo.value) {
       case 'title':
         _typing?.cancel();
-        _typing = demoType(_title, kPickupDemoName, onChanged: () {
-          if (mounted) setState(() {});
-        });
+        _typing = demoType(
+          _title,
+          kPickupDemoName,
+          onChanged: () {
+            if (mounted) setState(() {});
+          },
+        );
       case 'level':
         setState(() {
           _level = 'beginner';

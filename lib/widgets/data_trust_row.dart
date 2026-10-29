@@ -105,14 +105,12 @@ class DataTrustRow extends StatelessWidget {
   Future<void> _openReport(BuildContext context) async {
     Track.event('report_open', {'kind': kind, 'id': targetId});
     final messenger = ScaffoldMessenger.of(context);
-    final sent = await showDialog<bool>(
-      context: context,
-      builder: (_) => _ReportDialog(
-        kind: kind,
-        targetId: targetId,
-        targetName: targetName,
-        repo: repo ?? DataRepository(),
-      ),
+    final sent = await showDataReportDialog(
+      context,
+      kind: kind,
+      targetId: targetId,
+      targetName: targetName,
+      repo: repo,
     );
     if (sent == true) {
       messenger.showSnackBar(SnackBar(content: Text(t('rp_done'))));
@@ -273,3 +271,21 @@ class _ReportDialogState extends State<_ReportDialog> {
     ],
   );
 }
+
+/// '정보가 틀렸어요' 창을 띄운다(보냈으면 true). 줄의 버튼과 캡처 시연이 같이 쓴다 —
+/// 시연은 창을 보여 주기만 하고 보내지 않는다.
+Future<bool?> showDataReportDialog(
+  BuildContext context, {
+  required String kind,
+  required String targetId,
+  required String targetName,
+  DataRepository? repo,
+}) => showDialog<bool>(
+  context: context,
+  builder: (_) => _ReportDialog(
+    kind: kind,
+    targetId: targetId,
+    targetName: targetName,
+    repo: repo ?? DataRepository(),
+  ),
+);

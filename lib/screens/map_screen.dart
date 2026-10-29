@@ -13,6 +13,7 @@ import '../models/club.dart';
 import '../models/pickup_spot.dart';
 import '../services/analytics.dart';
 import '../services/sanitize.dart';
+import '../widgets/data_trust_row.dart' show showDataReportDialog;
 import '../services/data_repository.dart';
 import '../services/club_admin.dart';
 import '../services/club_filter.dart';
@@ -749,6 +750,9 @@ class _MapScreenState extends State<MapScreen> {
         break;
       case 'flow_pickup':
         await _flowPickup();
+        break;
+      case 'flow_tips':
+        await _flowTips();
         break;
     }
   }
@@ -1623,6 +1627,52 @@ class _MapScreenState extends State<MapScreen> {
     _onTab('clubs');
   }
 
+  /// 💡 꿀팁 모음 — 핀 꾹 눌러 릴스 미리보기 · 상세 맨 아래 '최종 확인'·'정보가 틀렸어요'
+  /// (창만 보여 주고 보내지 않음) · 오른쪽 위 EN 으로 영어 화면.
+  Future<void> _flowTips() async {
+    await _closeOverlays();
+    if (!mounted) return;
+    _onTab('clubs');
+    final c = _clubWithReels();
+    if (c == null) return;
+    if (c.lat != null && c.lng != null) await _centerOnPin(c.lat, c.lng);
+    if (!await _hold(2.5, 'tp_map')) return; // 그 팀 핀이 보이는 지도
+    _peekClub(c);
+    if (!await _hold(4, 'tp_peek')) return; // 배경 흐림 + 릴스 크게
+    setState(() => _reelPeek = null);
+    if (!await _hold(1)) return;
+
+    await _focusAndShowClub(c);
+    if (!await _hold(1.5, 'tp_detail')) return;
+    detailPanelDemoExpand.value++;
+    if (!await _hold(1.2)) return;
+    detailPanelDemoScrollEnd.value++;
+    if (!await _hold(3, 'tp_trust')) return; // 최종 확인일 + 정보가 틀렸어요
+    if (!mounted) return;
+    final report = showDataReportDialog(
+      context,
+      kind: 'club',
+      targetId: c.id,
+      targetName: c.name,
+    );
+    if (!await _hold(3.5, 'tp_report')) return; // 무엇이 틀렸는지 고르는 창
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).maybePop(); // 보내지 않고 닫기
+    unawaited(report);
+    if (!await _hold(1.2)) return;
+
+    // EN — 화면 전체가 영어로(외국인 친구에게 그대로 보여 주기)
+    await _backToMap();
+    if (!mounted) return;
+    await toggleLang();
+    if (!await _hold(3, 'tp_en_map')) return;
+    await _focusAndShowClub(c);
+    if (!await _hold(3.5, 'tp_en_detail')) return;
+    _endFlow();
+    await _backToMap();
+    if (appLang.value != 'ko') await toggleLang();
+  }
+
   Future<void> _flowArea() async {
     await _closeOverlays();
     if (!mounted) return;
@@ -1869,6 +1919,21 @@ class _MapScreenState extends State<MapScreen> {
         cover: cover,
         id: peekId ?? '',
         marks: marks,
+      ),
+    );
+  }
+
+  /// 꾹 누르기 릴스 미리보기를 그 팀으로 바로 연다(캡처 시연 — 손가락 좌표 없이).
+  void _peekClub(Club club) {
+    final reel = club.instaReels.isNotEmpty ? club.instaReels.first : null;
+    if (reel == null) return;
+    setState(
+      () => _reelPeek = _ReelPeek(
+        title: club.name,
+        reel: reel,
+        cover: club.instaReelCovers[Sanitize.instaReelCode(reel) ?? ''],
+        id: club.id,
+        marks: clubMarks(club),
       ),
     );
   }
