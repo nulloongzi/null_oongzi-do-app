@@ -31,7 +31,6 @@ void main() {
     expect(d.recruit!.msg, '남자부 모집중!!'); // 캔버스엔 이모지를 쓰지 않는다
     expect(d.tags, ['#성인', '#대학생']);
     expect(d.urgent, isNull);
-    expect(d.actions.length, 3); // 주소 복사 · 길찾기 · 공유
   });
 
   test('시트는 64% 지점에서 시작하고, 로고는 시트 안 이름 줄 오른쪽 끝', () {

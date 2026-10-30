@@ -25,14 +25,6 @@ class FrameBanner {
   const FrameBanner(this.badge, this.desc, this.msg);
 }
 
-class FrameAction {
-  final String label;
-  final Color bg, fg;
-  const FrameAction(this.label, this.bg, this.fg);
-}
-
-const _grayBtnBg = Color(0xFFECEFF1), _grayBtnFg = Color(0xFF455A64);
-
 class StickerData {
   final String title;
   final bool verified;
@@ -42,7 +34,6 @@ class StickerData {
   final List<String> tags;
   final String fee;
   final String address;
-  final List<FrameAction> actions;
 
   const StickerData({
     required this.title,
@@ -53,20 +44,7 @@ class StickerData {
     this.tags = const [],
     this.fee = '',
     this.address = '',
-    this.actions = const [],
   });
-
-  static List<FrameAction> _actions(String? address, double? lat) => [
-    if ((address ?? '').isNotEmpty)
-      FrameAction(stripEmoji(t('copy_address')), _grayBtnBg, _grayBtnFg),
-    if (lat != null)
-      FrameAction(
-        stripEmoji(t('directions_btn')),
-        NurungjiColors.yellow,
-        NurungjiColors.dark,
-      ),
-    FrameAction(stripEmoji(t('share_link')), _grayBtnBg, _grayBtnFg),
-  ];
 
   static String _summary(List? raw, String? text) {
     final ev = (raw != null && raw.isNotEmpty)
@@ -100,7 +78,6 @@ class StickerData {
       tags: [...parts.words.map((w) => '#${i18nTarget(w)}'), ...parts.notes],
       fee: stripEmoji(i18nPrice(c.price)),
       address: c.address ?? '',
-      actions: _actions(c.address, c.lat),
     );
   }
 
@@ -113,7 +90,6 @@ class StickerData {
       tags: [for (final x in StoryCardData.fromSpot(s).tags) x.text],
       fee: stripEmoji(i18nPrice(s.feeInfo)),
       address: s.address ?? '',
-      actions: _actions(s.address, s.lat),
     );
   }
 }
@@ -212,7 +188,7 @@ double _row(Canvas c, double x, double y, double w, _Ico icon, String text) {
 /// 각 칸 윗단 y (테스트용).
 class FrameLayout {
   final double title;
-  final double? urgent, schedule, recruit, tags, fee, address, actions;
+  final double? urgent, schedule, recruit, tags, fee, address;
   final Rect logo;
   const FrameLayout({
     required this.title,
@@ -223,7 +199,6 @@ class FrameLayout {
     this.tags,
     this.fee,
     this.address,
-    this.actions,
   });
 }
 
@@ -247,7 +222,7 @@ FrameLayout paintFrame(Canvas c, StickerData d, ui.Image? mark) {
   c.drawRRect(sheet, Paint()..color = Colors.white);
   var y = top + 72; // 위 여백 24dp
 
-  double? urgentY, schedY, recruitY, tagsY, feeY, addrY, actY;
+  double? urgentY, schedY, recruitY, tagsY, feeY, addrY;
   if (d.urgent != null) {
     y += 24;
     urgentY = y;
@@ -320,27 +295,6 @@ FrameLayout paintFrame(Canvas c, StickerData d, ui.Image? mark) {
     addrY = y;
     y += _row(c, x, y, _iw, cardIcoPin, d.address);
   }
-  if (d.actions.isNotEmpty) {
-    y += 36;
-    actY = y;
-    final n = d.actions.length;
-    final aw = (_iw - (n - 1) * 24) / n;
-    for (var i = 0; i < n; i++) {
-      final a = d.actions[i];
-      final ax = x + i * (aw + 24);
-      c.drawRRect(cardRRect(ax, y, aw, 113, 36), Paint()..color = a.bg);
-      final st = cardStyle(39, FontWeight.w700, a.fg);
-      cardText(
-        c,
-        cardWrapLines(a.label, st, aw - 30, 1).firstOrNull ?? '',
-        st,
-        ax + aw / 2,
-        y + 57,
-        align: TextAlign.center,
-        middle: true,
-      );
-    }
-  }
   c.restore();
 
   // 단색 로고: 시트 안, 이름 줄 오른쪽 끝. 늘 흰 시트 위라 어떤 영상에서도 똑같이 보이고,
@@ -375,7 +329,6 @@ FrameLayout paintFrame(Canvas c, StickerData d, ui.Image? mark) {
     tags: k(tagsY),
     fee: k(feeY),
     address: k(addrY),
-    actions: k(actY),
     logo: logoRect,
   );
 }
