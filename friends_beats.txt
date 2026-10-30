@@ -1,0 +1,9 @@
+fr_fab 2.81
+fr_card 5.33
+fr_page 7.35
+fr_code 9.85
+fr_qr 12.86
+fr_accept 16.87
+fr_share_card 19.87
+fr_shared 22.37
+flow_end 25.37
