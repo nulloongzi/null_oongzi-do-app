@@ -1,13 +1,14 @@
 // sticker_card.dart — 릴스 프레임: 9:16(1080×1920) 투명 PNG. 아래엔 진짜 상세 시트가 올라온 듯한
-// 바텀시트, 오른쪽 위엔 누룽지도 로고만. 지도 앱 바텀시트에 인증샷을 합성하던 유행에서 착안했다.
+// 바텀시트. 브랜드는 시트 이름 줄 오른쪽 끝의 연한 단색 로고 하나뿐. 지도 앱 바텀시트에 인증샷을 합성하던 유행에서 착안했다.
 // 시트는 화면 너비 꽉, 아래는 프레임 끝까지(둥근 건 위 모서리뿐), 내용은 프레임 아래로 잘려 나간다.
 // 유입 장치(QR·링크·문구)는 넣지 않는다 — 시트와 로고만 보고 궁금하게 만드는 노출용.
-// 모양은 접힌 상세 시트(map_detail_panel · detail_sheet)를 3배(360dp → 1080)로 옮겼다.
+// 모양은 접힌 상세 시트(map_detail_panel · detail_sheet)를 dp × 2.625(1080px 폰 ≈ 411dp)로 옮겼다.
 // 앱 전용(릴스는 폰에서 만든다). 규격은 웹 레포 docs/design-system.md §7-6.
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import '../models/club.dart';
 import '../models/pickup_spot.dart';
 import '../services/i18n.dart';
@@ -131,6 +132,8 @@ const _pad = 66.0; // 시트 안 좌우 여백 (22dp)
 const _iw = _vw - _pad * 2;
 const _urgentBg = Color(0xFFFFF3E0), _recruitBg = Color(0xFFE8F5E9);
 const _recruitInk = Color(0xFF2E7D32);
+const _markW = 60.0; // 단색 로고 폭(프레임 px)
+const _markAlpha = 0.4;
 
 // ── 시트 아이콘 (캔버스 안 이모지 금지 — 앱 캔버스에선 □로 깨진다) ──
 void _verified(Canvas c, double cx, double cy, double r) {
@@ -225,7 +228,7 @@ class FrameLayout {
 }
 
 /// 시트를 그린다. 프레임 밖(1920 아래)으로 넘친 건 이미지 크기에서 잘린다 — 접힌 시트 그대로.
-FrameLayout paintFrame(Canvas c, StickerData d, ui.Image? logo) {
+FrameLayout paintFrame(Canvas c, StickerData d, ui.Image? mark) {
   const x = _pad, top = frameTop / _k;
   c.save();
   c.scale(_k);
@@ -256,12 +259,18 @@ FrameLayout paintFrame(Canvas c, StickerData d, ui.Image? logo) {
   final titleY = y;
   final nx = x + (d.verified ? 84 : 0);
   final tst = cardStyle(61.5, FontWeight.w800, NurungjiColors.dark);
-  final name = cardWrapWords(d.title, tst, _iw - (nx - x), 2);
+  final name = cardWrapWords(
+    d.title,
+    tst,
+    _iw - (nx - x) - _markW / _k - 24,
+    2,
+  );
   final rowH = math.max(72.0, name.length * 74.0);
   if (d.verified) _verified(c, x + 33, y + math.min(rowH, 74) / 2, 33);
   for (var i = 0; i < name.length; i++) {
     cardText(c, name[i], tst, nx, y + i * 74 + 6);
   }
+  final titleMid = y + math.min(rowH, 74) / 2; // 오른쪽 끝 단색 로고가 이 줄 가운데에 선다
   y += rowH + 12;
 
   if (d.schedule.isNotEmpty) {
@@ -334,34 +343,26 @@ FrameLayout paintFrame(Canvas c, StickerData d, ui.Image? logo) {
   }
   c.restore();
 
-  // 오른쪽 위: 로고 아이콘만(글자·알약 없음). 인스타 상단 UI(진행 바·프로필 줄) 아래.
-  // 밝은 영상 위에서도 흰 밥이 묻히지 않게 아주 옅은 갈색 그림자만 깐다.
-  const ls = 160.0, ly = 220.0; // 로고 그림 둘레에 여백이 있어 보이는 크기는 약 100
-  const lx = frameW - 40 - ls;
-  const logoRect = Rect.fromLTWH(lx, ly, ls, ls);
-  if (logo != null) {
-    final src = Rect.fromLTWH(
-      0,
-      0,
-      logo.width.toDouble(),
-      logo.height.toDouble(),
-    );
+  // 단색 로고: 시트 안, 이름 줄 오른쪽 끝. 늘 흰 시트 위라 어떤 영상에서도 똑같이 보이고,
+  // 앱 화면의 일부처럼 읽힌다(빈 화면 EmptyMark 와 같은 연한 갈색). 영상 위엔 아무것도 얹지 않는다.
+  final markH = _markW * (mark == null ? 0.9 : mark.height / mark.width);
+  final logoRect = Rect.fromLTWH(
+    frameW - _pad * _k - _markW,
+    titleMid * _k - markH / 2,
+    _markW,
+    markH,
+  );
+  if (mark != null) {
     c.drawImageRect(
-      logo,
-      src,
-      logoRect.shift(const Offset(0, 4)),
-      Paint()
-        ..colorFilter = const ColorFilter.mode(
-          Color.fromRGBO(93, 64, 55, 0.28),
-          BlendMode.srcIn,
-        )
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
-    );
-    c.drawImageRect(
-      logo,
-      src,
+      mark,
+      Rect.fromLTWH(0, 0, mark.width.toDouble(), mark.height.toDouble()),
       logoRect,
-      Paint()..filterQuality = FilterQuality.high,
+      Paint()
+        ..filterQuality = FilterQuality.high
+        ..colorFilter = ColorFilter.mode(
+          NurungjiColors.brown.withValues(alpha: _markAlpha),
+          BlendMode.srcIn,
+        ),
     );
   }
 
@@ -383,9 +384,20 @@ FrameLayout paintFrame(Canvas c, StickerData d, ui.Image? logo) {
 FrameLayout stickerLayout(StickerData d) =>
     paintFrame(Canvas(ui.PictureRecorder()), d, null);
 
+/// 단색 로고(흰 실루엣 — 칠할 때 색을 입힌다). 못 읽으면 로고 없이 그린다.
+Future<ui.Image?> _loadMono() async {
+  try {
+    final bd = await rootBundle.load('assets/logo_mono.png');
+    final codec = await ui.instantiateImageCodec(bd.buffer.asUint8List());
+    return (await codec.getNextFrame()).image;
+  } catch (_) {
+    return null;
+  }
+}
+
 /// 9:16 투명 프레임 PNG (1080×1920).
 Future<Uint8List?> renderStickerPng(StickerData d) async {
-  final logo = await loadBrandLogo();
+  final logo = await _loadMono();
   final rec = ui.PictureRecorder();
   final c = Canvas(rec, const Rect.fromLTWH(0, 0, frameW, frameH));
   c.clipRect(const Rect.fromLTWH(0, 0, frameW, frameH));
