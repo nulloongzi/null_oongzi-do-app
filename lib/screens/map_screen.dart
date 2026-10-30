@@ -5,7 +5,7 @@ import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show SystemNavigator;
+import 'package:flutter/services.dart' show SystemChannels, SystemNavigator;
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -1615,13 +1615,19 @@ class _MapScreenState extends State<MapScreen> {
     if (!await _hold(1)) return;
 
     // 크루 등록 — 로그인 없이(익명). 이름 → 레벨·English OK → 유효기간.
+    // 열린 키보드(녹화엔 안 찍힌다)가 폼을 화면 위 절반으로 밀어 올린 적이 있다 — 먼저 닫는다
+    FocusManager.instance.primaryFocus?.unfocus();
+    await SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
     final cam = await _controller?.getCameraPosition();
     if (!mounted) return;
     final form = showPickupFormSheet(
       context,
       initialCenter: cam?.target ?? const NLatLng(37.5559, 127.0838),
     );
-    if (!await _hold(2, 'pk_form')) return;
+    await _hold(0.4);
+    FocusManager.instance.primaryFocus?.unfocus(); // 폼이 뜨며 포커스를 받았어도 키보드는 닫는다
+    await SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
+    if (!await _hold(1.6, 'pk_form')) return;
     pickupFormDemo.value = 'title';
     if (!await _hold(2.5, 'pk_form_title')) return;
     pickupFormDemo.value = 'level';
