@@ -320,6 +320,22 @@ const Map<String, Map<String, String>> kStrings = {
   'share_title': {'ko': '공유하기', 'en': 'Share'},
   'share_story': {'ko': '📸 인스타 스토리', 'en': '📸 Instagram Story'},
   'share_feed': {'ko': '🖼 피드 이미지 (3:4)', 'en': '🖼 Feed image (3:4)'},
+  'share_sticker': {
+    'ko': '🎬 릴스 프레임 (9:16 투명)',
+    'en': '🎬 Reel frame (9:16, transparent)',
+  },
+  // 릴스 프레임 — 상세 버튼(누구나) · 갤러리 저장
+  'frame_btn': {'ko': '🎬 릴스 프레임 만들기', 'en': '🎬 Make a Reels frame'},
+  'frame_saved': {
+    'ko': '갤러리에 저장했어요. 릴스 편집에서 영상 위에 꽉 차게 얹어 보세요',
+    'en':
+        'Saved to your gallery. Lay it full-screen over your video in the Reels editor',
+  },
+  'frame_open': {'ko': '갤러리', 'en': 'Gallery'},
+  'frame_denied': {
+    'ko': '사진 저장 권한이 필요해요. 설정에서 허용해 주세요',
+    'en': 'Allow photo access in Settings to save it',
+  },
   'share_story_hint': {
     'ko': '링크 자동 복사 — 보는 사람은 탭 1번에 입장',
     'en': 'Link auto-copied — 1 tap to open',

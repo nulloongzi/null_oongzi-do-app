@@ -2,6 +2,8 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- gal: 릴스 프레임 갤러리 저장. Android 10(API 29) 이하만 필요 — 그 위는 권한 없이 저장된다 -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
 
     <queries>
         <package android:name="net.daum.android.map" />
@@ -43,6 +45,7 @@
         android:label="누룽지도"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon"
+        android:requestLegacyExternalStorage="true"
         android:usesCleartextTraffic="true">
 
         <!-- appinio_social_share: 스토리 카드 임시 PNG를 인스타에 넘기는 FileProvider -->

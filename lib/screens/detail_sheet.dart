@@ -31,6 +31,7 @@ import '../widgets/bounce_tap.dart';
 import '../widgets/reel_card.dart';
 import '../widgets/schedule_timetable.dart';
 import '../widgets/share_menu.dart';
+import '../widgets/sticker_card.dart';
 import '../widgets/story_card.dart';
 import '../widgets/recruit_sheet.dart';
 import '../widgets/urgent_sheet.dart';
@@ -756,6 +757,16 @@ Widget _outlineBtn(String label, VoidCallback onTap) => BounceTap(
         ),
       ),
     ),
+  ),
+);
+
+// 🎬 릴스 프레임 — 관리자뿐 아니라 누구나(놀러 온 게스트도 '여기서 뛰었다' 영상을 올린다).
+// 액션 줄 아래 왼쪽에 작은 알약 하나. 누르면 9:16 투명 PNG 가 갤러리에 바로 저장된다.
+Widget _reelFrameBtn(VoidCallback onTap) => Padding(
+  padding: const EdgeInsets.only(top: 10),
+  child: Align(
+    alignment: Alignment.centerLeft,
+    child: _outlineBtn(t('frame_btn'), onTap),
   ),
 );
 
@@ -1812,6 +1823,18 @@ List<Widget> _spotDetailChildren(
         shareTitle: s.title,
         onStory: () => shareStoryCard(context, StoryCardData.fromSpot(s)),
         onFeed: () => shareFeedCard(context, StoryCardData.fromSpot(s)),
+        onSticker: () => saveReelFrame(
+          context,
+          StickerData.fromSpot(s),
+          track: {'spot_id': s.id, 'via': 'menu'},
+        ),
+      ),
+    ),
+    _reelFrameBtn(
+      () => saveReelFrame(
+        context,
+        StickerData.fromSpot(s),
+        track: {'spot_id': s.id, 'via': 'detail', 'is_admin': canModify},
       ),
     ),
     // 추가 안내(notes) — 웹 픽업 상세 메모 행 (폼 저장값 표시 누락 보완)
@@ -1897,6 +1920,11 @@ void showClubDetail(
     shareTitle: c.name,
     onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
     onFeed: () => shareFeedCard(context, StoryCardData.fromClub(c)),
+    onSticker: () => saveReelFrame(
+      context,
+      StickerData.fromClub(c),
+      track: {'club_id': c.id, 'via': 'menu'},
+    ),
   );
   Future<void> copyAddr() async {
     await Clipboard.setData(ClipboardData(text: c.address ?? ''));
@@ -2068,6 +2096,13 @@ void showClubDetail(
               fg: const Color(0xFF455A64),
             ),
           ],
+        ),
+      ),
+      _reelFrameBtn(
+        () => saveReelFrame(
+          context,
+          StickerData.fromClub(c),
+          track: {'club_id': c.id, 'via': 'detail', 'is_admin': canModify},
         ),
       ),
       // 데이터 신선도 + 신고 통로 (guidelines.html 2-3 · 3-1)
