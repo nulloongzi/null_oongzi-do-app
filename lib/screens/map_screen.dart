@@ -672,8 +672,11 @@ class _MapScreenState extends State<MapScreen> {
               shareTitle: c.name,
               onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
               onFeed: () => shareFeedCard(context, StoryCardData.fromClub(c)),
-              onSticker: () =>
-                  shareStickerCard(context, StickerData.fromClub(c)),
+              onSticker: () => saveReelFrame(
+                context,
+                StickerData.fromClub(c),
+                track: {'club_id': c.id, 'via': 'menu'},
+              ),
             );
           }
         }
@@ -970,8 +973,11 @@ class _MapScreenState extends State<MapScreen> {
             shareTitle: c4.name,
             onStory: () => shareStoryCard(context, StoryCardData.fromClub(c4)),
             onFeed: () => shareFeedCard(context, StoryCardData.fromClub(c4)),
-            onSticker: () =>
-                shareStickerCard(context, StickerData.fromClub(c4)),
+            onSticker: () => saveReelFrame(
+              context,
+              StickerData.fromClub(c4),
+              track: {'club_id': c4.id, 'via': 'menu'},
+            ),
           );
         }
         break;
@@ -1140,7 +1146,11 @@ class _MapScreenState extends State<MapScreen> {
       shareTitle: c.name,
       onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
       onFeed: () => shareFeedCard(context, StoryCardData.fromClub(c)),
-      onSticker: () => shareStickerCard(context, StickerData.fromClub(c)),
+      onSticker: () => saveReelFrame(
+        context,
+        StickerData.fromClub(c),
+        track: {'club_id': c.id, 'via': 'menu'},
+      ),
     );
     await _hold(4, 'share');
     _endFlow();

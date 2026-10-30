@@ -4,12 +4,14 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:appinio_social_share/appinio_social_share.dart';
+import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
 import '../widgets/share_card_kit.dart';
 import '../widgets/sticker_card.dart';
 import '../widgets/story_card.dart';
+import 'analytics.dart';
 import 'i18n.dart';
 import 'share_service.dart';
 import 'station_service.dart';
@@ -145,11 +147,18 @@ Future<void> shareFeedCard(BuildContext context, StoryCardData data) async {
   }
 }
 
-/// 릴스 프레임(9:16 투명 — 아래 바텀시트 + 오른쪽 위 로고) → OS 공유시트. 갤러리에 저장하거나
-/// 인스타 편집기로 바로 넘겨 영상 위에 꽉 차게 얹는다(앱 전용). IG 스토리 API 는
-/// 배경을 우리가 정해 버려서 쓰지 않는다 — 배경은 올리는 사람의 영상이어야 한다.
-Future<void> shareStickerCard(BuildContext context, StickerData data) async {
+/// 릴스 프레임(9:16 투명 — 아래 바텀시트 + 시트 안 단색 로고) → 갤러리에 바로 저장.
+/// 릴스는 영상을 먼저 찍고 편집기에서 갤러리 이미지를 불러오니, 공유시트를 거치지 않고 한 번에 저장한다.
+/// 저장에 실패하면(권한 거부 말고 다른 이유) OS 공유시트로 넘긴다. 앱 전용.
+/// IG 스토리 API 는 배경을 우리가 정해 버려서 쓰지 않는다 — 배경은 올리는 사람의 영상이어야 한다.
+/// [track]: 계측 파라미터(club_id|spot_id · via · is_admin). method=reel_frame 은 여기서 붙인다.
+Future<void> saveReelFrame(
+  BuildContext context,
+  StickerData data, {
+  Map<String, Object?> track = const {},
+}) async {
   final messenger = ScaffoldMessenger.of(context);
+  Track.event('share', {'method': 'reel_frame', ...track});
   Uint8List? png;
   try {
     png = await renderStickerPng(data);
@@ -158,21 +167,44 @@ Future<void> shareStickerCard(BuildContext context, StickerData data) async {
     messenger.showSnackBar(SnackBar(content: Text(t('err_card'))));
     return;
   }
-  messenger.showSnackBar(
-    SnackBar(
-      content: Text(t('sticker_hint')),
-      duration: const Duration(seconds: 4),
-    ),
-  );
+  final name = 'nulloongzido_frame_${DateTime.now().millisecondsSinceEpoch}';
+  try {
+    if (!await Gal.hasAccess() && !await Gal.requestAccess()) {
+      messenger.showSnackBar(SnackBar(content: Text(t('frame_denied'))));
+      return;
+    }
+    await Gal.putImageBytes(png, name: name);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(t('frame_saved')),
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(label: t('frame_open'), onPressed: Gal.open),
+      ),
+    );
+  } on GalException catch (e) {
+    if (e.type == GalExceptionType.accessDenied) {
+      messenger.showSnackBar(SnackBar(content: Text(t('frame_denied'))));
+      return;
+    }
+    await _shareFramePng(png, name, messenger);
+  } catch (_) {
+    await _shareFramePng(png, name, messenger);
+  }
+}
+
+// 갤러리 저장이 안 될 때의 길: PNG 를 OS 공유시트로(파일 앱 저장·인스타로 바로).
+Future<void> _shareFramePng(
+  Uint8List png,
+  String name,
+  ScaffoldMessengerState messenger,
+) async {
   try {
     final dir = await getTemporaryDirectory();
-    final file = File(
-      '${dir.path}/nurungji_frame_${DateTime.now().millisecondsSinceEpoch}.png',
-    );
+    final file = File('${dir.path}/$name.png');
     await file.writeAsBytes(png);
     await Share.shareXFiles([XFile(file.path, mimeType: 'image/png')]);
   } catch (e) {
-    debugPrint('sticker share: $e');
+    debugPrint('reel frame share: $e');
     messenger.showSnackBar(SnackBar(content: Text(t('err_share'))));
   }
 }

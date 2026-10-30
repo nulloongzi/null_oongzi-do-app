@@ -13,7 +13,8 @@ void showShareMenu(
   required String shareTitle,
   VoidCallback? onStory, // 인스타 스토리 (스토리 카드 렌더 → IG)
   VoidCallback? onFeed, // 피드 이미지 3:4 (카드 렌더 → OS 공유시트)
-  VoidCallback? onSticker, // 릴스 프레임 (9:16 투명 PNG → OS 공유시트)
+  VoidCallback?
+  onSticker, // 릴스 프레임 (9:16 투명 PNG → 갤러리 저장. 계측은 saveReelFrame 이 한다)
 }) {
   final u = Uri.tryParse(url);
   final idP = <String, Object?>{
@@ -73,7 +74,6 @@ void showShareMenu(
                 label: t('share_sticker'),
                 onTap: () {
                   Navigator.pop(ctx);
-                  Track.event('share', {'method': 'reel_frame', ...idP});
                   onSticker();
                 },
               ),
