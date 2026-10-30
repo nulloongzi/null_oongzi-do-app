@@ -96,9 +96,11 @@ class StickerData {
 
 // ── 규격 (design-system §7-6) ──────────────────────────────────────
 const frameW = 1080.0, frameH = 1920.0;
-// 시트 윗단 = 1920 × 0.64. 앱 접힌 시트(화면 42%)에서 손잡이·펼침 힌트 자리만큼 낮췄다 —
-// 프레임에선 끌어 올릴 수 없으니 둘 다 뺀다. 보이는 내용(제목·일정·띠…)은 그대로.
-const frameTop = 1229.0;
+// 시트 높이는 내용만큼(+ 아래 여백 16dp) — 고정 높이면 내용이 짧은 팀은 아래가 비었다.
+// 손잡이·펼침 힌트처럼 프레임에서 눌리지 않는 건 그리지 않는다.
+// 내용이 길면 시트 윗단은 frameTopMin(화면 절반)에서 멈추고 나머지는 아래로 잘린다 — 접힌 시트처럼.
+const frameTopMin = frameH * 0.5;
+const _bottomPad = 48.0; // 16dp × 3
 // 시트 안 숫자는 dp × 3 으로 적고, 그릴 때 _k 로 줄여 dp × 2.625 가 되게 한다.
 // 1080px 폰은 대개 너비 411dp(밀도 2.625) — ×3(360dp 폰)으로 그리면 실제 캡처보다 글자가 15% 컸다.
 const _k = 2.625 / 3;
@@ -187,10 +189,12 @@ double _row(Canvas c, double x, double y, double w, _Ico icon, String text) {
 
 /// 각 칸 윗단 y (테스트용).
 class FrameLayout {
+  final double top; // 시트 윗단
   final double title;
   final double? urgent, schedule, recruit, tags, fee, address;
   final Rect logo;
   const FrameLayout({
+    required this.top,
     required this.title,
     required this.logo,
     this.urgent,
@@ -202,14 +206,21 @@ class FrameLayout {
   });
 }
 
-/// 시트를 그린다. 프레임 밖(1920 아래)으로 넘친 건 이미지 크기에서 잘린다 — 접힌 시트 그대로.
+/// 시트를 그린다. 먼저 버리는 캔버스에 그려 내용 높이를 재고, 그만큼만 시트를 올린다.
 FrameLayout paintFrame(Canvas c, StickerData d, ui.Image? mark) {
-  const x = _pad, top = frameTop / _k;
+  final probe = _paintSheet(Canvas(ui.PictureRecorder()), d, null, 0);
+  final top = math.max(frameTopMin, frameH - (probe.end + _bottomPad) * _k);
+  return _paintSheet(c, d, mark, top / _k);
+}
+
+/// [top] 은 줄이기 전 좌표계의 시트 윗단. 프레임 밖(1920 아래)으로 넘친 건 이미지 크기에서 잘린다.
+_Painted _paintSheet(Canvas c, StickerData d, ui.Image? mark, double top) {
+  const x = _pad;
   c.save();
   c.scale(_k);
   // 시트 판: 위 모서리만 둥글고 아래는 프레임 끝까지
   final sheet = RRect.fromRectAndCorners(
-    const Rect.fromLTWH(0, top, _vw, _vh - top),
+    Rect.fromLTWH(0, top, _vw, _vh - top),
     topLeft: const Radius.circular(_r),
     topRight: const Radius.circular(_r),
   );
@@ -321,16 +332,36 @@ FrameLayout paintFrame(Canvas c, StickerData d, ui.Image? mark) {
   }
 
   double? k(double? v) => v == null ? null : v * _k; // 프레임 좌표로
-  return FrameLayout(
-    title: titleY * _k,
-    urgent: k(urgentY),
-    schedule: k(schedY),
-    recruit: k(recruitY),
-    tags: k(tagsY),
-    fee: k(feeY),
-    address: k(addrY),
-    logo: logoRect,
+  return _Painted(
+    y - top,
+    FrameLayout(
+      top: top * _k,
+      title: titleY * _k,
+      urgent: k(urgentY),
+      schedule: k(schedY),
+      recruit: k(recruitY),
+      tags: k(tagsY),
+      fee: k(feeY),
+      address: k(addrY),
+      logo: logoRect,
+    ),
   );
+}
+
+class _Painted extends FrameLayout {
+  final double end; // 시트 윗단부터 내용 끝까지(줄이기 전 좌표)
+  _Painted(this.end, FrameLayout l)
+    : super(
+        top: l.top,
+        title: l.title,
+        logo: l.logo,
+        urgent: l.urgent,
+        schedule: l.schedule,
+        recruit: l.recruit,
+        tags: l.tags,
+        fee: l.fee,
+        address: l.address,
+      );
 }
 
 /// 배치만 계산(테스트용) — 버려지는 캔버스에 그린다.
