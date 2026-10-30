@@ -283,14 +283,25 @@ class FriendShareService {
         : null;
     final sh = SharedLunchbox.fromMap(d)!;
     if (sh.hideAll) return FriendLunchbox('hidden', const [], at);
+    // 팀 문서는 한꺼번에 받는다(차례로 받으면 팀 수만큼 기다린다). 순서는 도시락 그대로.
+    final docs = await Future.wait([
+      for (final id in sh.teams)
+        _db
+            .collection('clubs')
+            .doc(id)
+            .get()
+            .then<DocumentSnapshot<Map<String, dynamic>>?>(
+              (d) => d,
+              onError: (_) => null,
+            ),
+    ]);
     final teams = <FriendTeam>[];
-    for (final id in sh.teams) {
+    for (final doc in docs) {
+      if (doc == null || !doc.exists) continue; // 삭제된 팀
       try {
-        final doc = await _db.collection('clubs').doc(id).get();
-        if (!doc.exists) continue; // 삭제된 팀
         final c = Club.fromDoc(doc);
         teams.add(
-          FriendTeam(c.name, false, teams.length, clubEvents(c), id: id),
+          FriendTeam(c.name, false, teams.length, clubEvents(c), id: doc.id),
         );
       } catch (_) {}
     }
@@ -305,6 +316,23 @@ class FriendShareService {
   /// 내 도시락 팀(이름·일정). 보는 사람은 나라서 숨긴 팀도 포함한다.
   Future<List<({String id, FriendTeam team})>> myTeams(String uid) async {
     final lb = await LunchboxService(db: _db).load(uid);
+    // 동호회 팀 문서는 한꺼번에 받아 둔다
+    final ids = [
+      for (final id in lb.bookmarks)
+        if (id != null && lb.customTeams[id] is! Map) id,
+    ];
+    final got = await Future.wait([
+      for (final id in ids)
+        _db
+            .collection('clubs')
+            .doc(id)
+            .get()
+            .then<DocumentSnapshot<Map<String, dynamic>>?>(
+              (d) => d,
+              onError: (_) => null,
+            ),
+    ]);
+    final docs = {for (var k = 0; k < ids.length; k++) ids[k]: got[k]};
     final out = <({String id, FriendTeam team})>[];
     for (var i = 0; i < 5; i++) {
       final id = lb.bookmarks[i];
@@ -323,8 +351,8 @@ class FriendShareService {
         continue;
       }
       try {
-        final doc = await _db.collection('clubs').doc(id).get();
-        if (!doc.exists) continue;
+        final doc = docs[id];
+        if (doc == null || !doc.exists) continue;
         final club = Club.fromDoc(doc);
         out.add((
           id: id,

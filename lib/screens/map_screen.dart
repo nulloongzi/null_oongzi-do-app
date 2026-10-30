@@ -1767,6 +1767,19 @@ class _MapScreenState extends State<MapScreen> {
     await _closeOverlays();
     if (!mounted) return;
     _onTab('clubs');
+    // 친구 도시락·내 도시락·팀 목록을 먼저 받아 둔다 — 화면마다 '불러오는 중'이 찍히지 않게
+    final hub = FriendsHub.instance;
+    final uid = _repo.currentUid;
+    try {
+      await Future.wait([
+        for (final f in hub.state.value.friends)
+          hub.reloadFriendLunchbox(f.other),
+        _repo.loadClubs(),
+        if (uid != null) LunchboxService().load(uid),
+        hub.refreshMyMeal(),
+      ]).timeout(const Duration(seconds: 25));
+    } catch (_) {}
+    if (!mounted) return;
     unawaited(showProfileSheet(context, initialPage: 1));
     if (!await _hold(3, 'ml_list')) return; // 이번 주 합석 줄 · 친구 밥그릇
     friendsDemo.value = 'detail';
@@ -1778,7 +1791,7 @@ class _MapScreenState extends State<MapScreen> {
     await _backToMap();
     if (!mounted) return;
     unawaited(showLunchboxSheet(context));
-    if (!await _hold(2, 'ml_lunchbox')) return;
+    if (!await _hold(3, 'ml_lunchbox')) return;
     lunchboxDemo.value = 'edit';
     if (!await _hold(2, 'ml_edit')) return; // 칸마다 눈 버튼
     lunchboxDemo.value = 'eye';
