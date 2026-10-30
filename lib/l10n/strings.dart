@@ -325,7 +325,14 @@ const Map<String, Map<String, String>> kStrings = {
     'en': '🎬 Reel frame (9:16, transparent)',
   },
   // 릴스 프레임 — 상세 버튼(누구나) · 갤러리 저장
-  'frame_btn': {'ko': '🎬 릴스 프레임 만들기', 'en': '🎬 Make a Reels frame'},
+  'frame_btn_short': {'ko': '🎬 프레임 만들기', 'en': '🎬 Make a frame'},
+  'frame_make': {'ko': '🎬 만들기', 'en': '🎬 Make'},
+  'reels_head': {'ko': '📷 인스타 릴스', 'en': '📷 Instagram Reels'},
+  'reels_none_title': {'ko': '아직 릴스가 없어요', 'en': 'No reels yet'},
+  'reels_none_body': {
+    'ko': '영상에 얹을 프레임을 만들어 첫 릴스를 올려 보세요',
+    'en': 'Make a frame for your video and post the first reel.',
+  },
   'frame_saved': {
     'ko': '갤러리에 저장했어요. 릴스 편집에서 영상 위에 꽉 차게 얹어 보세요',
     'en':

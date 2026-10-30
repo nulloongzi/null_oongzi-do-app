@@ -76,13 +76,17 @@ void main() {
     });
   }
 
-  // 릴스 프레임은 관리자 전용이 아니다 — 로그인 안 한 게스트도 상세에서 바로 만든다.
-  testWidgets('픽업 상세: 릴스 프레임 버튼은 비로그인에게도 보인다', (tester) async {
+  // 릴스 프레임은 관리자 전용이 아니다 — 로그인 안 한 게스트도 상세 릴스 칸에서 만든다.
+  // 릴스가 없는 크루는 릴스 칸에 안내 + '만들기'가 뜬다.
+  testWidgets('픽업 상세: 릴스 없으면 릴스 칸 안내 + 만들기(비로그인)', (tester) async {
     await tester.pumpWidget(
       host((ctx) => spotDetailBody(ctx, spot(), close: () {})),
     );
     await tester.pump();
-    expect(find.text('🎬 릴스 프레임 만들기'), findsOneWidget);
+    expect(find.text('📷 인스타 릴스'), findsOneWidget);
+    expect(find.text('아직 릴스가 없어요'), findsOneWidget);
+    expect(find.text('🎬 만들기'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('픽업 상세: 좌표가 있으면 길찾기가 실제로 뜬다', (tester) async {
