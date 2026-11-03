@@ -56,6 +56,11 @@ import '../widgets/urgent_sheet.dart';
 import '../widgets/empty_mark.dart';
 
 // 마커 1건 스펙(클럽/스팟 공통) — 아이콘 병렬 빌드 후 마커를 한 번에 생성하기 위한 중간 표현.
+/// 지도 오버레이 id = 항목 id + 새로고침 세대. 세대마다 달라야 한다 — 같은 id 로 지우고 다시 올리면
+/// 클러스터러가 옛 마커를 늦게 정리하며 새 마커까지 지운다(_refreshMarkers 3단계 주석).
+@visibleForTesting
+String markerOverlayId(String specId, int gen) => '$specId#$gen';
+
 class _MarkerSpec {
   final String id;
   final NLatLng pos;
@@ -1888,6 +1893,11 @@ class _MapScreenState extends State<MapScreen> {
     if (gen != _markerGen || !mounted || _controller == null) return;
 
     // 3) 마커 생성(급구 클럽=비클러스터, 그 외=클러스터러블)
+    // 지도에 올리는 id 에는 새로고침 세대를 붙인다. flutter_naver_map(1.4.4) 클러스터러는
+    // 지운 마커를 나중에(비동기로) 놓아주면서 **id 로** 지운다 — 같은 id 로 다시 올린 새 마커가
+    // 그때 같이 지워졌다. 필터 적용(확대) → 초기화 적용이면 화면에 보이던 마커가 전부 사라졌다.
+    // 세대마다 id 가 달라 늦게 오는 옛 마커 정리가 새 마커를 건드리지 않는다.
+    // (_lastSpecs·_markersById 는 세대 없는 spec id 로 찾는다)
     final markers = <NMarker>[];
     final overlays = <NAddableOverlay>{};
     for (var i = 0; i < items.length; i++) {
@@ -1895,10 +1905,11 @@ class _MapScreenState extends State<MapScreen> {
       final icon = icons[i];
       final size = icon != null ? _labelSize : _markerSize;
       final fallback = s.red ? _pickupIcon : _clubIcon;
+      final overlayId = markerOverlayId(s.id, gen);
       final NMarker m;
       if (s.clusterable) {
         final cm = NClusterableMarker(
-          id: s.id,
+          id: overlayId,
           position: s.pos,
           icon: icon ?? fallback,
           size: size,
@@ -1907,7 +1918,7 @@ class _MapScreenState extends State<MapScreen> {
         m = cm;
       } else {
         final nm = NMarker(
-          id: s.id,
+          id: overlayId,
           position: s.pos,
           icon: icon ?? fallback,
           size: size,
@@ -1923,7 +1934,7 @@ class _MapScreenState extends State<MapScreen> {
       if (s.areaOnly) {
         overlays.add(
           NCircleOverlay(
-            id: 'area_${s.id}',
+            id: 'area_$overlayId',
             center: s.pos,
             radius: kAreaCircleRadius,
             color: const Color(0x26FFC107),
