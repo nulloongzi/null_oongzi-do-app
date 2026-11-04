@@ -30,6 +30,7 @@ import '../services/this_week.dart';
 import '../services/urgent.dart';
 import '../services/urgent_service.dart';
 import '../services/lunchbox_service.dart';
+import '../services/map_scene.dart';
 import '../theme.dart';
 import 'detail_sheet.dart';
 import 'login_screen.dart';
@@ -45,6 +46,7 @@ import '../widgets/filter_sheet.dart';
 import '../widgets/glass_surface.dart';
 import '../widgets/reel_card.dart';
 import '../widgets/map_detail_panel.dart';
+import '../widgets/map_marker_layers.dart';
 import '../widgets/map_picker.dart' show mapPickerDemoConfirm;
 import '../widgets/pickup_list_sheet.dart';
 import '../widgets/recruit_sheet.dart';
@@ -54,38 +56,6 @@ import '../widgets/sticker_card.dart';
 import '../widgets/story_card.dart';
 import '../widgets/urgent_sheet.dart';
 import '../widgets/empty_mark.dart';
-
-// 마커 1건 스펙(클럽/스팟 공통) — 아이콘 병렬 빌드 후 마커를 한 번에 생성하기 위한 중간 표현.
-/// 지도 오버레이 id = 항목 id + 새로고침 세대. 세대마다 달라야 한다 — 같은 id 로 지우고 다시 올리면
-/// 클러스터러가 옛 마커를 늦게 정리하며 새 마커까지 지운다(_refreshMarkers 3단계 주석).
-@visibleForTesting
-String markerOverlayId(String specId, int gen) => '$specId#$gen';
-
-class _MarkerSpec {
-  final String id;
-  final NLatLng pos;
-  final String name;
-  final bool red; // 빨강 핀(급구/스팟)
-  final bool urgent;
-  // 라벨 앞 상태 표시 — 🔥(급구) 🍚(식구 모집) 🥄(맛보기). 픽업·일반 팀은 ''.
-  final String marks;
-  final bool verified;
-  final bool clusterable; // 급구 클럽=false(항상 표시), 그 외=true
-  final bool areaOnly; // 대략 위치만 공개 → 핀 대신 범위 원도 같이 그린다
-  final VoidCallback onTap;
-  const _MarkerSpec({
-    required this.id,
-    required this.pos,
-    required this.name,
-    required this.red,
-    required this.urgent,
-    this.marks = '',
-    required this.verified,
-    required this.clusterable,
-    this.areaOnly = false,
-    required this.onTap,
-  });
-}
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -151,7 +121,8 @@ class _MapScreenState extends State<MapScreen> {
     focusMapRequest.removeListener(_onFocusMapRequest);
     clubsReloadRequest.removeListener(_onClubsReloadRequest);
     detailPanel.value = null; // 화면 떠날 때 잔존 패널 정리
-    _labelFadeTimer?.cancel();
+    _layers.dispose();
+    _searchDebounce?.cancel();
     _roomTimer?.cancel();
     _search.dispose();
     _deepLinks.dispose();
@@ -159,15 +130,20 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   // 상단 검색: 동호회=필터 키워드 + 결과맞춤 / 픽업=목록·마커 재필터.
+  // 글자마다 다시 그리지 않고 300ms 쉬면 한 번. 그리기가 끝난 뒤에 카메라를 옮긴다 —
+  // 먼저 옮기면 줌 이름표 판단이 곧 지워질 옛 핀에 적용됐다.
   void _onSearch(String v) {
     if (_tab == 'clubs') {
       setState(() => _filter = _filter.copyWith(keyword: v));
-      _refreshMarkers();
-      _fitToFilter();
     } else {
       setState(() {});
-      _refreshMarkers();
     }
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () async {
+      if (!mounted) return;
+      await _refreshMarkers();
+      if (mounted && _tab == 'clubs') _fitToFilter();
+    });
   }
 
   // 픽업: 지역 + English-OK + 검색어(제목/장소/주소/인스타) 필터.
@@ -346,17 +322,24 @@ class _MapScreenState extends State<MapScreen> {
   bool _showLabels = false; // 현재 줌이 임계 이상? (스테이지3=알약 표시)
   bool _showUrgentLabels = false; // 급구 라벨 임계(일반보다 3단계 멀리) 이상?
 
-  /// 이 마커에 이름 알약을 붙일지 — 급구는 더 멀리서부터.
-  bool _labelOn(_MarkerSpec s) => s.urgent ? _showUrgentLabels : _showLabels;
-
-  // 라벨 토글을 clear+add 없이 in-place(setIcon/setSize)로 적용하기 위한 보관.
-  Map<String, NMarker> _markersById = {};
-  List<_MarkerSpec> _lastSpecs = const [];
-  Timer? _labelFadeTimer;
+  // 지도 마커 두 층(발견=묶음 · 신호=급구). 마커를 올리고 지우는 건 여기만 한다.
+  late final _layers = MapMarkerLayers(
+    labeledIcon: (m) => _labeledIcon(
+      m.name,
+      red: m.red,
+      urgent: m.urgent,
+      marks: m.marks,
+      verified: m.verified,
+    ),
+    baseIcon: (m) => m.red ? _pickupIcon : _clubIcon,
+    onTap: _onMarkerTap,
+    labelSize: _labelSize,
+    markerSize: _markerSize,
+  );
+  Timer? _searchDebounce; // 검색창: 마지막 글자 뒤 잠깐 기다렸다 한 번만 다시 그린다
   // '여기 자리 있어요?' 는 시각에 따라 바뀐다(마감이 지난 급구·끝난 운동이 빠진다).
   // 화면이 다시 그려질 때만 계산하면 앱을 켜 둔 채로는 낡은 항목이 남으므로 1분마다 다시 본다.
   Timer? _roomTimer;
-  int _markerGen = 0; // 마커 새로고침 세대 토큰(동시 호출 재진입 가드)
 
   // 마커 라벨 아이콘 캐시(이름·상태별 1회 렌더) + 핀 에셋 프리캐시(미로드 시 핀이 빈칸으로 캡처되는 것 방지)
   final Map<String, NOverlayImage> _labelIconCache = {};
@@ -1725,8 +1708,8 @@ class _MapScreenState extends State<MapScreen> {
     if (normalChanged || urgentChanged) {
       _showLabels = show;
       _showUrgentLabels = showUrgent;
-      // clear+add 없이 setIcon/setSize로 교체 + 페이드 — 상태가 바뀐 쪽 마커만
-      _applyLabelState(normal: normalChanged, urgent: urgentChanged);
+      // 발견 층은 새 이름표 단계로 다시 그리고(페이드), 급구는 제자리 교체 — map_marker_layers.dart
+      _refreshMarkers(fade: normalChanged);
     }
   }
 
@@ -1832,203 +1815,28 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  Future<void> _refreshMarkers({bool fade = false}) async {
-    final c = _controller;
-    if (c == null) return;
-    final gen = ++_markerGen; // 동시 새로고침 시 최신만 반영(재진입 가드)
-    // 1) 표시할 항목 수집(클럽/스팟 공통 스펙)
-    final items = <_MarkerSpec>[];
-    if (_tab == 'clubs') {
-      for (final club in _clubs.where(_filter.matches)) {
-        if (club.lat == null || club.lng == null) continue;
-        final urgent = club.urgentActive;
-        items.add(
-          _MarkerSpec(
-            id: 'c_${club.id}',
-            pos: NLatLng(club.lat!, club.lng!),
-            name: club.name,
-            red: urgent,
-            urgent: urgent,
-            marks: clubMarks(club),
-            verified: club.isVerified,
-            clusterable: !urgent, // 급구: 클러스터 제외(항상 표시)
-            areaOnly: isAreaOnly(club),
-            onTap: () => _focusAndShowClub(club),
-          ),
-        );
-      }
+  /// 지금 탭·필터·줌 이름표 단계로 장면을 만들어 지도에 반영한다. 지도에 다 올라간 뒤 끝난다.
+  Future<void> _refreshMarkers({bool fade = false}) {
+    final scene = _tab == 'clubs'
+        ? clubScene(_clubs, _filter)
+        : spotScene(_visibleSpots());
+    return _layers.apply(
+      scene,
+      labels: _showLabels,
+      urgentLabels: _showUrgentLabels,
+      fade: fade,
+    );
+  }
+
+  // 핀 탭 → 최신 목록에서 찾아 상세로(장면은 id 만 들고 있다).
+  void _onMarkerTap(MarkerSpec m) {
+    if (m.isClub) {
+      final c = _clubs.where((c) => c.id == m.refId).firstOrNull;
+      if (c != null) unawaited(_focusAndShowClub(c));
     } else {
-      for (final spot in _visibleSpots()) {
-        if (spot.lat == null || spot.lng == null) continue;
-        items.add(
-          _MarkerSpec(
-            id: 's_${spot.id}',
-            pos: NLatLng(spot.lat!, spot.lng!),
-            name: spot.title,
-            red: true,
-            urgent: false,
-            verified: false,
-            clusterable: true,
-            onTap: () => _focusAndShowSpot(spot),
-          ),
-        );
-      }
+      final s = _spots.where((s) => s.id == m.refId).firstOrNull;
+      if (s != null) unawaited(_focusAndShowSpot(s));
     }
-
-    // 2) 이름 알약 아이콘을 병렬로 빌드(순차 await 제거 → 줌 인 시 끊김 완화). 캐시 히트는 즉시.
-    // 라벨이 꺼진 마커는 null — 급구 라벨만 켜진 축척에선 급구 마커만 빌드한다.
-    final icons = await Future.wait(
-      items.map(
-        (s) => _labelOn(s)
-            ? _labeledIcon(
-                s.name,
-                red: s.red,
-                urgent: s.urgent,
-                marks: s.marks,
-                verified: s.verified,
-              )
-            : Future<NOverlayImage?>.value(),
-      ),
-    );
-    if (gen != _markerGen || !mounted || _controller == null) return;
-
-    // 3) 마커 생성(급구 클럽=비클러스터, 그 외=클러스터러블)
-    // 지도에 올리는 id 에는 새로고침 세대를 붙인다. flutter_naver_map(1.4.4) 클러스터러는
-    // 지운 마커를 나중에(비동기로) 놓아주면서 **id 로** 지운다 — 같은 id 로 다시 올린 새 마커가
-    // 그때 같이 지워졌다. 필터 적용(확대) → 초기화 적용이면 화면에 보이던 마커가 전부 사라졌다.
-    // 세대마다 id 가 달라 늦게 오는 옛 마커 정리가 새 마커를 건드리지 않는다.
-    // (_lastSpecs·_markersById 는 세대 없는 spec id 로 찾는다)
-    final markers = <NMarker>[];
-    final overlays = <NAddableOverlay>{};
-    for (var i = 0; i < items.length; i++) {
-      final s = items[i];
-      final icon = icons[i];
-      final size = icon != null ? _labelSize : _markerSize;
-      final fallback = s.red ? _pickupIcon : _clubIcon;
-      final overlayId = markerOverlayId(s.id, gen);
-      final NMarker m;
-      if (s.clusterable) {
-        final cm = NClusterableMarker(
-          id: overlayId,
-          position: s.pos,
-          icon: icon ?? fallback,
-          size: size,
-        );
-        cm.setOnTapListener((NClusterableMarker o) => s.onTap());
-        m = cm;
-      } else {
-        final nm = NMarker(
-          id: overlayId,
-          position: s.pos,
-          icon: icon ?? fallback,
-          size: size,
-        );
-        nm.setOnTapListener((NMarker o) => s.onTap());
-        m = nm;
-      }
-      markers.add(m);
-      overlays.add(m);
-      // 대략 위치 팀: 핀 아래에 범위 원을 깔아 "이 점이 정확한 좌표는 아니다"를
-      // 눈으로 알게 한다. 좌표 자체는 저장 시점에 이미 뭉개져 있다 — 이 원은
-      // 가리는 장치가 아니라 그 사실을 알리는 표시다.
-      if (s.areaOnly) {
-        overlays.add(
-          NCircleOverlay(
-            id: 'area_$overlayId',
-            center: s.pos,
-            radius: kAreaCircleRadius,
-            color: const Color(0x26FFC107),
-            outlineColor: const Color(0x99FFA000),
-            outlineWidth: 2,
-          ),
-        );
-      }
-    }
-
-    // 4) 아이콘 빌드를 끝낸 뒤에 clear+add → 사라졌다 뜨는 끊김 최소화
-    await c.clearOverlays();
-    if (overlays.isNotEmpty) await c.addOverlayAll(overlays);
-    if (gen != _markerGen) return; // 더 새 새로고침 진행 중 → 보관/페이드 생략(그쪽이 덮어씀)
-
-    // 라벨 in-place 토글용으로 현재 마커/스펙 보관(인덱스 정렬됨).
-    _lastSpecs = items;
-    _markersById = {
-      for (var i = 0; i < items.length; i++) items[i].id: markers[i],
-    };
-
-    // 5) 라벨 전환(줌) 시: 네이티브 마커 alpha 0→1 페이드 인(팝업 대신 부드러운 등장)
-    if (fade && markers.isNotEmpty) _fadeInMarkers(markers);
-  }
-
-  // 라벨 on/off를 clear+add 없이 적용: 보관된 기존 마커의 아이콘·크기만 교체 후 페이드.
-  // (보관된 마커가 없으면 풀 리프레시로 폴백)
-  // [normal]·[urgent]: 라벨 상태가 바뀐 묶음만 건드린다 — 급구 경계(줌 9.2 부근)를
-  // 넘을 때 일반 마커까지 깜빡이며 다시 나타나지 않게.
-  Future<void> _applyLabelState({
-    bool normal = true,
-    bool urgent = true,
-  }) async {
-    final specs = _lastSpecs
-        .where((s) => s.urgent ? urgent : normal)
-        .toList(growable: false);
-    if (_lastSpecs.isEmpty || _markersById.isEmpty) {
-      return _refreshMarkers(fade: true);
-    }
-    if (specs.isEmpty) return;
-    final gen = _markerGen; // 적용 도중 풀 리프레시가 끼어들면 양보(재진입 가드)
-    final icons = await Future.wait(
-      specs.map(
-        (s) => _labelOn(s)
-            ? _labeledIcon(
-                s.name,
-                red: s.red,
-                urgent: s.urgent,
-                marks: s.marks,
-                verified: s.verified,
-              )
-            : Future<NOverlayImage?>.value(),
-      ),
-    );
-    if (gen != _markerGen || !mounted) return;
-    final updated = <NMarker>[];
-    for (var i = 0; i < specs.length; i++) {
-      final m = _markersById[specs[i].id];
-      if (m == null) continue;
-      final icon = icons[i];
-      final fallback = specs[i].red ? _pickupIcon : _clubIcon;
-      try {
-        m.setIcon(icon ?? fallback);
-        m.setSize(icon != null ? _labelSize : _markerSize);
-      } catch (_) {}
-      updated.add(m);
-    }
-    if (updated.isNotEmpty) _fadeInMarkers(updated);
-  }
-
-  // 마커 등장 페이드: alpha 0→1 짧은 트윈. 채널콜 폭주 방지를 위해 스텝 제한 + 가드.
-  void _fadeInMarkers(List<NMarker> markers) {
-    _labelFadeTimer?.cancel(); // 이전 페이드 진행 중이면 취소(겹침 방지)
-    for (final m in markers) {
-      try {
-        m.setAlpha(0.0);
-      } catch (_) {}
-    }
-    const steps = 6;
-    var i = 0;
-    _labelFadeTimer = Timer.periodic(const Duration(milliseconds: 36), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      i++;
-      final v = (i / steps).clamp(0.0, 1.0);
-      for (final m in markers) {
-        try {
-          m.setAlpha(v);
-        } catch (_) {}
-      }
-      if (i >= steps) timer.cancel();
-    });
   }
 
   void _onTab(String t) {
@@ -2197,6 +2005,8 @@ class _MapScreenState extends State<MapScreen> {
                   _controller = controller;
                   await _ensureClusterIcon();
                   await _enableMyLocation();
+                  // 묶음 아이콘이 준비된 뒤에 붙인다. 붙기 전에 온 마지막 장면을 그때 그린다
+                  _layers.attach(NaverMarkerSink(controller));
                   _refreshMarkers();
                 },
                 // 줌이 임계를 넘나들면 이름 알약 표시/숨김 전환(스테이지 2↔3)
