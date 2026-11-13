@@ -230,20 +230,24 @@ class RoundResult {
   /// 비는 자리가 하나라도 있는지.
   bool get hasNeed => games.any((g) => g.hasNeed);
 
-  RoundResult copyWith({bool? pinsRelaxed, bool? abcFellBack, String? mode}) =>
-      RoundResult(
-        round: round,
-        games: games,
-        mode: mode ?? this.mode,
-        prio: prio,
-        sport: sport,
-        tactic: tactic,
-        budget: budget,
-        flexAsked: flexAsked,
-        teamSize: teamSize,
-        pinsRelaxed: pinsRelaxed ?? this.pinsRelaxed,
-        abcFellBack: abcFellBack ?? this.abcFellBack,
-      );
+  RoundResult copyWith({
+    bool? pinsRelaxed,
+    bool? abcFellBack,
+    String? mode,
+    List<GameResult>? games,
+  }) => RoundResult(
+    round: round,
+    games: games ?? this.games,
+    mode: mode ?? this.mode,
+    prio: prio,
+    sport: sport,
+    tactic: tactic,
+    budget: budget,
+    flexAsked: flexAsked,
+    teamSize: teamSize,
+    pinsRelaxed: pinsRelaxed ?? this.pinsRelaxed,
+    abcFellBack: abcFellBack ?? this.abcFellBack,
+  );
 }
 
 /// 확정된 라운드 기록.

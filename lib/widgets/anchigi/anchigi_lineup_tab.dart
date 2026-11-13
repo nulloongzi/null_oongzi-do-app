@@ -48,16 +48,14 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
             '${(int.tryParse(p['mc'] ?? '0') ?? 0) - (int.tryParse(p['n'] ?? '0') ?? 0)}',
       }),
       'only' => tf('ag_dg_only', {
-        'pos': p['pos'] ?? '',
-        'posko': t('ag_pos_${p['pos']}'),
+        'pos': t('ag_posx_${p['pos']}'),
         'cnt': p['cnt'] ?? '',
         'names': p['names'] ?? '',
         'max': p['max'] ?? '',
         'bench': p['bench'] ?? '',
       }),
       'few' => tf('ag_dg_few', {
-        'pos': p['pos'] ?? '',
-        'posko': t('ag_pos_${p['pos']}'),
+        'pos': t('ag_posx_${p['pos']}'),
         'able': p['able'] ?? '',
         'min': p['min'] ?? '',
       }),
