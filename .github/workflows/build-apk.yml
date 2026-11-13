@@ -30,6 +30,9 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          # 3.50.0 부터 Gradle 9.3.1 이상을 요구해 빌드가 막힌다(run #35). Gradle·AGP 를
+          # 올리기 전까지 마지막으로 빌드가 되던 버전(run #34)에 묶어 둔다.
+          flutter-version: 3.47.9
 
       - run: flutter --version
 
