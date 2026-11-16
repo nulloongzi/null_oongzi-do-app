@@ -325,18 +325,95 @@ void main() {
       expect(s.shortHanded, isTrue);
     });
 
-    test('모임을 보관하면 기록만 새로 시작한다', () async {
+    test('날짜마다 명단 · 기록이 따로 남고 다시 열어도 이어진다', () async {
       final s = await freshStore();
+      expect(s.days.length, 1);
+      expect(s.currentDay.date, AnchigiStore.todayStr(), reason: '처음이면 오늘 날짜');
       s.addPlayer('가', {'S': 'main'});
       s.statOf(s.players.first.id).play = 3;
       s.round = 4;
+      s.editDay('2026-11-21', '정기 픽업');
 
-      expect(s.archiveMeet(), isTrue);
-      expect(s.meets.length, 1);
-      expect(s.meets.first.rounds, 3);
+      s.addDay('2026-12-27', '');
+      expect(s.players, isEmpty, reason: '새 날짜는 빈 명단');
       expect(s.stat, isEmpty);
       expect(s.round, 1);
-      expect(s.players.length, 1, reason: '명단은 유지돼야 함');
+      s.addPlayer('나', {'OH': 'main'});
+      await s.persist();
+
+      final back = AnchigiStore();
+      await back.load();
+      expect(back.days.length, 2);
+      expect(back.currentDay.date, '2026-12-27', reason: '마지막에 연 날짜가 열린다');
+      expect(back.players.map((p) => p.name), ['나']);
+      expect(back.sortedDays.map((d) => d.date), ['2026-11-21', '2026-12-27']);
+
+      back.switchDay(back.sortedDays.first.id);
+      expect(back.currentDay.title, '정기 픽업');
+      expect(back.players.map((p) => p.name), ['가']);
+      expect(back.round, 4);
+      expect(back.stat[back.players.first.id]!.play, 3);
+
+      expect(back.deleteDay(), isTrue);
+      expect(back.days.length, 1);
+      expect(back.players.map((p) => p.name), ['나']);
+      expect(back.deleteDay(), isFalse, reason: '마지막 하나는 못 지운다');
+    });
+
+    test('새 날짜에 명단을 가져오면 자리는 그대로, 참석 · 퇴장은 새로', () async {
+      final s = await freshStore();
+      s.addPlayer('가', {'S': 'main'});
+      s.setHere(s.players.first.id, false);
+      s.setLeave(s.players.first.id, '15:00');
+      final oldId = s.dayId;
+
+      s.addDay('2026-11-21', '', copyRoster: true);
+      expect(s.players.single.tier, {'S': 'main'});
+      expect(s.players.single.here, isTrue);
+      expect(s.players.single.leave, isNull);
+
+      s.switchDay(oldId);
+      expect(s.players.single.here, isFalse, reason: '원래 날짜는 그대로');
+    });
+
+    test('날짜 기능 전 저장본은 날짜 미정 하나로 이어진다', () async {
+      SharedPreferences.setMockInitialValues({
+        'anchigi.players.v1':
+            '[{"id":"pa","name":"옛사람","tier":{"S":"main"},"here":true}]',
+        'anchigi.round.v1': '3',
+      });
+      final s = AnchigiStore();
+      await s.load();
+      expect(s.days.length, 1);
+      expect(s.currentDay.date, '');
+      expect(s.players.single.name, '옛사람');
+      expect(s.round, 3);
+    });
+
+    test('이름을 바꾸면 뽑은 배치 · 지난 라운드 이름도 바뀐다', () async {
+      final s = await freshStore();
+      for (var i = 0; i < 12; i++) {
+        s.addPlayer('P$i', {});
+      }
+      await s.draw();
+      s.commit();
+      await s.draw();
+      final id = s.players.first.id;
+      s.renamePlayer(id, '누룽이');
+
+      Iterable<String> namesOf(List<GameResult> gs) => gs.expand(
+        (g) => [
+          ...g.teams
+              .expand((t) => t)
+              .where((a) => a.id == id)
+              .map((a) => a.name),
+          ...g.bench.where((b) => b.id == id).map((b) => b.name),
+        ],
+      );
+      expect(s.players.first.name, '누룽이');
+      expect(namesOf(s.pastRounds.first.games), everyElement('누룽이'));
+      expect(namesOf(s.pastRounds.first.games), isNotEmpty);
+      expect(namesOf(s.current!.games), everyElement('누룽이'));
     });
 
     test('껐던 구성은 다시 켜지지 않는다', () async {

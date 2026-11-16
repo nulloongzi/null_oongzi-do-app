@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/anchigi/anchigi_constants.dart';
+import '../../models/anchigi/anchigi_day.dart';
 import '../../models/anchigi/anchigi_player.dart';
 import '../../models/anchigi/anchigi_round.dart';
 import '../../models/anchigi/anchigi_schedule.dart';
@@ -34,8 +35,15 @@ class AnchigiStore extends ChangeNotifier {
   /// 6인제 전술: '5-1'(세터 1) | '6-2'(세터 2, 전위 세터는 라이트).
   String tactic = '5-1';
 
-  /// 보관해 둔 지난 모임.
+  /// 날짜 기능 전에 보관해 둔 지난 모임(보기 · 지우기만).
   List<AnchigiMeet> meets = [];
+
+  /// 날짜별 안치기. [players] · [stat] · [round] · [pastRounds] 는 지금 연 날짜의
+  /// 작업본이고, 저장할 때 그 날짜 칸에 되돌려 쓴다. 설정은 모든 날짜가 같이 쓴다.
+  List<AnchigiDay> days = [];
+
+  /// 지금 연 날짜의 id.
+  String dayId = '';
 
   /// 결과를 코트 대신 목록으로 볼지.
   bool compact = false;
@@ -204,6 +212,33 @@ class AnchigiStore extends ChangeNotifier {
           .toList();
     });
 
+    days = read('days', <AnchigiDay>[], (v) {
+      return (v as List)
+          .map((e) => AnchigiDay.fromJson(Map<String, dynamic>.from(e as Map)))
+          .where((d) => d.id.isNotEmpty)
+          .toList();
+    });
+    final savedDay = read<String?>('day', null, (v) => v as String?);
+    if (days.isEmpty) {
+      // 날짜 기능 전의 저장본 — 쓰던 명단 · 기록을 '날짜 미정' 하나로 옮긴다.
+      // 처음 쓰는 사람은 오늘 날짜로 시작한다.
+      final had = players.isNotEmpty || pastRounds.isNotEmpty || round > 1;
+      final d = AnchigiDay(
+        id: genPlayerId(),
+        date: had ? '' : todayStr(),
+        players: players,
+        stat: stat,
+        round: round,
+        past: pastRounds,
+      );
+      days = [d];
+      dayId = d.id;
+    } else {
+      final d = dayById(savedDay) ?? days.first;
+      dayId = d.id;
+      _openDay(d);
+    }
+
     if (!kPrios.contains(prio)) prio = 'custom';
     if (mode != 'abc' && mode != 'free') mode = 'abc';
     if (nGames < 1 || nGames > 6) nGames = 3;
@@ -241,6 +276,102 @@ class AnchigiStore extends ChangeNotifier {
       _key('past'),
       jsonEncode(pastRounds.map((r) => r.toJson()).toList()),
     );
+    _syncDay();
+    await sp.setString(
+      _key('days'),
+      jsonEncode(days.map((d) => d.toJson()).toList()),
+    );
+    await sp.setString(_key('day'), jsonEncode(dayId));
+  }
+
+  // ── 날짜 ──────────────────────────────────────────────────────────────────
+
+  AnchigiDay? dayById(String? id) {
+    for (final d in days) {
+      if (d.id == id) return d;
+    }
+    return null;
+  }
+
+  AnchigiDay get currentDay => dayById(dayId) ?? days.first;
+
+  /// 날짜순(가까운 날 먼저), 날짜 미정은 맨 뒤.
+  List<AnchigiDay> get sortedDays => sortDays(days);
+
+  void _openDay(AnchigiDay d) {
+    players = d.players;
+    stat = d.stat;
+    round = d.round;
+    pastRounds = d.past;
+  }
+
+  void _syncDay() {
+    final d = dayById(dayId);
+    if (d == null) return;
+    d.players = players;
+    d.stat = stat;
+    d.round = round;
+    d.past = pastRounds;
+  }
+
+  /// 다른 날짜의 안치기를 연다. 뽑아 둔 결과는 그 날짜 것이 아니라 버린다.
+  void switchDay(String id) {
+    final d = dayById(id);
+    if (d == null || id == dayId) return;
+    _syncDay();
+    dayId = id;
+    _openDay(d);
+    _syncSport();
+    picked = null;
+    _invalidate();
+    _commitChange();
+  }
+
+  /// 새 날짜를 만들고 연다. [copyRoster] 면 지금 명단을 자리 · 고정째 가져오되
+  /// 참석 · 일찍 가는 시간은 그날 다시 정하게 비운다.
+  void addDay(String date, String title, {bool copyRoster = false}) {
+    final d = AnchigiDay(
+      id: genPlayerId(),
+      date: date,
+      title: title.trim(),
+      players: copyRoster
+          ? [
+              for (final p in players)
+                p.copy()
+                  ..here = true
+                  ..leave = null,
+            ]
+          : [],
+    );
+    days.add(d);
+    _syncDay();
+    dayId = d.id;
+    _openDay(d);
+    _syncSport();
+    picked = null;
+    _invalidate();
+    _commitChange();
+  }
+
+  void editDay(String date, String title) {
+    final d = currentDay;
+    d.date = date;
+    d.title = title.trim();
+    _commitChange();
+  }
+
+  /// 지금 연 날짜를 지운다. 마지막 하나는 지울 수 없다.
+  bool deleteDay() {
+    if (days.length <= 1) return false;
+    days.removeWhere((d) => d.id == dayId);
+    final next = sortedDays.first;
+    dayId = next.id;
+    _openDay(next);
+    _syncSport();
+    picked = null;
+    _invalidate();
+    _commitChange();
+    return true;
   }
 
   /// 설정을 바꾸면 이미 뽑아둔 결과는 무효가 된다(원본과 동일).
@@ -425,10 +556,41 @@ class AnchigiStore extends ChangeNotifier {
     _commitChange();
   }
 
+  /// 이름 바꾸기. 이미 뽑은 배치 · 지난 라운드에 찍힌 이름도 같이 고친다
+  /// (기록은 id 로 묶여 있어 그대로 이어진다).
   void renamePlayer(String id, String name) {
+    final v = name.trim();
     final p = players.firstWhere((q) => q.id == id);
-    p.name = name.trim();
+    if (v.isEmpty || v == p.name) return;
+    p.name = v;
+    GameResult fix(GameResult g) => GameResult.fromJson(
+      _renamed(g.toJson(), id, v) as Map<String, dynamic>,
+    );
+    pastRounds = [
+      for (final r in pastRounds)
+        PastRound(
+          round: r.round,
+          games: r.games.map(fix).toList(),
+          mode: r.mode,
+          sport: r.sport,
+        ),
+    ];
+    final c = current;
+    if (c != null) current = c.copyWith(games: c.games.map(fix).toList());
     _commitChange();
+  }
+
+  /// JSON 트리에서 id 가 맞는 자리 · 이름표의 이름('n')을 바꾼다.
+  static dynamic _renamed(dynamic v, String id, String name) {
+    if (v is List) return [for (final e in v) _renamed(e, id, name)];
+    if (v is Map) {
+      final m = <String, dynamic>{
+        for (final e in v.entries) e.key as String: _renamed(e.value, id, name),
+      };
+      if (m['id'] == id && m.containsKey('n')) m['n'] = name;
+      return m;
+    }
+    return v;
   }
 
   void setHere(String id, bool v) {
@@ -564,34 +726,13 @@ class AnchigiStore extends ChangeNotifier {
     _commitChange();
   }
 
-  // ── 모임 보관 / 백업 ──────────────────────────────────────────────────────
+  // ── 지난 모임 / 백업 ──────────────────────────────────────────────────────
 
   static String todayStr() {
     final d = DateTime.now();
     final m = d.month.toString().padLeft(2, '0');
     final dd = d.day.toString().padLeft(2, '0');
     return '${d.year}-$m-$dd';
-  }
-
-  /// 이번 모임을 보관하고 누적 기록만 새로 시작한다. 명단은 그대로 둔다.
-  bool archiveMeet() {
-    if (round <= 1 && pastRounds.isEmpty) return false;
-    meets.insert(
-      0,
-      AnchigiMeet(
-        date: todayStr(),
-        rounds: round - 1 < 0 ? 0 : round - 1,
-        sport: sport,
-        stat: {for (final e in stat.entries) e.key: e.value.toJson()},
-        past: List<PastRound>.from(pastRounds),
-      ),
-    );
-    stat = {};
-    round = 1;
-    pastRounds = [];
-    _invalidate();
-    _commitChange();
-    return true;
   }
 
   void deleteMeet(int index) {
@@ -601,27 +742,32 @@ class AnchigiStore extends ChangeNotifier {
   }
 
   /// 백업 JSON. 기기를 바꾸거나 앱을 지워도 명단·기록이 남게.
-  String exportJson() => jsonEncode({
-    'app': 'anchigi',
-    'v': 1,
-    'exportedAt': DateTime.now().toIso8601String(),
-    'players': players.map((p) => p.toJson()).toList(),
-    'stat': {for (final e in stat.entries) e.key: e.value.toJson()},
-    'round': round,
-    'past': pastRounds.map((r) => r.toJson()).toList(),
-    'meets': meets.map((m) => m.toJson()).toList(),
-    'settings': {
-      'sport': sport,
-      'tactic': tactic,
-      'mode': mode,
-      'prio': prio,
-      'flex': flexSlots,
-      'tpl': allowed,
-      'ngames': nGames,
-      'compact': compact,
-      'schedule': schedule.toJson(),
-    },
-  });
+  String exportJson() {
+    _syncDay();
+    return jsonEncode({
+      'app': 'anchigi',
+      'v': 1,
+      'exportedAt': DateTime.now().toIso8601String(),
+      'players': players.map((p) => p.toJson()).toList(),
+      'stat': {for (final e in stat.entries) e.key: e.value.toJson()},
+      'round': round,
+      'past': pastRounds.map((r) => r.toJson()).toList(),
+      'meets': meets.map((m) => m.toJson()).toList(),
+      'days': days.map((d) => d.toJson()).toList(),
+      'day': dayId,
+      'settings': {
+        'sport': sport,
+        'tactic': tactic,
+        'mode': mode,
+        'prio': prio,
+        'flex': flexSlots,
+        'tpl': allowed,
+        'ngames': nGames,
+        'compact': compact,
+        'schedule': schedule.toJson(),
+      },
+    });
+  }
 
   /// 백업 JSON 을 그대로 덮어쓴다. 읽을 수 없으면 false.
   /// 먼저 전부 읽어 본 뒤에 바꾼다 — 중간에 터져 반쯤 덮어쓰면 안 된다.
@@ -640,6 +786,7 @@ class AnchigiStore extends ChangeNotifier {
     final newStat = <String, AnchigiStat>{};
     final List<PastRound> newPast;
     final List<AnchigiMeet> newMeets;
+    final List<AnchigiDay> newDays;
     Map<String, dynamic> sg;
     try {
       sg = d['settings'] is Map
@@ -663,17 +810,36 @@ class AnchigiStore extends ChangeNotifier {
       newMeets = (d['meets'] as List? ?? [])
           .map((e) => AnchigiMeet.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList();
+      newDays = (d['days'] as List? ?? [])
+          .map((e) => AnchigiDay.fromJson(Map<String, dynamic>.from(e as Map)))
+          .where((x) => x.id.isNotEmpty)
+          .toList();
     } catch (_) {
       return false;
     }
 
     if (kSports.contains(sg['sport'])) sport = sg['sport'] as String;
     if (kTactics.contains(sg['tactic'])) tactic = sg['tactic'] as String;
-    players = newPlayers;
-    stat = newStat;
-    round = (d['round'] as num?)?.toInt() ?? 1;
-    pastRounds = newPast;
     meets = newMeets;
+    if (newDays.isNotEmpty) {
+      days = newDays;
+      final open =
+          dayById(d['day'] is String ? d['day'] as String : null) ?? days.first;
+      dayId = open.id;
+      _openDay(open);
+    } else {
+      // 날짜 기능 전의 백업 — 그 명단 · 기록을 '날짜 미정' 하나로.
+      final nd = AnchigiDay(
+        id: genPlayerId(),
+        players: newPlayers,
+        stat: newStat,
+        round: (d['round'] as num?)?.toInt() ?? 1,
+        past: newPast,
+      );
+      days = [nd];
+      dayId = nd.id;
+      _openDay(nd);
+    }
 
     final m = sg['mode'];
     if (m == 'abc' || m == 'free') mode = m as String;

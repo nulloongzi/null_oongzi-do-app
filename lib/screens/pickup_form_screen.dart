@@ -93,7 +93,8 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
 
   // 주소 → 좌표 (Cloud Function). 실패 시 지도 피커로 폴백 안내.
   Future<void> _geocode() async {
-    final addr = _address.text.trim();
+    // 주소칸이 비어 있으면 장소 이름으로 찾는다 — 둘을 같은 걸로 두 번 적지 않게.
+    final addr = _locQuery;
     if (addr.isEmpty) {
       _snack(t('f_addr_empty'));
       return;
@@ -123,6 +124,12 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
                 ? '${r.placeName} ${t('f_addr_found')}'
                 : t('f_addr_found')),
     );
+  }
+
+  /// 위치를 찾을 말: 주소, 없으면 장소 이름(지오코더가 장소 이름도 찾는다).
+  String get _locQuery {
+    final a = _address.text.trim();
+    return a.isNotEmpty ? a : _venue.text.trim();
   }
 
   List<ChipOption> get _sportOptions => [
@@ -354,13 +361,15 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
     // 지도에서 안 찍었으면 주소로 자동 지오코딩(웹 pickup-host.js:230-238).
     // 실패해도 등록은 진행 — 좌표 없는 크루는 목록에만 뜬다. 수정 중 주소를 고쳐
     // onChanged가 좌표를 지운 경우도 여기서 재지오코딩되어 기존 핀이 유지된다.
-    if ((_lat == null || _lng == null) && address.isNotEmpty) {
+    // 주소칸이 비었으면 장소 이름으로 찾는다(_locQuery).
+    final locQuery = _locQuery;
+    if ((_lat == null || _lng == null) && locQuery.isNotEmpty) {
       // 지오코딩 함수는 인증 필수 — 무로그인 등록 흐름에선 먼저 익명 인증을
       // 확보해야 조용히 실패하지 않는다(createPickup의 ensureUid와 동일 경로).
       try {
         await _repo.ensureUid();
       } catch (_) {}
-      final r = await GeocodingService.geocode(address); // 오류 시 null
+      final r = await GeocodingService.geocode(locQuery); // 오류 시 null
       if (r != null) {
         _lat = r.lat;
         _lng = r.lng;
@@ -460,7 +469,22 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
                 ],
               ),
             ),
-            _group(t('pf_venue'), _input(_venue, t('pf_venue_hint'))),
+            _group(
+              t('pf_venue'),
+              TextField(
+                controller: _venue,
+                // 주소 없이 장소 이름으로 찾은 좌표는 이름을 고치면 무효(주소칸과 같은 규칙).
+                onChanged: (_) {
+                  if (_lat != null && _address.text.trim().isEmpty) {
+                    setState(() {
+                      _lat = null;
+                      _lng = null;
+                    });
+                  }
+                },
+                decoration: InputDecoration(hintText: t('pf_venue_hint')),
+              ),
+            ),
             // 지역 칩: 좌표 없는 크루의 필터 기준. 같은 칩을 다시 누르면 해제(미지정).
             _group(
               t('pf_region'),
@@ -604,7 +628,11 @@ class _PickupFormScreenState extends State<PickupFormScreen> {
               });
             }
           },
-          decoration: InputDecoration(hintText: t('pf_addr_hint')),
+          decoration: InputDecoration(
+            hintText: t('pf_addr_hint'),
+            helperText: t('pf_addr_same'),
+            helperMaxLines: 2,
+          ),
         ),
         const SizedBox(height: 8),
         Row(

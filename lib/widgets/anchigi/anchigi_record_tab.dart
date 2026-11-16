@@ -81,7 +81,9 @@ class AnchigiRecordTab extends StatelessWidget {
             ],
           ),
         ),
-        _meetsCard(context),
+        // 날짜 기능 전에 보관해 둔 모임 — 남아 있을 때만. 새로 보관하는 길은
+        // 날짜 막대(＋)가 대신한다.
+        if (store.meets.isNotEmpty) _meetsCard(context),
         _backupCard(context),
         _resetCard(context),
       ],
@@ -109,7 +111,7 @@ class AnchigiRecordTab extends StatelessWidget {
     return r ?? false;
   }
 
-  /// 모임 단위로 끊어 보관한다 — 기록이 한 모임에 영영 묶이지 않게.
+  /// 날짜 기능 전에 보관한 지난 모임(보기 · 지우기만).
   Widget _meetsCard(BuildContext context) => AgCard(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -136,72 +138,37 @@ class AnchigiRecordTab extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        if (store.meets.isEmpty)
-          Text(
-            t('ag_meet_none'),
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: NurungjiColors.brown,
-            ),
-          )
-        else
-          for (var i = 0; i < store.meets.length; i++)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '${store.meets[i].date}  '
-                      '${store.meets[i].rounds}${t('ag_meet_rounds_suf')} · '
-                      '${t('ag_sport_${store.meets[i].sport}')}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: NurungjiColors.dark,
-                      ),
+        for (var i = 0; i < store.meets.length; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '${store.meets[i].date}  '
+                    '${store.meets[i].rounds}${t('ag_meet_rounds_suf')} · '
+                    '${t('ag_sport_${store.meets[i].sport}')}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: NurungjiColors.dark,
                     ),
                   ),
-                  IconButton(
-                    onPressed: () async {
-                      if (await _confirm(context, t('ag_meet_del_confirm'))) {
-                        store.deleteMeet(i);
-                      }
-                    },
-                    visualDensity: VisualDensity.compact,
-                    iconSize: 16,
-                    color: NurungjiColors.brown,
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-            ),
-        const SizedBox(height: 10),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton(
-            onPressed: () async {
-              final messenger = ScaffoldMessenger.of(context);
-              if (store.round <= 1 && store.pastRounds.isEmpty) {
-                messenger.showSnackBar(
-                  SnackBar(content: Text(t('ag_meet_archive_empty'))),
-                );
-                return;
-              }
-              if (await _confirm(context, t('ag_meet_archive_confirm'))) {
-                store.archiveMeet();
-              }
-            },
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-            ),
-            child: Text(
-              t('ag_meet_archive'),
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+                ),
+                IconButton(
+                  onPressed: () async {
+                    if (await _confirm(context, t('ag_meet_del_confirm'))) {
+                      store.deleteMeet(i);
+                    }
+                  },
+                  visualDensity: VisualDensity.compact,
+                  iconSize: 16,
+                  color: NurungjiColors.brown,
+                  icon: const Icon(Icons.close),
+                ),
+              ],
             ),
           ),
-        ),
         const SizedBox(height: 8),
         Text(
           t('ag_meet_hint'),

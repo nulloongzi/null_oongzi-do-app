@@ -97,6 +97,15 @@ class _AnchigiRosterTabState extends State<AnchigiRosterTab> {
     return r ?? false;
   }
 
+  Future<void> _rename(AnchigiPlayer p) async {
+    final v = await showDialog<String>(
+      context: context,
+      builder: (_) => _RenameDialog(name: p.name),
+    );
+    if (v == null || v.trim().isEmpty) return;
+    s.renamePlayer(p.id, v);
+  }
+
   Future<void> _pickLeave(AnchigiPlayer p) async {
     final parts = (p.leave ?? '').split(':');
     final initial = parts.length == 2
@@ -209,18 +218,34 @@ class _AnchigiRosterTabState extends State<AnchigiRosterTab> {
                 ),
               ),
               Expanded(
-                child: GestureDetector(
-                  onTap: () => s.pick(p.id),
-                  child: Text(
-                    p.name,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: p.here
-                          ? NurungjiColors.dark
-                          : NurungjiColors.brown,
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: GestureDetector(
+                        onTap: () => s.pick(p.id),
+                        child: Text(
+                          p.name,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: p.here
+                                ? NurungjiColors.dark
+                                : NurungjiColors.brown,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                    // ✎ 이름 바꾸기 — 기록은 id 로 묶여 있어 그대로 이어진다.
+                    IconButton(
+                      onPressed: () => _rename(p),
+                      visualDensity: VisualDensity.compact,
+                      iconSize: 15,
+                      color: NurungjiColors.brown,
+                      tooltip: t('ag_rename_title'),
+                      icon: const Icon(Icons.edit_outlined),
+                    ),
+                  ],
                 ),
               ),
               // 퇴장 시간.
@@ -670,5 +695,52 @@ class _AnchigiRosterTabState extends State<AnchigiRosterTab> {
         ),
       ],
     ),
+  );
+}
+
+/// 이름 바꾸기 팝업. 입력 칸 컨트롤러를 팝업이 닫힐 때(애니메이션 뒤) 정리하려고 따로 둔다.
+class _RenameDialog extends StatefulWidget {
+  final String name;
+
+  const _RenameDialog({required this.name});
+
+  @override
+  State<_RenameDialog> createState() => _RenameDialogState();
+}
+
+class _RenameDialogState extends State<_RenameDialog> {
+  late final _ctl = TextEditingController(text: widget.name);
+
+  @override
+  void dispose() {
+    _ctl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    backgroundColor: NurungjiColors.light,
+    title: Text(
+      t('ag_rename_title'),
+      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+    ),
+    content: TextField(
+      controller: _ctl,
+      autofocus: true,
+      maxLength: 20,
+      textInputAction: TextInputAction.done,
+      onSubmitted: (x) => Navigator.pop(context, x),
+      decoration: InputDecoration(hintText: t('ag_name_ph'), isDense: true),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: Text(t('cancel')),
+      ),
+      TextButton(
+        onPressed: () => Navigator.pop(context, _ctl.text),
+        child: Text(t('ag_day_save')),
+      ),
+    ],
   );
 }

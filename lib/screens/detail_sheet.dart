@@ -288,51 +288,130 @@ Widget _infoRow(String icon, String text) => Padding(
   ),
 );
 
-// 📍 주소 행 + 복사 알약 (웹 #sheetAddressVal + #btnCopy). display=표시값, copyText=복사값.
+/// 픽업 장소 표시 줄. 장소 이름과 주소를 같은 걸로 적는 일이 많다(예: 둘 다
+/// '서울광남초등학교') — 같거나 한쪽이 다른 쪽을 품으면 한 줄만 보인다.
+/// 다르면 [장소 이름, 주소] 두 줄.
+@visibleForTesting
+List<String> pickupWhereLines(String? venue, String? address) {
+  final v = (venue ?? '').trim(), a = (address ?? '').trim();
+  if (v.isEmpty) return a.isEmpty ? const [] : [a];
+  if (a.isEmpty) return [v];
+  String n(String x) => x.replaceAll(RegExp(r'\s+'), '').toLowerCase();
+  final nv = n(v), na = n(a);
+  if (nv == na || na.contains(nv)) return [a];
+  if (nv.contains(na)) return [v];
+  return [v, a];
+}
+
+// 📍 주소 행 + 복사 · 길찾기 알약 (웹 #sheetAddressVal + #btnCopy).
+// lines=표시 줄(1~2, 첫 줄이 장소 이름이면 굵게), copyText=복사값.
 // onDirections 가 있으면 길찾기 알약도 붙는다 — 좌표 없는 크루(장소 유동적)는 null.
+// 한 줄이 알약 옆에 다 들어가면 한 줄로, 아니면 글은 폭을 다 쓰고 알약은 아랫줄에
+// 나란히 넓게 내린다 — 오른쪽에 세로로 쌓으면 긴 장소 이름이 좁은 칸에서 여러 번 꺾였다.
 Widget _addressRow(
   BuildContext context,
-  String display,
+  List<String> lines,
   String copyText, {
   VoidCallback? onDirections,
-}) => Padding(
-  padding: const EdgeInsets.only(top: 12),
-  child: Row(
+}) {
+  const textStyle = TextStyle(
+    fontSize: 15.5,
+    color: NurungjiColors.dark,
+    height: 1.4,
+  );
+  Future<void> copy() async {
+    await Clipboard.setData(ClipboardData(text: copyText));
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('address_copied'))));
+    }
+  }
+
+  final labels = [
+    t('copy_address'),
+    if (onDirections != null) t('directions_btn'),
+  ];
+  final text = Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Text('📍', style: TextStyle(fontSize: 17)),
-      const SizedBox(width: 10),
-      Expanded(
-        child: Text(
-          display,
-          style: const TextStyle(
-            fontSize: 15.5,
-            color: NurungjiColors.dark,
-            height: 1.4,
-          ),
+      for (var i = 0; i < lines.length; i++)
+        Text(
+          lines[i],
+          style: i == 0 && lines.length > 1
+              ? textStyle.copyWith(fontWeight: FontWeight.w800)
+              : textStyle,
         ),
-      ),
-      const SizedBox(width: 8),
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          _outlineBtn(t('copy_address'), () async {
-            await Clipboard.setData(ClipboardData(text: copyText));
-            if (context.mounted) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(t('address_copied'))));
-            }
-          }),
-          if (onDirections != null) ...[
-            const SizedBox(height: 6),
-            _outlineBtn(t('directions_btn'), onDirections),
-          ],
-        ],
-      ),
     ],
-  ),
-);
+  );
+  return Padding(
+    padding: const EdgeInsets.only(top: 12),
+    child: LayoutBuilder(
+      builder: (context, box) {
+        final scaler = MediaQuery.textScalerOf(context);
+        double w(String s, TextStyle st) => (TextPainter(
+          text: TextSpan(text: s, style: st),
+          textDirection: TextDirection.ltr,
+          textScaler: scaler,
+        )..layout()).width;
+        // 알약 폭 = 글 폭 + 좌우 여백 28, 알약 사이 6
+        final pills =
+            labels.fold<double>(
+              0,
+              (sum, l) => sum + w(l, _outlineBtnText) + 28,
+            ) +
+            6 * (labels.length - 1);
+        final textRoom = box.maxWidth - 27 - 8 - pills; // 아이콘 17+10, 사이 8
+        final inline =
+            lines.length == 1 && w(lines.first, textStyle) <= textRoom;
+        final copyBtn = _outlineBtn(labels.first, copy, wide: !inline);
+        final dirBtn = onDirections == null
+            ? null
+            : _outlineBtn(labels.last, onDirections, wide: !inline);
+        final icon = const Text('📍', style: TextStyle(fontSize: 17));
+        if (inline) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              icon,
+              const SizedBox(width: 10),
+              Expanded(child: text),
+              const SizedBox(width: 8),
+              copyBtn,
+              if (dirBtn != null) ...[const SizedBox(width: 6), dirBtn],
+            ],
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                icon,
+                const SizedBox(width: 10),
+                Expanded(child: text),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.only(left: 27),
+              child: Row(
+                children: [
+                  Expanded(child: copyBtn),
+                  if (dirBtn != null) ...[
+                    const SizedBox(width: 6),
+                    Expanded(child: dirBtn),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    ),
+  );
+}
 
 // 시간표 morph (웹 #timeMorphContainer/interpolateMorph): peek=요약 텍스트, expand=주간 그리드.
 // 패널 펼침비율(DetailPanelScope.expand)에 묶인다 — 요약은 비율 0→0.5 에서 흐려지고,
@@ -840,27 +919,37 @@ Widget _primaryBtn(String label, VoidCallback onTap) => Padding(
 );
 
 // 보조 액션: 웹 .btn-copy 톤의 작은 연회색 알약(아기자기).
-Widget _outlineBtn(String label, VoidCallback onTap) => BounceTap(
-  child: Material(
-    color: const Color(0xFFF0ECE2),
-    borderRadius: BorderRadius.circular(12),
-    child: InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-        child: Text(
-          label,
-          style: const TextStyle(
-            color: NurungjiColors.chipFg,
-            fontWeight: FontWeight.w700,
-            fontSize: 13.5,
+const _outlineBtnText = TextStyle(
+  color: NurungjiColors.chipFg,
+  fontWeight: FontWeight.w700,
+  fontSize: 13.5,
+);
+
+/// [wide] 면 받은 폭을 다 채우고 글은 가운데(아랫줄에 나란히 놓을 때).
+Widget _outlineBtn(String label, VoidCallback onTap, {bool wide = false}) =>
+    BounceTap(
+      child: Material(
+        color: const Color(0xFFF0ECE2),
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            child: wide
+                ? SizedBox(
+                    width: double.infinity,
+                    child: Text(
+                      label,
+                      textAlign: TextAlign.center,
+                      style: _outlineBtnText,
+                    ),
+                  )
+                : Text(label, style: _outlineBtnText),
           ),
         ),
       ),
-    ),
-  ),
-);
+    );
 
 // 인스타 아이콘 (웹 .instagram 그라데이션) — 타이틀 옆. 탭하면 인스타 열기.
 Widget _instaIcon(VoidCallback onTap) => BounceTap(
@@ -1791,10 +1880,8 @@ List<Widget> _spotDetailChildren(
   Future<void> Function()? onChanged,
 }) {
   // 장소가 유동적인 크루는 체육관·주소가 비어 있다 → 지역 칩으로 대체 표시.
-  final where = [
-    s.venueName,
-    s.address,
-  ].where((e) => e != null && e.isNotEmpty).join(' · ');
+  final whereLines = pickupWhereLines(s.venueName, s.address);
+  final where = whereLines.join(' · ');
   final whereLabel = where.isNotEmpty
       ? where
       : ((s.region != null && s.region!.isNotEmpty)
@@ -1852,8 +1939,8 @@ List<Widget> _spotDetailChildren(
     if (where.isNotEmpty)
       _addressRow(
         context,
-        where,
-        s.address ?? where,
+        whereLines,
+        (s.address ?? '').trim().isNotEmpty ? s.address!.trim() : where,
         // 픽업에도 길찾기를 준다 — 동호회에만 있으면 NSM(주당 길찾기 클릭)이
         // 구조적으로 동호회 편향이 되고, 당일 행동인 픽업의 성과가 묻힌다.
         onDirections: (s.lat != null && s.lng != null)

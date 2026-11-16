@@ -797,8 +797,12 @@ const Map<String, Map<String, String>> kStrings = {
   'pf_venue_hint': {'ko': '예: 잠실학생체육관', 'en': 'e.g. Jamsil Student Gym'},
   'pf_region': {'ko': '지역', 'en': 'Region'},
   'pf_addr': {
-    'ko': '주소 (선택 · 없으면 목록에만 표시)',
-    'en': 'Address (optional — list only if blank)',
+    'ko': '주소 (선택 · 위치를 못 찾으면 목록에만 표시)',
+    'en': 'Address (optional — list only if no location is found)',
+  },
+  'pf_addr_same': {
+    'ko': '장소 이름으로 찾아지면 비워 둬도 돼요. 같은 걸 두 번 적지 않아도 돼요.',
+    'en': 'Leave blank if the venue name finds it — no need to type it twice.',
   },
   'pf_addr_hint': {
     'ko': '예: 서울 송파구 올림픽로 25',
@@ -998,13 +1002,13 @@ const Map<String, Map<String, String>> kStrings = {
     'en': '(pick several to choose among)',
   },
   'ag_tpl_mb2': {'ko': 'MB 2', 'en': 'MB 2'},
-  'ag_tpl_mb2_desc': {'ko': '리베로 없음', 'en': 'no libero'},
-  'ag_tpl_mb1li': {'ko': 'MB 1 + Li 1', 'en': 'MB 1 + Li 1'},
-  'ag_tpl_mb1li_desc': {'ko': '센터 1 · 리베로 1', 'en': '1 center · 1 libero'},
-  'ag_tpl_mb2li': {'ko': 'MB 2 + Li 1', 'en': 'MB 2 + Li 1'},
+  'ag_tpl_mb2_desc': {'ko': 'Lib 없음', 'en': 'no libero'},
+  'ag_tpl_mb1li': {'ko': 'MB 1 + Lib 1', 'en': 'MB 1 + Lib 1'},
+  'ag_tpl_mb1li_desc': {'ko': 'MB 1 · Lib 1', 'en': '1 MB · 1 libero'},
+  'ag_tpl_mb2li': {'ko': 'MB 2 + Lib 1', 'en': 'MB 2 + Lib 1'},
   'ag_tpl_mb2li_desc': {
-    'ko': '리베로가 후위 센터와 교대',
-    'en': 'libero swaps with back-row center',
+    'ko': 'Lib이 후위 MB와 교대',
+    'en': 'libero swaps with back-row MB',
   },
   'ag_tpl_person': {'ko': '인', 'en': '-person'},
   'ag_games_count': {'ko': '경기 수', 'en': 'Games'},
@@ -1066,7 +1070,7 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_bench_label': {'ko': '대기', 'en': 'Bench'},
   'ag_bench_none': {'ko': '없음 · 전원 출전', 'en': 'none · everyone plays'},
   'ag_borrowed': {'ko': '차출', 'en': 'borrowed'},
-  'ag_team_swap': {'ko': '후위 센터와 교대', 'en': 'swaps with back-row center'},
+  'ag_team_swap': {'ko': '후위 MB와 교대', 'en': 'swaps with back-row MB'},
   'ag_team_word': {'ko': 'TEAM', 'en': 'TEAM'},
   'ag_fitgap_even': {
     'ko': '두 팀 자리 적합도가 비슷해요.',
@@ -1162,12 +1166,14 @@ const Map<String, Map<String, String>> kStrings = {
     'en': 'Clear the cumulative record and restart from R1.',
   },
 
-  // 포지션 이름
-  'ag_pos_S': {'ko': '세터', 'en': 'Setter'},
-  'ag_pos_OP': {'ko': '라이트', 'en': 'Opposite'},
-  'ag_pos_OH': {'ko': '레프트', 'en': 'Outside'},
-  'ag_pos_MB': {'ko': '센터', 'en': 'Middle'},
-  'ag_pos_Li': {'ko': '리베로', 'en': 'Libero'},
+  // 포지션 이름 — 6인제는 한국어 화면에서도 공식 약어(S · OP · OH · MB · Lib)로 쓴다.
+  // '센터 · 라이트 · 레프트'는 동호회마다 가리키는 자리가 갈려 헷갈린다.
+  // 9인제 역할(속공 · 차 · 백…)은 우리말 이름 말고는 통하는 약어가 없어 그대로 둔다.
+  'ag_pos_S': {'ko': 'S', 'en': 'Setter'},
+  'ag_pos_OP': {'ko': 'OP', 'en': 'Opposite'},
+  'ag_pos_OH': {'ko': 'OH', 'en': 'Outside'},
+  'ag_pos_MB': {'ko': 'MB', 'en': 'Middle'},
+  'ag_pos_Li': {'ko': 'Lib', 'en': 'Libero'},
 
   // 9인제 역할 — 명단에서는 이 여섯 가지만 고른다.
   'ag_pos_S9': {'ko': '세터', 'en': 'Setter'},
@@ -1177,12 +1183,12 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_pos_CH': {'ko': '차', 'en': 'Mid'},
   'ag_pos_BK': {'ko': '백', 'en': 'Back'},
 
-  // 칩처럼 좁은 자리에 쓰는 짧은 이름(6인제는 코드가 이미 짧아 그대로).
-  'ag_posx_S': {'ko': '세터', 'en': 'S'},
-  'ag_posx_OP': {'ko': '라이트', 'en': 'OP'},
-  'ag_posx_OH': {'ko': '레프트', 'en': 'OH'},
-  'ag_posx_MB': {'ko': '센터', 'en': 'MB'},
-  'ag_posx_Li': {'ko': '리베로', 'en': 'Li'},
+  // 칩처럼 좁은 자리에 쓰는 짧은 이름(6인제는 공식 약어).
+  'ag_posx_S': {'ko': 'S', 'en': 'S'},
+  'ag_posx_OP': {'ko': 'OP', 'en': 'OP'},
+  'ag_posx_OH': {'ko': 'OH', 'en': 'OH'},
+  'ag_posx_MB': {'ko': 'MB', 'en': 'MB'},
+  'ag_posx_Li': {'ko': 'Lib', 'en': 'Lib'},
   'ag_posx_S9': {'ko': '세터', 'en': 'Setter'},
   'ag_posx_QK': {'ko': '속공', 'en': 'Quick'},
   'ag_posx_L9': {'ko': '레프트', 'en': 'Left'},
@@ -1207,21 +1213,21 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_seat_cb': {'ko': '백센터', 'en': 'Back centre'},
   'ag_seat_cb2': {'ko': '센터백', 'en': 'Centre back'},
   'ag_seat_rb': {'ko': '라이트백', 'en': 'Right back'},
-  'ag_seat_s_front': {'ko': '세터 · 라이트', 'en': 'Setter · right'},
+  'ag_seat_s_front': {'ko': 'S · OP', 'en': 'Setter · right'},
 
   // 6인제 전술
   'ag_tactic_title': {'ko': '전술', 'en': 'System'},
   'ag_tactic_51': {'ko': '5-1', 'en': '5-1'},
-  'ag_tactic_51_sub': {'ko': '세터 1명', 'en': 'one setter'},
+  'ag_tactic_51_sub': {'ko': 'S 1명', 'en': 'one setter'},
   'ag_tactic_62': {'ko': '6-2', 'en': '6-2'},
   'ag_tactic_62_sub': {
-    'ko': '세터 2명 · 전위는 라이트',
+    'ko': 'S 2명 · 전위는 OP 자리',
     'en': 'two setters · front one hits right',
   },
   'ag_tactic_hint': {
     'ko':
-        '5-1 은 세터 한 명이 여섯 자리를 다 돌고, 6-2 는 세터 둘이 후위에서 번갈아 토스해요. '
-        '6-2 의 전위 세터는 라이트 자리에서 공격해요.',
+        '5-1 은 S 한 명이 여섯 자리를 다 돌고, 6-2 는 S 둘이 후위에서 번갈아 토스해요. '
+        '6-2 의 전위 S는 OP 자리에서 공격해요.',
     'en':
         'In 5-1 one setter runs all six rotations; in 6-2 two setters take turns setting '
         'from the back row, and the front-row setter attacks from the right.',
@@ -1350,31 +1356,44 @@ const Map<String, Map<String, String>> kStrings = {
 
   // 9인제 구성
 
-  // 모임 보관 · 백업
-  'ag_meet_title': {'ko': '지난 모임', 'en': 'Past meetups'},
-  'ag_meet_none': {'ko': '보관한 모임이 없어요.', 'en': 'No meetups archived yet.'},
-  'ag_meet_archive': {
-    'ko': '이번 모임 보관하고 새로 시작',
-    'en': 'Archive this meetup · start fresh',
+  // 날짜별 안치기
+  'ag_day_undated': {'ko': '날짜 미정', 'en': 'No date'},
+  'ag_day_pick': {'ko': '안치기 날짜', 'en': 'Session date'},
+  'ag_day_edit': {'ko': '날짜 · 이름 바꾸기', 'en': 'Edit date · name'},
+  'ag_day_new_title': {'ko': '새 안치기 날짜', 'en': 'New session date'},
+  'ag_day_edit_title': {'ko': '이 날짜 고치기', 'en': 'Edit this date'},
+  'ag_day_date': {'ko': '날짜', 'en': 'Date'},
+  'ag_day_title': {'ko': '이름 (선택)', 'en': 'Name (optional)'},
+  'ag_day_title_ph': {'ko': '예: 정기 픽업', 'en': 'e.g. Weekly pickup'},
+  'ag_day_copy': {
+    'ko': '지금 명단 그대로 가져오기 (자리 · 고정 포함)',
+    'en': 'Copy the current roster (positions · pins included)',
   },
-  'ag_meet_archive_confirm': {
-    'ko': '이번 모임 기록을 보관하고 1R부터 새로 시작해요. 명단은 그대로 남아요.',
+  'ag_day_save': {'ko': '저장', 'en': 'Save'},
+  'ag_day_del': {'ko': '이 날짜 지우기', 'en': 'Delete this date'},
+  'ag_day_del_confirm': {
+    'ko': '이 날짜의 명단과 기록을 지워요. 계속할까요?',
+    'en': 'This deletes the roster and record for this date. Continue?',
+  },
+  'ag_day_need_date': {'ko': '날짜를 골라 주세요.', 'en': 'Pick a date.'},
+  'ag_day_hint': {
+    'ko': '날짜마다 명단 · 참석 · 기록이 따로 저장돼요. 픽업 날짜별로 미리 명단을 받아 두세요.',
     'en':
-        'Archive this meetup\'s record and restart from R1. The roster stays.',
+        'Each date keeps its own roster, attendance and record. Collect sign-ups per pickup date ahead of time.',
   },
-  'ag_meet_archive_empty': {
-    'ko': '보관할 기록이 없어요. 라운드를 확정한 뒤에 눌러 주세요.',
-    'en': 'Nothing to archive yet — confirm a round first.',
-  },
+  'ag_rename_title': {'ko': '이름 바꾸기', 'en': 'Rename'},
+
+  // 지난 모임(날짜 기능 전에 보관한 것) · 백업
+  'ag_meet_title': {'ko': '지난 모임', 'en': 'Past meetups'},
   'ag_meet_rounds_suf': {'ko': '개 라운드', 'en': ' rounds'},
   'ag_meet_del_confirm': {
     'ko': '이 모임 기록을 지울까요?',
     'en': 'Delete this archived meetup?',
   },
   'ag_meet_hint': {
-    'ko': '모임을 보관해 두면 누적 기록은 새로 시작하고, 지난 모임은 여기 남아요.',
+    'ko': '날짜 기능이 생기기 전에 보관해 둔 모임이에요. 이제는 위 날짜 칸의 ＋로 날짜마다 따로 기록해요.',
     'en':
-        'Archiving resets the cumulative record while keeping the meetup here.',
+        'Meetups archived before dates existed. Use + next to the date above to keep each day separately now.',
   },
   'ag_backup_title': {'ko': '백업', 'en': 'Backup'},
   'ag_backup_export': {'ko': '내보내기', 'en': 'Export'},
@@ -1400,12 +1419,12 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'ag_dg_only': {
     'ko':
-        '{pos}({posko}) 전용이 {cnt}명({names})인데, 코트에 {pos} 자리는 최대 {max}개이고 대기는 {bench}명뿐이에요.',
+        '{pos} 전용이 {cnt}명({names})인데, 코트에 {pos} 자리는 최대 {max}개이고 대기는 {bench}명뿐이에요.',
     'en':
         '{cnt} players are {pos}-only ({names}), but there are at most {max} {pos} slots on court and only {bench} bench spots.',
   },
   'ag_dg_few': {
-    'ko': '{pos}({posko})를 볼 수 있는 사람이 {able}명뿐이에요. 한 경기에 최소 {min}명이 필요해요.',
+    'ko': '{pos}를 볼 수 있는 사람이 {able}명뿐이에요. 한 경기에 최소 {min}명이 필요해요.',
     'en': 'Only {able} players can play {pos}. Each game needs at least {min}.',
   },
   'ag_dg_abc': {
@@ -1424,8 +1443,9 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_help_h1': {'ko': '배치가 정해지는 순서', 'en': 'How lineups are decided'},
   'ag_help_1sport': {
     'ko':
-        '먼저 종목을 골라요. 6인제는 로테이션이 있어 존(1~6)으로 서고, 5-1(세터 1) 과 '
-        '6-2(세터 2 · 전위 세터는 라이트)로 갈려요. 9인제는 로테이션이 없고 속공 수로 '
+        '먼저 종목을 골라요. 6인제는 로테이션이 있어 존(1~6)으로 서고, 5-1(S 1) 과 '
+        '6-2(S 2 · 전위 S는 OP 자리)로 갈려요. 자리 이름은 공식 약어 S(세터) · OP(아포짓) · '
+        'OH(아웃사이드 히터) · MB(미들 블로커) · Lib(리베로)로 써요. 9인제는 로테이션이 없고 속공 수로 '
         '리시브 줄이 갈려요 — 속공 1명이면 2-4-3, 2명이면 3-4-2, 3명이면 4-3-2. '
         '명단에서는 역할 6종(세터 · 속공 · 레프트 · 라이트 · 차 · 백)만 고르면 돼요.',
     'en':
@@ -1482,7 +1502,7 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'ag_help_a5': {
     'ko':
-        '그래도 뽑아요. 못 채운 자리가 (필요)로 자리 이름과 함께 뜨니, 세터가 필요한지 센터가 '
+        '그래도 뽑아요. 못 채운 자리가 (필요)로 자리 이름과 함께 뜨니, S가 필요한지 MB가 '
         '필요한지 보고 단톡방에 올리면 돼요.',
     'en':
         'It still draws. Empty seats show as (needed) with the seat name, so you know what to '
@@ -1515,10 +1535,10 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'ag_help_1d': {
     'ko':
-        '모든 자리가 그 사람의 가능 자리 안이어야 해요. 6인제는 여기에 더해 팀마다 세터 1명 · '
-        '대각(S↔OP, OH↔OH, MB↔Li)을 맞춰요. 자리를 하나도 안 고른 사람은 어디든 설 수 있는 사람으로 봐요.',
+        '모든 자리가 그 사람의 가능 자리 안이어야 해요. 6인제는 여기에 더해 팀마다 S 1명 · '
+        '대각(S↔OP, OH↔OH, MB↔Lib)을 맞춰요. 자리를 하나도 안 고른 사람은 어디든 설 수 있는 사람으로 봐요.',
     'en':
-        'Every seat must be within a player\'s eligible seats; 6-a-side also needs one setter per team with a valid diagonal (S↔OP, OH↔OH, MB↔Li). A player with no seat picked can play anywhere.',
+        'Every seat must be within a player\'s eligible seats; 6-a-side also needs one setter per team with a valid diagonal (S↔OP, OH↔OH, MB↔Lib). A player with no seat picked can play anywhere.',
   },
   'ag_help_1e': {
     'ko': '조건을 만족하는 배치를 여러 개 뽑아 아래 공정성 점수가 가장 좋은 것을 골라요.',
@@ -1542,7 +1562,7 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'ag_help_2c': {
     'ko':
-        '가능 포지션이 적은 사람이 먼저. 세터만 되는 사람은 세터 자리에 우선 들어가요. 그래야 그 사람이 대기로 밀리지 않아요.',
+        '가능 포지션이 적은 사람이 먼저. S만 되는 사람은 S 자리에 우선 들어가요. 그래야 그 사람이 대기로 밀리지 않아요.',
     'en':
         'Fewer eligible positions → sooner. Setter-only players get the setter slot first, so they don\'t get benched.',
   },
@@ -1559,12 +1579,12 @@ const Map<String, Map<String, String>> kStrings = {
   },
   'ag_help_h3': {'ko': '자주 묻는 것', 'en': 'FAQ'},
   'ag_help_q1': {
-    'ko': '세터 전용이 있으면 다른 사람 S를 꺼야 해요?',
+    'ko': 'S 전용이 있으면 다른 사람 S를 꺼야 해요?',
     'en': 'If there\'s a setter-only player, should I turn off S for others?',
   },
   'ag_help_a1': {
     'ko':
-        '아니요. 세터 전용이 있으면 어차피 그 사람이 세터 자리를 먼저 가져가요. S를 켜둬야 세터 전용이 대기 중이거나 일찍 갔을 때 대신 들어갈 수 있어요.',
+        '아니요. S 전용이 있으면 어차피 그 사람이 S 자리를 먼저 가져가요. S를 켜둬야 S 전용이 대기 중이거나 일찍 갔을 때 대신 들어갈 수 있어요.',
     'en':
         'No. A setter-only player takes the setter slot first anyway. Keep S on so someone can cover when that setter is benched or has left.',
   },

@@ -271,7 +271,7 @@ void main() {
     await tester.pumpAndSettle();
     await drawAndWait(tester);
 
-    // 전위 세터는 '존 4 · 세터 · 라이트' 로 표시된다.
+    // 전위 세터는 '존 4 · S · OP' 로 표시된다.
     expect(find.textContaining(t('ag_seat_s_front')), findsWidgets);
   });
 
@@ -320,6 +320,46 @@ void main() {
     await tester.tap(find.text('📌'));
     await tester.pumpAndSettle();
     expect(find.text('📌 ${t('ag_posx_S')}'), findsOneWidget);
+  });
+
+  testWidgets('6인제 자리 칩은 한국어에서도 공식 약어', (tester) async {
+    seedRoster(1);
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(t('ag_tab_roster')));
+    await tester.pumpAndSettle();
+
+    for (final x in ['S', 'OP', 'OH', 'MB', 'Lib']) {
+      expect(find.text(x), findsWidgets);
+    }
+    expect(find.textContaining('센터'), findsNothing);
+    expect(find.textContaining('리베로'), findsNothing);
+  });
+
+  testWidgets('✎ 로 이름을 바꿀 수 있다', (tester) async {
+    seedRoster(1);
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(t('ag_tab_roster')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip(t('ag_rename_title')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, '누룽이');
+    await tester.tap(find.text(t('ag_day_save')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('누룽이'), findsOneWidget);
+    expect(find.text('선수0'), findsNothing);
+  });
+
+  testWidgets('예전 명단은 날짜 미정으로 열리고 날짜 막대에 인원이 보인다', (tester) async {
+    seedRoster(3);
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    expect(find.textContaining(t('ag_day_undated')), findsOneWidget);
+    expect(find.textContaining('${t('ag_day_undated')} · 3'), findsOneWidget);
+    expect(find.byTooltip(t('ag_day_new_title')), findsOneWidget);
   });
 
   testWidgets('기록 탭은 확정 전에는 비어 있다', (tester) async {
