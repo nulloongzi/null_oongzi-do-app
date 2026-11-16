@@ -224,7 +224,29 @@ English and Korean throughout. Start today! 🏐
 > | 10 (2.4.0) | **AAB 를 만든 적이 없다** — 스토어에 나간 적 없음(Release AAB 실행 이력으로 확인). |
 > | 9 (2.3.0) | 12 이전의 라이브. 대체됨. |
 >
-> 번호는 재사용할 수 없다. 27 까지 썼으므로 다음은 28 이다(pubspec 을 `2.x.y+28` 로 올리고 빌드).
+> 번호는 재사용할 수 없다. 28 까지 썼으므로 다음은 29 다(pubspec 을 `2.x.y+29` 로 올리고 빌드).
+>
+> **28(2.14.0) 노트 — 프로덕션 26 이후 변경분(27 마커 수정 포함).** KO 302자 / EN 466자(상한 500):
+> ```
+> 🏐 안치기, 날짜별로 저장
+> 픽업 날짜마다 명단·참석·기록을 따로 받아 둘 수 있어요. 지금 명단을 그대로 가져와 새 날짜를 만들 수도 있어요. 명단 이름은 ✎로 바로 바꾸고, 6인제 자리는 S·OP·OH·MB·Lib로 표시해요.
+>
+> 📍 픽업 상세가 더 편하게
+> 시트를 끌어 올리지 않아도 안에서 스크롤돼요. 장소 이름과 주소가 같으면 한 번만 보여 주고, 주소가 길면 주소 복사·길찾기 버튼이 아래에 나란히 놓여요. 등록할 때 주소칸을 비워도 장소 이름으로 위치를 찾아요.
+>
+> 🗺 지도 손질
+> 필터를 초기화하면 지도 핀이 사라지던 문제를 고쳤어요.
+> ```
+> ```
+> 🏐 Anchigi by date
+> Keep a separate roster, attendance and record for each pickup date, or copy your current roster to a new date. Rename players with ✎. 6-a-side seats show as S, OP, OH, MB, Lib.
+>
+> 📍 Easier pickup details
+> Scroll inside the sheet without pulling it up. Matching venue and address show once; long addresses put Copy and Directions side by side below. Hosts can find the spot by venue name alone.
+>
+> 🗺 Map fix
+> Pins no longer vanish after resetting filters.
+> ```
 >
 > **27(2.13.1) 노트 — 26 이후 변경분만:**
 > ```
