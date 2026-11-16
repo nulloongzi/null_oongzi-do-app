@@ -797,8 +797,12 @@ const Map<String, Map<String, String>> kStrings = {
   'pf_venue_hint': {'ko': '예: 잠실학생체육관', 'en': 'e.g. Jamsil Student Gym'},
   'pf_region': {'ko': '지역', 'en': 'Region'},
   'pf_addr': {
-    'ko': '주소 (선택 · 없으면 목록에만 표시)',
-    'en': 'Address (optional — list only if blank)',
+    'ko': '주소 (선택 · 위치를 못 찾으면 목록에만 표시)',
+    'en': 'Address (optional — list only if no location is found)',
+  },
+  'pf_addr_same': {
+    'ko': '장소 이름으로 찾아지면 비워 둬도 돼요. 같은 걸 두 번 적지 않아도 돼요.',
+    'en': 'Leave blank if the venue name finds it — no need to type it twice.',
   },
   'pf_addr_hint': {
     'ko': '예: 서울 송파구 올림픽로 25',

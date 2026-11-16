@@ -121,4 +121,34 @@ void main() {
     expect(closed, 1);
     expect(kSheetFlingVelocity, 800.0);
   });
+
+  // 웹 .sheet-content-wrapper 처럼 접힌 상태에서도 본문을 쓸어 올려 아래를 본다.
+  testWidgets('접힌 상태에서도 본문이 스크롤된다', (tester) async {
+    tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MapDetailPanel(
+            onClose: () {},
+            child: const Column(
+              children: [SizedBox(height: 900), Text('맨 아래')],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final scroll = tester.widget<SingleChildScrollView>(
+      find.byType(SingleChildScrollView),
+    );
+    final before = scroll.controller!.offset;
+    await tester.drag(
+      find.byType(SingleChildScrollView),
+      const Offset(0, -200),
+    );
+    await tester.pumpAndSettle();
+    expect(scroll.controller!.offset, greaterThan(before));
+  });
 }

@@ -319,10 +319,10 @@ class _MapDetailPanelState extends State<MapDetailPanel>
                   type: MaterialType.transparency,
                   child: SingleChildScrollView(
                     controller: _body,
-                    // peek(ratio<0.5)에선 스크롤 잠금 — 펼쳐야 그 아래(릴스/소유자)까지 봄.
-                    physics: _ratio >= 0.5
-                        ? null
-                        : const NeverScrollableScrollPhysics(),
+                    // 접힌 상태에서도 본문을 쓸어 올려 아래(주소·게임비·연락 버튼)까지 볼 수
+                    // 있다 — 웹 .sheet-content-wrapper(overflow-y:auto)와 같다. 예전엔 접힌
+                    // 상태에서 잠가 둬서 핸들을 끌어 펼치기 전엔 잘린 아래가 안 보였다.
+                    // (릴스·관리 영역은 여전히 펼쳐야 나타난다 — _ExpandReveal)
                     child: DetailPanelScope(
                       expand: _expand,
                       toggle: _toggle,
