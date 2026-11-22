@@ -19,6 +19,9 @@ class AnchigiDay {
   int round;
   List<PastRound> past;
 
+  /// 뽑았지만 아직 확정하지 않은 배치. 앱이 꺼져도 남는다.
+  RoundResult? current;
+
   AnchigiDay({
     required this.id,
     this.date = '',
@@ -27,6 +30,7 @@ class AnchigiDay {
     Map<String, AnchigiStat>? stat,
     this.round = 1,
     List<PastRound>? past,
+    this.current,
   }) : players = players ?? [],
        stat = stat ?? {},
        past = past ?? [];
@@ -39,6 +43,7 @@ class AnchigiDay {
     'stat': {for (final e in stat.entries) e.key: e.value.toJson()},
     'round': round,
     'past': past.map((r) => r.toJson()).toList(),
+    if (current != null) 'current': current!.toJson(),
   };
 
   factory AnchigiDay.fromJson(Map<String, dynamic> j) {
@@ -64,7 +69,19 @@ class AnchigiDay {
       past: (j['past'] as List? ?? [])
           .map((e) => PastRound.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList(),
+      current: _current(j['current']),
     );
+  }
+
+  /// 뽑아 둔 배치는 읽다 깨져도 날짜 전체를 버리지 않는다 — 배치만 없는 셈 친다.
+  static RoundResult? _current(dynamic v) {
+    if (v is! Map) return null;
+    try {
+      final r = RoundResult.fromJson(Map<String, dynamic>.from(v));
+      return r.games.isEmpty ? null : r;
+    } catch (_) {
+      return null;
+    }
   }
 }
 

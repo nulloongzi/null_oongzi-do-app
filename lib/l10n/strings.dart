@@ -1281,10 +1281,12 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_prio_hint': {
     'ko':
         '맞춘 자리 우선은 고정(📌)해 둔 자리와 각자 고른 주 자리를 먼저 지켜요. '
-        '사람에게 등급을 매기는 게 아니라, 진행하는 사람이 자리를 직접 지정하는 거예요.',
+        '사람에게 등급을 매기는 게 아니라, 진행하는 사람이 자리를 직접 지정하는 거예요. '
+        '다양성 우선은 안 해본 자리와 함께, 같이 덜 뛰어 본 사람끼리 한 팀이 되게 섞어요.',
     'en':
         '"Set seats first" keeps pinned (📌) seats and each player\'s main seat '
-        'as much as possible. It is not a skill grade — the organizer picks the seats.',
+        'as much as possible. It is not a skill grade — the organizer picks the seats. '
+        '"Variety first" also mixes teams so people who rarely played together end up on the same side.',
   },
   'ag_adv_title': {'ko': '고급 설정', 'en': 'Advanced'},
   'ag_flex_title': {'ko': '실험 자리(팀당)', 'en': 'Open slots (per team)'},
@@ -1301,10 +1303,10 @@ const Map<String, Map<String, String>> kStrings = {
   'ag_pin_hint': {
     'ko':
         '📌 를 누르면 그 사람은 주 자리에만 서요. 옆 칸에서 A · B · C 코어도 지정할 수 있어요'
-        '(A · B · C 고정 모드).',
+        '(A · B · C 고정 모드). ☕ 를 누르면 라운드마다 첫 경기는 되도록 쉬어요.',
     'en':
         'Tap 📌 and that player only takes their main seat. The box next to it '
-        'pins them to an A · B · C core (A · B · C mode).',
+        'pins them to an A · B · C core (A · B · C mode). Tap ☕ to sit out the first game of each round.',
   },
   'ag_pin_relaxed': {
     'ko': '고정(📌)을 전부 지키면 배치가 안 나와서, 이번 라운드는 고정을 풀고 짰어요.',
@@ -1382,6 +1384,12 @@ const Map<String, Map<String, String>> kStrings = {
         'Each date keeps its own roster, attendance and record. Collect sign-ups per pickup date ahead of time.',
   },
   'ag_rename_title': {'ko': '이름 바꾸기', 'en': 'Rename'},
+  'ag_rest_first': {'ko': '첫 경기 쉼', 'en': 'Sit 1st game'},
+  'ag_rest_first_hint': {
+    'ko': '라운드마다 첫 경기는 되도록 대기로 둬요. 이 사람 없이는 자리가 빌 때만 들어가요.',
+    'en':
+        'Sits out the first game of each round when possible — plays only if a seat would otherwise be empty.',
+  },
 
   // 지난 모임(날짜 기능 전에 보관한 것) · 백업
   'ag_meet_title': {'ko': '지난 모임', 'en': 'Past meetups'},
@@ -1561,8 +1569,7 @@ const Map<String, Map<String, String>> kStrings = {
         'More times benched → sooner, and being benched twice in a row is penalized hard.',
   },
   'ag_help_2c': {
-    'ko':
-        '가능 포지션이 적은 사람이 먼저. S만 되는 사람은 S 자리에 우선 들어가요. 그래야 그 사람이 대기로 밀리지 않아요.',
+    'ko': '가능 포지션이 적은 사람이 먼저. S만 되는 사람은 S 자리에 우선 들어가요. 그래야 그 사람이 대기로 밀리지 않아요.',
     'en':
         'Fewer eligible positions → sooner. Setter-only players get the setter slot first, so they don\'t get benched.',
   },

@@ -356,6 +356,35 @@ class _AnchigiRosterTabState extends State<AnchigiRosterTab> {
                 const SizedBox(width: 6),
                 _pinTeamPicker(p),
               ],
+              const SizedBox(width: 6),
+              // ☕ 라운드마다 첫 경기는 쉬기(담타 등) — 되도록 첫 경기 대기로 둔다.
+              Tooltip(
+                message: t('ag_rest_first_hint'),
+                child: GestureDetector(
+                  onTap: () => s.toggleRestFirst(p.id),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: p.restFirst
+                          ? NurungjiColors.yellow
+                          : NurungjiColors.chipBg,
+                      borderRadius: BorderRadius.circular(9),
+                      border: Border.all(color: const Color(0x18000000)),
+                    ),
+                    child: Text(
+                      p.restFirst ? '☕ ${t('ag_rest_first')}' : '☕',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: NurungjiColors.dark,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ],

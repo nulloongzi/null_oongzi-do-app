@@ -100,14 +100,7 @@ class AnchigiStore extends ChangeNotifier {
 
   SolveRequest _request() => SolveRequest(
     present: present.map((p) => p.copy()).toList(),
-    stat: {
-      for (final e in stat.entries)
-        e.key: AnchigiStat(
-          play: e.value.play,
-          bench: e.value.bench,
-          pos: Map<String, int>.from(e.value.pos),
-        ),
-    },
+    stat: {for (final e in stat.entries) e.key: e.value.copy()},
     round: round,
     nGames: nGames,
     mode: mode,
@@ -303,6 +296,11 @@ class AnchigiStore extends ChangeNotifier {
     stat = d.stat;
     round = d.round;
     pastRounds = d.past;
+    // 뽑아 둔 배치가 지금 라운드 것이면 이어서 보여 준다(앱이 꺼졌다 켜져도).
+    current = (d.current != null && d.current!.round == d.round)
+        ? d.current
+        : null;
+    failure = [];
   }
 
   void _syncDay() {
@@ -312,6 +310,7 @@ class AnchigiStore extends ChangeNotifier {
     d.stat = stat;
     d.round = round;
     d.past = pastRounds;
+    d.current = current;
   }
 
   /// 다른 날짜의 안치기를 연다. 뽑아 둔 결과는 그 날짜 것이 아니라 버린다.
@@ -320,10 +319,10 @@ class AnchigiStore extends ChangeNotifier {
     if (d == null || id == dayId) return;
     _syncDay();
     dayId = id;
+    // 그 날짜에 뽑아 둔 배치는 그대로 연다(_openDay) — 버리지 않는다.
     _openDay(d);
     _syncSport();
     picked = null;
-    _invalidate();
     _commitChange();
   }
 
@@ -369,7 +368,6 @@ class AnchigiStore extends ChangeNotifier {
     _openDay(next);
     _syncSport();
     picked = null;
-    _invalidate();
     _commitChange();
     return true;
   }
@@ -551,6 +549,9 @@ class AnchigiStore extends ChangeNotifier {
   void removePlayer(String id) {
     players.removeWhere((p) => p.id == id);
     stat.remove(id);
+    for (final st in stat.values) {
+      st.mates.remove(id);
+    }
     if (picked == id) picked = null;
     _invalidate();
     _commitChange();
@@ -603,6 +604,14 @@ class AnchigiStore extends ChangeNotifier {
     for (final p in players) {
       p.here = v;
     }
+    _invalidate();
+    _commitChange();
+  }
+
+  /// ☕ 라운드 첫 경기 쉬기 켜기/끄기.
+  void toggleRestFirst(String id) {
+    final p = players.firstWhere((q) => q.id == id);
+    p.restFirst = !p.restFirst;
     _invalidate();
     _commitChange();
   }
@@ -690,6 +699,8 @@ class AnchigiStore extends ChangeNotifier {
     failure = r == null ? const [InfeasibleReason('generic')] : [];
     drawing = false;
     notifyListeners();
+    // 뽑자마자 저장 — 배치를 캡처해 단톡에 보내는 사이 앱이 꺼져도 남게.
+    await persist();
   }
 
   /// 뽑은 결과를 확정. 이때만 누적 기록이 쌓인다.
@@ -698,11 +709,19 @@ class AnchigiStore extends ChangeNotifier {
     if (c == null) return;
     for (final g in c.games) {
       for (final team in g.teams) {
+        final ids = [
+          for (final a in team)
+            if (!a.empty) a.id,
+        ];
         for (final a in team) {
           if (a.empty) continue;
           final s = statOf(a.id);
           s.play++;
           s.pos[a.pos] = (s.pos[a.pos] ?? 0) + 1;
+          // 같은 팀으로 뛴 횟수 — 다음 라운드에 새 짝을 만들 때 쓴다.
+          for (final o in ids) {
+            if (o != a.id) s.mates[o] = (s.mates[o] ?? 0) + 1;
+          }
         }
       }
       for (final b in g.bench) {

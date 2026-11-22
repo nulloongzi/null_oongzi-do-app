@@ -34,6 +34,10 @@ class AnchigiPlayer {
   /// 고정할 코어(0=A,1=B,2=C). null이면 자동.
   int? pinTeam;
 
+  /// ☕ 라운드마다 첫 경기는 쉬고 싶은 사람(담타 등). 되도록 첫 경기 대기로 둔다 —
+  /// 그 사람 없이는 자리가 비는 경우에만 들어간다.
+  bool restFirst;
+
   /// 지금 보고 있는 종목. 가능 자리·티어가 이 값에 따라 갈린다.
   /// (웹의 전역 sport 와 같은 역할 — 스토어가 갈아 끼운다.)
   String sport;
@@ -46,6 +50,7 @@ class AnchigiPlayer {
     this.leave,
     Map<String, String>? pin,
     this.pinTeam,
+    this.restFirst = false,
     this.sport = 'v6',
   }) : tier = tier ?? <String, String>{},
        pin = pin ?? <String, String>{};
@@ -104,6 +109,7 @@ class AnchigiPlayer {
     leave: leave,
     pin: Map<String, String>.from(pin),
     pinTeam: pinTeam,
+    restFirst: restFirst,
     sport: sport,
   );
 
@@ -115,6 +121,7 @@ class AnchigiPlayer {
     'leave': leave,
     if (pin.isNotEmpty) 'pin': pin,
     if (pinTeam != null) 'pinTeam': pinTeam,
+    if (restFirst) 'restFirst': true,
   };
 
   factory AnchigiPlayer.fromJson(Map<String, dynamic> j) {
@@ -145,27 +152,49 @@ class AnchigiPlayer {
       leave: j['leave'] as String?,
       pin: pin,
       pinTeam: (j['pinTeam'] as num?)?.toInt(),
+      restFirst: j['restFirst'] as bool? ?? false,
     );
     p.normalize();
     return p;
   }
 }
 
-/// 누적 기록. 원본 stat[id] = {play, bench, pos:{...}}.
+/// 누적 기록. 원본 stat[id] = {play, bench, pos:{...}, mates:{...}}.
 class AnchigiStat {
   int play;
   int bench;
   Map<String, int> pos;
 
-  AnchigiStat({this.play = 0, this.bench = 0, Map<String, int>? pos})
-    : pos = pos ?? {for (final p in kAllPos) p: 0} {
+  /// 같은 팀으로 뛴 경기 수. 상대 id → 횟수. 늘 같은 사람끼리만 묶이지 않게
+  /// 솔버가 이 값이 큰 짝을 같은 팀에 두는 걸 꺼린다.
+  Map<String, int> mates;
+
+  AnchigiStat({
+    this.play = 0,
+    this.bench = 0,
+    Map<String, int>? pos,
+    Map<String, int>? mates,
+  }) : pos = pos ?? {for (final p in kAllPos) p: 0},
+       mates = mates ?? {} {
     // 6인제만 쓰던 시절의 기록에는 9인제 자리 칸이 없다.
     for (final p in kAllPos) {
       this.pos.putIfAbsent(p, () => 0);
     }
   }
 
-  Map<String, dynamic> toJson() => {'play': play, 'bench': bench, 'pos': pos};
+  AnchigiStat copy() => AnchigiStat(
+    play: play,
+    bench: bench,
+    pos: Map<String, int>.from(pos),
+    mates: Map<String, int>.from(mates),
+  );
+
+  Map<String, dynamic> toJson() => {
+    'play': play,
+    'bench': bench,
+    'pos': pos,
+    if (mates.isNotEmpty) 'mates': mates,
+  };
 
   factory AnchigiStat.fromJson(Map<String, dynamic> j) {
     final pos = {for (final p in kAllPos) p: 0};
@@ -177,10 +206,18 @@ class AnchigiStat {
         }
       });
     }
+    final mates = <String, int>{};
+    final rawM = j['mates'];
+    if (rawM is Map) {
+      rawM.forEach((k, v) {
+        if (k is String && v is num) mates[k] = v.toInt();
+      });
+    }
     return AnchigiStat(
       play: (j['play'] as num?)?.toInt() ?? 0,
       bench: (j['bench'] as num?)?.toInt() ?? 0,
       pos: pos,
+      mates: mates,
     );
   }
 }

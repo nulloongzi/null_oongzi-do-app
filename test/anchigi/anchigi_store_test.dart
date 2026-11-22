@@ -473,4 +473,75 @@ void main() {
       expect(other.importJson('{잘못된'), isFalse);
     });
   });
+
+  group('뽑아 둔 배치 · 같이 뛴 기록', () {
+    Future<AnchigiStore> withRoster(int n) async {
+      final s = await freshStore();
+      for (var i = 0; i < n; i++) {
+        s.addPlayer('P$i', {});
+      }
+      return s;
+    }
+
+    test('뽑아 둔 배치는 앱을 다시 켜도 남아 있고, 확정하면 기록에 쌓인다', () async {
+      final s = await withRoster(12);
+      await s.draw();
+      expect(s.current, isNotNull);
+
+      // 앱이 꺼졌다 켜진 셈 — 저장소를 새로 읽는다.
+      final back = AnchigiStore();
+      await back.load();
+      expect(back.current, isNotNull, reason: '확정 전 배치가 날아가면 안 된다');
+      expect(back.current!.round, 1);
+      back.commit();
+      expect(back.round, 2);
+      expect(back.stat.values.every((x) => x.play > 0), isTrue);
+    });
+
+    test('날짜를 오가도 그 날짜에 뽑아 둔 배치가 남는다', () async {
+      final s = await withRoster(12);
+      await s.draw();
+      final first = s.dayId;
+      s.addDay('2026-12-27', '');
+      expect(s.current, isNull);
+      s.switchDay(first);
+      expect(s.current, isNotNull);
+    });
+
+    test('설정을 바꾸면 뽑아 둔 배치는 저장본에서도 사라진다', () async {
+      final s = await withRoster(12);
+      await s.draw();
+      s.setNGames(2);
+      await s.persist();
+      final back = AnchigiStore();
+      await back.load();
+      expect(back.current, isNull);
+    });
+
+    test('확정하면 같은 팀으로 뛴 횟수가 쌓인다', () async {
+      final s = await withRoster(12);
+      await s.draw();
+      final g = s.current!.games.first;
+      final a = g.teams[0][0].id, b = g.teams[0][1].id, c = g.teams[1][0].id;
+      s.commit();
+      expect(s.stat[a]!.mates[b], greaterThanOrEqualTo(1));
+      // 다른 팀이었던 경기는 세지 않는다 — 세 경기 내내 상대였을 수도 있다.
+      final together = s.stat[a]!.mates[c] ?? 0;
+      expect(together, lessThan(3 + 1));
+
+      await s.persist();
+      final back = AnchigiStore();
+      await back.load();
+      expect(back.stat[a]!.mates[b], s.stat[a]!.mates[b], reason: '저장 왕복');
+    });
+
+    test('☕ 첫 경기 쉬기는 저장된다', () async {
+      final s = await withRoster(1);
+      s.toggleRestFirst(s.players.first.id);
+      await s.persist();
+      final back = AnchigiStore();
+      await back.load();
+      expect(back.players.first.restFirst, isTrue);
+    });
+  });
 }
