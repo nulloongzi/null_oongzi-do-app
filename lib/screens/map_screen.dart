@@ -761,6 +761,8 @@ class _MapScreenState extends State<MapScreen> {
         break;
       case 'flow_tips':
         await _flowTips();
+      case 'flow_frame':
+        await _flowFrame();
         break;
       case 'flow_anchigi':
         await _flowAnchigi();
@@ -1704,6 +1706,29 @@ class _MapScreenState extends State<MapScreen> {
     _endFlow();
     await _backToMap();
     if (appLang.value != 'ko') await toggleLang();
+  }
+
+  /// 🎬 릴스 프레임 — 팀 상세를 펼쳐 릴스 칸 머리줄 '만들기' → 9:16 투명 PNG 가 갤러리에 저장.
+  /// 저장된 그림은 local_capture 가 폰 사진첩(Pictures)에서 꺼내 온다(영상 위 합성은 릴스 굽기에서).
+  Future<void> _flowFrame() async {
+    await _closeOverlays();
+    if (!mounted) return;
+    _onTab('clubs');
+    final c = _clubWithReels();
+    if (c == null) return;
+    if (c.lat != null && c.lng != null) await _centerOnPin(c.lat, c.lng);
+    if (!await _hold(2, 'fm_map')) return;
+    await _focusAndShowClub(c);
+    if (!await _hold(2, 'fm_detail')) return;
+    detailPanelDemoExpand.value++;
+    if (!await _hold(1.2)) return;
+    reelsSectionDemo.value = 'show';
+    if (!await _hold(2.5, 'fm_reels')) return; // 릴스 칸 머리줄 오른쪽 '🎬 만들기'
+    reelsSectionDemo.value = 'frame';
+    if (!await _hold(4, 'fm_saved')) return; // 갤러리에 저장했어요 + [갤러리]
+    reelsSectionDemo.value = '';
+    _endFlow();
+    await _backToMap();
   }
 
   /// 🏐 안치기 — 픽업 탭 왼쪽 아래 → 명단에 이름 붙여 넣기 → 6인제 배치 뽑기(코트·대기)

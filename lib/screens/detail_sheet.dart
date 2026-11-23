@@ -560,6 +560,9 @@ class _CuratedNote extends StatelessWidget {
 // 첫 릴스는 항상 표시(피로감↓), 2개 이상이면 '더 보기' 드롭다운으로 나머지.
 // 릴스가 없으면 단색 로고 안내 칸 — 프레임으로 첫 릴스를 올려 보라고 권한다.
 // 카드는 ReelCard(커버 → 탭하면 인스타). covers: insta_reel_covers(code→URL).
+/// 캡처 시연: 'show'(릴스 칸이 보이게 내림) 'frame'(릴스 프레임 만들기). '#n' 꼬리 허용.
+final ValueNotifier<String> reelsSectionDemo = ValueNotifier<String>('');
+
 class _ReelsSection extends StatefulWidget {
   final List<String> reels;
   final VoidCallback onFrame;
@@ -581,6 +584,33 @@ class _ReelsSection extends StatefulWidget {
 
 class _ReelsSectionState extends State<_ReelsSection> {
   bool _open = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (kCaptureMode) reelsSectionDemo.addListener(_onDemo);
+  }
+
+  @override
+  void dispose() {
+    reelsSectionDemo.removeListener(_onDemo);
+    super.dispose();
+  }
+
+  void _onDemo() {
+    if (!mounted) return;
+    switch (reelsSectionDemo.value.split('#').first) {
+      case 'show':
+        Scrollable.ensureVisible(
+          context,
+          alignment: 0.2,
+          duration: const Duration(milliseconds: 700),
+          curve: Curves.easeInOut,
+        );
+      case 'frame':
+        widget.onFrame();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

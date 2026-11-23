@@ -562,6 +562,16 @@ if [ "$INCLUDE_REELS" = "true" ] && want flows; then
   flow anchigi flow_anchigi 50   # 🏐 안치기 → 명단 붙여 넣기 14명 → 6인제 뽑기(코트·대기) → 확정 → 9인제 (필요) 자리 → 기록(명단은 백업했다 되돌림)
   flow friends flow_friends 40  # 🍚 둘째 장 → 내 초대 코드·QR → 받은 신청 수락 → 식단표 보이기 확인(다른 계정이 미리 신청해 둬야 한다)
   flow meal    flow_meal    36   # 이번 주 합석 → 친구 상세 → 식단표 겹쳐 보기 → 도시락 눈 버튼(되돌림). friends 뒤에
+  flow frame   flow_frame   20   # 🎬 팀 상세 펼침 → 릴스 칸 '만들기' → 갤러리 저장(아래에서 그 PNG 를 꺼내 온다)
+  # 릴스 프레임 PNG — 앱이 사진첩에 저장한 가장 새 것을 꺼내 온다(영상 합성용).
+  if [ -s "$FLOWS_DIR/frame_${CAP_LANG}.mp4" ]; then
+    fp="$(adb shell 'find /sdcard -name "nulloongzido_frame_*" 2>/dev/null' | tr -d '\r' | sort | tail -1)"
+    if [ -n "$fp" ] && adb pull "$fp" "$REELS/raw/frame_${CAP_LANG}.png" >/dev/null 2>&1; then
+      log "  ↳ raw/frame_${CAP_LANG}.png (릴스 프레임)"
+    else
+      echo "::warning::릴스 프레임 PNG 를 사진첩에서 못 찾았습니다"
+    fi
+  fi
 
   # 풀 투어: 3편 이어붙이기(편집 없이 바로 쓰는 앱 소개용).
   TOUR_LIST="$FLOWS_DIR/.tour.txt"; : > "$TOUR_LIST"
@@ -579,7 +589,7 @@ if [ "$INCLUDE_REELS" = "true" ] && want flows; then
 
   if [ "$FINGERPRINT" = "true" ]; then
   echo "===== FLOW FINGERPRINT ====="
-  for n in discover collect register reels room admin urgent recruit area pickup tips anchigi friends meal full_tour; do
+  for n in discover collect register reels room admin urgent recruit area pickup tips anchigi friends meal frame full_tour; do
     flow_montage "$FLOWS_DIR/${n}_${CAP_LANG}.mp4" "flow_${n}"
   done
   echo "===== END FLOW FINGERPRINT ====="
