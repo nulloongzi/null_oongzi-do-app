@@ -230,20 +230,56 @@ class RoundResult {
   /// 비는 자리가 하나라도 있는지.
   bool get hasNeed => games.any((g) => g.hasNeed);
 
-  RoundResult copyWith({bool? pinsRelaxed, bool? abcFellBack, String? mode}) =>
-      RoundResult(
-        round: round,
-        games: games,
-        mode: mode ?? this.mode,
-        prio: prio,
-        sport: sport,
-        tactic: tactic,
-        budget: budget,
-        flexAsked: flexAsked,
-        teamSize: teamSize,
-        pinsRelaxed: pinsRelaxed ?? this.pinsRelaxed,
-        abcFellBack: abcFellBack ?? this.abcFellBack,
-      );
+  /// 뽑아 둔 결과도 저장한다 — 뽑고 나서 카톡으로 보내는 사이 앱이 꺼져도
+  /// 확정 전 배치가 날아가지 않게.
+  Map<String, dynamic> toJson() => {
+    'round': round,
+    'games': games.map((g) => g.toJson()).toList(),
+    'mode': mode,
+    'prio': prio,
+    'sport': sport,
+    'tactic': tactic,
+    'budget': budget,
+    'flexAsked': flexAsked,
+    if (teamSize != null) 'teamSize': teamSize,
+    if (pinsRelaxed) 'pinsRelaxed': true,
+    if (abcFellBack) 'abcFellBack': true,
+  };
+
+  factory RoundResult.fromJson(Map<String, dynamic> j) => RoundResult(
+    round: (j['round'] as num?)?.toInt() ?? 1,
+    games: (j['games'] as List? ?? [])
+        .map((g) => GameResult.fromJson(Map<String, dynamic>.from(g as Map)))
+        .toList(),
+    mode: j['mode'] as String? ?? 'abc',
+    prio: j['prio'] as String? ?? 'custom',
+    sport: j['sport'] as String? ?? 'v6',
+    tactic: j['tactic'] as String? ?? '5-1',
+    budget: (j['budget'] as num?)?.toInt() ?? 0,
+    flexAsked: (j['flexAsked'] as num?)?.toInt() ?? 0,
+    teamSize: (j['teamSize'] as num?)?.toInt(),
+    pinsRelaxed: j['pinsRelaxed'] as bool? ?? false,
+    abcFellBack: j['abcFellBack'] as bool? ?? false,
+  );
+
+  RoundResult copyWith({
+    bool? pinsRelaxed,
+    bool? abcFellBack,
+    String? mode,
+    List<GameResult>? games,
+  }) => RoundResult(
+    round: round,
+    games: games ?? this.games,
+    mode: mode ?? this.mode,
+    prio: prio,
+    sport: sport,
+    tactic: tactic,
+    budget: budget,
+    flexAsked: flexAsked,
+    teamSize: teamSize,
+    pinsRelaxed: pinsRelaxed ?? this.pinsRelaxed,
+    abcFellBack: abcFellBack ?? this.abcFellBack,
+  );
 }
 
 /// 확정된 라운드 기록.

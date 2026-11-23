@@ -694,4 +694,130 @@ void main() {
       }
     });
   });
+
+  group('☕ 라운드 첫 경기 쉬기', () {
+    bool benchedFirst(RoundResult r, String id) =>
+        r.games.first.bench.any((b) => b.id == id);
+
+    for (final mode in ['free', 'abc']) {
+      test('대기 자리가 있으면 첫 경기는 쉰다 — $mode', () {
+        // 15명: 6인 팀이면 경기마다 3명 대기. 그중 셋이 첫 경기 쉬기.
+        for (var k = 0; k < 15; k++) {
+          final pool = roster(15);
+          for (final q in pool.take(3)) {
+            q.restFirst = true;
+          }
+          final r = AnchigiSolver(
+            req(pool, mode: mode, allowed: ['mb2']),
+          ).solveRound()!;
+          for (final q in pool.take(3)) {
+            expect(benchedFirst(r, q.id), isTrue, reason: '${q.name} 첫 경기');
+          }
+        }
+      });
+    }
+
+    test('그 사람 없이는 자리가 비면 들어간다', () {
+      // 12명 = 코트 12자리, 대기 0. 쉬고 싶어도 빈자리보단 뛴다.
+      final pool = roster(12);
+      pool.first.restFirst = true;
+      final r = AnchigiSolver(
+        req(pool, mode: 'free', allowed: ['mb2']),
+      ).solveRound()!;
+      expect(r.games.first.need.expand((x) => x), isEmpty);
+      expect(benchedFirst(r, pool.first.id), isFalse);
+    });
+
+    test('두 번째 경기부터는 평소대로', () {
+      final pool = roster(13);
+      pool.first.restFirst = true;
+      final r = AnchigiSolver(
+        req(pool, mode: 'free', allowed: ['mb2']),
+      ).solveRound()!;
+      expect(benchedFirst(r, pool.first.id), isTrue);
+      // 첫 경기에 쉬었으니 다음 경기엔 뛴다(연속 대기 벌점).
+      expect(r.games[1].bench.any((b) => b.id == pool.first.id), isFalse);
+    });
+  });
+
+  group('같이 뛴 사람 섞기', () {
+    /// 한 라운드에서 같은 팀이 된 짝 중 '단골 짝'이 몇 번 나왔나.
+    int regularPairs(RoundResult r, Set<String> regulars) {
+      var n = 0;
+      for (final g in r.games) {
+        for (final team in g.teams) {
+          final ids = team.where((a) => !a.empty).map((a) => a.id).toList();
+          for (var i = 0; i < ids.length; i++) {
+            for (var j = i + 1; j < ids.length; j++) {
+              if (regulars.contains(ids[i]) && regulars.contains(ids[j])) n++;
+            }
+          }
+        }
+      }
+      return n;
+    }
+
+    for (final mode in ['free', 'abc']) {
+      test('늘 같이 뛴 여섯은 덜 묶인다 — $mode', () {
+        // P0~P5 가 지난 라운드들에서 늘 한 팀이었다고 치고, 18명으로 뽑는다.
+        final pool = roster(18);
+        final reg = pool.take(6).map((q) => q.id).toSet();
+        Map<String, AnchigiStat> history(bool withMates) => {
+          for (final q in pool)
+            q.id: AnchigiStat(
+              play: 6,
+              mates: withMates && reg.contains(q.id)
+                  ? {
+                      for (final o in reg)
+                        if (o != q.id) o: 9,
+                    }
+                  : {},
+            ),
+        };
+        var plain = 0, mixed = 0;
+        for (var k = 0; k < 12; k++) {
+          plain += regularPairs(
+            AnchigiSolver(
+              req(
+                pool,
+                mode: mode,
+                prio: 'variety',
+                allowed: ['mb2'],
+                stat: history(false),
+              ),
+            ).solveRound()!,
+            reg,
+          );
+          mixed += regularPairs(
+            AnchigiSolver(
+              req(
+                pool,
+                mode: mode,
+                prio: 'variety',
+                allowed: ['mb2'],
+                stat: history(true),
+              ),
+            ).solveRound()!,
+            reg,
+          );
+        }
+        if (mode == 'free') {
+          expect(
+            mixed,
+            lessThan(plain * 0.6),
+            reason: 'plain=$plain mixed=$mixed',
+          );
+        } else {
+          // A · B · C 18명(6 · 6 · 6)에선 단골 여섯을 코어마다 둘씩 나눠도 경기마다
+          // 한 팀에 한 짝은 생긴다 → 라운드당 6이 최소. 그 근처까지 내려와야 한다.
+          expect(
+            mixed,
+            lessThanOrEqualTo(12 * 6 * 1.15),
+            reason: 'mixed=$mixed',
+          );
+          expect(mixed, lessThan(plain * 0.8), reason: 'plain=$plain');
+        }
+      });
+    }
+  });
 }

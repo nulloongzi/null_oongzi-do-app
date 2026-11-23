@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../services/anchigi/anchigi_store.dart';
 import '../services/i18n.dart';
 import '../theme.dart';
+import '../widgets/anchigi/anchigi_day_bar.dart';
 import '../widgets/anchigi/anchigi_help_tab.dart';
 import '../widgets/anchigi/anchigi_lineup_tab.dart';
 import '../widgets/anchigi/anchigi_record_tab.dart';
@@ -91,16 +92,24 @@ class _AnchigiScreenState extends State<AnchigiScreen>
             child: CircularProgressIndicator(color: NurungjiColors.yellow),
           );
         }
-        return TabBarView(
-          controller: _tabs,
+        return Column(
           children: [
-            AnchigiLineupTab(
-              store: _store,
-              onGoRoster: () => _tabs.animateTo(1),
+            // 어떤 날의 안치기인지 — 탭을 넘겨도 늘 보이게 탭 화면 위에 둔다.
+            AnchigiDayBar(store: _store),
+            Expanded(
+              child: TabBarView(
+                controller: _tabs,
+                children: [
+                  AnchigiLineupTab(
+                    store: _store,
+                    onGoRoster: () => _tabs.animateTo(1),
+                  ),
+                  AnchigiRosterTab(store: _store),
+                  AnchigiRecordTab(store: _store),
+                  const AnchigiHelpTab(),
+                ],
+              ),
             ),
-            AnchigiRosterTab(store: _store),
-            AnchigiRecordTab(store: _store),
-            const AnchigiHelpTab(),
           ],
         );
       },

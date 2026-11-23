@@ -73,13 +73,24 @@ class _Snap {
   /// 고정(📌)한 자리. 없으면 null.
   final String? pin;
 
+  /// ☕ 라운드 첫 경기는 쉬고 싶은 사람.
+  final bool restFirst;
+
+  /// 지금 풀고 있는 경기에서 쉬기를 바라는지(restFirst 이고 첫 경기).
+  bool restNow = false;
+
+  /// 같은 팀으로 뛴 경기 수(상대 id → 횟수). 라운드 안에서도 경기마다 늘어난다.
+  final Map<String, int> mates;
+
   _Snap({
     required this.play,
     required this.bench,
     required this.early,
     required this.fit,
     required this.pos,
+    required this.mates,
     this.pin,
+    this.restFirst = false,
   }) : bstreak = 0;
 }
 
@@ -232,11 +243,34 @@ class AnchigiSolver {
         early: _isEarly(p),
         fit: {for (final q in _seats) q: p.fitOf(q)},
         pos: {for (final q in _seats) q: s.pos[q] ?? 0},
+        mates: Map<String, int>.from(s.mates),
         pin: _pinsOn ? p.pinned : null,
+        restFirst: p.restFirst,
       );
       sum += s.play;
     }
     return _Sc(by, pool.isEmpty ? 0 : sum / pool.length);
+  }
+
+  /// 이 경기에서 ☕ 쉬기를 바라는 사람 표시 — 라운드의 첫 경기만.
+  void _markRest(_Sc sc, int gi) {
+    for (final s in sc.byId.values) {
+      s.restNow = s.restFirst && gi == 0;
+    }
+  }
+
+  /// 같은 팀 짝들의 누적 횟수 합. 늘 같이 뛴 사람끼리 또 묶일수록 커진다.
+  double _mateCost(_Sc sc, Iterable<String> ids) {
+    final l = ids.toList();
+    var c = 0.0;
+    for (var i = 0; i < l.length; i++) {
+      final m = sc.byId[l[i]]?.mates;
+      if (m == null) continue;
+      for (var j = i + 1; j < l.length; j++) {
+        c += m[l[j]] ?? 0;
+      }
+    }
+    return c * _f.mateW;
   }
 
   /// 라운드 안에서 경기가 끝날 때마다 평균 출전을 다시 계산.
@@ -264,6 +298,8 @@ class AnchigiSolver {
     if (s.early) c -= kEarlySlotBonus;
     // 고정한 자리면 크게 깎아, 그 사람이 실제로 그 자리에 들어가게 한다.
     if (s.pin != null && s.pin == pos) c -= kPinSlotBonus;
+    // ☕ 이번 경기는 쉬고 싶은 사람 — 다른 사람으로 못 채울 때만 들어간다.
+    if (s.restNow) c += kRestFirstCost;
     if (nOpt > 1) {
       final cnt = s.pos[pos] ?? 0;
       c += cnt * f.varietyW;
@@ -286,7 +322,8 @@ class AnchigiSolver {
         s.bench * 4.0 +
         s.bstreak * kBenchStreakPenalty +
         (s.early ? kEarlyBenchPenalty : 0.0) +
-        (s.pin != null ? kPinSlotBonus : 0.0);
+        (s.pin != null ? kPinSlotBonus : 0.0) -
+        (s.restNow ? kRestFirstCost : 0.0);
   }
 
   /// 배치 하나를 완성된 경기 결과로. 대기 비용과 팀 균형까지 합산한다.
@@ -366,6 +403,11 @@ class AnchigiSolver {
                 fitSum[1] / (nOn[1] == 0 ? 1 : nOn[1]))
             .abs();
     cost += gap * _f.balanceW * 6;
+
+    // 늘 같이 뛴 사람끼리만 한 팀이 되지 않게.
+    for (var tm = 0; tm < 2; tm++) {
+      cost += _mateCost(sc, teams[tm].where((a) => !a.empty).map((a) => a.id));
+    }
 
     return GameResult(
       teams: teams,
@@ -526,7 +568,24 @@ class AnchigiSolver {
       }
 
       // 싼 후보부터, 다만 매번 다른 결과가 나오도록 난수를 섞는다.
+      // 이미 이 팀에 들어간 사람과 같이 뛴 횟수도 비용에 넣어, 후보를 고를 때부터
+      // 늘 같이 뛴 짝을 피한다(끝난 배치를 비교만 해선 섞이는 힘이 약했다).
       final slot = slots[bi];
+      final mates = [
+        for (final a in assign)
+          if (a != null && !a.empty && a.team == slot.team) a.id,
+      ];
+      double mateKey(String id) {
+        if (mates.isEmpty) return 0;
+        final m = sc.byId[id]?.mates;
+        if (m == null) return 0;
+        var c = 0;
+        for (final o in mates) {
+          c += m[o] ?? 0;
+        }
+        return c * _f.mateW;
+      }
+
       final keyed =
           bc
               .map(
@@ -534,6 +593,7 @@ class AnchigiSolver {
                   p: p,
                   key:
                       _slotCost(p.id, slot.pos, sc, p.pos.length) +
+                      mateKey(p.id) +
                       _rnd.nextDouble() * 1.6,
                 ),
               )
@@ -644,6 +704,16 @@ class AnchigiSolver {
     final cores = <List<AnchigiPlayer>>[[], [], []];
     final coreOf = <String, int>{};
 
+    // 코어에 넣을 때 이미 들어간 사람과 같이 뛴 횟수 — 적은 코어를 고른다.
+    double mateWith(AnchigiPlayer p, List<AnchigiPlayer> core) {
+      final m = _st(p.id).mates;
+      var c = 0;
+      for (final q in core) {
+        c += m[q.id] ?? 0;
+      }
+      return c * _f.mateW;
+    }
+
     for (final e in byFlex) {
       final p = e.p;
       final want = _pinTeamOf(p);
@@ -658,18 +728,18 @@ class AnchigiSolver {
               .map(
                 (c) => (
                   c: c,
-                  room: szs[c] - cores[c].length,
-                  jit: _rnd.nextDouble(),
+                  // 남은 자리가 많을수록, 같이 뛴 사람이 적을수록 먼저.
+                  key:
+                      mateWith(p, cores[c]) -
+                      (szs[c] - cores[c].length) * 0.75 +
+                      _rnd.nextDouble() * 2.0,
                 ),
               )
               .toList()
-            // 남은 자리가 많은 코어부터 채운다.
-            ..sort((a, b) {
-              if (a.room != b.room) return b.room - a.room;
-              return a.jit.compareTo(b.jit);
-            });
+            ..sort((a, b) => a.key.compareTo(b.key));
       if (order.isEmpty) return null;
-      final c = order.first.c;
+      // ☕ 첫 경기 쉬기는 C 코어로 — 첫 경기(A vs B) 동안 C 는 쉰다.
+      final c = p.restFirst && order.any((o) => o.c == 2) ? 2 : order.first.c;
       cores[c].add(p);
       coreOf[p.id] = c;
     }
@@ -693,6 +763,8 @@ class AnchigiSolver {
     final x = pr[0], y = pr[1], z = pr[2];
     final must = [<String>{}, <String>{}];
     for (final p in pool) {
+      // ☕ 이번 경기 쉬기를 바라는 사람은 자기 코어 경기라도 꼭 뛰게 하지 않는다.
+      if (sc.byId[p.id]?.restNow == true) continue;
       final c = _coreOf[p.id];
       if (c == x) {
         must[0].add(p.id);
@@ -795,6 +867,16 @@ class AnchigiSolver {
   /// 연속 대기(bstreak)는 여기서만 오르내린다 — 뛰면 0으로 돌아간다.
   void _applyGame(_Sc sc, GameResult g) {
     for (final team in g.teams) {
+      final ids = [
+        for (final a in team)
+          if (!a.empty) a.id,
+      ];
+      for (final x in ids) {
+        final m = sc.byId[x]!.mates;
+        for (final y in ids) {
+          if (x != y) m[y] = (m[y] ?? 0) + 1;
+        }
+      }
       for (final a in team) {
         if (a.empty) continue;
         final snap = sc.byId[a.id]!;
@@ -840,6 +922,7 @@ class AnchigiSolver {
     for (var i = 0; i < nGames; i++) {
       final avail = _availForGame(present, round, i);
       final availIds = avail.map((p) => p.id).toSet();
+      _markRest(sc, i);
       final g = _solveGameABC(
         avail,
         sc,
@@ -922,6 +1005,7 @@ class AnchigiSolver {
     for (var i = 0; i < nGames; i++) {
       final avail = _availForGame(present, round, i);
       final availIds = avail.map((p) => p.id).toSet();
+      _markRest(sc, i);
       final g = _solveGameFree(avail, sc, 0);
       if (g == null) return null;
       if (usedBudget > maxBud) maxBud = usedBudget;

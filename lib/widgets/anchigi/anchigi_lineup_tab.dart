@@ -48,16 +48,14 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
             '${(int.tryParse(p['mc'] ?? '0') ?? 0) - (int.tryParse(p['n'] ?? '0') ?? 0)}',
       }),
       'only' => tf('ag_dg_only', {
-        'pos': p['pos'] ?? '',
-        'posko': t('ag_pos_${p['pos']}'),
+        'pos': t('ag_posx_${p['pos']}'),
         'cnt': p['cnt'] ?? '',
         'names': p['names'] ?? '',
         'max': p['max'] ?? '',
         'bench': p['bench'] ?? '',
       }),
       'few' => tf('ag_dg_few', {
-        'pos': p['pos'] ?? '',
-        'posko': t('ag_pos_${p['pos']}'),
+        'pos': t('ag_posx_${p['pos']}'),
         'able': p['able'] ?? '',
         'min': p['min'] ?? '',
       }),
@@ -1061,6 +1059,10 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
   }
 
   Widget _gameCard(int rnd, int gi, GameResult g, String sport) {
+    final restIds = {
+      for (final p in s.players)
+        if (p.restFirst) p.id,
+    };
     // ABC 모드에서 이 경기의 두 팀에 해당하는 코어를 골라 차출 표시에 쓴다.
     final pair = kPairs[gi % 3];
     final teamCores = g.cores == null
@@ -1158,8 +1160,11 @@ class _AnchigiLineupTabState extends State<AnchigiLineupTab> {
                                       : NurungjiColors.chipBg,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
+                                // ☕ 첫 경기 쉬기를 고른 사람은 첫 경기 대기에 표시
                                 child: Text(
-                                  b.name,
+                                  gi == 0 && restIds.contains(b.id)
+                                      ? '☕ ${b.name}'
+                                      : b.name,
                                   style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,

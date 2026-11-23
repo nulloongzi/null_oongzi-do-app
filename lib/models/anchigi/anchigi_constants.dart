@@ -270,6 +270,9 @@ class PrioWeights {
   final double playW;
   final double balanceW;
 
+  /// 같은 팀으로 많이 뛴 짝을 또 묶는 비용(한 짝 · 한 경기당).
+  final double mateW;
+
   const PrioWeights({
     required this.flex,
     required this.fitW,
@@ -277,6 +280,7 @@ class PrioWeights {
     required this.newBonus,
     required this.playW,
     required this.balanceW,
+    required this.mateW,
   });
 }
 
@@ -291,6 +295,7 @@ const Map<String, PrioWeights> kPrio = {
     newBonus: 0.5,
     playW: 1.5,
     balanceW: 6.0,
+    mateW: 0.6,
   ),
   // 다양성 우선 — 안 해본 자리를 먼저. 고정은 여기서도 그대로 지킨다.
   'variety': PrioWeights(
@@ -300,6 +305,8 @@ const Map<String, PrioWeights> kPrio = {
     newBonus: 4.0,
     playW: 1.0,
     balanceW: 2.0,
+    // 다양성 우선은 자리뿐 아니라 같이 뛰는 사람도 섞는다.
+    mateW: 1.6,
   ),
 };
 
@@ -328,6 +335,10 @@ const double kEmptySlotCost = 40.0;
 /// 일찍 가는 사람은 슬롯 비용을 깎아(우선 출전) 대기 비용은 올린다(대기 회피).
 const double kEarlySlotBonus = 5.0;
 const double kEarlyBenchPenalty = 10.0;
+
+/// ☕ 첫 경기 쉬기를 고른 사람을 그 경기에 넣는 비용. 빈자리(kEmptySlotCost)보다는
+/// 작아서, 그 사람 없이는 자리가 빌 때만 들어간다.
+const double kRestFirstCost = 30.0;
 
 /// 세터 전용 선수가 평균+N 이상 뛰었으면 세터 슬롯 비용에 가중.
 const int kSetterOveruseN = 1;
