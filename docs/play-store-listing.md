@@ -227,6 +227,20 @@ English and Korean throughout. Start today! 🏐
 >
 > 번호는 재사용할 수 없다. 29 까지 썼으므로 다음은 30 이다(pubspec 을 `2.x.y+30` 으로 올리고 빌드).
 >
+> **29(2.14.1) 노트 — 28 이후 변경분만.** KO 158자 / EN 334자(상한 500):
+> ```
+> 🏐 안치기 손질
+> • 뽑은 배치를 바로 저장해요. 캡처해서 보내는 사이 앱이 꺼져도 확정 전 배치가 그대로 남아요.
+> • ☕ 첫 경기 쉼: 라운드마다 첫 경기는 되도록 대기로 둬요. 자리가 빌 때만 들어가요.
+> • 같이 뛴 사람을 기억해서, 늘 같은 사람끼리만 한 팀이 되지 않게 섞어요.
+> ```
+> ```
+> 🏐 Anchigi updates
+> • Draws are saved right away — if the app closes while you share a screenshot, the unconfirmed lineup is still there.
+> • ☕ Sit 1st game: sits out the first game of each round when possible, playing only if a seat would be empty.
+> • Remembers who played together and mixes teams so the same people aren't always paired.
+> ```
+>
 > **28(2.14.0) 노트 — 프로덕션 26 이후 변경분(27 마커 수정 포함).** KO 302자 / EN 466자(상한 500):
 > ```
 > 🏐 안치기, 날짜별로 저장
