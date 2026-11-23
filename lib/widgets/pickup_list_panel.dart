@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/pickup_spot.dart';
 import '../services/i18n.dart';
 import '../theme.dart';
+import 'empty_mark.dart';
 
 class PickupListPanel extends StatelessWidget {
   final List<PickupSpot> spots; // englishOnly 등 이미 필터된 목록
@@ -27,9 +28,17 @@ class PickupListPanel extends StatelessWidget {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text(
-            t('pk_empty'),
-            style: const TextStyle(color: NurungjiColors.brown),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const EmptyMark(),
+              const SizedBox(height: 12),
+              Text(
+                t('pk_empty'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: NurungjiColors.brown),
+              ),
+            ],
           ),
         ),
       );

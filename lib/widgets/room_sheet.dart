@@ -16,6 +16,7 @@ import '../theme.dart';
 import 'app_sheet.dart';
 import 'glass_surface.dart';
 import 'bowl_text.dart';
+import 'empty_mark.dart';
 
 const _guestInk = NurungjiColors.urgentInk;
 const _dropInInk = Color(0xFF2E7D32); // 식구 모집 배지와 같은 초록(흰 바탕 5.1:1)
@@ -441,13 +442,20 @@ class _RoomSheetState extends State<RoomSheet> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 28),
               child: Center(
-                child: Text(
-                  t('tw_empty'),
-                  key: const ValueKey('tw_empty'),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: NurungjiColors.brown,
-                  ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const EmptyMark(),
+                    const SizedBox(height: 12),
+                    Text(
+                      t('tw_empty'),
+                      key: const ValueKey('tw_empty'),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: NurungjiColors.brown,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             )

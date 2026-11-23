@@ -52,8 +52,10 @@ import '../widgets/pickup_list_sheet.dart';
 import '../widgets/recruit_sheet.dart';
 import '../widgets/room_sheet.dart';
 import '../widgets/share_menu.dart';
+import '../widgets/sticker_card.dart';
 import '../widgets/story_card.dart';
 import '../widgets/urgent_sheet.dart';
+import '../widgets/empty_mark.dart';
 
 // 마커 1건 스펙(클럽/스팟 공통) — 아이콘 병렬 빌드 후 마커를 한 번에 생성하기 위한 중간 표현.
 class _MarkerSpec {
@@ -674,6 +676,11 @@ class _MapScreenState extends State<MapScreen> {
               shareTitle: c.name,
               onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
               onFeed: () => shareFeedCard(context, StoryCardData.fromClub(c)),
+              onSticker: () => saveReelFrame(
+                context,
+                StickerData.fromClub(c),
+                track: {'club_id': c.id, 'via': 'menu'},
+              ),
             );
           }
         }
@@ -985,6 +992,11 @@ class _MapScreenState extends State<MapScreen> {
             shareTitle: c4.name,
             onStory: () => shareStoryCard(context, StoryCardData.fromClub(c4)),
             onFeed: () => shareFeedCard(context, StoryCardData.fromClub(c4)),
+            onSticker: () => saveReelFrame(
+              context,
+              StickerData.fromClub(c4),
+              track: {'club_id': c4.id, 'via': 'menu'},
+            ),
           );
         }
         break;
@@ -1153,6 +1165,11 @@ class _MapScreenState extends State<MapScreen> {
       shareTitle: c.name,
       onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
       onFeed: () => shareFeedCard(context, StoryCardData.fromClub(c)),
+      onSticker: () => saveReelFrame(
+        context,
+        StickerData.fromClub(c),
+        track: {'club_id': c.id, 'via': 'menu'},
+      ),
     );
     await _hold(4, 'share');
     _endFlow();
@@ -2922,6 +2939,8 @@ class _MapScreenState extends State<MapScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            const EmptyMark(size: 22, opacity: 0.6),
+            const SizedBox(width: 8),
             Flexible(
               child: Text(
                 t('empty_result'),

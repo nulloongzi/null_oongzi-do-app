@@ -28,9 +28,11 @@ import '../theme.dart';
 import '../services/analytics.dart';
 import '../services/sanitize.dart';
 import '../widgets/bounce_tap.dart';
+import '../widgets/empty_mark.dart';
 import '../widgets/reel_card.dart';
 import '../widgets/schedule_timetable.dart';
 import '../widgets/share_menu.dart';
+import '../widgets/sticker_card.dart';
 import '../widgets/story_card.dart';
 import '../widgets/recruit_sheet.dart';
 import '../widgets/urgent_sheet.dart';
@@ -554,10 +556,13 @@ class _CuratedNote extends StatelessWidget {
   );
 }
 
-// 릴스 섹션: 첫 릴스는 항상 표시(피로감↓), 2개 이상이면 '더 보기' 드롭다운으로 나머지.
+// 릴스 섹션: 머리줄 '📷 인스타 릴스' + 오른쪽 '🎬 프레임 만들기'(릴스 프레임 — 누구나).
+// 첫 릴스는 항상 표시(피로감↓), 2개 이상이면 '더 보기' 드롭다운으로 나머지.
+// 릴스가 없으면 단색 로고 안내 칸 — 프레임으로 첫 릴스를 올려 보라고 권한다.
 // 카드는 ReelCard(커버 → 탭하면 인스타). covers: insta_reel_covers(code→URL).
 class _ReelsSection extends StatefulWidget {
   final List<String> reels;
+  final VoidCallback onFrame;
   final Map<String, String> covers;
   // reel_play 계측용: 어느 팀/스팟의 몇 번째 릴스를 열었는지.
   final String source; // 'club' | 'pickup'
@@ -567,6 +572,7 @@ class _ReelsSection extends StatefulWidget {
     required this.covers,
     required this.source,
     required this.id,
+    required this.onFrame,
   });
 
   @override
@@ -579,12 +585,29 @@ class _ReelsSectionState extends State<_ReelsSection> {
   @override
   Widget build(BuildContext context) {
     final reels = widget.reels;
-    if (reels.isEmpty) return const SizedBox.shrink();
     final more = reels.length - 1;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _card(reels.first, 0),
+        Padding(
+          padding: const EdgeInsets.only(top: 14),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  t('reels_head'),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
+                    color: NurungjiColors.dark,
+                  ),
+                ),
+              ),
+              if (reels.isNotEmpty) _framePill(t('frame_btn_short')),
+            ],
+          ),
+        ),
+        if (reels.isEmpty) _none() else _card(reels.first, 0),
         if (more > 0)
           BounceTap(
             onTap: () => setState(() => _open = !_open),
@@ -623,6 +646,86 @@ class _ReelsSectionState extends State<_ReelsSection> {
       ],
     );
   }
+
+  Widget _framePill(String label) => BounceTap(
+    onTap: widget.onFrame,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+      decoration: BoxDecoration(
+        color: NurungjiColors.bg,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: NurungjiColors.yellow, width: 1.5),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontWeight: FontWeight.w800,
+          fontSize: 12,
+          color: NurungjiColors.dark,
+        ),
+      ),
+    ),
+  );
+
+  // 릴스가 없을 때: 단색 로고 + 안내 + 만들기
+  Widget _none() => Container(
+    margin: const EdgeInsets.only(top: 10),
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: const Color(0xFFFFFDF7),
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: const Color(0xFFD7C4A8), width: 1.5),
+    ),
+    child: Row(
+      children: [
+        const EmptyMark(size: 44),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                t('reels_none_title'),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                  color: NurungjiColors.dark,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                t('reels_none_body'),
+                style: const TextStyle(
+                  fontSize: 12,
+                  height: 1.45,
+                  color: NurungjiColors.brown,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        BounceTap(
+          onTap: widget.onFrame,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+            decoration: BoxDecoration(
+              color: NurungjiColors.yellow,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              t('frame_make'),
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+                color: NurungjiColors.dark,
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 
   Widget _card(String url, int index) => ReelCard(
     url: url,
@@ -1812,6 +1915,11 @@ List<Widget> _spotDetailChildren(
         shareTitle: s.title,
         onStory: () => shareStoryCard(context, StoryCardData.fromSpot(s)),
         onFeed: () => shareFeedCard(context, StoryCardData.fromSpot(s)),
+        onSticker: () => saveReelFrame(
+          context,
+          StickerData.fromSpot(s),
+          track: {'spot_id': s.id, 'via': 'menu'},
+        ),
       ),
     ),
     // 추가 안내(notes) — 웹 픽업 상세 메모 행 (폼 저장값 표시 누락 보완)
@@ -1832,13 +1940,17 @@ List<Widget> _spotDetailChildren(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (s.instaReels.isNotEmpty)
-            _ReelsSection(
-              reels: s.instaReels,
-              covers: s.instaReelCovers,
-              source: 'pickup',
-              id: s.id,
+          _ReelsSection(
+            reels: s.instaReels,
+            covers: s.instaReelCovers,
+            source: 'pickup',
+            id: s.id,
+            onFrame: () => saveReelFrame(
+              context,
+              StickerData.fromSpot(s),
+              track: {'spot_id': s.id, 'via': 'detail', 'is_admin': canModify},
             ),
+          ),
           if (canModify)
             _modifyRow(
               onEdit: () async {
@@ -1897,6 +2009,11 @@ void showClubDetail(
     shareTitle: c.name,
     onStory: () => shareStoryCard(context, StoryCardData.fromClub(c)),
     onFeed: () => shareFeedCard(context, StoryCardData.fromClub(c)),
+    onSticker: () => saveReelFrame(
+      context,
+      StickerData.fromClub(c),
+      track: {'club_id': c.id, 'via': 'menu'},
+    ),
   );
   Future<void> copyAddr() async {
     await Clipboard.setData(ClipboardData(text: c.address ?? ''));
@@ -2083,13 +2200,21 @@ void showClubDetail(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (c.instaReels.isNotEmpty)
-              _ReelsSection(
-                reels: c.instaReels,
-                covers: c.instaReelCovers,
-                source: 'club',
-                id: c.id,
+            _ReelsSection(
+              reels: c.instaReels,
+              covers: c.instaReelCovers,
+              source: 'club',
+              id: c.id,
+              onFrame: () => saveReelFrame(
+                context,
+                StickerData.fromClub(c),
+                track: {
+                  'club_id': c.id,
+                  'via': 'detail',
+                  'is_admin': canModify,
+                },
               ),
+            ),
             if (canModify && !c.isVerified) _VerificationSection(club: c),
             // 관리자 영역은 실명 로그인한 사람에게 보인다(익명·운영자 제외, 웹과 같은
             // 조건) — 관리자면 '빠지기', 아니면 '신청'. 인증 여부와 무관하다:
